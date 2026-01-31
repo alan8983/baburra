@@ -1,0 +1,105 @@
+'use client';
+
+// Stock 相關 hooks
+
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { Stock, StockWithStats, CreateStockInput, StockSearchResult, CandlestickData } from '@/domain/models';
+import { API_ROUTES } from '@/lib/constants';
+
+// Query Keys
+export const stockKeys = {
+  all: ['stocks'] as const,
+  lists: () => [...stockKeys.all, 'list'] as const,
+  list: (filters: Record<string, unknown>) => [...stockKeys.lists(), filters] as const,
+  details: () => [...stockKeys.all, 'detail'] as const,
+  detail: (ticker: string) => [...stockKeys.details(), ticker] as const,
+  search: (query: string) => [...stockKeys.all, 'search', query] as const,
+  prices: (ticker: string, params?: Record<string, unknown>) =>
+    [...stockKeys.all, 'prices', ticker, params] as const,
+};
+
+// 取得 Stock 列表
+export function useStocks(params?: { search?: string; page?: number; limit?: number }) {
+  return useQuery({
+    queryKey: stockKeys.list(params ?? {}),
+    queryFn: async (): Promise<{ data: StockWithStats[]; total: number }> => {
+      const searchParams = new URLSearchParams();
+      if (params?.search) searchParams.set('search', params.search);
+      if (params?.page) searchParams.set('page', params.page.toString());
+      if (params?.limit) searchParams.set('limit', params.limit.toString());
+
+      const url = `${API_ROUTES.STOCKS}?${searchParams.toString()}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to fetch stocks');
+      return res.json();
+    },
+  });
+}
+
+// 取得單一 Stock 詳情
+export function useStock(ticker: string) {
+  return useQuery({
+    queryKey: stockKeys.detail(ticker),
+    queryFn: async (): Promise<StockWithStats> => {
+      const res = await fetch(API_ROUTES.STOCK_DETAIL(ticker));
+      if (!res.ok) throw new Error('Failed to fetch stock');
+      return res.json();
+    },
+    enabled: !!ticker,
+  });
+}
+
+// 搜尋 Stock (用於 Selector)
+export function useStockSearch(query: string) {
+  return useQuery({
+    queryKey: stockKeys.search(query),
+    queryFn: async (): Promise<StockSearchResult[]> => {
+      const res = await fetch(`${API_ROUTES.STOCKS}?search=${encodeURIComponent(query)}&limit=10`);
+      if (!res.ok) throw new Error('Failed to search stocks');
+      const { data } = await res.json();
+      return data;
+    },
+    enabled: query.length >= 1,
+  });
+}
+
+// 取得股價資料
+export function useStockPrices(
+  ticker: string,
+  params?: { startDate?: string; endDate?: string }
+) {
+  return useQuery({
+    queryKey: stockKeys.prices(ticker, params),
+    queryFn: async (): Promise<CandlestickData[]> => {
+      const searchParams = new URLSearchParams();
+      if (params?.startDate) searchParams.set('startDate', params.startDate);
+      if (params?.endDate) searchParams.set('endDate', params.endDate);
+
+      const url = `${API_ROUTES.STOCK_PRICES(ticker)}?${searchParams.toString()}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to fetch stock prices');
+      return res.json();
+    },
+    enabled: !!ticker,
+  });
+}
+
+// 建立 Stock
+export function useCreateStock() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: CreateStockInput): Promise<Stock> => {
+      const res = await fetch(API_ROUTES.STOCKS, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      });
+      if (!res.ok) throw new Error('Failed to create stock');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: stockKeys.lists() });
+    },
+  });
+}

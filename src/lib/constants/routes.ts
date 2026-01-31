@@ -1,0 +1,78 @@
+// 路由常數定義
+
+export const ROUTES = {
+  // Marketing pages
+  HOME: '/',
+  FEATURES: '/features',
+  PRICING: '/pricing',
+
+  // Auth pages
+  LOGIN: '/login',
+  REGISTER: '/register',
+  AUTH_CALLBACK: '/auth/callback',
+
+  // App pages
+  DASHBOARD: '/dashboard',
+  INPUT: '/input',
+  DRAFTS: '/drafts',
+  DRAFT_DETAIL: (id: string) => `/drafts/${id}`,
+  KOLS: '/kols',
+  KOL_DETAIL: (id: string) => `/kols/${id}`,
+  STOCKS: '/stocks',
+  STOCK_DETAIL: (ticker: string) => `/stocks/${ticker}`,
+  POSTS: '/posts',
+  POST_DETAIL: (id: string) => `/posts/${id}`,
+  POST_NEW: '/posts/new',
+  SETTINGS: '/settings',
+} as const;
+
+// API 路由
+export const API_ROUTES = {
+  // Auth
+  AUTH_SIGNUP: '/api/auth/signup',
+  AUTH_LOGIN: '/api/auth/login',
+  AUTH_LOGOUT: '/api/auth/logout',
+  AUTH_SESSION: '/api/auth/session',
+
+  // KOLs
+  KOLS: '/api/kols',
+  KOL_DETAIL: (id: string) => `/api/kols/${id}`,
+  KOL_POSTS: (id: string) => `/api/kols/${id}/posts`,
+  KOL_WIN_RATE: (id: string) => `/api/kols/${id}/win-rate`,
+
+  // Stocks
+  STOCKS: '/api/stocks',
+  STOCK_DETAIL: (ticker: string) => `/api/stocks/${ticker}`,
+  STOCK_POSTS: (ticker: string) => `/api/stocks/${ticker}/posts`,
+  STOCK_PRICES: (ticker: string) => `/api/stocks/${ticker}/prices`,
+  STOCK_WIN_RATE: (ticker: string) => `/api/stocks/${ticker}/win-rate`,
+  STOCK_ARGUMENTS: (ticker: string) => `/api/stocks/${ticker}/arguments`,
+
+  // Posts
+  POSTS: '/api/posts',
+  POST_DETAIL: (id: string) => `/api/posts/${id}`,
+  POST_CHECK_DUPLICATE: '/api/posts/check-duplicate',
+
+  // Drafts
+  DRAFTS: '/api/drafts',
+  DRAFT_DETAIL: (id: string) => `/api/drafts/${id}`,
+
+  // AI
+  AI_ANALYZE: '/api/ai/analyze',
+  AI_EXTRACT_ARGUMENTS: '/api/ai/extract-arguments',
+  AI_USAGE: '/api/ai/usage',
+
+  // Argument Categories
+  ARGUMENT_CATEGORIES: '/api/argument-categories',
+} as const;
+
+// 導航項目
+export const NAV_ITEMS = [
+  { label: 'Dashboard', href: ROUTES.DASHBOARD, icon: 'LayoutDashboard' },
+  { label: '快速輸入', href: ROUTES.INPUT, icon: 'PenLine' },
+  { label: '草稿', href: ROUTES.DRAFTS, icon: 'FileText', showBadge: true },
+  { label: 'KOL 列表', href: ROUTES.KOLS, icon: 'Users' },
+  { label: '投資標的', href: ROUTES.STOCKS, icon: 'TrendingUp' },
+  { label: '所有文章', href: ROUTES.POSTS, icon: 'Newspaper' },
+  { label: '設定', href: ROUTES.SETTINGS, icon: 'Settings' },
+] as const;
