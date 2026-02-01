@@ -7,3 +7,4 @@ export * from './use-drafts';
 export * from './use-stock-prices';
 export * from './use-upload';
 export * from './use-ai';
+export * from './use-auth';

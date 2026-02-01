@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { useUIStore } from '@/stores';
 import { ROUTES } from '@/lib/constants';
 import { useAiUsage } from '@/hooks/use-ai';
+import { useAuth } from '@/hooks/use-auth';
 
 const iconMap = {
   LayoutDashboard,
@@ -227,6 +229,57 @@ export function Sidebar() {
 
       {/* AI Quota Footer */}
       <AiQuotaFooter isCollapsed={!sidebarOpen} />
+
+      {/* Logout Button */}
+      <LogoutButton isCollapsed={!sidebarOpen} />
     </aside>
+  );
+}
+
+function LogoutButton({ isCollapsed }: { isCollapsed: boolean }) {
+  const { signOut, loading, user } = useAuth();
+
+  // 開發模式下如果沒有真實用戶，不顯示登出按鈕
+  const isDev = process.env.NODE_ENV === 'development';
+  if (isDev && !user) {
+    return null;
+  }
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } catch {
+      // 錯誤已在 hook 中處理
+    }
+  };
+
+  if (isCollapsed) {
+    return (
+      <div className="border-t p-2 flex justify-center">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+          onClick={handleLogout}
+          disabled={loading}
+        >
+          <LogOut className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border-t p-4">
+      <Button
+        variant="ghost"
+        className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+        onClick={handleLogout}
+        disabled={loading}
+      >
+        <LogOut className="mr-2 h-4 w-4" />
+        登出
+      </Button>
+    </div>
   );
 }

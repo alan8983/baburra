@@ -244,7 +244,7 @@ export default function DraftEditPage({ params }: { params: Promise<{ id: string
           儲存草稿
         </Button>
         <Button asChild>
-          <Link href={ROUTES.POST_NEW}>
+          <Link href={`${ROUTES.POST_NEW}?draftId=${id}`}>
             預覽並確認
             <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
