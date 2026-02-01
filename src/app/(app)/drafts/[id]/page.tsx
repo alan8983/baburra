@@ -1,60 +1,128 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Plus, Search, Trash2, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, ArrowRight, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ROUTES } from '@/lib/constants';
-
-// 模擬草稿資料
-const mockDraft = {
-  id: '1',
-  kolId: '1',
-  kolName: '股癌',
-  stockIds: ['1', '2'],
-  stockTickers: ['TSLA', 'NVDA'],
-  content: `特斯拉最新財報分析：
-
-1. 營收成長 25%，超出市場預期
-2. 毛利率持續受壓，主要受到價格戰影響
-3. FSD 授權收入成為新成長動能
-
-整體來看，雖然短期毛利率有壓力，但長期仍看好特斯拉的競爭優勢。建議逢低佈局。`,
-  sourceUrl: 'https://twitter.com/example/status/123456',
-  sentiment: 1,
-  postedAt: '2026-01-30T14:30:00',
-};
-
-const sentimentOptions = [
-  { value: -2, label: '強烈看空', color: 'bg-red-600 text-white' },
-  { value: -1, label: '看空', color: 'bg-red-100 text-red-700' },
-  { value: 0, label: '中立', color: 'bg-gray-100 text-gray-700' },
-  { value: 1, label: '看多', color: 'bg-green-100 text-green-700' },
-  { value: 2, label: '強烈看多', color: 'bg-green-600 text-white' },
-];
+import {
+  KOLSelector,
+  KOLFormDialog,
+  StockSelector,
+  StockFormDialog,
+  SentimentSelector,
+  DatetimeInput,
+  ImageUploader,
+} from '@/components/forms';
+import type { KOLSearchResult, StockSearchResult, Sentiment } from '@/domain/models';
+import { useDraft, useUpdateDraft, useDeleteDraft } from '@/hooks';
 
 export default function DraftEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const [draft, setDraft] = useState(mockDraft);
-  const [kolSearch, setKolSearch] = useState('');
-  const [stockSearch, setStockSearch] = useState('');
+  const router = useRouter();
+  const { data: draft, isLoading, error } = useDraft(id);
+  const updateDraft = useUpdateDraft(id);
+  const deleteDraft = useDeleteDraft();
 
-  const handleSentimentChange = (value: number) => {
-    setDraft({ ...draft, sentiment: value });
+  // 表單狀態（由 API 資料初始化）
+  const [selectedKOL, setSelectedKOL] = useState<KOLSearchResult | null>(null);
+  const [selectedStocks, setSelectedStocks] = useState<StockSearchResult[]>([]);
+  const [content, setContent] = useState('');
+  const [sourceUrl, setSourceUrl] = useState('');
+  const [sentiment, setSentiment] = useState<Sentiment | null>(null);
+  const [postedAt, setPostedAt] = useState<Date | null>(null);
+  const [images, setImages] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!draft) return;
+    setSelectedKOL(
+      draft.kol ? { id: draft.kol.id, name: draft.kol.name, avatarUrl: draft.kol.avatarUrl } : null
+    );
+    setSelectedStocks(
+      draft.stocks.map((s) => ({ id: s.id, ticker: s.ticker, name: s.name, logoUrl: null }))
+    );
+    setContent(draft.content ?? '');
+    setSourceUrl(draft.sourceUrl ?? '');
+    setSentiment(draft.sentiment as Sentiment | null);
+    setPostedAt(draft.postedAt ? new Date(draft.postedAt) : null);
+    setImages(draft.images ?? []);
+  }, [draft]);
+
+  // Dialog 狀態
+  const [kolDialogOpen, setKolDialogOpen] = useState(false);
+  const [kolDialogDefaultName, setKolDialogDefaultName] = useState('');
+  const [stockDialogOpen, setStockDialogOpen] = useState(false);
+  const [stockDialogDefaultTicker, setStockDialogDefaultTicker] = useState('');
+
+  // 處理新增 KOL
+  const handleCreateKOL = (name: string) => {
+    setKolDialogDefaultName(name);
+    setKolDialogOpen(true);
   };
 
-  const handleRemoveStock = (ticker: string) => {
-    setDraft({
-      ...draft,
-      stockTickers: draft.stockTickers.filter((t) => t !== ticker),
-    });
+  const handleKOLCreated = (kol: KOLSearchResult) => {
+    setSelectedKOL(kol);
   };
+
+  // 處理新增 Stock
+  const handleCreateStock = (ticker: string) => {
+    setStockDialogDefaultTicker(ticker);
+    setStockDialogOpen(true);
+  };
+
+  const handleStockCreated = (stock: StockSearchResult) => {
+    setSelectedStocks((prev) => [...prev, stock]);
+  };
+
+  const handleSave = async () => {
+    try {
+      await updateDraft.mutateAsync({
+        kolId: selectedKOL?.id ?? null,
+        content: content || null,
+        sourceUrl: sourceUrl || null,
+        sentiment: sentiment ?? null,
+        postedAt: postedAt ?? null,
+        stockIds: selectedStocks.map((s) => s.id),
+        images,
+      });
+    } catch {
+      // error handled by mutation
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('確定要刪除此草稿？')) return;
+    try {
+      await deleteDraft.mutateAsync(id);
+      router.push(ROUTES.DRAFTS);
+    } catch {
+      // error handled by mutation
+    }
+  };
+
+  if (isLoading || (!draft && !error)) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-6">
+        <p className="text-muted-foreground">載入中...</p>
+      </div>
+    );
+  }
+  if (error || !draft) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-6">
+        <p className="text-destructive">無法載入草稿</p>
+        <Button variant="outline" asChild>
+          <Link href={ROUTES.DRAFTS}>返回草稿列表</Link>
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -66,7 +134,13 @@ export default function DraftEditPage({ params }: { params: Promise<{ id: string
             返回草稿列表
           </Link>
         </Button>
-        <Button variant="ghost" size="sm" className="text-destructive">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-destructive"
+          onClick={handleDelete}
+          disabled={deleteDraft.isPending}
+        >
           <Trash2 className="mr-2 h-4 w-4" />
           刪除草稿
         </Button>
@@ -83,104 +157,55 @@ export default function DraftEditPage({ params }: { params: Promise<{ id: string
         <CardContent className="space-y-6">
           {/* KOL Selector */}
           <div className="space-y-2">
-            <Label>KOL *</Label>
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="搜尋或選擇 KOL..."
-                value={draft.kolName || kolSearch}
-                onChange={(e) => setKolSearch(e.target.value)}
-                className="pl-9"
-              />
-              {draft.kolName && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-1 top-1"
-                  onClick={() => setDraft({ ...draft, kolId: '', kolName: '' })}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-            <Button variant="outline" size="sm">
-              <Plus className="mr-2 h-4 w-4" />
-              新增 KOL
-            </Button>
+            <Label>
+              KOL <span className="text-destructive">*</span>
+            </Label>
+            <KOLSelector
+              value={selectedKOL}
+              onChange={setSelectedKOL}
+              onCreateNew={handleCreateKOL}
+              placeholder="搜尋或選擇 KOL..."
+            />
           </div>
 
           <Separator />
 
           {/* Stock Selector */}
           <div className="space-y-2">
-            <Label>投資標的 *</Label>
-            {draft.stockTickers.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {draft.stockTickers.map((ticker) => (
-                  <Badge
-                    key={ticker}
-                    variant="secondary"
-                    className="cursor-pointer"
-                    onClick={() => handleRemoveStock(ticker)}
-                  >
-                    {ticker}
-                    <X className="ml-1 h-3 w-3" />
-                  </Badge>
-                ))}
-              </div>
-            )}
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="搜尋或選擇標的 (可多選)..."
-                value={stockSearch}
-                onChange={(e) => setStockSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Button variant="outline" size="sm">
-              <Plus className="mr-2 h-4 w-4" />
-              新增標的
-            </Button>
+            <Label>
+              投資標的 <span className="text-destructive">*</span>
+            </Label>
+            <StockSelector
+              value={selectedStocks}
+              onChange={setSelectedStocks}
+              onCreateNew={handleCreateStock}
+              placeholder="搜尋或選擇標的 (可多選)..."
+            />
           </div>
 
           <Separator />
 
           {/* Posted At */}
-          <div className="space-y-2">
-            <Label>發文時間 *</Label>
-            <Input
-              type="datetime-local"
-              value={draft.postedAt.slice(0, 16)}
-              onChange={(e) =>
-                setDraft({ ...draft, postedAt: e.target.value })
-              }
-            />
-            <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm">
-                現在
-              </Button>
-              <Button variant="outline" size="sm">
-                1小時前
-              </Button>
-              <Button variant="outline" size="sm">
-                1天前
-              </Button>
-              <Button variant="outline" size="sm">
-                3天前
-              </Button>
-            </div>
-          </div>
+          <DatetimeInput
+            label="發文時間"
+            required
+            value={postedAt}
+            onChange={setPostedAt}
+            showQuickOptions
+            max={new Date()}
+          />
 
           <Separator />
 
           {/* Content */}
           <div className="space-y-2">
-            <Label>主文內容 *</Label>
+            <Label>
+              主文內容 <span className="text-destructive">*</span>
+            </Label>
             <Textarea
               placeholder="KOL 的原始發文內容..."
-              value={draft.content}
-              onChange={(e) => setDraft({ ...draft, content: e.target.value })}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
               className="min-h-[200px]"
             />
           </div>
@@ -193,61 +218,73 @@ export default function DraftEditPage({ params }: { params: Promise<{ id: string
             <Input
               type="url"
               placeholder="https://..."
-              value={draft.sourceUrl}
-              onChange={(e) => setDraft({ ...draft, sourceUrl: e.target.value })}
+              value={sourceUrl}
+              onChange={(e) => setSourceUrl(e.target.value)}
             />
           </div>
 
           <Separator />
 
           {/* Images */}
-          <div className="space-y-2">
-            <Label>圖片</Label>
-            <div className="flex gap-2">
-              <div className="flex h-20 w-20 items-center justify-center rounded-lg border border-dashed">
-                <Plus className="h-6 w-6 text-muted-foreground" />
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              點擊上傳圖片，最多 10 張
-            </p>
-          </div>
+          <ImageUploader
+            value={images}
+            onChange={setImages}
+            maxImages={10}
+          />
         </CardContent>
       </Card>
 
       {/* Action Buttons */}
       <div className="flex justify-end gap-3">
-        <Button variant="outline">儲存草稿</Button>
-        <Button>
-          預覽並確認
-          <ArrowRight className="ml-2 h-4 w-4" />
+        <Button
+          variant="outline"
+          onClick={handleSave}
+          disabled={updateDraft.isPending}
+        >
+          儲存草稿
+        </Button>
+        <Button asChild>
+          <Link href={ROUTES.POST_NEW}>
+            預覽並確認
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Link>
         </Button>
       </div>
 
-      {/* Sentiment Selection (Preview) */}
+      {/* Sentiment Selection */}
       <Card>
         <CardHeader>
           <CardTitle>走勢情緒</CardTitle>
           <CardDescription>
-            這將在預覽確認頁選擇，此處為預覽
+            選擇這篇文章的整體看法方向
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {sentimentOptions.map((option) => (
-              <Button
-                key={option.value}
-                variant={draft.sentiment === option.value ? 'default' : 'outline'}
-                size="sm"
-                className={draft.sentiment === option.value ? option.color : ''}
-                onClick={() => handleSentimentChange(option.value)}
-              >
-                {option.label}
-              </Button>
-            ))}
-          </div>
+          <SentimentSelector
+            value={sentiment}
+            onChange={setSentiment}
+            showIcon
+            aiSuggestion={1}
+            onAcceptAiSuggestion={() => setSentiment(1)}
+          />
         </CardContent>
       </Card>
+
+      {/* KOL Form Dialog */}
+      <KOLFormDialog
+        open={kolDialogOpen}
+        onOpenChange={setKolDialogOpen}
+        defaultName={kolDialogDefaultName}
+        onSuccess={handleKOLCreated}
+      />
+
+      {/* Stock Form Dialog */}
+      <StockFormDialog
+        open={stockDialogOpen}
+        onOpenChange={setStockDialogOpen}
+        defaultTicker={stockDialogDefaultTicker}
+        onSuccess={handleStockCreated}
+      />
     </div>
   );
 }

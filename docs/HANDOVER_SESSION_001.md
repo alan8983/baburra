@@ -37,8 +37,8 @@
 | 2.1-2.3 Domain Model & Repository | ✅ 完成 | 型別定義已建立 |
 | 2.4 KOL API Routes | ❌ 未開始 | 下個 Session 繼續 |
 | 2.5 KOL 列表頁 | ✅ 完成 | 含搜尋、模擬資料 |
-| 2.6 KOL 搜尋/選擇元件 | ❌ 未開始 | 需建立 |
-| 2.7 KOL 新增 Dialog | ❌ 未開始 | 需建立 |
+| 2.6 KOL 搜尋/選擇元件 | ✅ 完成 | `components/forms/kol-selector.tsx` |
+| 2.7 KOL 新增 Dialog | ✅ 完成 | `components/forms/kol-form-dialog.tsx` |
 | 2.8-2.9 KOL 詳情頁 | ✅ 完成 | 含 Tabs (Overview/Stats/About) |
 | 2.10 use-kols Hook | ✅ 完成 | TanStack Query 整合 |
 
@@ -49,7 +49,7 @@
 | 3.1-3.3 Domain Model & Repository | ✅ 完成 | 型別定義已建立 |
 | 3.4 Stock API Routes | ❌ 未開始 | 下個 Session 繼續 |
 | 3.5 Stock 列表頁 | ✅ 完成 | 含搜尋、模擬資料 |
-| 3.6 Stock 搜尋/選擇元件 | ❌ 未開始 | 需建立 |
+| 3.6 Stock 搜尋/選擇元件 | ✅ 完成 | `components/forms/stock-selector.tsx` |
 | 3.7 Stock 詳情頁 | ✅ 完成 | 含 Tabs (Posts/Chart/Arguments) |
 | 3.8 use-stocks Hook | ✅ 完成 | TanStack Query 整合 |
 
@@ -62,7 +62,7 @@
 | 4.6 QuickInput 元件 | ✅ 完成 | 含 AI 識別預覽區塊 |
 | 4.7 草稿列表頁 | ✅ 完成 | `/drafts` |
 | 4.8 草稿編輯頁 | ✅ 完成 | `/drafts/[id]` |
-| 4.9-4.12 表單元件 | ❌ 未開始 | 需建立 KOL/Stock Selector |
+| 4.9-4.12 表單元件 | ✅ 完成 | KOL/Stock Selector, Sentiment, Datetime |
 | 4.13 重複 URL 比對 | ❌ 未開始 | |
 | 4.14 圖片上傳 | ❌ 未開始 | |
 | API Routes | ❌ 未開始 | |

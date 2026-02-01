@@ -30,3 +30,15 @@ export async function createServerSupabaseClient() {
     }
   );
 }
+
+/** 取得當前使用者 ID（用於 API Routes）。有 session 用 auth，否則用 DEV_USER_ID（開發用）。 */
+export async function getCurrentUserId(): Promise<string | null> {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.id) return user.id;
+  } catch {
+    // ignore
+  }
+  return process.env.DEV_USER_ID ?? process.env.TEST_USER_ID ?? null;
+}

@@ -11,46 +11,157 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { ROUTES } from '@/lib/constants';
+import { formatDateTime } from '@/lib/utils/date';
 import { SENTIMENT_LABELS, SENTIMENT_COLORS } from '@/domain/models/post';
+import { useStockPricesForChart } from '@/hooks/use-stock-prices';
+import { CandlestickChart, postToSentimentMarker, SentimentMarkerLegend } from '@/components/charts';
+import { usePost } from '@/hooks';
 
-// 模擬文章資料
-const mockPost = {
-  id: '1',
-  kol: { id: '1', name: '股癌', avatarUrl: null },
-  stocks: [
-    { id: '1', ticker: 'AAPL', name: 'Apple Inc.' },
-    { id: '2', ticker: 'TSLA', name: 'Tesla Inc.' },
-  ],
-  sentiment: 1 as const,
-  sentimentAiGenerated: true,
-  postedAt: '2026/01/30 14:30',
-  sourceUrl: 'https://twitter.com/example/status/123456',
-  sourcePlatform: 'twitter',
-  content: `蘋果和特斯拉最新財報分析：
+function toDateString(postedAt: Date | string): string {
+  if (postedAt instanceof Date) return postedAt.toISOString().slice(0, 10);
+  const s = String(postedAt);
+  if (s.includes('-')) return s.slice(0, 10);
+  const [d] = s.split(' ');
+  if (!d) return s;
+  const [y, m, day] = d.split('/');
+  return [y, m?.padStart(2, '0'), day?.padStart(2, '0')].filter(Boolean).join('-');
+}
 
-【蘋果 AAPL】
-1. 營收 1197 億美元，年增 8%
-2. iPhone 營收持續成長，AI 功能帶動換機潮
-3. 服務營收 248 億美元，創歷史新高
-4. 本益比 32 倍，略高於歷史平均
+function PostChartTab({
+  stocks,
+  postedAt,
+  sentiment,
+}: {
+  stocks: { id: string; ticker: string; name: string }[];
+  postedAt: Date | string;
+  sentiment: number;
+}) {
+  const dateStr = toDateString(postedAt);
+  const sentimentMarker = postToSentimentMarker(dateStr, sentiment, {
+    text: '本篇發文',
+  });
+  if (stocks.length === 0) {
+    return (
+      <Card>
+        <CardContent className="flex h-[300px] items-center justify-center">
+          <p className="text-muted-foreground">此文章無關聯標的</p>
+        </CardContent>
+      </Card>
+    );
+  }
+  return (
+    <div className="space-y-6">
+      {stocks.map((stock) => (
+        <PostStockChart
+          key={stock.id}
+          ticker={stock.ticker}
+          name={stock.name}
+          sentimentMarkers={[sentimentMarker]}
+        />
+      ))}
+    </div>
+  );
+}
 
-【特斯拉 TSLA】
-1. 營收 233 億美元，年增 25%
-2. 毛利率 17.2%，受價格戰影響
-3. FSD 授權營收快速成長
-4. 4680 電池量產進度良好
-
-整體評估：兩家公司都展現出強勁的成長動能，蘋果的服務生態系和特斯拉的 FSD 都是長期看好的關鍵。建議逢低佈局。`,
-  images: [] as string[],
-  priceChanges: {
-    AAPL: { day5: 5.2, day30: 8.1, day90: 12.5, day365: 25.3 },
-    TSLA: { day5: 3.1, day30: 2.3, day90: -5.2, day365: 45.8 },
-  } as Record<string, { day5: number; day30: number; day90: number; day365: number }>,
-};
+function PostStockChart({
+  ticker,
+  name,
+  sentimentMarkers,
+}: {
+  ticker: string;
+  name: string;
+  sentimentMarkers: { time: string; sentiment: number; text?: string }[];
+}) {
+  const { data, isLoading, error } = useStockPricesForChart(ticker);
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>{ticker}</CardTitle>
+          <CardDescription>{name}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex h-[360px] items-center justify-center">
+          <p className="text-muted-foreground">載入股價中...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+  if (error || !data) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>{ticker}</CardTitle>
+          <CardDescription>{name}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex h-[360px] items-center justify-center">
+          <p className="text-muted-foreground">
+            {error?.message ?? '無法載入股價'}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+  if (data.candles.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>{ticker}</CardTitle>
+          <CardDescription>{name}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex h-[360px] items-center justify-center">
+          <p className="text-muted-foreground">此標的暫無股價資料</p>
+        </CardContent>
+      </Card>
+    );
+  }
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{ticker}</CardTitle>
+        <CardDescription>{name} · 股價走勢與本篇發文標記</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <CandlestickChart
+          candles={data.candles}
+          volumes={data.volumes}
+          sentimentMarkers={sentimentMarkers}
+          height={360}
+          className="rounded-lg border"
+        />
+        <SentimentMarkerLegend markers={sentimentMarkers} />
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const post = mockPost;
+  const { data: post, isLoading, error } = usePost(id);
+
+  if (error || (!isLoading && !post)) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-6">
+        <Button variant="ghost" size="sm" asChild>
+          <Link href={ROUTES.POSTS}>返回文章列表</Link>
+        </Button>
+        <Card className="py-12">
+          <CardContent className="flex flex-col items-center justify-center text-center">
+            <p className="text-destructive">無法載入文章或找不到該文章</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+  if (isLoading || !post) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-6">
+        <Button variant="ghost" size="sm" asChild>
+          <Link href={ROUTES.POSTS}>返回文章列表</Link>
+        </Button>
+        <p className="text-muted-foreground">載入中...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -86,7 +197,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
               >
                 {post.kol.name}
               </Link>
-              <p className="text-sm text-muted-foreground">{post.postedAt}</p>
+              <p className="text-sm text-muted-foreground">{formatDateTime(post.postedAt)}</p>
             </div>
           </div>
 
@@ -95,7 +206,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
           {/* Stocks & Price Changes */}
           <div className="space-y-3">
             {post.stocks.map((stock) => {
-              const changes = post.priceChanges[stock.ticker];
+              const changes = post.priceChanges?.[stock.id];
               return (
                 <div
                   key={stock.id}
@@ -121,19 +232,25 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                   <div className="flex flex-wrap gap-3 text-sm">
                     <span
                       className={
-                        changes.day5 >= 0 ? 'text-green-600' : 'text-red-600'
+                        changes?.day5 != null
+                          ? changes.day5 >= 0
+                            ? 'text-green-600'
+                            : 'text-red-600'
+                          : 'text-muted-foreground'
                       }
                     >
-                      5日: {changes.day5 >= 0 ? '+' : ''}
-                      {changes.day5.toFixed(1)}%
+                      5日: {changes?.day5 != null ? `${changes.day5 >= 0 ? '+' : ''}${changes.day5.toFixed(1)}%` : '—'}
                     </span>
                     <span
                       className={
-                        changes.day30 >= 0 ? 'text-green-600' : 'text-red-600'
+                        changes?.day30 != null
+                          ? changes.day30 >= 0
+                            ? 'text-green-600'
+                            : 'text-red-600'
+                          : 'text-muted-foreground'
                       }
                     >
-                      30日: {changes.day30 >= 0 ? '+' : ''}
-                      {changes.day30.toFixed(1)}%
+                      30日: {changes?.day30 != null ? `${changes.day30 >= 0 ? '+' : ''}${changes.day30.toFixed(1)}%` : '—'}
                     </span>
                   </div>
                 </div>
@@ -217,21 +334,11 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
 
         {/* Chart Tab */}
         <TabsContent value="chart">
-          <Card>
-            <CardHeader>
-              <CardTitle>K 線圖</CardTitle>
-              <CardDescription>
-                股價走勢圖與發文時間標記
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex h-[400px] items-center justify-center rounded-lg border border-dashed">
-                <p className="text-muted-foreground">
-                  K 線圖元件將在 Phase 6 實作
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          <PostChartTab
+            stocks={post.stocks}
+            postedAt={post.postedAt}
+            sentiment={post.sentiment}
+          />
         </TabsContent>
       </Tabs>
     </div>

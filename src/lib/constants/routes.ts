@@ -64,6 +64,9 @@ export const API_ROUTES = {
 
   // Argument Categories
   ARGUMENT_CATEGORIES: '/api/argument-categories',
+
+  // Upload
+  UPLOAD: '/api/upload',
 } as const;
 
 // 導航項目

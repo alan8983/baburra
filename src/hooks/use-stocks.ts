@@ -3,8 +3,17 @@
 // Stock 相關 hooks
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Stock, StockWithStats, CreateStockInput, StockSearchResult, CandlestickData } from '@/domain/models';
+import type {
+  Stock,
+  StockWithStats,
+  CreateStockInput,
+  StockSearchResult,
+  CandlestickData,
+  PostWithPriceChanges,
+} from '@/domain/models';
 import { API_ROUTES } from '@/lib/constants';
+
+import type { WinRateStats } from '@/domain/calculators';
 
 // Query Keys
 export const stockKeys = {
@@ -13,6 +22,9 @@ export const stockKeys = {
   list: (filters: Record<string, unknown>) => [...stockKeys.lists(), filters] as const,
   details: () => [...stockKeys.all, 'detail'] as const,
   detail: (ticker: string) => [...stockKeys.details(), ticker] as const,
+  posts: (ticker: string, params?: Record<string, unknown>) =>
+    [...stockKeys.detail(ticker), 'posts', params] as const,
+  winRate: (ticker: string) => [...stockKeys.detail(ticker), 'win-rate'] as const,
   search: (query: string) => [...stockKeys.all, 'search', query] as const,
   prices: (ticker: string, params?: Record<string, unknown>) =>
     [...stockKeys.all, 'prices', ticker, params] as const,
@@ -63,6 +75,26 @@ export function useStockSearch(query: string) {
   });
 }
 
+// 取得標的相關文章列表
+export function useStockPosts(
+  ticker: string,
+  params?: { page?: number; limit?: number }
+) {
+  return useQuery({
+    queryKey: stockKeys.posts(ticker, params),
+    queryFn: async (): Promise<{ data: PostWithPriceChanges[]; total: number }> => {
+      const searchParams = new URLSearchParams();
+      if (params?.page) searchParams.set('page', params.page.toString());
+      if (params?.limit) searchParams.set('limit', params.limit.toString());
+      const url = `${API_ROUTES.STOCK_POSTS(ticker)}?${searchParams.toString()}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to fetch stock posts');
+      return res.json();
+    },
+    enabled: !!ticker,
+  });
+}
+
 // 取得股價資料
 export function useStockPrices(
   ticker: string,
@@ -101,5 +133,19 @@ export function useCreateStock() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: stockKeys.lists() });
     },
+  });
+}
+
+// 取得標的勝率統計
+export function useStockWinRate(ticker: string) {
+  return useQuery({
+    queryKey: stockKeys.winRate(ticker),
+    queryFn: async (): Promise<WinRateStats> => {
+      const res = await fetch(API_ROUTES.STOCK_WIN_RATE(ticker));
+      if (!res.ok) throw new Error('Failed to fetch stock win rate');
+      return res.json();
+    },
+    enabled: !!ticker,
+    staleTime: 5 * 60 * 1000, // 5 分鐘內不重新請求
   });
 }

@@ -3,8 +3,16 @@
 // KOL 相關 hooks
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { KOL, KOLWithStats, CreateKOLInput, KOLSearchResult } from '@/domain/models';
+import type {
+  KOL,
+  KOLWithStats,
+  CreateKOLInput,
+  KOLSearchResult,
+  PostWithPriceChanges,
+} from '@/domain/models';
 import { API_ROUTES } from '@/lib/constants';
+
+import type { WinRateStats } from '@/domain/calculators';
 
 // Query Keys
 export const kolKeys = {
@@ -13,6 +21,8 @@ export const kolKeys = {
   list: (filters: Record<string, unknown>) => [...kolKeys.lists(), filters] as const,
   details: () => [...kolKeys.all, 'detail'] as const,
   detail: (id: string) => [...kolKeys.details(), id] as const,
+  posts: (id: string) => [...kolKeys.detail(id), 'posts'] as const,
+  winRate: (id: string) => [...kolKeys.detail(id), 'win-rate'] as const,
   search: (query: string) => [...kolKeys.all, 'search', query] as const,
 };
 
@@ -41,6 +51,23 @@ export function useKol(id: string) {
     queryFn: async (): Promise<KOLWithStats> => {
       const res = await fetch(API_ROUTES.KOL_DETAIL(id));
       if (!res.ok) throw new Error('Failed to fetch KOL');
+      return res.json();
+    },
+    enabled: !!id,
+  });
+}
+
+// 取得 KOL 的文章列表
+export function useKolPosts(id: string, params?: { page?: number; limit?: number }) {
+  return useQuery({
+    queryKey: [...kolKeys.posts(id), params ?? {}],
+    queryFn: async (): Promise<{ data: PostWithPriceChanges[]; total: number }> => {
+      const searchParams = new URLSearchParams();
+      if (params?.page) searchParams.set('page', params.page.toString());
+      if (params?.limit) searchParams.set('limit', params.limit.toString());
+      const url = `${API_ROUTES.KOL_POSTS(id)}?${searchParams.toString()}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to fetch KOL posts');
       return res.json();
     },
     enabled: !!id,
@@ -78,5 +105,19 @@ export function useCreateKol() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: kolKeys.lists() });
     },
+  });
+}
+
+// 取得 KOL 勝率統計
+export function useKolWinRate(id: string) {
+  return useQuery({
+    queryKey: kolKeys.winRate(id),
+    queryFn: async (): Promise<WinRateStats> => {
+      const res = await fetch(API_ROUTES.KOL_WIN_RATE(id));
+      if (!res.ok) throw new Error('Failed to fetch KOL win rate');
+      return res.json();
+    },
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000, // 5 分鐘內不重新請求
   });
 }

@@ -2,48 +2,56 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, FileText, Sparkles } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowRight, FileText, Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { ROUTES } from '@/lib/constants';
-
-// 模擬草稿資料
-const mockDrafts = [
-  {
-    id: '1',
-    preview: 'TSLA 相關 - 特斯拉最新財報分析...',
-    updatedAt: '2小時前',
-  },
-  {
-    id: '2',
-    preview: 'AAPL 相關 - Apple Vision Pro 評測...',
-    updatedAt: '昨天',
-  },
-  {
-    id: '3',
-    preview: 'NVDA 相關 - AI 晶片需求持續強勁...',
-    updatedAt: '3天前',
-  },
-];
+import { useDrafts, useCreateDraft } from '@/hooks';
+import { formatRelativeTime } from '@/lib/utils/date';
 
 export default function InputPage() {
+  const router = useRouter();
   const [content, setContent] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
+  // 使用 API 取得最近草稿
+  const { data: draftsData, isLoading: draftsLoading } = useDrafts({ limit: 3 });
+  const createDraft = useCreateDraft();
+
+  const recentDrafts = draftsData?.data ?? [];
+
   const handleSaveDraft = async () => {
-    // TODO: 實作儲存草稿功能
-    console.log('Save draft:', content);
+    if (!content.trim()) return;
+    try {
+      const newDraft = await createDraft.mutateAsync({
+        content: content.trim(),
+      });
+      setContent('');
+      // 導向草稿編輯頁
+      router.push(ROUTES.DRAFT_DETAIL(newDraft.id));
+    } catch (error) {
+      console.error('Failed to save draft:', error);
+    }
   };
 
   const handleDirectCreate = async () => {
-    // TODO: 實作直接建檔功能
+    if (!content.trim()) return;
     setIsAnalyzing(true);
-    // 模擬 AI 分析
-    setTimeout(() => {
+    try {
+      // 先建立草稿
+      const newDraft = await createDraft.mutateAsync({
+        content: content.trim(),
+      });
+      setContent('');
+      // 導向草稿編輯頁（未來可直接導向預覽確認頁）
+      router.push(ROUTES.DRAFT_DETAIL(newDraft.id));
+    } catch (error) {
+      console.error('Failed to create draft:', error);
+    } finally {
       setIsAnalyzing(false);
-      // 導向預覽確認頁
-    }, 2000);
+    }
   };
 
   return (
@@ -109,13 +117,20 @@ export default function InputPage() {
             <Button
               variant="outline"
               onClick={handleSaveDraft}
-              disabled={!content.trim()}
+              disabled={!content.trim() || createDraft.isPending}
             >
-              儲存為草稿
+              {createDraft.isPending && !isAnalyzing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  儲存中...
+                </>
+              ) : (
+                '儲存為草稿'
+              )}
             </Button>
             <Button
               onClick={handleDirectCreate}
-              disabled={!content.trim() || isAnalyzing}
+              disabled={!content.trim() || isAnalyzing || createDraft.isPending}
             >
               {isAnalyzing ? (
                 <>
@@ -148,20 +163,34 @@ export default function InputPage() {
           </Button>
         </CardHeader>
         <CardContent>
-          {mockDrafts.length > 0 ? (
+          {draftsLoading ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              <span className="ml-2 text-sm text-muted-foreground">載入中...</span>
+            </div>
+          ) : recentDrafts.length > 0 ? (
             <div className="space-y-2">
-              {mockDrafts.map((draft) => (
-                <Link
-                  key={draft.id}
-                  href={ROUTES.DRAFT_DETAIL(draft.id)}
-                  className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
-                >
-                  <span className="truncate text-sm">{draft.preview}</span>
-                  <span className="ml-4 shrink-0 text-xs text-muted-foreground">
-                    {draft.updatedAt}
-                  </span>
-                </Link>
-              ))}
+              {recentDrafts.map((draft) => {
+                const preview = draft.content 
+                  ? draft.content.slice(0, 50) + (draft.content.length > 50 ? '...' : '')
+                  : '（尚無內容）';
+                const stockTickers = draft.stocks.map((s) => s.ticker).join(', ');
+                const displayText = stockTickers 
+                  ? `${stockTickers} - ${preview}` 
+                  : preview;
+                return (
+                  <Link
+                    key={draft.id}
+                    href={ROUTES.DRAFT_DETAIL(draft.id)}
+                    className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                  >
+                    <span className="truncate text-sm">{displayText}</span>
+                    <span className="ml-4 shrink-0 text-xs text-muted-foreground">
+                      {formatRelativeTime(draft.updatedAt)}
+                    </span>
+                  </Link>
+                );
+              })}
             </div>
           ) : (
             <p className="text-center text-sm text-muted-foreground">

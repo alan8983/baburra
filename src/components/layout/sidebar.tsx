@@ -12,6 +12,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useUIStore } from '@/stores';
 import { ROUTES } from '@/lib/constants';
+import { useAiUsage } from '@/hooks/use-ai';
 
 const iconMap = {
   LayoutDashboard,
@@ -83,6 +85,74 @@ function NavItem({ label, href, icon, showBadge, isCollapsed }: NavItemProps) {
         )}
       </Button>
     </Link>
+  );
+}
+
+function AiQuotaFooter({ isCollapsed }: { isCollapsed: boolean }) {
+  const { data: usage, isLoading } = useAiUsage();
+
+  if (isCollapsed) {
+    // 收合狀態只顯示圖示
+    const percentage = usage ? (usage.remaining / usage.weeklyLimit) * 100 : 100;
+    const colorClass = percentage > 50 ? 'text-green-500' : percentage > 20 ? 'text-yellow-500' : 'text-red-500';
+
+    return (
+      <div className="border-t p-2 flex justify-center">
+        <Sparkles className={cn('h-4 w-4', isLoading ? 'animate-pulse text-muted-foreground' : colorClass)} />
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="border-t p-4">
+        <div className="text-xs text-muted-foreground animate-pulse">
+          <span>AI 配額: </span>
+          <span className="font-medium">載入中...</span>
+        </div>
+        <div className="mt-2 h-1.5 w-full rounded-full bg-muted" />
+      </div>
+    );
+  }
+
+  if (!usage) {
+    return null;
+  }
+
+  const percentage = (usage.remaining / usage.weeklyLimit) * 100;
+  const colorClass = percentage > 50 ? 'bg-green-500' : percentage > 20 ? 'bg-yellow-500' : 'bg-red-500';
+
+  // 格式化重置時間
+  const formatResetTime = () => {
+    if (!usage.resetAt) return '';
+    const reset = new Date(usage.resetAt);
+    const now = new Date();
+    const diffDays = Math.ceil((reset.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays <= 0) return '今天重置';
+    if (diffDays === 1) return '明天重置';
+    return `${diffDays}天後重置`;
+  };
+
+  return (
+    <div className="border-t p-4">
+      <div className="flex items-center justify-between text-xs">
+        <div className="flex items-center gap-1 text-muted-foreground">
+          <Sparkles className="h-3 w-3" />
+          <span>AI 配額</span>
+        </div>
+        <span className="text-muted-foreground">{formatResetTime()}</span>
+      </div>
+      <div className="mt-1 flex items-baseline gap-1">
+        <span className="text-lg font-bold">{usage.remaining}</span>
+        <span className="text-sm text-muted-foreground">/ {usage.weeklyLimit} 本週</span>
+      </div>
+      <div className="mt-2 h-1.5 w-full rounded-full bg-muted">
+        <div
+          className={cn('h-full rounded-full transition-all', colorClass)}
+          style={{ width: `${percentage}%` }}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -156,21 +226,7 @@ export function Sidebar() {
       </ScrollArea>
 
       {/* AI Quota Footer */}
-      {sidebarOpen && (
-        <div className="border-t p-4">
-          <div className="text-xs text-muted-foreground">
-            <span>AI 配額: </span>
-            <span className="font-medium text-foreground">12/15</span>
-            <span> 本週</span>
-          </div>
-          <div className="mt-2 h-1.5 w-full rounded-full bg-muted">
-            <div
-              className="h-full rounded-full bg-primary"
-              style={{ width: '80%' }}
-            />
-          </div>
-        </div>
-      )}
+      <AiQuotaFooter isCollapsed={!sidebarOpen} />
     </aside>
   );
 }

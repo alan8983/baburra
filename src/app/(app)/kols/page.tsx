@@ -9,49 +9,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ROUTES } from '@/lib/constants';
-
-// 模擬資料
-const mockKols = [
-  {
-    id: '1',
-    name: '股癌',
-    avatarUrl: null,
-    postCount: 42,
-    winRate: 0.65,
-    lastPostAt: '2026-01-30',
-  },
-  {
-    id: '2',
-    name: '財報狗',
-    avatarUrl: null,
-    postCount: 38,
-    winRate: 0.72,
-    lastPostAt: '2026-01-28',
-  },
-  {
-    id: '3',
-    name: '艾蜜莉',
-    avatarUrl: null,
-    postCount: 56,
-    winRate: 0.58,
-    lastPostAt: '2026-01-25',
-  },
-  {
-    id: '4',
-    name: '老王愛說笑',
-    avatarUrl: null,
-    postCount: 24,
-    winRate: 0.68,
-    lastPostAt: '2026-01-20',
-  },
-];
+import { formatDate } from '@/lib/utils/date';
+import { useKols } from '@/hooks';
 
 export default function KolsPage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const { data, isLoading, error } = useKols({ search: searchQuery || undefined });
 
-  const filteredKols = mockKols.filter((kol) =>
-    kol.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const kols = data?.data ?? [];
+  const filteredKols = kols;
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold tracking-tight">KOL 列表</h1>
+        <Card className="py-12">
+          <CardContent className="flex flex-col items-center justify-center text-center">
+            <p className="text-destructive">無法載入 KOL 列表，請稍後再試。</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -80,48 +59,59 @@ export default function KolsPage() {
         />
       </div>
 
+      {/* Loading */}
+      {isLoading && (
+        <Card className="py-12">
+          <CardContent className="flex justify-center text-muted-foreground">
+            載入中...
+          </CardContent>
+        </Card>
+      )}
+
       {/* KOL Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {filteredKols.map((kol) => (
-          <Link key={kol.id} href={ROUTES.KOL_DETAIL(kol.id)}>
-            <Card className="transition-colors hover:bg-muted/50">
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={kol.avatarUrl || undefined} />
-                    <AvatarFallback>
-                      <User className="h-6 w-6" />
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-base truncate">{kol.name}</CardTitle>
-                    <CardDescription className="text-xs">
-                      最近發文: {kol.lastPostAt}
-                    </CardDescription>
+      {!isLoading && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filteredKols.map((kol) => (
+            <Link key={kol.id} href={ROUTES.KOL_DETAIL(kol.id)}>
+              <Card className="transition-colors hover:bg-muted/50">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={kol.avatarUrl || undefined} />
+                      <AvatarFallback>
+                        <User className="h-6 w-6" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-base truncate">{kol.name}</CardTitle>
+                      <CardDescription className="text-xs">
+                        最近發文: {kol.lastPostAt ? formatDate(kol.lastPostAt) : '—'}
+                      </CardDescription>
+                    </div>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between text-sm">
-                  <div>
-                    <span className="text-muted-foreground">文章數: </span>
-                    <span className="font-medium">{kol.postCount}</span>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between text-sm">
+                    <div>
+                      <span className="text-muted-foreground">文章數: </span>
+                      <span className="font-medium">{kol.postCount}</span>
+                    </div>
+                    <Badge
+                      variant={kol.winRate != null && kol.winRate >= 0.6 ? 'default' : 'secondary'}
+                      className={kol.winRate != null && kol.winRate >= 0.6 ? 'bg-green-600' : ''}
+                    >
+                      勝率 {kol.winRate != null ? `${(kol.winRate * 100).toFixed(0)}%` : '—'}
+                    </Badge>
                   </div>
-                  <Badge
-                    variant={kol.winRate >= 0.6 ? 'default' : 'secondary'}
-                    className={kol.winRate >= 0.6 ? 'bg-green-600' : ''}
-                  >
-                    勝率 {(kol.winRate * 100).toFixed(0)}%
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      )}
 
       {/* Empty State */}
-      {filteredKols.length === 0 && (
+      {!isLoading && filteredKols.length === 0 && (
         <Card className="py-12">
           <CardContent className="flex flex-col items-center justify-center text-center">
             <User className="h-12 w-12 text-muted-foreground" />

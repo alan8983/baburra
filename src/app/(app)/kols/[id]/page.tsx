@@ -1,8 +1,8 @@
 'use client';
 
-import { use } from 'react';
+import { use, useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ExternalLink, User } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Loader2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -10,66 +10,67 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { ROUTES } from '@/lib/constants';
+import { formatDate } from '@/lib/utils/date';
 import { SENTIMENT_LABELS, SENTIMENT_COLORS } from '@/domain/models/post';
-
-// 模擬資料
-const mockKol = {
-  id: '1',
-  name: '股癌',
-  avatarUrl: null,
-  bio: '專注美股分析，分享投資心得與市場觀察。',
-  socialLinks: {
-    twitter: 'https://twitter.com/example',
-    youtube: 'https://youtube.com/example',
-  },
-  postCount: 42,
-  winRate: 0.65,
-};
-
-const mockPostsByStock = [
-  {
-    stockId: '1',
-    ticker: 'AAPL',
-    name: 'Apple Inc.',
-    winRate: 0.7,
-    posts: [
-      { id: '1', sentiment: 1 as const, postedAt: '2026/01/30', priceChange: 5.2 },
-      { id: '2', sentiment: 2 as const, postedAt: '2026/01/15', priceChange: 12.3 },
-    ],
-    totalPosts: 8,
-  },
-  {
-    stockId: '2',
-    ticker: 'TSLA',
-    name: 'Tesla Inc.',
-    winRate: 0.55,
-    posts: [
-      { id: '3', sentiment: -1 as const, postedAt: '2026/01/28', priceChange: -3.1 },
-    ],
-    totalPosts: 5,
-  },
-  {
-    stockId: '3',
-    ticker: 'NVDA',
-    name: 'NVIDIA Corp.',
-    winRate: 0.8,
-    posts: [
-      { id: '4', sentiment: 2 as const, postedAt: '2026/01/25', priceChange: 15.8 },
-    ],
-    totalPosts: 10,
-  },
-];
-
-const winRateStats = [
-  { period: '5日', rate: 0.62, total: 42 },
-  { period: '30日', rate: 0.65, total: 40 },
-  { period: '90日', rate: 0.58, total: 35 },
-  { period: '365日', rate: 0.55, total: 28 },
-];
+import { useKol, useKolPosts, useKolWinRate } from '@/hooks';
+import { formatWinRate, getWinRateColorClass } from '@/domain/calculators';
 
 export default function KolDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const kol = mockKol;
+  const { data: kol, isLoading: kolLoading, error: kolError } = useKol(id);
+  const { data: postsData, isLoading: postsLoading } = useKolPosts(id);
+  const { data: winRateStats, isLoading: winRateLoading } = useKolWinRate(id);
+
+  const postsByStock = useMemo(() => {
+    const list = postsData?.data ?? [];
+    const map = new Map<
+      string,
+      { stockId: string; ticker: string; name: string; posts: Array<{ id: string; sentiment: number; postedAt: Date; priceChange: number | null }> }
+    >();
+    for (const post of list) {
+      const priceChanges = post.priceChanges ?? {};
+      for (const stock of post.stocks) {
+        if (!map.has(stock.id)) {
+          map.set(stock.id, { stockId: stock.id, ticker: stock.ticker, name: stock.name, posts: [] });
+        }
+        const entry = map.get(stock.id)!;
+        const change = priceChanges[stock.id]?.day5 ?? null;
+        entry.posts.push({
+          id: post.id,
+          sentiment: post.sentiment,
+          postedAt: post.postedAt,
+          priceChange: change,
+        });
+      }
+    }
+    return Array.from(map.values());
+  }, [postsData?.data]);
+
+  if (kolError || (!kolLoading && !kol)) {
+    return (
+      <div className="space-y-6">
+        <Button variant="ghost" size="sm" asChild>
+          <Link href={ROUTES.KOLS}>返回 KOL 列表</Link>
+        </Button>
+        <Card className="py-12">
+          <CardContent className="flex flex-col items-center justify-center text-center">
+            <p className="text-destructive">無法載入 KOL 或找不到該 KOL</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (kolLoading || !kol) {
+    return (
+      <div className="space-y-6">
+        <Button variant="ghost" size="sm" asChild>
+          <Link href={ROUTES.KOLS}>返回 KOL 列表</Link>
+        </Button>
+        <p className="text-muted-foreground">載入中...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -102,9 +103,9 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
                 </Badge>
                 <Badge
                   variant="default"
-                  className={kol.winRate >= 0.6 ? 'bg-green-600' : ''}
+                  className={kol.winRate != null && kol.winRate >= 0.6 ? 'bg-green-600' : ''}
                 >
-                  總體勝率: {(kol.winRate * 100).toFixed(0)}%
+                  總體勝率: {kol.winRate != null ? `${(kol.winRate * 100).toFixed(0)}%` : '—'}
                 </Badge>
               </div>
               {/* Social Links */}
@@ -140,61 +141,66 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
         {/* Overview Tab */}
         <TabsContent value="overview" className="space-y-4">
           <h2 className="text-lg font-semibold">依標的分組的文章</h2>
-          {mockPostsByStock.map((stock) => (
-            <Card key={stock.stockId}>
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-base">
-                      {stock.ticker} - {stock.name}
-                    </CardTitle>
-                    <CardDescription>
-                      共 {stock.totalPosts} 篇文章
-                    </CardDescription>
-                  </div>
-                  <Badge
-                    variant={stock.winRate >= 0.6 ? 'default' : 'secondary'}
-                    className={stock.winRate >= 0.6 ? 'bg-green-600' : ''}
-                  >
-                    勝率 {(stock.winRate * 100).toFixed(0)}%
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {stock.posts.map((post) => (
-                  <div
-                    key={post.id}
-                    className="flex items-center justify-between rounded-lg border p-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Badge
-                        variant="outline"
-                        className={SENTIMENT_COLORS[post.sentiment]}
-                      >
-                        {SENTIMENT_LABELS[post.sentiment]}
-                      </Badge>
-                      <span className="text-sm text-muted-foreground">
-                        {post.postedAt}
-                      </span>
+          {postsLoading && <p className="text-muted-foreground">載入文章...</p>}
+          {!postsLoading && postsByStock.length === 0 && (
+            <p className="text-muted-foreground">尚無文章</p>
+          )}
+          {!postsLoading &&
+            postsByStock.map((stock) => (
+              <Card key={stock.stockId}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base">
+                        {stock.ticker} - {stock.name}
+                      </CardTitle>
+                      <CardDescription>
+                        共 {stock.posts.length} 篇文章
+                      </CardDescription>
                     </div>
-                    <span
-                      className={`text-sm font-medium ${
-                        post.priceChange >= 0 ? 'text-green-600' : 'text-red-600'
-                      }`}
-                    >
-                      {post.priceChange >= 0 ? '+' : ''}
-                      {post.priceChange.toFixed(1)}% (5日)
-                    </span>
                   </div>
-                ))}
-                {stock.totalPosts > stock.posts.length && (
-                  <Button variant="ghost" size="sm" className="w-full">
-                    查看全部 {stock.totalPosts} 篇
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {stock.posts.slice(0, 5).map((post) => (
+                    <Link key={post.id} href={ROUTES.POST_DETAIL(post.id)}>
+                      <div className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50">
+                        <div className="flex items-center gap-3">
+                          <Badge
+                            variant="outline"
+                            className={SENTIMENT_COLORS[post.sentiment as keyof typeof SENTIMENT_COLORS]}
+                          >
+                            {SENTIMENT_LABELS[post.sentiment as keyof typeof SENTIMENT_LABELS]}
+                          </Badge>
+                          <span className="text-sm text-muted-foreground">
+                            {formatDate(post.postedAt)}
+                          </span>
+                        </div>
+                        <span
+                          className={`text-sm font-medium ${
+                            post.priceChange == null
+                              ? 'text-muted-foreground'
+                              : post.priceChange >= 0
+                                ? 'text-green-600'
+                                : 'text-red-600'
+                          }`}
+                        >
+                          {post.priceChange != null
+                            ? `${post.priceChange >= 0 ? '+' : ''}${post.priceChange.toFixed(1)}% (5日)`
+                            : '—'}
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+                  {stock.posts.length > 5 && (
+                    <Button variant="ghost" size="sm" className="w-full" asChild>
+                      <Link href={ROUTES.STOCK_DETAIL(stock.ticker)}>
+                        查看全部 {stock.posts.length} 篇
+                      </Link>
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
         </TabsContent>
 
         {/* Stats Tab */}
@@ -207,22 +213,64 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {winRateStats.map((stat) => (
-                  <div
-                    key={stat.period}
-                    className="rounded-lg border p-4 text-center"
-                  >
-                    <p className="text-sm text-muted-foreground">{stat.period}勝率</p>
-                    <p className="mt-1 text-3xl font-bold">
-                      {(stat.rate * 100).toFixed(0)}%
+              {winRateLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <span className="ml-2 text-muted-foreground">計算勝率中...</span>
+                </div>
+              ) : winRateStats ? (
+                <div className="space-y-6">
+                  {/* 整體統計 */}
+                  <div className="rounded-lg border bg-muted/30 p-4 text-center">
+                    <p className="text-sm text-muted-foreground">整體平均勝率</p>
+                    <p className={`mt-1 text-4xl font-bold ${getWinRateColorClass(winRateStats.overall.avgWinRate)}`}>
+                      {formatWinRate(winRateStats.overall.avgWinRate)}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      ({stat.total} 篇有效文章)
+                      共 {winRateStats.overall.total} 篇有方向性文章
                     </p>
                   </div>
-                ))}
-              </div>
+
+                  {/* 各期間統計 */}
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {[
+                      { key: 'day5', label: '5日', data: winRateStats.day5 },
+                      { key: 'day30', label: '30日', data: winRateStats.day30 },
+                      { key: 'day90', label: '90日', data: winRateStats.day90 },
+                      { key: 'day365', label: '365日', data: winRateStats.day365 },
+                    ].map((item) => (
+                      <div
+                        key={item.key}
+                        className="rounded-lg border p-4 text-center"
+                      >
+                        <p className="text-sm text-muted-foreground">{item.label}勝率</p>
+                        <p className={`mt-1 text-3xl font-bold ${getWinRateColorClass(item.data.rate)}`}>
+                          {formatWinRate(item.data.rate)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.data.wins}勝 / {item.data.losses}敗
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          ({item.data.total} 筆有效樣本)
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* 說明 */}
+                  <div className="rounded-lg border border-dashed p-4">
+                    <h4 className="text-sm font-medium">勝率計算說明</h4>
+                    <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                      <li>• 看多文章：發文後股價上漲即為勝利</li>
+                      <li>• 看空文章：發文後股價下跌即為勝利</li>
+                      <li>• 中立文章不納入勝率計算</li>
+                      <li>• 每篇文章對應的每個標的分別計算</li>
+                    </ul>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground">無法載入勝率資料</p>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
