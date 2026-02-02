@@ -107,6 +107,7 @@ export function KOLSelector({
             !value && 'text-muted-foreground',
             className
           )}
+          data-testid="kol-selector-trigger"
         >
           {value ? (
             <div className="flex items-center gap-2">
@@ -124,15 +125,28 @@ export function KOLSelector({
           )}
           <div className="flex items-center gap-1">
             {value && (
-              <X className="h-4 w-4 shrink-0 opacity-50 hover:opacity-100" onClick={handleClear} />
+              <button
+                type="button"
+                onClick={handleClear}
+                className="shrink-0 opacity-50 hover:opacity-100 focus:outline-none"
+                data-testid="kol-selector-clear-button"
+                aria-label="清除選擇"
+              >
+                <X className="h-4 w-4" />
+              </button>
             )}
             <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
           </div>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0" align="start">
+      <PopoverContent className="w-[300px] p-0" align="start" data-testid="kol-selector-popover">
         <Command shouldFilter={false}>
-          <CommandInput placeholder="搜尋 KOL 名稱..." value={search} onValueChange={setSearch} />
+          <CommandInput
+            placeholder="搜尋 KOL 名稱..."
+            value={search}
+            onValueChange={setSearch}
+            data-testid="kol-selector-input"
+          />
           <CommandList>
             {isLoading ? (
               <div className="flex items-center justify-center py-6">
@@ -155,6 +169,7 @@ export function KOLSelector({
                       value={kol.id}
                       onSelect={() => handleSelect(kol)}
                       className="cursor-pointer"
+                      data-testid={`kol-selector-item-${kol.id}`}
                     >
                       <Avatar className="h-6 w-6">
                         <AvatarImage src={kol.avatarUrl || undefined} />
@@ -175,6 +190,7 @@ export function KOLSelector({
                     onSelect={handleCreateNew}
                     className="cursor-pointer"
                     disabled={!canCreateNew}
+                    data-testid="kol-selector-create-button"
                   >
                     <Plus className="h-4 w-4" />
                     <span>{canCreateNew ? `新增 KOL「${search}」` : '輸入名稱以新增 KOL'}</span>

@@ -5,9 +5,9 @@ import { defineConfig, devices } from '@playwright/test';
  * @see https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
-  testDir: './e2e',
+  testDir: './tests/e2e',
   // 測試報告輸出目錄
-  outputDir: './e2e/test-results',
+  outputDir: './tests/e2e/test-results',
   // 測試執行超時
   timeout: 30 * 1000,
   expect: {
@@ -21,7 +21,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   // 測試報告格式
   reporter: [
-    ['html', { outputFolder: './e2e/playwright-report' }],
+    ['html', { outputFolder: './tests/e2e/playwright-report' }],
     ['list'],
   ],
   // 共用設定

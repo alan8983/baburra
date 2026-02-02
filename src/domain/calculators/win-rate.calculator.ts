@@ -75,13 +75,28 @@ function calculatePeriodWinRate(posts: PostForWinRate[], period: PriceChangePeri
   }
 
   const total = wins + losses;
+  // 使用高精度計算，避免浮點數誤差
+  const rate = total > 0 ? Number((wins / total).toFixed(10)) : null;
   return {
     period,
     total,
     wins,
     losses,
-    rate: total > 0 ? wins / total : null,
+    rate,
   };
+}
+
+/**
+ * 計算特定期間的勝率（符合計畫中的簡單版本）
+ * @param posts 包含情緒和漲跌幅的文章列表
+ * @param period 計算期間（5, 30, 90, 365 天）
+ * @returns 勝率結果
+ */
+export function calculateWinRate(
+  posts: PostForWinRate[],
+  period: PriceChangePeriod
+): WinRateResult {
+  return calculatePeriodWinRate(posts, period);
 }
 
 /**
@@ -101,7 +116,9 @@ export function calculateWinRateStats(posts: PostForWinRate[]): WinRateStats {
 
   let avgWinRate: number | null = null;
   if (validResults.length > 0) {
-    avgWinRate = validResults.reduce((sum, r) => sum + (r.rate ?? 0), 0) / validResults.length;
+    // 使用高精度計算，避免浮點數誤差
+    const sum = validResults.reduce((acc, r) => acc + (r.rate ?? 0), 0);
+    avgWinRate = Number((sum / validResults.length).toFixed(10));
   }
 
   return {

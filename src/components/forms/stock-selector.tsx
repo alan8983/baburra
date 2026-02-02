@@ -127,6 +127,7 @@ export function StockSelector({
                 className="h-4 w-4 p-0 hover:bg-transparent"
                 onClick={(e) => handleRemove(stock, e)}
                 disabled={disabled}
+                data-testid={`stock-selector-remove-${stock.id}`}
               >
                 <X className="h-3 w-3" />
               </Button>
@@ -144,6 +145,7 @@ export function StockSelector({
             aria-expanded={open}
             disabled={disabled}
             className={cn('w-full justify-between font-normal', 'text-muted-foreground')}
+            data-testid="stock-selector-trigger"
           >
             <div className="flex items-center gap-2">
               <Search className="h-4 w-4" />
@@ -156,12 +158,13 @@ export function StockSelector({
             <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[350px] p-0" align="start">
+        <PopoverContent className="w-[350px] p-0" align="start" data-testid="stock-selector-popover">
           <Command shouldFilter={false}>
             <CommandInput
               placeholder="搜尋代碼或名稱..."
               value={search}
               onValueChange={setSearch}
+              data-testid="stock-selector-input"
             />
             <CommandList>
               {isLoading ? (
@@ -192,6 +195,7 @@ export function StockSelector({
                             'cursor-pointer',
                             !canSelect && 'cursor-not-allowed opacity-50'
                           )}
+                          data-testid={`stock-selector-item-${stock.id}`}
                         >
                           <div className="mr-2 flex h-5 w-5 items-center justify-center rounded border">
                             {selected && <Check className="text-primary h-4 w-4" />}
@@ -215,6 +219,7 @@ export function StockSelector({
                       onSelect={handleCreateNew}
                       className="cursor-pointer"
                       disabled={!canCreateNew}
+                      data-testid="stock-selector-create-button"
                     >
                       <Plus className="h-4 w-4" />
                       <span>
