@@ -10,6 +10,11 @@ const publicRoutes = ['/', '/login', '/register', '/auth/callback', '/forgot-pas
 // API 路由（部分需要認證）
 const publicApiRoutes = ['/api/auth'];
 
+// 檢查 Supabase 是否正確配置（非占位符）
+const isSupabaseConfigured =
+  process.env.NEXT_PUBLIC_SUPABASE_URL &&
+  !process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder');
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -25,6 +30,17 @@ export async function middleware(request: NextRequest) {
 
   // 跳過公開 API 路由
   if (publicApiRoutes.some((route) => pathname.startsWith(route))) {
+    return NextResponse.next();
+  }
+
+  // 如果有 DEV_USER_ID 或 TEST_USER_ID，直接允許存取（用於開發/測試）
+  const hasTestUser = !!(process.env.DEV_USER_ID || process.env.TEST_USER_ID);
+  if (hasTestUser) {
+    return NextResponse.next();
+  }
+
+  // 如果 Supabase 未正確配置，跳過認證（避免錯誤）
+  if (!isSupabaseConfigured) {
     return NextResponse.next();
   }
 
@@ -61,12 +77,8 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // 開發模式：如果有 DEV_USER_ID 環境變數，允許未登入存取
-  const isDev = process.env.NODE_ENV === 'development';
-  const hasDevUser = !!process.env.DEV_USER_ID;
-
-  // 如果未登入且不是開發模式（或沒有 DEV_USER_ID）
-  if (!user && !(isDev && hasDevUser)) {
+  // 如果未登入
+  if (!user) {
     // API 路由返回 401
     if (pathname.startsWith('/api/')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
