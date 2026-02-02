@@ -7,10 +7,7 @@ import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { getDraftById, updateDraft, deleteDraft } from '@/infrastructure/repositories';
 import type { UpdateDraftInput } from '@/domain/models';
 
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const userId = await getCurrentUserId();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -27,10 +24,7 @@ export async function GET(
   }
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const userId = await getCurrentUserId();
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

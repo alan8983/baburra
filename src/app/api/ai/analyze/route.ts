@@ -20,15 +20,24 @@ export async function POST(request: NextRequest) {
 
     // 驗證輸入
     if (!body.content || typeof body.content !== 'string') {
-      return NextResponse.json({ error: 'content is required and must be a string' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'content is required and must be a string' },
+        { status: 400 }
+      );
     }
 
     if (body.content.length < 10) {
-      return NextResponse.json({ error: 'content must be at least 10 characters' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'content must be at least 10 characters' },
+        { status: 400 }
+      );
     }
 
     if (body.content.length > 10000) {
-      return NextResponse.json({ error: 'content must be less than 10000 characters' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'content must be less than 10000 characters' },
+        { status: 400 }
+      );
     }
 
     // 檢查配額

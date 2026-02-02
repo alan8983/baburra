@@ -25,13 +25,23 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
     const list = postsData?.data ?? [];
     const map = new Map<
       string,
-      { stockId: string; ticker: string; name: string; posts: Array<{ id: string; sentiment: number; postedAt: Date; priceChange: number | null }> }
+      {
+        stockId: string;
+        ticker: string;
+        name: string;
+        posts: Array<{ id: string; sentiment: number; postedAt: Date; priceChange: number | null }>;
+      }
     >();
     for (const post of list) {
       const priceChanges = post.priceChanges ?? {};
       for (const stock of post.stocks) {
         if (!map.has(stock.id)) {
-          map.set(stock.id, { stockId: stock.id, ticker: stock.ticker, name: stock.name, posts: [] });
+          map.set(stock.id, {
+            stockId: stock.id,
+            ticker: stock.ticker,
+            name: stock.name,
+            posts: [],
+          });
         }
         const entry = map.get(stock.id)!;
         const change = priceChanges[stock.id]?.day5 ?? null;
@@ -94,13 +104,9 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
             </Avatar>
             <div className="flex-1 text-center sm:text-left">
               <h1 className="text-2xl font-bold">{kol.name}</h1>
-              {kol.bio && (
-                <p className="mt-1 text-muted-foreground">{kol.bio}</p>
-              )}
+              {kol.bio && <p className="text-muted-foreground mt-1">{kol.bio}</p>}
               <div className="mt-3 flex flex-wrap items-center justify-center gap-4 sm:justify-start">
-                <Badge variant="outline">
-                  文章數: {kol.postCount}
-                </Badge>
+                <Badge variant="outline">文章數: {kol.postCount}</Badge>
                 <Badge
                   variant="default"
                   className={kol.winRate != null && kol.winRate >= 0.6 ? 'bg-green-600' : ''}
@@ -117,7 +123,7 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
                       href={url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary"
+                      className="text-muted-foreground hover:text-primary inline-flex items-center gap-1 text-sm"
                     >
                       <ExternalLink className="h-3 w-3" />
                       {platform}
@@ -154,24 +160,24 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
                       <CardTitle className="text-base">
                         {stock.ticker} - {stock.name}
                       </CardTitle>
-                      <CardDescription>
-                        共 {stock.posts.length} 篇文章
-                      </CardDescription>
+                      <CardDescription>共 {stock.posts.length} 篇文章</CardDescription>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {stock.posts.slice(0, 5).map((post) => (
                     <Link key={post.id} href={ROUTES.POST_DETAIL(post.id)}>
-                      <div className="flex items-center justify-between rounded-lg border p-3 hover:bg-muted/50">
+                      <div className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3">
                         <div className="flex items-center gap-3">
                           <Badge
                             variant="outline"
-                            className={SENTIMENT_COLORS[post.sentiment as keyof typeof SENTIMENT_COLORS]}
+                            className={
+                              SENTIMENT_COLORS[post.sentiment as keyof typeof SENTIMENT_COLORS]
+                            }
                           >
                             {SENTIMENT_LABELS[post.sentiment as keyof typeof SENTIMENT_LABELS]}
                           </Badge>
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-muted-foreground text-sm">
                             {formatDate(post.postedAt)}
                           </span>
                         </div>
@@ -208,25 +214,25 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
           <Card>
             <CardHeader>
               <CardTitle>勝率統計</CardTitle>
-              <CardDescription>
-                依不同時間週期計算的預測勝率
-              </CardDescription>
+              <CardDescription>依不同時間週期計算的預測勝率</CardDescription>
             </CardHeader>
             <CardContent>
               {winRateLoading ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  <span className="ml-2 text-muted-foreground">計算勝率中...</span>
+                  <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+                  <span className="text-muted-foreground ml-2">計算勝率中...</span>
                 </div>
               ) : winRateStats ? (
                 <div className="space-y-6">
                   {/* 整體統計 */}
-                  <div className="rounded-lg border bg-muted/30 p-4 text-center">
-                    <p className="text-sm text-muted-foreground">整體平均勝率</p>
-                    <p className={`mt-1 text-4xl font-bold ${getWinRateColorClass(winRateStats.overall.avgWinRate)}`}>
+                  <div className="bg-muted/30 rounded-lg border p-4 text-center">
+                    <p className="text-muted-foreground text-sm">整體平均勝率</p>
+                    <p
+                      className={`mt-1 text-4xl font-bold ${getWinRateColorClass(winRateStats.overall.avgWinRate)}`}
+                    >
                       {formatWinRate(winRateStats.overall.avgWinRate)}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       共 {winRateStats.overall.total} 篇有方向性文章
                     </p>
                   </div>
@@ -239,18 +245,17 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
                       { key: 'day90', label: '90日', data: winRateStats.day90 },
                       { key: 'day365', label: '365日', data: winRateStats.day365 },
                     ].map((item) => (
-                      <div
-                        key={item.key}
-                        className="rounded-lg border p-4 text-center"
-                      >
-                        <p className="text-sm text-muted-foreground">{item.label}勝率</p>
-                        <p className={`mt-1 text-3xl font-bold ${getWinRateColorClass(item.data.rate)}`}>
+                      <div key={item.key} className="rounded-lg border p-4 text-center">
+                        <p className="text-muted-foreground text-sm">{item.label}勝率</p>
+                        <p
+                          className={`mt-1 text-3xl font-bold ${getWinRateColorClass(item.data.rate)}`}
+                        >
                           {formatWinRate(item.data.rate)}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-muted-foreground text-xs">
                           {item.data.wins}勝 / {item.data.losses}敗
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-muted-foreground text-xs">
                           ({item.data.total} 筆有效樣本)
                         </p>
                       </div>
@@ -260,7 +265,7 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
                   {/* 說明 */}
                   <div className="rounded-lg border border-dashed p-4">
                     <h4 className="text-sm font-medium">勝率計算說明</h4>
-                    <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                    <ul className="text-muted-foreground mt-2 space-y-1 text-xs">
                       <li>• 看多文章：發文後股價上漲即為勝利</li>
                       <li>• 看空文章：發文後股價下跌即為勝利</li>
                       <li>• 中立文章不納入勝率計算</li>
@@ -269,7 +274,7 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
                   </div>
                 </div>
               ) : (
-                <p className="text-center text-muted-foreground">無法載入勝率資料</p>
+                <p className="text-muted-foreground text-center">無法載入勝率資料</p>
               )}
             </CardContent>
           </Card>
@@ -284,9 +289,7 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
             <CardContent className="space-y-4">
               <div>
                 <h3 className="font-medium">簡介</h3>
-                <p className="mt-1 text-muted-foreground">
-                  {kol.bio || '尚無簡介'}
-                </p>
+                <p className="text-muted-foreground mt-1">{kol.bio || '尚無簡介'}</p>
               </div>
               <Separator />
               <div>
@@ -299,7 +302,7 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm text-primary hover:underline"
+                        className="text-primary flex items-center gap-2 text-sm hover:underline"
                       >
                         <ExternalLink className="h-4 w-4" />
                         {platform}: {url}
@@ -307,7 +310,7 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
                     ))}
                   </div>
                 ) : (
-                  <p className="mt-1 text-muted-foreground">尚無社群連結</p>
+                  <p className="text-muted-foreground mt-1">尚無社群連結</p>
                 )}
               </div>
             </CardContent>

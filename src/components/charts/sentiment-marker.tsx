@@ -28,7 +28,7 @@ export function postToSentimentMarker(
 export function SentimentMarkerLegend({ markers }: { markers: SentimentMarkerItem[] }) {
   if (markers.length === 0) return null;
   return (
-    <div className="mt-2 flex flex-wrap gap-3 text-xs text-muted-foreground">
+    <div className="text-muted-foreground mt-2 flex flex-wrap gap-3 text-xs">
       {markers.map((m, i) => (
         <span key={i}>
           <span
@@ -41,7 +41,9 @@ export function SentimentMarkerLegend({ markers }: { markers: SentimentMarkerIte
             }
           >
             {m.time}: {SENTIMENT_LABELS[m.sentiment as keyof typeof SENTIMENT_LABELS]}
-            {m.text && m.text !== SENTIMENT_LABELS[m.sentiment as keyof typeof SENTIMENT_LABELS] ? ` (${m.text})` : ''}
+            {m.text && m.text !== SENTIMENT_LABELS[m.sentiment as keyof typeof SENTIMENT_LABELS]
+              ? ` (${m.text})`
+              : ''}
           </span>
         </span>
       ))}

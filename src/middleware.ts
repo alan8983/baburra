@@ -44,9 +44,7 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({
             request,
           });
@@ -59,7 +57,9 @@ export async function middleware(request: NextRequest) {
   );
 
   // 嘗試取得使用者資訊
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   // 開發模式：如果有 DEV_USER_ID 環境變數，允許未登入存取
   const isDev = process.env.NODE_ENV === 'development';
@@ -69,10 +69,7 @@ export async function middleware(request: NextRequest) {
   if (!user && !(isDev && hasDevUser)) {
     // API 路由返回 401
     if (pathname.startsWith('/api/')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // 頁面路由重導向到登入頁

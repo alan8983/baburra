@@ -3,7 +3,13 @@
 // Post 相關 hooks
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Post, PostWithRelations, PostWithPriceChanges, CreatePostInput, UpdatePostInput } from '@/domain/models';
+import type {
+  Post,
+  PostWithRelations,
+  PostWithPriceChanges,
+  CreatePostInput,
+  UpdatePostInput,
+} from '@/domain/models';
 import { API_ROUTES } from '@/lib/constants';
 
 // Query Keys
@@ -61,9 +67,7 @@ export function useCheckDuplicateUrl(url: string) {
   return useQuery({
     queryKey: ['posts', 'checkDuplicate', url],
     queryFn: async (): Promise<{ isDuplicate: boolean; existingPost?: PostWithRelations }> => {
-      const res = await fetch(
-        `${API_ROUTES.POST_CHECK_DUPLICATE}?url=${encodeURIComponent(url)}`
-      );
+      const res = await fetch(`${API_ROUTES.POST_CHECK_DUPLICATE}?url=${encodeURIComponent(url)}`);
       if (!res.ok) throw new Error('Failed to check duplicate');
       return res.json();
     },

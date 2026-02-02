@@ -36,51 +36,53 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const parentCategories = categories.filter((c) => c.parentId === null);
 
     // 組織成階層結構
-    const groupedSummary = parentCategories.map((parent) => {
-      const childCategories = categories.filter((c) => c.parentId === parent.id);
-      const childSummaries = childCategories
-        .map((child) => {
-          const summaryItem = summary.find((s) => s.categoryId === child.id);
-          const categoryArguments = arguments_list.filter((a) => a.categoryId === child.id);
+    const groupedSummary = parentCategories
+      .map((parent) => {
+        const childCategories = categories.filter((c) => c.parentId === parent.id);
+        const childSummaries = childCategories
+          .map((child) => {
+            const summaryItem = summary.find((s) => s.categoryId === child.id);
+            const categoryArguments = arguments_list.filter((a) => a.categoryId === child.id);
 
-          return {
-            category: {
-              id: child.id,
-              code: child.code,
-              name: child.name,
-              description: child.description,
-            },
-            mentionCount: summaryItem?.mentionCount || 0,
-            bullishCount: summaryItem?.bullishCount || 0,
-            bearishCount: summaryItem?.bearishCount || 0,
-            avgSentiment: summaryItem?.avgSentiment || null,
-            firstMentionedAt: summaryItem?.firstMentionedAt?.toISOString() || null,
-            lastMentionedAt: summaryItem?.lastMentionedAt?.toISOString() || null,
-            arguments: categoryArguments.map((a) => ({
-              id: a.id,
-              postId: a.postId,
-              originalText: a.originalText,
-              summary: a.summary,
-              sentiment: a.sentiment,
-              confidence: a.confidence,
-              createdAt: a.createdAt.toISOString(),
-            })),
-          };
-        })
-        .filter((s) => s.mentionCount > 0);
+            return {
+              category: {
+                id: child.id,
+                code: child.code,
+                name: child.name,
+                description: child.description,
+              },
+              mentionCount: summaryItem?.mentionCount || 0,
+              bullishCount: summaryItem?.bullishCount || 0,
+              bearishCount: summaryItem?.bearishCount || 0,
+              avgSentiment: summaryItem?.avgSentiment || null,
+              firstMentionedAt: summaryItem?.firstMentionedAt?.toISOString() || null,
+              lastMentionedAt: summaryItem?.lastMentionedAt?.toISOString() || null,
+              arguments: categoryArguments.map((a) => ({
+                id: a.id,
+                postId: a.postId,
+                originalText: a.originalText,
+                summary: a.summary,
+                sentiment: a.sentiment,
+                confidence: a.confidence,
+                createdAt: a.createdAt.toISOString(),
+              })),
+            };
+          })
+          .filter((s) => s.mentionCount > 0);
 
-      const totalMentions = childSummaries.reduce((sum, s) => sum + s.mentionCount, 0);
+        const totalMentions = childSummaries.reduce((sum, s) => sum + s.mentionCount, 0);
 
-      return {
-        parent: {
-          id: parent.id,
-          code: parent.code,
-          name: parent.name,
-        },
-        totalMentions,
-        children: childSummaries,
-      };
-    }).filter((g) => g.totalMentions > 0);
+        return {
+          parent: {
+            id: parent.id,
+            code: parent.code,
+            name: parent.name,
+          },
+          totalMentions,
+          children: childSummaries,
+        };
+      })
+      .filter((g) => g.totalMentions > 0);
 
     return NextResponse.json({
       stock: {

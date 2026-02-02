@@ -73,9 +73,7 @@ export function calculateCategorySummary(
   const neutralCount = categoryArgs.filter((a) => a.sentiment === 0).length;
   const avgSentiment = categoryArgs.reduce((sum, a) => sum + a.sentiment, 0) / mentionCount;
 
-  const sortedByDate = categoryArgs.sort(
-    (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
-  );
+  const sortedByDate = categoryArgs.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   const firstMentionedAt = sortedByDate[0].createdAt;
   const lastMentionedAt = sortedByDate[sortedByDate.length - 1].createdAt;
 
@@ -152,9 +150,7 @@ export function calculateGroupedSummary(
 /**
  * 計算時間分布（按月分組）
  */
-export function calculateTimeDistribution(
-  arguments_list: ArgumentData[]
-): {
+export function calculateTimeDistribution(arguments_list: ArgumentData[]): {
   month: string;
   count: number;
   bullishCount: number;
@@ -163,10 +159,7 @@ export function calculateTimeDistribution(
   if (arguments_list.length === 0) return [];
 
   // 按月分組
-  const monthMap = new Map<
-    string,
-    { count: number; bullishCount: number; bearishCount: number }
-  >();
+  const monthMap = new Map<string, { count: number; bullishCount: number; bearishCount: number }>();
 
   for (const arg of arguments_list) {
     const monthKey = `${arg.createdAt.getFullYear()}-${String(arg.createdAt.getMonth() + 1).padStart(2, '0')}`;
@@ -204,9 +197,7 @@ export function calculateSentimentTrend(
   if (arguments_list.length === 0) return [];
 
   // 按日期排序
-  const sorted = [...arguments_list].sort(
-    (a, b) => a.createdAt.getTime() - b.createdAt.getTime()
-  );
+  const sorted = [...arguments_list].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
 
   const result: { date: Date; sentiment: number; movingAvg: number }[] = [];
 

@@ -20,7 +20,7 @@ export function Header() {
   const { setMobileMenuOpen } = useUIStore();
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background px-4 lg:px-6">
+    <header className="bg-background sticky top-0 z-40 flex h-16 items-center gap-4 border-b px-4 lg:px-6">
       {/* Mobile menu button */}
       <Button
         variant="ghost"
@@ -35,11 +35,11 @@ export function Header() {
       {/* Search */}
       <div className="flex-1">
         <form className="relative max-w-md">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Search className="text-muted-foreground absolute top-2.5 left-2.5 h-4 w-4" />
           <Input
             type="search"
             placeholder="搜尋 KOL、標的、文章..."
-            className="w-full appearance-none bg-muted pl-8"
+            className="bg-muted w-full appearance-none pl-8"
           />
         </form>
       </div>
@@ -49,7 +49,7 @@ export function Header() {
         {/* Notifications */}
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
-          <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-medium text-destructive-foreground">
+          <span className="bg-destructive text-destructive-foreground absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-medium">
             2
           </span>
           <span className="sr-only">Notifications</span>
@@ -70,10 +70,8 @@ export function Header() {
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">開發者</p>
-                <p className="text-xs leading-none text-muted-foreground">
-                  dev@example.com
-                </p>
+                <p className="text-sm leading-none font-medium">開發者</p>
+                <p className="text-muted-foreground text-xs leading-none">dev@example.com</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />

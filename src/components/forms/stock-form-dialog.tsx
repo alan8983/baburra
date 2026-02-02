@@ -72,7 +72,7 @@ export function StockFormDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.ticker.trim() || !formData.name.trim()) return;
 
     try {
@@ -113,9 +113,7 @@ export function StockFormDialog({
               <TrendingUp className="h-5 w-5" />
               新增投資標的
             </DialogTitle>
-            <DialogDescription>
-              建立新的投資標的，之後系統會自動抓取股價資料
-            </DialogDescription>
+            <DialogDescription>建立新的投資標的，之後系統會自動抓取股價資料</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
@@ -128,14 +126,12 @@ export function StockFormDialog({
                 id="stock-ticker"
                 placeholder="例如：AAPL、TSLA、2330"
                 value={formData.ticker}
-                onChange={(e) =>
-                  setFormData({ ...formData, ticker: e.target.value.toUpperCase() })
-                }
+                onChange={(e) => setFormData({ ...formData, ticker: e.target.value.toUpperCase() })}
                 disabled={createStock.isPending}
                 autoFocus
                 className="uppercase"
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 請輸入股票代碼，例如美股輸入 AAPL，台股輸入 2330
               </p>
             </div>
@@ -149,9 +145,7 @@ export function StockFormDialog({
                 id="stock-name"
                 placeholder="例如：Apple Inc."
                 value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 disabled={createStock.isPending}
               />
             </div>
@@ -161,9 +155,7 @@ export function StockFormDialog({
               <Label htmlFor="stock-market">市場</Label>
               <Select
                 value={formData.market}
-                onValueChange={(value: Market) =>
-                  setFormData({ ...formData, market: value })
-                }
+                onValueChange={(value: Market) => setFormData({ ...formData, market: value })}
                 disabled={createStock.isPending}
               >
                 <SelectTrigger id="stock-market">
@@ -191,9 +183,7 @@ export function StockFormDialog({
             </Button>
             <Button
               type="submit"
-              disabled={
-                !formData.ticker.trim() || !formData.name.trim() || createStock.isPending
-              }
+              disabled={!formData.ticker.trim() || !formData.name.trim() || createStock.isPending}
             >
               {createStock.isPending ? (
                 <>

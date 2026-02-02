@@ -48,12 +48,10 @@ export async function POST(request: Request) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    const { data, error } = await supabase.storage
-      .from(BUCKET_NAME)
-      .upload(fileName, buffer, {
-        contentType: file.type,
-        upsert: false,
-      });
+    const { data, error } = await supabase.storage.from(BUCKET_NAME).upload(fileName, buffer, {
+      contentType: file.type,
+      upsert: false,
+    });
 
     if (error) {
       console.error('Upload error:', error);
@@ -61,9 +59,7 @@ export async function POST(request: Request) {
     }
 
     // 取得公開 URL
-    const { data: urlData } = supabase.storage
-      .from(BUCKET_NAME)
-      .getPublicUrl(data.path);
+    const { data: urlData } = supabase.storage.from(BUCKET_NAME).getPublicUrl(data.path);
 
     return NextResponse.json({
       url: urlData.publicUrl,

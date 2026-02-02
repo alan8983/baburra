@@ -104,7 +104,7 @@ export function SentimentSelector({
       <div className="flex flex-wrap gap-2">
         {SENTIMENT_OPTIONS.map((option) => {
           const isSelected = value === option.value;
-          
+
           return (
             <Button
               key={option.value}
@@ -113,10 +113,7 @@ export function SentimentSelector({
               size="sm"
               disabled={disabled}
               onClick={() => onChange(option.value)}
-              className={cn(
-                'transition-all',
-                isSelected ? option.bgColor : option.hoverColor
-              )}
+              className={cn('transition-all', isSelected ? option.bgColor : option.hoverColor)}
             >
               {showIcon && option.icon}
               <span className={showIcon ? 'ml-1' : ''}>
@@ -129,8 +126,8 @@ export function SentimentSelector({
 
       {/* AI 建議 */}
       {aiSuggestionOption && value !== aiSuggestion && (
-        <div className="flex items-center gap-2 rounded-lg border border-dashed border-primary/50 bg-primary/5 p-3">
-          <Sparkles className="h-4 w-4 text-primary" />
+        <div className="border-primary/50 bg-primary/5 flex items-center gap-2 rounded-lg border border-dashed p-3">
+          <Sparkles className="text-primary h-4 w-4" />
           <span className="flex-1 text-sm">
             AI 建議：
             <span className={cn('ml-1 font-medium', aiSuggestionOption.color)}>

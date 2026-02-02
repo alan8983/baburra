@@ -3,10 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { listPosts } from '@/infrastructure/repositories';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const { searchParams } = new URL(request.url);

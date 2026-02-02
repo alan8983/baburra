@@ -14,7 +14,11 @@ import { ROUTES } from '@/lib/constants';
 import { formatDateTime } from '@/lib/utils/date';
 import { SENTIMENT_LABELS, SENTIMENT_COLORS } from '@/domain/models/post';
 import { useStockPricesForChart } from '@/hooks/use-stock-prices';
-import { CandlestickChart, postToSentimentMarker, SentimentMarkerLegend } from '@/components/charts';
+import {
+  CandlestickChart,
+  postToSentimentMarker,
+  SentimentMarkerLegend,
+} from '@/components/charts';
 import { usePost } from '@/hooks';
 
 function toDateString(postedAt: Date | string): string {
@@ -94,9 +98,7 @@ function PostStockChart({
           <CardDescription>{name}</CardDescription>
         </CardHeader>
         <CardContent className="flex h-[360px] items-center justify-center">
-          <p className="text-muted-foreground">
-            {error?.message ?? '無法載入股價'}
-          </p>
+          <p className="text-muted-foreground">{error?.message ?? '無法載入股價'}</p>
         </CardContent>
       </Card>
     );
@@ -191,13 +193,10 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
               </AvatarFallback>
             </Avatar>
             <div>
-              <Link
-                href={ROUTES.KOL_DETAIL(post.kol.id)}
-                className="font-medium hover:underline"
-              >
+              <Link href={ROUTES.KOL_DETAIL(post.kol.id)} className="font-medium hover:underline">
                 {post.kol.name}
               </Link>
-              <p className="text-sm text-muted-foreground">{formatDateTime(post.postedAt)}</p>
+              <p className="text-muted-foreground text-sm">{formatDateTime(post.postedAt)}</p>
             </div>
           </div>
 
@@ -219,13 +218,8 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                     >
                       {stock.ticker}
                     </Link>
-                    <span className="text-sm text-muted-foreground">
-                      {stock.name}
-                    </span>
-                    <Badge
-                      variant="outline"
-                      className={SENTIMENT_COLORS[post.sentiment]}
-                    >
+                    <span className="text-muted-foreground text-sm">{stock.name}</span>
+                    <Badge variant="outline" className={SENTIMENT_COLORS[post.sentiment]}>
                       {SENTIMENT_LABELS[post.sentiment]}
                     </Badge>
                   </div>
@@ -239,7 +233,10 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                           : 'text-muted-foreground'
                       }
                     >
-                      5日: {changes?.day5 != null ? `${changes.day5 >= 0 ? '+' : ''}${changes.day5.toFixed(1)}%` : '—'}
+                      5日:{' '}
+                      {changes?.day5 != null
+                        ? `${changes.day5 >= 0 ? '+' : ''}${changes.day5.toFixed(1)}%`
+                        : '—'}
                     </span>
                     <span
                       className={
@@ -250,7 +247,10 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                           : 'text-muted-foreground'
                       }
                     >
-                      30日: {changes?.day30 != null ? `${changes.day30 >= 0 ? '+' : ''}${changes.day30.toFixed(1)}%` : '—'}
+                      30日:{' '}
+                      {changes?.day30 != null
+                        ? `${changes.day30 >= 0 ? '+' : ''}${changes.day30.toFixed(1)}%`
+                        : '—'}
                     </span>
                   </div>
                 </div>
@@ -265,7 +265,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                 href={post.sourceUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                className="text-primary inline-flex items-center gap-1 text-sm hover:underline"
               >
                 <ExternalLink className="h-3 w-3" />
                 查看原文 ({post.sourcePlatform})
@@ -288,21 +288,16 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
             <CardContent className="pt-6">
               {/* Sentiment Badge */}
               <div className="mb-4 flex items-center gap-2">
-                <Badge
-                  variant="outline"
-                  className={SENTIMENT_COLORS[post.sentiment]}
-                >
+                <Badge variant="outline" className={SENTIMENT_COLORS[post.sentiment]}>
                   {SENTIMENT_LABELS[post.sentiment]}
                 </Badge>
                 {post.sentimentAiGenerated && (
-                  <span className="text-xs text-muted-foreground">
-                    (AI 分析)
-                  </span>
+                  <span className="text-muted-foreground text-xs">(AI 分析)</span>
                 )}
               </div>
 
               {/* Content */}
-              <div className="prose prose-sm max-w-none dark:prose-invert">
+              <div className="prose prose-sm dark:prose-invert max-w-none">
                 {post.content.split('\n').map((line, i) => (
                   <p key={i} className={line === '' ? 'h-4' : ''}>
                     {line}
@@ -314,16 +309,8 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
               {post.images.length > 0 && (
                 <div className="mt-4 grid grid-cols-2 gap-2">
                   {post.images.map((img, i) => (
-                    <div
-                      key={i}
-                      className="relative aspect-video overflow-hidden rounded-lg"
-                    >
-                      <Image
-                        src={img}
-                        alt={`圖片 ${i + 1}`}
-                        fill
-                        className="object-cover"
-                      />
+                    <div key={i} className="relative aspect-video overflow-hidden rounded-lg">
+                      <Image src={img} alt={`圖片 ${i + 1}`} fill className="object-cover" />
                     </div>
                   ))}
                 </div>
@@ -334,11 +321,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
 
         {/* Chart Tab */}
         <TabsContent value="chart">
-          <PostChartTab
-            stocks={post.stocks}
-            postedAt={post.postedAt}
-            sentiment={post.sentiment}
-          />
+          <PostChartTab stocks={post.stocks} postedAt={post.postedAt} sentiment={post.sentiment} />
         </TabsContent>
       </Tabs>
     </div>

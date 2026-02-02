@@ -47,9 +47,7 @@ const resourceItems = [
   { label: '所有文章', href: ROUTES.POSTS, icon: 'Newspaper' },
 ] as const;
 
-const settingsItems = [
-  { label: '設定', href: ROUTES.SETTINGS, icon: 'Settings' },
-] as const;
+const settingsItems = [{ label: '設定', href: ROUTES.SETTINGS, icon: 'Settings' }] as const;
 
 interface NavItemProps {
   label: string;
@@ -96,11 +94,14 @@ function AiQuotaFooter({ isCollapsed }: { isCollapsed: boolean }) {
   if (isCollapsed) {
     // 收合狀態只顯示圖示
     const percentage = usage ? (usage.remaining / usage.weeklyLimit) * 100 : 100;
-    const colorClass = percentage > 50 ? 'text-green-500' : percentage > 20 ? 'text-yellow-500' : 'text-red-500';
+    const colorClass =
+      percentage > 50 ? 'text-green-500' : percentage > 20 ? 'text-yellow-500' : 'text-red-500';
 
     return (
-      <div className="border-t p-2 flex justify-center">
-        <Sparkles className={cn('h-4 w-4', isLoading ? 'animate-pulse text-muted-foreground' : colorClass)} />
+      <div className="flex justify-center border-t p-2">
+        <Sparkles
+          className={cn('h-4 w-4', isLoading ? 'text-muted-foreground animate-pulse' : colorClass)}
+        />
       </div>
     );
   }
@@ -108,11 +109,11 @@ function AiQuotaFooter({ isCollapsed }: { isCollapsed: boolean }) {
   if (isLoading) {
     return (
       <div className="border-t p-4">
-        <div className="text-xs text-muted-foreground animate-pulse">
+        <div className="text-muted-foreground animate-pulse text-xs">
           <span>AI 配額: </span>
           <span className="font-medium">載入中...</span>
         </div>
-        <div className="mt-2 h-1.5 w-full rounded-full bg-muted" />
+        <div className="bg-muted mt-2 h-1.5 w-full rounded-full" />
       </div>
     );
   }
@@ -122,7 +123,8 @@ function AiQuotaFooter({ isCollapsed }: { isCollapsed: boolean }) {
   }
 
   const percentage = (usage.remaining / usage.weeklyLimit) * 100;
-  const colorClass = percentage > 50 ? 'bg-green-500' : percentage > 20 ? 'bg-yellow-500' : 'bg-red-500';
+  const colorClass =
+    percentage > 50 ? 'bg-green-500' : percentage > 20 ? 'bg-yellow-500' : 'bg-red-500';
 
   // 格式化重置時間
   const formatResetTime = () => {
@@ -138,7 +140,7 @@ function AiQuotaFooter({ isCollapsed }: { isCollapsed: boolean }) {
   return (
     <div className="border-t p-4">
       <div className="flex items-center justify-between text-xs">
-        <div className="flex items-center gap-1 text-muted-foreground">
+        <div className="text-muted-foreground flex items-center gap-1">
           <Sparkles className="h-3 w-3" />
           <span>AI 配額</span>
         </div>
@@ -146,9 +148,9 @@ function AiQuotaFooter({ isCollapsed }: { isCollapsed: boolean }) {
       </div>
       <div className="mt-1 flex items-baseline gap-1">
         <span className="text-lg font-bold">{usage.remaining}</span>
-        <span className="text-sm text-muted-foreground">/ {usage.weeklyLimit} 本週</span>
+        <span className="text-muted-foreground text-sm">/ {usage.weeklyLimit} 本週</span>
       </div>
-      <div className="mt-2 h-1.5 w-full rounded-full bg-muted">
+      <div className="bg-muted mt-2 h-1.5 w-full rounded-full">
         <div
           className={cn('h-full rounded-full transition-all', colorClass)}
           style={{ width: `${percentage}%` }}
@@ -164,29 +166,25 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'relative flex flex-col border-r bg-sidebar transition-all duration-300',
+        'bg-sidebar relative flex flex-col border-r transition-all duration-300',
         sidebarOpen ? 'w-64' : 'w-16'
       )}
     >
       {/* Logo */}
-      <div className={cn('flex h-16 items-center border-b px-4', sidebarOpen ? 'justify-between' : 'justify-center')}>
+      <div
+        className={cn(
+          'flex h-16 items-center border-b px-4',
+          sidebarOpen ? 'justify-between' : 'justify-center'
+        )}
+      >
         {sidebarOpen && (
           <Link href={ROUTES.DASHBOARD} className="flex items-center gap-2">
-            <TrendingUp className="h-6 w-6 text-primary" />
+            <TrendingUp className="text-primary h-6 w-6" />
             <span className="font-semibold">KOL Tracker</span>
           </Link>
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8"
-          onClick={toggleSidebar}
-        >
-          {sidebarOpen ? (
-            <ChevronLeft className="h-4 w-4" />
-          ) : (
-            <ChevronRight className="h-4 w-4" />
-          )}
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleSidebar}>
+          {sidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
         </Button>
       </div>
 
@@ -194,11 +192,7 @@ export function Sidebar() {
       <ScrollArea className="flex-1 px-2 py-4">
         <div className="space-y-1">
           {navItems.map((item) => (
-            <NavItem
-              key={item.href}
-              {...item}
-              isCollapsed={!sidebarOpen}
-            />
+            <NavItem key={item.href} {...item} isCollapsed={!sidebarOpen} />
           ))}
         </div>
 
@@ -206,11 +200,7 @@ export function Sidebar() {
 
         <div className="space-y-1">
           {resourceItems.map((item) => (
-            <NavItem
-              key={item.href}
-              {...item}
-              isCollapsed={!sidebarOpen}
-            />
+            <NavItem key={item.href} {...item} isCollapsed={!sidebarOpen} />
           ))}
         </div>
 
@@ -218,11 +208,7 @@ export function Sidebar() {
 
         <div className="space-y-1">
           {settingsItems.map((item) => (
-            <NavItem
-              key={item.href}
-              {...item}
-              isCollapsed={!sidebarOpen}
-            />
+            <NavItem key={item.href} {...item} isCollapsed={!sidebarOpen} />
           ))}
         </div>
       </ScrollArea>
@@ -255,11 +241,11 @@ function LogoutButton({ isCollapsed }: { isCollapsed: boolean }) {
 
   if (isCollapsed) {
     return (
-      <div className="border-t p-2 flex justify-center">
+      <div className="flex justify-center border-t p-2">
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+          className="text-muted-foreground hover:text-destructive h-8 w-8"
           onClick={handleLogout}
           disabled={loading}
         >
@@ -273,7 +259,7 @@ function LogoutButton({ isCollapsed }: { isCollapsed: boolean }) {
     <div className="border-t p-4">
       <Button
         variant="ghost"
-        className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 w-full justify-start"
         onClick={handleLogout}
         disabled={loading}
       >

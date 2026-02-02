@@ -9,16 +9,10 @@ import { getStockPrices } from '@/infrastructure/repositories/stock-price.reposi
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(
-  request: NextRequest,
-  context: { params: Promise<{ ticker: string }> }
-) {
+export async function GET(request: NextRequest, context: { params: Promise<{ ticker: string }> }) {
   const { ticker } = await context.params;
   if (!ticker) {
-    return NextResponse.json(
-      { error: 'Missing ticker' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Missing ticker' }, { status: 400 });
   }
 
   const { searchParams } = new URL(request.url);
@@ -39,9 +33,6 @@ export async function GET(
     return NextResponse.json({ candles, volumes });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Failed to fetch stock prices';
-    return NextResponse.json(
-      { error: message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

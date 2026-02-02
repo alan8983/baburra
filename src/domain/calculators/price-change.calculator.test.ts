@@ -137,9 +137,7 @@ describe('price-change.calculator', () => {
       ];
 
       const candlesByStock: Record<string, CandlestickData[]> = {
-        'stock-1': [
-          { time: '2026-01-01', open: 100, high: 105, low: 95, close: 100 },
-        ],
+        'stock-1': [{ time: '2026-01-01', open: 100, high: 105, low: 95, close: 100 }],
       };
 
       const result = calculateBatchPriceChanges(posts, candlesByStock);

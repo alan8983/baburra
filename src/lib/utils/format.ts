@@ -38,7 +38,7 @@ export function formatPrice(price: number | null | undefined, decimals = 2): str
  */
 export function formatVolume(volume: number | null | undefined): string {
   if (volume === null || volume === undefined) return '-';
-  
+
   if (volume >= 1_000_000_000) {
     return `${(volume / 1_000_000_000).toFixed(2)}B`;
   }

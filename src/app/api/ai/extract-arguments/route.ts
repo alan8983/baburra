@@ -31,7 +31,10 @@ export async function POST(request: NextRequest) {
 
     // 驗證輸入
     if (!body.content || typeof body.content !== 'string') {
-      return NextResponse.json({ error: 'content is required and must be a string' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'content is required and must be a string' },
+        { status: 400 }
+      );
     }
 
     if (!body.postId) {

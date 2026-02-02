@@ -54,15 +54,20 @@ export async function listPosts(params: {
   const supabase = createAdminClient();
   const { search = '', kolId, stockTicker, page = 1, limit = 20 } = params;
 
-  let query = supabase
-    .from('posts')
-    .select('*', { count: 'exact', head: false });
+  let query = supabase.from('posts').select('*', { count: 'exact', head: false });
 
   if (kolId) query = query.eq('kol_id', kolId);
   if (stockTicker) {
-    const { data: stock } = await supabase.from('stocks').select('id').eq('ticker', stockTicker).single();
+    const { data: stock } = await supabase
+      .from('stocks')
+      .select('id')
+      .eq('ticker', stockTicker)
+      .single();
     if (stock?.id) {
-      const { data: postIds } = await supabase.from('post_stocks').select('post_id').eq('stock_id', stock.id);
+      const { data: postIds } = await supabase
+        .from('post_stocks')
+        .select('post_id')
+        .eq('stock_id', stock.id);
       const ids = (postIds ?? []).map((p) => p.post_id as string);
       if (ids.length === 0) return { data: [], total: 0 };
       query = query.in('id', ids);
@@ -76,7 +81,11 @@ export async function listPosts(params: {
 
   const from = (page - 1) * limit;
   const to = from + limit - 1;
-  const { data: rows, count, error } = await query.order('posted_at', { ascending: false }).range(from, to);
+  const {
+    data: rows,
+    count,
+    error,
+  } = await query.order('posted_at', { ascending: false }).range(from, to);
 
   if (error) throw new Error(error.message);
   if (!rows?.length) return { data: [], total: count ?? 0 };
@@ -85,12 +94,17 @@ export async function listPosts(params: {
   const kolIds = [...new Set(posts.map((p) => p.kol_id))];
   const postIds = posts.map((p) => p.id);
 
-  const { data: postStocks } = await supabase.from('post_stocks').select('post_id, stock_id').in('post_id', postIds);
+  const { data: postStocks } = await supabase
+    .from('post_stocks')
+    .select('post_id, stock_id')
+    .in('post_id', postIds);
   const stockIds = [...new Set((postStocks ?? []).map((ps) => ps.stock_id as string))];
 
   const [kolRows, stockRows] = await Promise.all([
     supabase.from('kols').select('id, name, avatar_url').in('id', kolIds),
-    stockIds.length ? supabase.from('stocks').select('id, ticker, name').in('id', stockIds) : { data: [] },
+    stockIds.length
+      ? supabase.from('stocks').select('id, ticker, name').in('id', stockIds)
+      : { data: [] },
   ]);
 
   const kolMap: Record<string, { id: string; name: string; avatarUrl: string | null }> = {};
@@ -103,7 +117,11 @@ export async function listPosts(params: {
   }
   const stockMap: Record<string, { id: string; ticker: string; name: string }> = {};
   for (const s of stockRows.data ?? []) {
-    stockMap[s.id as string] = { id: s.id as string, ticker: s.ticker as string, name: s.name as string };
+    stockMap[s.id as string] = {
+      id: s.id as string,
+      ticker: s.ticker as string,
+      name: s.name as string,
+    };
   }
 
   const stocksByPost: Record<string, { id: string; ticker: string; name: string }[]> = {};
@@ -137,12 +155,19 @@ export async function getPostById(id: string): Promise<PostWithPriceChanges | nu
   if (error || !row) return null;
 
   const post = mapDbToPost(row as DbPost);
-  const { data: kol } = await supabase.from('kols').select('id, name, avatar_url').eq('id', post.kolId).single();
+  const { data: kol } = await supabase
+    .from('kols')
+    .select('id, name, avatar_url')
+    .eq('id', post.kolId)
+    .single();
   const { data: psRows } = await supabase.from('post_stocks').select('stock_id').eq('post_id', id);
   const stockIds = (psRows ?? []).map((p) => p.stock_id as string);
   let stocks: PostWithRelations['stocks'] = [];
   if (stockIds.length > 0) {
-    const { data: sRows } = await supabase.from('stocks').select('id, ticker, name').in('id', stockIds);
+    const { data: sRows } = await supabase
+      .from('stocks')
+      .select('id, ticker, name')
+      .in('id', stockIds);
     stocks = (sRows ?? []).map((s) => ({
       id: s.id as string,
       ticker: s.ticker as string,
@@ -153,7 +178,11 @@ export async function getPostById(id: string): Promise<PostWithPriceChanges | nu
   return {
     ...post,
     kol: kol
-      ? { id: kol.id as string, name: kol.name as string, avatarUrl: (kol.avatar_url as string) ?? null }
+      ? {
+          id: kol.id as string,
+          name: kol.name as string,
+          avatarUrl: (kol.avatar_url as string) ?? null,
+        }
       : { id: post.kolId, name: '', avatarUrl: null },
     stocks,
     priceChanges: {},
@@ -183,9 +212,9 @@ export async function createPost(input: CreatePostInput, createdBy: string | nul
   const post = mapDbToPost(row as DbPost);
 
   if (input.stockIds?.length) {
-    await supabase.from('post_stocks').insert(
-      input.stockIds.map((stock_id) => ({ post_id: post.id, stock_id }))
-    );
+    await supabase
+      .from('post_stocks')
+      .insert(input.stockIds.map((stock_id) => ({ post_id: post.id, stock_id })));
   }
 
   return post;
@@ -203,7 +232,12 @@ export async function updatePost(id: string, input: UpdatePostInput): Promise<Po
     return p ? { ...p } : null;
   }
 
-  const { data: row, error } = await supabase.from('posts').update(payload).eq('id', id).select().single();
+  const { data: row, error } = await supabase
+    .from('posts')
+    .update(payload)
+    .eq('id', id)
+    .select()
+    .single();
   if (error) throw new Error(error.message);
   return row ? mapDbToPost(row as DbPost) : null;
 }
@@ -227,12 +261,22 @@ export async function findPostBySourceUrl(sourceUrl: string): Promise<PostWithRe
 
   if (error || !row) return null;
   const post = mapDbToPost(row as DbPost);
-  const { data: kol } = await supabase.from('kols').select('id, name, avatar_url').eq('id', post.kolId).single();
-  const { data: psRows } = await supabase.from('post_stocks').select('stock_id').eq('post_id', post.id);
+  const { data: kol } = await supabase
+    .from('kols')
+    .select('id, name, avatar_url')
+    .eq('id', post.kolId)
+    .single();
+  const { data: psRows } = await supabase
+    .from('post_stocks')
+    .select('stock_id')
+    .eq('post_id', post.id);
   const stockIds = (psRows ?? []).map((p) => p.stock_id as string);
   let stocks: PostWithRelations['stocks'] = [];
   if (stockIds.length > 0) {
-    const { data: sRows } = await supabase.from('stocks').select('id, ticker, name').in('id', stockIds);
+    const { data: sRows } = await supabase
+      .from('stocks')
+      .select('id, ticker, name')
+      .in('id', stockIds);
     stocks = (sRows ?? []).map((s) => ({
       id: s.id as string,
       ticker: s.ticker as string,
@@ -243,7 +287,11 @@ export async function findPostBySourceUrl(sourceUrl: string): Promise<PostWithRe
   return {
     ...post,
     kol: kol
-      ? { id: kol.id as string, name: kol.name as string, avatarUrl: (kol.avatar_url as string) ?? null }
+      ? {
+          id: kol.id as string,
+          name: kol.name as string,
+          avatarUrl: (kol.avatar_url as string) ?? null,
+        }
       : { id: post.kolId, name: '', avatarUrl: null },
     stocks,
   };

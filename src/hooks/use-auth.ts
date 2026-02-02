@@ -40,7 +40,10 @@ export function useAuth(): UseAuthReturn {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
         if (error) throw error;
 
         setState({
@@ -61,21 +64,21 @@ export function useAuth(): UseAuthReturn {
     initAuth();
 
     // 監聽 auth 狀態變化
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setState({
-          user: session?.user ?? null,
-          session,
-          loading: false,
-          error: null,
-        });
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setState({
+        user: session?.user ?? null,
+        session,
+        loading: false,
+        error: null,
+      });
 
-        // 登出後導向登入頁
-        if (event === 'SIGNED_OUT') {
-          router.push(ROUTES.LOGIN);
-        }
+      // 登出後導向登入頁
+      if (event === 'SIGNED_OUT') {
+        router.push(ROUTES.LOGIN);
       }
-    );
+    });
 
     return () => {
       subscription.unsubscribe();
@@ -264,11 +267,11 @@ export function useUserId() {
       setLoading(false);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_, session) => {
-        setUserId(session?.user?.id ?? null);
-      }
-    );
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_, session) => {
+      setUserId(session?.user?.id ?? null);
+    });
 
     return () => {
       subscription.unsubscribe();

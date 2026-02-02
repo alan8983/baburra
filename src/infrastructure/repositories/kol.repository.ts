@@ -1,7 +1,13 @@
 // KOL Repository - 使用 Supabase Admin Client（繞過 RLS）
 
 import { createAdminClient } from '@/infrastructure/supabase/admin';
-import type { KOL, KOLWithStats, CreateKOLInput, UpdateKOLInput, KOLSearchResult } from '@/domain/models';
+import type {
+  KOL,
+  KOLWithStats,
+  CreateKOLInput,
+  UpdateKOLInput,
+  KOLSearchResult,
+} from '@/domain/models';
 
 type DbKol = {
   id: string;
@@ -53,7 +59,11 @@ export async function listKols(params: {
 
   const from = (page - 1) * limit;
   const to = from + limit - 1;
-  const { data: rows, count, error } = await query.order('updated_at', { ascending: false }).range(from, to);
+  const {
+    data: rows,
+    count,
+    error,
+  } = await query.order('updated_at', { ascending: false }).range(from, to);
 
   if (error) throw new Error(error.message);
 
@@ -62,10 +72,7 @@ export async function listKols(params: {
     return { data: [], total: count ?? 0 };
   }
 
-  const { data: postStats } = await supabase
-    .from('posts')
-    .select('kol_id')
-    .in('kol_id', ids);
+  const { data: postStats } = await supabase.from('posts').select('kol_id').in('kol_id', ids);
 
   const countByKol: Record<string, number> = {};
   const lastPostByKol: Record<string, string> = {};
@@ -104,7 +111,10 @@ export async function getKolById(id: string): Promise<KOLWithStats | null> {
   if (error || !row) return null;
 
   const kol = mapDbToKol(row as DbKol);
-  const { count } = await supabase.from('posts').select('*', { count: 'exact', head: true }).eq('kol_id', id);
+  const { count } = await supabase
+    .from('posts')
+    .select('*', { count: 'exact', head: true })
+    .eq('kol_id', id);
   const { data: lastPost } = await supabase
     .from('posts')
     .select('posted_at')
@@ -127,7 +137,11 @@ export async function createKol(input: CreateKOLInput): Promise<KOL> {
   let slug = baseSlug;
   let attempt = 0;
   while (true) {
-    const { data: existing } = await supabase.from('kols').select('id').eq('slug', slug).maybeSingle();
+    const { data: existing } = await supabase
+      .from('kols')
+      .select('id')
+      .eq('slug', slug)
+      .maybeSingle();
     if (!existing) break;
     attempt += 1;
     slug = `${baseSlug}-${attempt}`;
@@ -158,7 +172,12 @@ export async function updateKol(id: string, input: UpdateKOLInput): Promise<KOL 
   if (input.socialLinks !== undefined) payload.social_links = input.socialLinks;
   if (Object.keys(payload).length === 0) return getKolById(id).then((k) => (k ? { ...k } : null));
 
-  const { data: row, error } = await supabase.from('kols').update(payload).eq('id', id).select().single();
+  const { data: row, error } = await supabase
+    .from('kols')
+    .update(payload)
+    .eq('id', id)
+    .select()
+    .single();
   if (error) throw new Error(error.message);
   return row ? mapDbToKol(row as DbKol) : null;
 }

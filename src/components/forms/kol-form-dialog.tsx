@@ -59,7 +59,7 @@ export function KOLFormDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim()) return;
 
     try {
@@ -114,9 +114,7 @@ export function KOLFormDialog({
                 id="kol-name"
                 placeholder="輸入 KOL 名稱"
                 value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 disabled={createKol.isPending}
                 autoFocus
               />
@@ -129,9 +127,7 @@ export function KOLFormDialog({
                 id="kol-bio"
                 placeholder="簡短介紹這位 KOL..."
                 value={formData.bio || ''}
-                onChange={(e) =>
-                  setFormData({ ...formData, bio: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                 disabled={createKol.isPending}
                 rows={3}
               />

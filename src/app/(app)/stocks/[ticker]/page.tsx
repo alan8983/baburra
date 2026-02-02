@@ -52,9 +52,7 @@ function StockChartTab({ ticker }: { ticker: string }) {
     <Card>
       <CardHeader>
         <CardTitle>K 線圖</CardTitle>
-        <CardDescription>
-          股價走勢圖與 KOL 觀點標記
-        </CardDescription>
+        <CardDescription>股價走勢圖與 KOL 觀點標記</CardDescription>
       </CardHeader>
       <CardContent>
         <CandlestickChart
@@ -115,7 +113,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
       <Card>
         <CardContent className="pt-6">
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-            <div className="flex h-16 w-16 items-center justify-center rounded-lg bg-primary/10 text-2xl font-bold text-primary">
+            <div className="bg-primary/10 text-primary flex h-16 w-16 items-center justify-center rounded-lg text-2xl font-bold">
               {stock.ticker.slice(0, 2)}
             </div>
             <div className="flex-1 text-center sm:text-left">
@@ -123,11 +121,9 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                 <h1 className="text-2xl font-bold">{stock.ticker}</h1>
                 <Badge variant="outline">{stock.market}</Badge>
               </div>
-              <p className="mt-1 text-muted-foreground">{stock.name}</p>
+              <p className="text-muted-foreground mt-1">{stock.name}</p>
               <div className="mt-3 flex flex-wrap items-center justify-center gap-4 sm:justify-start">
-                <Badge variant="outline">
-                  文章數: {stock.postCount}
-                </Badge>
+                <Badge variant="outline">文章數: {stock.postCount}</Badge>
                 <Badge
                   variant="default"
                   className={stock.winRate != null && stock.winRate >= 0.6 ? 'bg-green-600' : ''}
@@ -159,10 +155,11 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
           {!postsLoading &&
             posts.map((post) => {
               const currentStock = post.stocks.find((s) => s.ticker === decodedTicker);
-              const changes = currentStock && post.priceChanges ? post.priceChanges[currentStock.id] : null;
+              const changes =
+                currentStock && post.priceChanges ? post.priceChanges[currentStock.id] : null;
               return (
                 <Link key={post.id} href={ROUTES.POST_DETAIL(post.id)}>
-                  <Card className="transition-colors hover:bg-muted/50">
+                  <Card className="hover:bg-muted/50 transition-colors">
                     <CardContent className="pt-4">
                       <div className="flex items-start gap-4">
                         <Avatar className="h-10 w-10">
@@ -171,7 +168,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                             <User className="h-5 w-5" />
                           </AvatarFallback>
                         </Avatar>
-                        <div className="flex-1 min-w-0">
+                        <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <Link
                               href={ROUTES.KOL_DETAIL(post.kol.id)}
@@ -180,17 +177,14 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                             >
                               {post.kol.name}
                             </Link>
-                            <Badge
-                              variant="outline"
-                              className={SENTIMENT_COLORS[post.sentiment]}
-                            >
+                            <Badge variant="outline" className={SENTIMENT_COLORS[post.sentiment]}>
                               {SENTIMENT_LABELS[post.sentiment]}
                             </Badge>
-                            <span className="text-sm text-muted-foreground">
+                            <span className="text-muted-foreground text-sm">
                               {formatDateTime(post.postedAt)}
                             </span>
                           </div>
-                          <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
+                          <p className="text-muted-foreground mt-2 line-clamp-2 text-sm">
                             {post.content}
                           </p>
                           <div className="mt-2 flex flex-wrap gap-4 text-sm">
@@ -203,7 +197,10 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                                   : 'text-muted-foreground'
                               }
                             >
-                              5日: {changes?.day5 != null ? `${changes.day5 >= 0 ? '+' : ''}${changes.day5.toFixed(1)}%` : '—'}
+                              5日:{' '}
+                              {changes?.day5 != null
+                                ? `${changes.day5 >= 0 ? '+' : ''}${changes.day5.toFixed(1)}%`
+                                : '—'}
                             </span>
                             <span
                               className={
@@ -214,7 +211,10 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                                   : 'text-muted-foreground'
                               }
                             >
-                              30日: {changes?.day30 != null ? `${changes.day30 >= 0 ? '+' : ''}${changes.day30.toFixed(1)}%` : '—'}
+                              30日:{' '}
+                              {changes?.day30 != null
+                                ? `${changes.day30 >= 0 ? '+' : ''}${changes.day30.toFixed(1)}%`
+                                : '—'}
                             </span>
                           </div>
                         </div>
@@ -231,25 +231,25 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
           <Card>
             <CardHeader>
               <CardTitle>勝率統計</CardTitle>
-              <CardDescription>
-                KOL 對此標的的預測勝率（依不同時間週期計算）
-              </CardDescription>
+              <CardDescription>KOL 對此標的的預測勝率（依不同時間週期計算）</CardDescription>
             </CardHeader>
             <CardContent>
               {winRateLoading ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                  <span className="ml-2 text-muted-foreground">計算勝率中...</span>
+                  <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+                  <span className="text-muted-foreground ml-2">計算勝率中...</span>
                 </div>
               ) : winRateStats ? (
                 <div className="space-y-6">
                   {/* 整體統計 */}
-                  <div className="rounded-lg border bg-muted/30 p-4 text-center">
-                    <p className="text-sm text-muted-foreground">整體平均勝率</p>
-                    <p className={`mt-1 text-4xl font-bold ${getWinRateColorClass(winRateStats.overall.avgWinRate)}`}>
+                  <div className="bg-muted/30 rounded-lg border p-4 text-center">
+                    <p className="text-muted-foreground text-sm">整體平均勝率</p>
+                    <p
+                      className={`mt-1 text-4xl font-bold ${getWinRateColorClass(winRateStats.overall.avgWinRate)}`}
+                    >
                       {formatWinRate(winRateStats.overall.avgWinRate)}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       共 {winRateStats.overall.total} 篇有方向性文章
                     </p>
                   </div>
@@ -262,18 +262,17 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                       { key: 'day90', label: '90日', data: winRateStats.day90 },
                       { key: 'day365', label: '365日', data: winRateStats.day365 },
                     ].map((item) => (
-                      <div
-                        key={item.key}
-                        className="rounded-lg border p-4 text-center"
-                      >
-                        <p className="text-sm text-muted-foreground">{item.label}勝率</p>
-                        <p className={`mt-1 text-3xl font-bold ${getWinRateColorClass(item.data.rate)}`}>
+                      <div key={item.key} className="rounded-lg border p-4 text-center">
+                        <p className="text-muted-foreground text-sm">{item.label}勝率</p>
+                        <p
+                          className={`mt-1 text-3xl font-bold ${getWinRateColorClass(item.data.rate)}`}
+                        >
                           {formatWinRate(item.data.rate)}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-muted-foreground text-xs">
                           {item.data.wins}勝 / {item.data.losses}敗
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-muted-foreground text-xs">
                           ({item.data.total} 筆有效樣本)
                         </p>
                       </div>
@@ -283,7 +282,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                   {/* 說明 */}
                   <div className="rounded-lg border border-dashed p-4">
                     <h4 className="text-sm font-medium">勝率計算說明</h4>
-                    <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                    <ul className="text-muted-foreground mt-2 space-y-1 text-xs">
                       <li>• 看多文章：發文後股價上漲即為勝利</li>
                       <li>• 看空文章：發文後股價下跌即為勝利</li>
                       <li>• 中立文章不納入勝率計算</li>
@@ -292,7 +291,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                   </div>
                 </div>
               ) : (
-                <p className="text-center text-muted-foreground">無法載入勝率資料</p>
+                <p className="text-muted-foreground text-center">無法載入勝率資料</p>
               )}
             </CardContent>
           </Card>

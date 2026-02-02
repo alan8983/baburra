@@ -59,9 +59,7 @@ export default function InputPage() {
       {/* Page Header */}
       <div className="text-center">
         <h1 className="text-3xl font-bold tracking-tight">快速輸入</h1>
-        <p className="mt-2 text-muted-foreground">
-          貼上 KOL 的投資觀點文章，快速收錄到資料庫
-        </p>
+        <p className="text-muted-foreground mt-2">貼上 KOL 的投資觀點文章，快速收錄到資料庫</p>
       </div>
 
       {/* Input Card */}
@@ -71,9 +69,7 @@ export default function InputPage() {
             <FileText className="h-5 w-5" />
             輸入文章內容
           </CardTitle>
-          <CardDescription>
-            貼上文章內容或網址，系統會自動識別 KOL 和投資標的
-          </CardDescription>
+          <CardDescription>貼上文章內容或網址，系統會自動識別 KOL 和投資標的</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Textarea
@@ -92,10 +88,10 @@ export default function InputPage() {
           {content.length > 50 && (
             <div className="rounded-lg border border-dashed p-4">
               <div className="flex items-center gap-2 text-sm font-medium">
-                <Sparkles className="h-4 w-4 text-primary" />
+                <Sparkles className="text-primary h-4 w-4" />
                 AI 自動識別結果 (預覽)
               </div>
-              <div className="mt-2 grid gap-2 text-sm text-muted-foreground">
+              <div className="text-muted-foreground mt-2 grid gap-2 text-sm">
                 <div>
                   <span className="font-medium">KOL: </span>
                   <span className="text-foreground">待識別...</span>
@@ -165,27 +161,25 @@ export default function InputPage() {
         <CardContent>
           {draftsLoading ? (
             <div className="flex items-center justify-center py-4">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-              <span className="ml-2 text-sm text-muted-foreground">載入中...</span>
+              <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+              <span className="text-muted-foreground ml-2 text-sm">載入中...</span>
             </div>
           ) : recentDrafts.length > 0 ? (
             <div className="space-y-2">
               {recentDrafts.map((draft) => {
-                const preview = draft.content 
+                const preview = draft.content
                   ? draft.content.slice(0, 50) + (draft.content.length > 50 ? '...' : '')
                   : '（尚無內容）';
                 const stockTickers = draft.stocks.map((s) => s.ticker).join(', ');
-                const displayText = stockTickers 
-                  ? `${stockTickers} - ${preview}` 
-                  : preview;
+                const displayText = stockTickers ? `${stockTickers} - ${preview}` : preview;
                 return (
                   <Link
                     key={draft.id}
                     href={ROUTES.DRAFT_DETAIL(draft.id)}
-                    className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                    className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3 transition-colors"
                   >
                     <span className="truncate text-sm">{displayText}</span>
-                    <span className="ml-4 shrink-0 text-xs text-muted-foreground">
+                    <span className="text-muted-foreground ml-4 shrink-0 text-xs">
                       {formatRelativeTime(draft.updatedAt)}
                     </span>
                   </Link>
@@ -193,9 +187,7 @@ export default function InputPage() {
               })}
             </div>
           ) : (
-            <p className="text-center text-sm text-muted-foreground">
-              還沒有草稿
-            </p>
+            <p className="text-muted-foreground text-center text-sm">還沒有草稿</p>
           )}
         </CardContent>
       </Card>
@@ -204,7 +196,7 @@ export default function InputPage() {
       <Card className="bg-muted/50">
         <CardContent className="pt-6">
           <h3 className="font-medium">使用提示</h3>
-          <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+          <ul className="text-muted-foreground mt-2 space-y-1 text-sm">
             <li>• 支援直接貼上 Facebook、Twitter 的貼文內容</li>
             <li>• 系統會自動識別文章中提及的股票代碼</li>
             <li>• AI 會分析文章情緒，但您可以在確認前調整</li>

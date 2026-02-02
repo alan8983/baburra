@@ -142,7 +142,7 @@ export function DatetimeInput({
 
       {/* 時間輸入 */}
       <div className="relative">
-        <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Calendar className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
         <Input
           type="datetime-local"
           value={inputValue}
@@ -176,8 +176,9 @@ export function DatetimeInput({
 
       {/* 顯示已選時間 */}
       {value && (
-        <p className="text-xs text-muted-foreground">
-          已選擇：{value.toLocaleString('zh-TW', {
+        <p className="text-muted-foreground text-xs">
+          已選擇：
+          {value.toLocaleString('zh-TW', {
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',

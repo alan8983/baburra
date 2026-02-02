@@ -51,7 +51,11 @@ export async function listDraftsByUserId(
 
   const from = (page - 1) * limit;
   const to = from + limit - 1;
-  const { data: rows, count, error } = await supabase
+  const {
+    data: rows,
+    count,
+    error,
+  } = await supabase
     .from('drafts')
     .select('*', { count: 'exact', head: false })
     .eq('user_id', userId)
@@ -66,8 +70,12 @@ export async function listDraftsByUserId(
   const stockIds = [...new Set(drafts.flatMap((d) => d.stockIds))];
 
   const [kolRows, stockRows] = await Promise.all([
-    kolIds.length ? supabase.from('kols').select('id, name, avatar_url').in('id', kolIds) : { data: [] },
-    stockIds.length ? supabase.from('stocks').select('id, ticker, name').in('id', stockIds) : { data: [] },
+    kolIds.length
+      ? supabase.from('kols').select('id, name, avatar_url').in('id', kolIds)
+      : { data: [] },
+    stockIds.length
+      ? supabase.from('stocks').select('id, ticker, name').in('id', stockIds)
+      : { data: [] },
   ]);
 
   const kolMap: Record<string, { id: string; name: string; avatarUrl: string | null }> = {};
@@ -89,7 +97,7 @@ export async function listDraftsByUserId(
 
   const data: DraftWithRelations[] = drafts.map((d) => ({
     ...d,
-    kol: d.kolId ? kolMap[d.kolId] ?? null : null,
+    kol: d.kolId ? (kolMap[d.kolId] ?? null) : null,
     stocks: d.stockIds.map((sid) => stockMap[sid]).filter(Boolean),
   }));
 
@@ -110,13 +118,25 @@ export async function getDraftById(id: string, userId: string): Promise<DraftWit
 
   let kol: DraftWithRelations['kol'] = null;
   if (draft.kolId) {
-    const { data: k } = await supabase.from('kols').select('id, name, avatar_url').eq('id', draft.kolId).single();
-    if (k) kol = { id: k.id as string, name: k.name as string, avatarUrl: (k.avatar_url as string) ?? null };
+    const { data: k } = await supabase
+      .from('kols')
+      .select('id, name, avatar_url')
+      .eq('id', draft.kolId)
+      .single();
+    if (k)
+      kol = {
+        id: k.id as string,
+        name: k.name as string,
+        avatarUrl: (k.avatar_url as string) ?? null,
+      };
   }
 
   const stocks: DraftWithRelations['stocks'] = [];
   if (draft.stockIds.length > 0) {
-    const { data: sRows } = await supabase.from('stocks').select('id, ticker, name').in('id', draft.stockIds);
+    const { data: sRows } = await supabase
+      .from('stocks')
+      .select('id, ticker, name')
+      .in('id', draft.stockIds);
     for (const s of sRows ?? []) {
       stocks.push({ id: s.id as string, ticker: s.ticker as string, name: s.name as string });
     }
@@ -137,7 +157,11 @@ export async function createDraft(userId: string, input: CreateDraftInput): Prom
       source_url: input.sourceUrl ?? null,
       images: input.images ?? [],
       sentiment: input.sentiment ?? null,
-      posted_at: input.postedAt ? (input.postedAt instanceof Date ? input.postedAt.toISOString() : input.postedAt) : null,
+      posted_at: input.postedAt
+        ? input.postedAt instanceof Date
+          ? input.postedAt.toISOString()
+          : input.postedAt
+        : null,
       stock_ids: input.stockIds ?? [],
       stock_name_inputs: input.stockNameInputs ?? [],
     })
@@ -171,7 +195,11 @@ export async function updateDraft(
   if (input.stockNameInputs !== undefined) payload.stock_name_inputs = input.stockNameInputs;
   if (Object.keys(payload).length === 0) return getDraftById(id, userId);
 
-  const { error } = await supabase.from('drafts').update(payload).eq('id', id).eq('user_id', userId);
+  const { error } = await supabase
+    .from('drafts')
+    .update(payload)
+    .eq('id', id)
+    .eq('user_id', userId);
   if (error) throw new Error(error.message);
   return getDraftById(id, userId);
 }

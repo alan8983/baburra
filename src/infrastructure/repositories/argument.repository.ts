@@ -158,7 +158,9 @@ export async function createPostArgument(input: CreatePostArgumentInput): Promis
 /**
  * 批量建立文章論點
  */
-export async function createPostArguments(inputs: CreatePostArgumentInput[]): Promise<PostArgument[]> {
+export async function createPostArguments(
+  inputs: CreatePostArgumentInput[]
+): Promise<PostArgument[]> {
   if (inputs.length === 0) return [];
 
   const supabase = createAdminClient();
@@ -275,7 +277,10 @@ export async function getStockArgumentSummary(
 /**
  * 更新標的論點彙整（在新增論點後呼叫）
  */
-export async function updateStockArgumentSummary(stockId: string, categoryId: string): Promise<void> {
+export async function updateStockArgumentSummary(
+  stockId: string,
+  categoryId: string
+): Promise<void> {
   const supabase = createAdminClient();
 
   // 計算該標的該類別的統計資料

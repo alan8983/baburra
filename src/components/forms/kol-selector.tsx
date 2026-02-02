@@ -13,11 +13,7 @@ import {
   CommandList,
   CommandSeparator,
 } from '@/components/ui/command';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { KOLSearchResult } from '@/domain/models';
 import { useKols } from '@/hooks';
@@ -116,9 +112,7 @@ export function KOLSelector({
             <div className="flex items-center gap-2">
               <Avatar className="h-5 w-5">
                 <AvatarImage src={value.avatarUrl || undefined} />
-                <AvatarFallback className="text-xs">
-                  {value.name.charAt(0)}
-                </AvatarFallback>
+                <AvatarFallback className="text-xs">{value.name.charAt(0)}</AvatarFallback>
               </Avatar>
               <span className="truncate">{value.name}</span>
             </div>
@@ -130,10 +124,7 @@ export function KOLSelector({
           )}
           <div className="flex items-center gap-1">
             {value && (
-              <X
-                className="h-4 w-4 shrink-0 opacity-50 hover:opacity-100"
-                onClick={handleClear}
-              />
+              <X className="h-4 w-4 shrink-0 opacity-50 hover:opacity-100" onClick={handleClear} />
             )}
             <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
           </div>
@@ -141,28 +132,20 @@ export function KOLSelector({
       </PopoverTrigger>
       <PopoverContent className="w-[300px] p-0" align="start">
         <Command shouldFilter={false}>
-          <CommandInput
-            placeholder="搜尋 KOL 名稱..."
-            value={search}
-            onValueChange={setSearch}
-          />
+          <CommandInput placeholder="搜尋 KOL 名稱..." value={search} onValueChange={setSearch} />
           <CommandList>
             {isLoading ? (
               <div className="flex items-center justify-center py-6">
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                <span className="ml-2 text-sm text-muted-foreground">搜尋中...</span>
+                <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+                <span className="text-muted-foreground ml-2 text-sm">搜尋中...</span>
               </div>
             ) : (
               <>
                 <CommandEmpty>
                   {search ? (
-                    <div className="py-2 text-center text-sm">
-                      找不到「{search}」
-                    </div>
+                    <div className="py-2 text-center text-sm">找不到「{search}」</div>
                   ) : (
-                    <div className="py-2 text-center text-sm">
-                      沒有 KOL 資料
-                    </div>
+                    <div className="py-2 text-center text-sm">沒有 KOL 資料</div>
                   )}
                 </CommandEmpty>
                 <CommandGroup heading="KOL 列表">
@@ -175,14 +158,10 @@ export function KOLSelector({
                     >
                       <Avatar className="h-6 w-6">
                         <AvatarImage src={kol.avatarUrl || undefined} />
-                        <AvatarFallback className="text-xs">
-                          {kol.name.charAt(0)}
-                        </AvatarFallback>
+                        <AvatarFallback className="text-xs">{kol.name.charAt(0)}</AvatarFallback>
                       </Avatar>
                       <span className="flex-1 truncate">{kol.name}</span>
-                      {value?.id === kol.id && (
-                        <Check className="h-4 w-4 text-primary" />
-                      )}
+                      {value?.id === kol.id && <Check className="text-primary h-4 w-4" />}
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -198,11 +177,7 @@ export function KOLSelector({
                     disabled={!canCreateNew}
                   >
                     <Plus className="h-4 w-4" />
-                    <span>
-                      {canCreateNew
-                        ? `新增 KOL「${search}」`
-                        : '輸入名稱以新增 KOL'}
-                    </span>
+                    <span>{canCreateNew ? `新增 KOL「${search}」` : '輸入名稱以新增 KOL'}</span>
                   </CommandItem>
                 </CommandGroup>
               </>

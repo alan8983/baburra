@@ -40,10 +40,7 @@ function findClosePrice(
  * @param endPrice 結束價格
  * @returns 漲跌幅百分比 (正數為漲，負數為跌)
  */
-export function calculatePriceChangePercent(
-  startPrice: number,
-  endPrice: number
-): number {
+export function calculatePriceChangePercent(startPrice: number, endPrice: number): number {
   if (startPrice === 0) return 0;
   return ((endPrice - startPrice) / startPrice) * 100;
 }

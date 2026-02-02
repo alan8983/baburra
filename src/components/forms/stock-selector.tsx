@@ -14,11 +14,7 @@ import {
   CommandList,
   CommandSeparator,
 } from '@/components/ui/command';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import type { StockSearchResult } from '@/domain/models';
 import { useStocks } from '@/hooks';
 
@@ -122,7 +118,7 @@ export function StockSelector({
             <Badge
               key={stock.id}
               variant="secondary"
-              className="cursor-pointer gap-1 pr-1 hover:bg-secondary/80"
+              className="hover:bg-secondary/80 cursor-pointer gap-1 pr-1"
             >
               <span className="font-semibold">{stock.ticker}</span>
               <Button
@@ -147,10 +143,7 @@ export function StockSelector({
             role="combobox"
             aria-expanded={open}
             disabled={disabled}
-            className={cn(
-              'w-full justify-between font-normal',
-              'text-muted-foreground'
-            )}
+            className={cn('w-full justify-between font-normal', 'text-muted-foreground')}
           >
             <div className="flex items-center gap-2">
               <Search className="h-4 w-4" />
@@ -173,27 +166,23 @@ export function StockSelector({
             <CommandList>
               {isLoading ? (
                 <div className="flex items-center justify-center py-6">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  <span className="ml-2 text-sm text-muted-foreground">搜尋中...</span>
+                  <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
+                  <span className="text-muted-foreground ml-2 text-sm">搜尋中...</span>
                 </div>
               ) : (
                 <>
                   <CommandEmpty>
                     {search ? (
-                      <div className="py-2 text-center text-sm">
-                        找不到「{search}」
-                      </div>
+                      <div className="py-2 text-center text-sm">找不到「{search}」</div>
                     ) : (
-                      <div className="py-2 text-center text-sm">
-                        沒有投資標的資料
-                      </div>
+                      <div className="py-2 text-center text-sm">沒有投資標的資料</div>
                     )}
                   </CommandEmpty>
                   <CommandGroup heading="投資標的">
                     {stocks.map((stock) => {
                       const selected = isSelected(stock);
                       const canSelect = selected || !isMaxReached;
-                      
+
                       return (
                         <CommandItem
                           key={stock.id}
@@ -201,18 +190,16 @@ export function StockSelector({
                           onSelect={() => canSelect && handleSelect(stock)}
                           className={cn(
                             'cursor-pointer',
-                            !canSelect && 'opacity-50 cursor-not-allowed'
+                            !canSelect && 'cursor-not-allowed opacity-50'
                           )}
                         >
-                          <div className="flex h-5 w-5 items-center justify-center rounded border mr-2">
-                            {selected && <Check className="h-4 w-4 text-primary" />}
+                          <div className="mr-2 flex h-5 w-5 items-center justify-center rounded border">
+                            {selected && <Check className="text-primary h-4 w-4" />}
                           </div>
                           <div className="flex flex-1 items-center gap-2">
-                            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                            <TrendingUp className="text-muted-foreground h-4 w-4" />
                             <span className="font-semibold">{stock.ticker}</span>
-                            <span className="truncate text-muted-foreground">
-                              {stock.name}
-                            </span>
+                            <span className="text-muted-foreground truncate">{stock.name}</span>
                           </div>
                         </CommandItem>
                       );

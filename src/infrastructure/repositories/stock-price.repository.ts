@@ -35,12 +35,8 @@ export async function getStockPrices(
   ticker: string,
   options?: { startDate?: string; endDate?: string }
 ): Promise<{ candles: CandlestickData[]; volumes: VolumeData[] }> {
-  const end = options?.endDate
-    ? new Date(options.endDate)
-    : new Date();
-  const start = options?.startDate
-    ? new Date(options.startDate)
-    : subtractDays(end, CACHE_DAYS);
+  const end = options?.endDate ? new Date(options.endDate) : new Date();
+  const start = options?.startDate ? new Date(options.startDate) : subtractDays(end, CACHE_DAYS);
   const startStr = toYYYYMMDD(start);
   const endStr = toYYYYMMDD(end);
   const cacheKey = `${ticker}:${startStr}:${endStr}`;

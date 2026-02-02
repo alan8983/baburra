@@ -5,10 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getKolById, updateKol } from '@/infrastructure/repositories';
 import type { UpdateKOLInput } from '@/domain/models';
 
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const kol = await getKolById(id);
@@ -23,10 +20,7 @@ export async function GET(
   }
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const body = (await request.json()) as UpdateKOLInput;

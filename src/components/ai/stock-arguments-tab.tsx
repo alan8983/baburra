@@ -42,7 +42,7 @@ export function StockArgumentsTab({ ticker }: StockArgumentsTabProps) {
       <div className="space-y-4">
         <div className="animate-pulse space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-32 bg-muted rounded-lg" />
+            <div key={i} className="bg-muted h-32 rounded-lg" />
           ))}
         </div>
       </div>
@@ -53,7 +53,7 @@ export function StockArgumentsTab({ ticker }: StockArgumentsTabProps) {
     return (
       <Card>
         <CardContent className="py-8">
-          <p className="text-center text-muted-foreground">載入論點資料失敗</p>
+          <p className="text-muted-foreground text-center">載入論點資料失敗</p>
         </CardContent>
       </Card>
     );
@@ -63,8 +63,8 @@ export function StockArgumentsTab({ ticker }: StockArgumentsTabProps) {
     return (
       <Card>
         <CardContent className="py-8">
-          <p className="text-center text-muted-foreground">尚無論點資料</p>
-          <p className="text-center text-sm text-muted-foreground mt-2">
+          <p className="text-muted-foreground text-center">尚無論點資料</p>
+          <p className="text-muted-foreground mt-2 text-center text-sm">
             當文章被 AI 分析時，論點會自動提取並顯示在此處
           </p>
         </CardContent>
@@ -77,7 +77,7 @@ export function StockArgumentsTab({ ticker }: StockArgumentsTabProps) {
       {/* 總覽 */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center justify-between">
+          <CardTitle className="flex items-center justify-between text-base">
             <span>📊 論點分布統計</span>
             <Badge variant="secondary">{data.totalArgumentCount} 個論點</Badge>
           </CardTitle>
@@ -85,11 +85,11 @@ export function StockArgumentsTab({ ticker }: StockArgumentsTabProps) {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             {data.summary.map((group) => (
-              <div key={group.parent.id} className="text-center p-3 border rounded-lg">
-                <div className="text-2xl mb-1">{CATEGORY_ICONS[group.parent.code] || '📌'}</div>
+              <div key={group.parent.id} className="rounded-lg border p-3 text-center">
+                <div className="mb-1 text-2xl">{CATEGORY_ICONS[group.parent.code] || '📌'}</div>
                 <div className="font-medium">{group.parent.name}</div>
-                <div className="text-2xl font-bold text-primary">{group.totalMentions}</div>
-                <div className="text-xs text-muted-foreground">次提及</div>
+                <div className="text-primary text-2xl font-bold">{group.totalMentions}</div>
+                <div className="text-muted-foreground text-xs">次提及</div>
               </div>
             ))}
           </div>
@@ -100,7 +100,7 @@ export function StockArgumentsTab({ ticker }: StockArgumentsTabProps) {
       <div className="space-y-4">
         {data.summary.map((group) => (
           <div key={group.parent.id}>
-            <h3 className="font-semibold mb-3 flex items-center gap-2">
+            <h3 className="mb-3 flex items-center gap-2 font-semibold">
               <span>{CATEGORY_ICONS[group.parent.code] || '📌'}</span>
               <span>{group.parent.name}</span>
               <Badge variant="outline">{group.totalMentions}</Badge>
@@ -128,7 +128,8 @@ function CategoryCard({ data }: CategoryCardProps) {
 
   // 計算看多/看空比例
   const totalSentimentCount = data.bullishCount + data.bearishCount;
-  const bullishPercentage = totalSentimentCount > 0 ? (data.bullishCount / totalSentimentCount) * 100 : 50;
+  const bullishPercentage =
+    totalSentimentCount > 0 ? (data.bullishCount / totalSentimentCount) * 100 : 50;
 
   return (
     <Card>
@@ -159,7 +160,7 @@ function CategoryCard({ data }: CategoryCardProps) {
             <span className="text-green-600">看多 {data.bullishCount}</span>
             <span className="text-red-600">看空 {data.bearishCount}</span>
           </div>
-          <div className="h-2 bg-muted rounded-full overflow-hidden flex">
+          <div className="bg-muted flex h-2 overflow-hidden rounded-full">
             <div
               className="bg-green-500 transition-all"
               style={{ width: `${bullishPercentage}%` }}
@@ -173,7 +174,7 @@ function CategoryCard({ data }: CategoryCardProps) {
 
         {/* 時間範圍 */}
         {data.firstMentionedAt && data.lastMentionedAt && (
-          <div className="text-xs text-muted-foreground flex gap-4">
+          <div className="text-muted-foreground flex gap-4 text-xs">
             <span>首次提及: {formatDate(data.firstMentionedAt)}</span>
             <span>最近提及: {formatDate(data.lastMentionedAt)}</span>
           </div>
@@ -183,11 +184,11 @@ function CategoryCard({ data }: CategoryCardProps) {
         {isExpanded && data.arguments.length > 0 && (
           <>
             <Separator />
-            <div className="space-y-3 max-h-96 overflow-y-auto">
+            <div className="max-h-96 space-y-3 overflow-y-auto">
               {/* 看多論點 */}
               {data.arguments.filter((a) => a.sentiment > 0).length > 0 && (
                 <div>
-                  <h5 className="text-sm font-medium text-green-600 mb-2">
+                  <h5 className="mb-2 text-sm font-medium text-green-600">
                     ▲ 看多論點 ({data.arguments.filter((a) => a.sentiment > 0).length})
                   </h5>
                   <div className="space-y-2">
@@ -204,7 +205,7 @@ function CategoryCard({ data }: CategoryCardProps) {
               {/* 中立論點 */}
               {data.arguments.filter((a) => a.sentiment === 0).length > 0 && (
                 <div>
-                  <h5 className="text-sm font-medium text-gray-600 mb-2">
+                  <h5 className="mb-2 text-sm font-medium text-gray-600">
                     ● 中立論點 ({data.arguments.filter((a) => a.sentiment === 0).length})
                   </h5>
                   <div className="space-y-2">
@@ -221,7 +222,7 @@ function CategoryCard({ data }: CategoryCardProps) {
               {/* 看空論點 */}
               {data.arguments.filter((a) => a.sentiment < 0).length > 0 && (
                 <div>
-                  <h5 className="text-sm font-medium text-red-600 mb-2">
+                  <h5 className="mb-2 text-sm font-medium text-red-600">
                     ▼ 看空論點 ({data.arguments.filter((a) => a.sentiment < 0).length})
                   </h5>
                   <div className="space-y-2">
@@ -251,12 +252,12 @@ function ArgumentItem({ argument }: ArgumentItemProps) {
   const sentimentColors = SENTIMENT_COLORS[argument.sentiment as Sentiment];
 
   return (
-    <div className="border rounded-lg p-2 text-sm">
+    <div className="rounded-lg border p-2 text-sm">
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
           {argument.summary && <p className="mb-1">{argument.summary}</p>}
           {argument.originalText && (
-            <blockquote className="border-l-2 border-muted pl-2 text-xs text-muted-foreground italic">
+            <blockquote className="border-muted text-muted-foreground border-l-2 pl-2 text-xs italic">
               {argument.originalText.length > 100
                 ? `${argument.originalText.slice(0, 100)}...`
                 : argument.originalText}
@@ -272,7 +273,7 @@ function ArgumentItem({ argument }: ArgumentItemProps) {
           </Link>
         </div>
       </div>
-      <div className="text-xs text-muted-foreground mt-1">{formatDate(argument.createdAt)}</div>
+      <div className="text-muted-foreground mt-1 text-xs">{formatDate(argument.createdAt)}</div>
     </div>
   );
 }

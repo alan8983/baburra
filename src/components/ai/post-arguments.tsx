@@ -48,7 +48,7 @@ export function PostArguments({ arguments: args, className }: PostArgumentsProps
           <CardTitle className="text-base">論點分析</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">尚未提取論點</p>
+          <p className="text-muted-foreground text-sm">尚未提取論點</p>
         </CardContent>
       </Card>
     );
@@ -70,7 +70,7 @@ export function PostArguments({ arguments: args, className }: PostArgumentsProps
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-base">
           <span>🧠</span>
           <span>論點分析</span>
           <Badge variant="secondary" className="ml-auto">
@@ -83,7 +83,7 @@ export function PostArguments({ arguments: args, className }: PostArgumentsProps
           <div key={parentName}>
             {groupIndex > 0 && <Separator className="my-4" />}
             <div className="space-y-3">
-              <h4 className="font-medium text-sm text-muted-foreground">{parentName}</h4>
+              <h4 className="text-muted-foreground text-sm font-medium">{parentName}</h4>
               {parentArgs.map((arg) => (
                 <ArgumentCard key={arg.id} argument={arg} />
               ))}
@@ -101,11 +101,11 @@ function ArgumentCard({ argument }: { argument: Argument }) {
   const sentimentColors = SENTIMENT_COLORS[argument.sentiment];
 
   return (
-    <div className="border rounded-lg p-3 space-y-2">
+    <div className="space-y-2 rounded-lg border p-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span>{icon}</span>
-          <span className="font-medium text-sm">{argument.categoryName}</span>
+          <span className="text-sm font-medium">{argument.categoryName}</span>
         </div>
         <Badge className={sentimentColors}>{sentimentLabel}</Badge>
       </div>
@@ -113,7 +113,7 @@ function ArgumentCard({ argument }: { argument: Argument }) {
       {argument.summary && <p className="text-sm">{argument.summary}</p>}
 
       {argument.originalText && (
-        <blockquote className="border-l-2 border-muted pl-3 text-xs text-muted-foreground italic">
+        <blockquote className="border-muted text-muted-foreground border-l-2 pl-3 text-xs italic">
           {argument.originalText.length > 150
             ? `${argument.originalText.slice(0, 150)}...`
             : argument.originalText}
@@ -121,7 +121,7 @@ function ArgumentCard({ argument }: { argument: Argument }) {
       )}
 
       {argument.confidence !== null && (
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+        <div className="text-muted-foreground flex items-center gap-1 text-xs">
           <span>信心度:</span>
           <span className="font-medium">{Math.round(argument.confidence * 100)}%</span>
         </div>

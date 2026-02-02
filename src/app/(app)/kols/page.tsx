@@ -38,9 +38,7 @@ export default function KolsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">KOL 列表</h1>
-          <p className="text-muted-foreground">
-            瀏覽和管理所有追蹤中的 KOL
-          </p>
+          <p className="text-muted-foreground">瀏覽和管理所有追蹤中的 KOL</p>
         </div>
         <Button>
           <Plus className="mr-2 h-4 w-4" />
@@ -50,7 +48,7 @@ export default function KolsPage() {
 
       {/* Search */}
       <div className="relative max-w-md">
-        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <Search className="text-muted-foreground absolute top-3 left-3 h-4 w-4" />
         <Input
           placeholder="搜尋 KOL..."
           value={searchQuery}
@@ -62,9 +60,7 @@ export default function KolsPage() {
       {/* Loading */}
       {isLoading && (
         <Card className="py-12">
-          <CardContent className="flex justify-center text-muted-foreground">
-            載入中...
-          </CardContent>
+          <CardContent className="text-muted-foreground flex justify-center">載入中...</CardContent>
         </Card>
       )}
 
@@ -73,7 +69,7 @@ export default function KolsPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredKols.map((kol) => (
             <Link key={kol.id} href={ROUTES.KOL_DETAIL(kol.id)}>
-              <Card className="transition-colors hover:bg-muted/50">
+              <Card className="hover:bg-muted/50 transition-colors">
                 <CardHeader className="pb-3">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-12 w-12">
@@ -82,8 +78,8 @@ export default function KolsPage() {
                         <User className="h-6 w-6" />
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-base truncate">{kol.name}</CardTitle>
+                    <div className="min-w-0 flex-1">
+                      <CardTitle className="truncate text-base">{kol.name}</CardTitle>
                       <CardDescription className="text-xs">
                         最近發文: {kol.lastPostAt ? formatDate(kol.lastPostAt) : '—'}
                       </CardDescription>
@@ -114,9 +110,9 @@ export default function KolsPage() {
       {!isLoading && filteredKols.length === 0 && (
         <Card className="py-12">
           <CardContent className="flex flex-col items-center justify-center text-center">
-            <User className="h-12 w-12 text-muted-foreground" />
+            <User className="text-muted-foreground h-12 w-12" />
             <h3 className="mt-4 text-lg font-semibold">找不到 KOL</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="text-muted-foreground mt-2 text-sm">
               {searchQuery
                 ? `沒有符合「${searchQuery}」的 KOL`
                 : '還沒有任何 KOL，點擊上方按鈕新增'}

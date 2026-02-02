@@ -14,23 +14,25 @@ export async function GET() {
     const parentCategories = categories.filter((c) => c.parentId === null);
     const childCategories = categories.filter((c) => c.parentId !== null);
 
-    const result = parentCategories.map((parent) => ({
-      id: parent.id,
-      code: parent.code,
-      name: parent.name,
-      description: parent.description,
-      sortOrder: parent.sortOrder,
-      children: childCategories
-        .filter((c) => c.parentId === parent.id)
-        .map((child) => ({
-          id: child.id,
-          code: child.code,
-          name: child.name,
-          description: child.description,
-          sortOrder: child.sortOrder,
-        }))
-        .sort((a, b) => a.sortOrder - b.sortOrder),
-    })).sort((a, b) => a.sortOrder - b.sortOrder);
+    const result = parentCategories
+      .map((parent) => ({
+        id: parent.id,
+        code: parent.code,
+        name: parent.name,
+        description: parent.description,
+        sortOrder: parent.sortOrder,
+        children: childCategories
+          .filter((c) => c.parentId === parent.id)
+          .map((child) => ({
+            id: child.id,
+            code: child.code,
+            name: child.name,
+            description: child.description,
+            sortOrder: child.sortOrder,
+          }))
+          .sort((a, b) => a.sortOrder - b.sortOrder),
+      }))
+      .sort((a, b) => a.sortOrder - b.sortOrder);
 
     return NextResponse.json(result);
   } catch (error) {

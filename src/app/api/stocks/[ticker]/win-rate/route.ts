@@ -29,10 +29,7 @@ export async function GET(request: Request, context: RouteContext) {
       .single();
 
     if (!stock) {
-      return NextResponse.json(
-        { error: 'Stock not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Stock not found' }, { status: 404 });
     }
 
     // 2. 取得與該標的相關的所有文章
@@ -77,10 +74,7 @@ export async function GET(request: Request, context: RouteContext) {
       const priceChanges: Record<string, PriceChangeByPeriod> = {};
 
       if (candles.length > 0) {
-        priceChanges[stock.id] = calculatePriceChanges(
-          candles,
-          new Date(post.postedAt)
-        );
+        priceChanges[stock.id] = calculatePriceChanges(candles, new Date(post.postedAt));
       } else {
         priceChanges[stock.id] = {
           day5: null,
@@ -103,9 +97,6 @@ export async function GET(request: Request, context: RouteContext) {
     return NextResponse.json(stats);
   } catch (error) {
     console.error('Failed to calculate stock win rate:', error);
-    return NextResponse.json(
-      { error: 'Failed to calculate win rate' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to calculate win rate' }, { status: 500 });
   }
 }

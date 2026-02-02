@@ -178,7 +178,7 @@ describe('argument-summary.calculator', () => {
       expect(result[0].parentCode).toBe('QUANTITATIVE');
       expect(result[0].totalMentions).toBe(3);
       expect(result[0].categories).toHaveLength(2);
-      
+
       // 應按 mentionCount 降序排序
       expect(result[0].categories[0].categoryCode).toBe('VALUATION');
       expect(result[0].categories[0].mentionCount).toBe(2);

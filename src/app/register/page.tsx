@@ -58,8 +58,8 @@ export default function RegisterPage() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary">
-            <TrendingUp className="h-6 w-6 text-primary-foreground" />
+          <div className="bg-primary mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg">
+            <TrendingUp className="text-primary-foreground h-6 w-6" />
           </div>
           <CardTitle className="text-2xl font-bold">建立帳號</CardTitle>
           <CardDescription>開始追蹤 KOL 的投資觀點</CardDescription>
@@ -68,7 +68,7 @@ export default function RegisterPage() {
           {/* 錯誤訊息 */}
           {displayError && (
             <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-              <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
               <span>{displayError}</span>
             </div>
           )}
@@ -77,7 +77,7 @@ export default function RegisterPage() {
             <div className="space-y-2">
               <Label htmlFor="displayName">顯示名稱</Label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <User className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                 <Input
                   id="displayName"
                   type="text"
@@ -95,7 +95,7 @@ export default function RegisterPage() {
                 電子郵件 <span className="text-destructive">*</span>
               </Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Mail className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                 <Input
                   id="email"
                   type="email"
@@ -114,7 +114,7 @@ export default function RegisterPage() {
                 密碼 <span className="text-destructive">*</span>
               </Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Lock className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                 <Input
                   id="password"
                   type="password"
@@ -133,7 +133,7 @@ export default function RegisterPage() {
                 確認密碼 <span className="text-destructive">*</span>
               </Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Lock className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                 <Input
                   id="confirmPassword"
                   type="password"
@@ -159,14 +159,14 @@ export default function RegisterPage() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-muted-foreground">
+          <div className="text-muted-foreground mt-6 text-center text-sm">
             已經有帳號？{' '}
-            <Link href={ROUTES.LOGIN} className="font-medium text-primary hover:underline">
+            <Link href={ROUTES.LOGIN} className="text-primary font-medium hover:underline">
               立即登入
             </Link>
           </div>
 
-          <p className="mt-4 text-center text-xs text-muted-foreground">
+          <p className="text-muted-foreground mt-4 text-center text-xs">
             註冊即表示您同意我們的
             <Link href="/terms" className="underline">
               服務條款

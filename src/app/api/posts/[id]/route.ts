@@ -6,10 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPostById, updatePost, deletePost } from '@/infrastructure/repositories';
 import type { UpdatePostInput } from '@/domain/models';
 
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const post = await getPostById(id);
@@ -24,10 +21,7 @@ export async function GET(
   }
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const body = (await request.json()) as UpdatePostInput;

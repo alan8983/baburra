@@ -47,7 +47,8 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     // 3. 取得所有標的的股價資料（使用 365 天範圍）
-    const candlesByStock: Record<string, Awaited<ReturnType<typeof getStockPrices>>['candles']> = {};
+    const candlesByStock: Record<string, Awaited<ReturnType<typeof getStockPrices>>['candles']> =
+      {};
 
     // 找出最早的發文日期
     const earliestDate = posts.reduce((min, post) => {
@@ -81,10 +82,7 @@ export async function GET(request: Request, context: RouteContext) {
       for (const stock of post.stocks) {
         const candles = candlesByStock[stock.id];
         if (candles && candles.length > 0) {
-          priceChanges[stock.id] = calculatePriceChanges(
-            candles,
-            new Date(post.postedAt)
-          );
+          priceChanges[stock.id] = calculatePriceChanges(candles, new Date(post.postedAt));
         } else {
           priceChanges[stock.id] = {
             day5: null,
@@ -108,9 +106,6 @@ export async function GET(request: Request, context: RouteContext) {
     return NextResponse.json(stats);
   } catch (error) {
     console.error('Failed to calculate KOL win rate:', error);
-    return NextResponse.json(
-      { error: 'Failed to calculate win rate' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to calculate win rate' }, { status: 500 });
   }
 }

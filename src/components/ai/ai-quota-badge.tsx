@@ -7,12 +7,7 @@
 
 import { useAiUsage } from '@/hooks/use-ai';
 import { Badge } from '@/components/ui/badge';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Sparkles } from 'lucide-react';
 
 interface AiQuotaBadgeProps {
@@ -26,7 +21,7 @@ export function AiQuotaBadge({ variant = 'default', className }: AiQuotaBadgePro
   if (isLoading) {
     return (
       <Badge variant="outline" className={className}>
-        <Sparkles className="w-3 h-3 mr-1" />
+        <Sparkles className="mr-1 h-3 w-3" />
         <span className="animate-pulse">...</span>
       </Badge>
     );
@@ -64,7 +59,7 @@ export function AiQuotaBadge({ variant = 'default', className }: AiQuotaBadgePro
         <Tooltip>
           <TooltipTrigger asChild>
             <Badge variant="outline" className={`${colorClass} ${className}`}>
-              <Sparkles className="w-3 h-3 mr-1" />
+              <Sparkles className="mr-1 h-3 w-3" />
               {remaining}
             </Badge>
           </TooltipTrigger>
@@ -72,7 +67,7 @@ export function AiQuotaBadge({ variant = 'default', className }: AiQuotaBadgePro
             <p>
               AI 配額: {remaining}/{weeklyLimit}
             </p>
-            <p className="text-xs text-muted-foreground">{formatResetTime()}</p>
+            <p className="text-muted-foreground text-xs">{formatResetTime()}</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -84,7 +79,7 @@ export function AiQuotaBadge({ variant = 'default', className }: AiQuotaBadgePro
       <Tooltip>
         <TooltipTrigger asChild>
           <Badge variant="outline" className={`${colorClass} ${className}`}>
-            <Sparkles className="w-3 h-3 mr-1" />
+            <Sparkles className="mr-1 h-3 w-3" />
             <span>
               AI: {remaining}/{weeklyLimit}
             </span>
@@ -92,7 +87,7 @@ export function AiQuotaBadge({ variant = 'default', className }: AiQuotaBadgePro
         </TooltipTrigger>
         <TooltipContent>
           <p>本週剩餘 AI 分析次數</p>
-          <p className="text-xs text-muted-foreground">{formatResetTime()}</p>
+          <p className="text-muted-foreground text-xs">{formatResetTime()}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

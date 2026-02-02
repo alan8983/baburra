@@ -41,7 +41,11 @@ export async function listStocks(params: {
 
   const from = (page - 1) * limit;
   const to = from + limit - 1;
-  const { data: rows, count, error } = await query.order('updated_at', { ascending: false }).range(from, to);
+  const {
+    data: rows,
+    count,
+    error,
+  } = await query.order('updated_at', { ascending: false }).range(from, to);
 
   if (error) throw new Error(error.message);
 
@@ -50,7 +54,10 @@ export async function listStocks(params: {
     return { data: [], total: count ?? 0 };
   }
 
-  const { data: postStocks } = await supabase.from('post_stocks').select('stock_id, post_id').in('stock_id', ids);
+  const { data: postStocks } = await supabase
+    .from('post_stocks')
+    .select('stock_id, post_id')
+    .in('stock_id', ids);
   const countByStock: Record<string, number> = {};
   const postIdsByStock: Record<string, string[]> = {};
   for (const ps of postStocks ?? []) {
@@ -93,7 +100,11 @@ export async function listStocks(params: {
 
 export async function getStockByTicker(ticker: string): Promise<StockWithStats | null> {
   const supabase = createAdminClient();
-  const { data: row, error } = await supabase.from('stocks').select('*').eq('ticker', ticker).single();
+  const { data: row, error } = await supabase
+    .from('stocks')
+    .select('*')
+    .eq('ticker', ticker)
+    .single();
   if (error || !row) return null;
 
   const stock = mapDbToStock(row as DbStock);

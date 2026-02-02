@@ -26,7 +26,7 @@ export function ImageUploader({
 }: ImageUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  
+
   const { uploadMultiple, isUploading, progress } = useUploadImages({
     onError: (error) => {
       setUploadError(error.message);
@@ -49,7 +49,7 @@ export function ImageUploader({
 
       setUploadError(null);
       const results = await uploadMultiple(files);
-      
+
       if (results.length > 0) {
         const newUrls = results.map((r) => r.url);
         onChange([...value, ...newUrls]);
@@ -82,13 +82,13 @@ export function ImageUploader({
   return (
     <div className={cn('space-y-2', className)}>
       <Label>圖片</Label>
-      
+
       <div className="flex flex-wrap gap-2">
         {/* 已上傳的圖片 */}
         {value.map((url, index) => (
           <div
             key={url}
-            className="relative h-20 w-20 rounded-lg overflow-hidden border bg-muted group"
+            className="bg-muted group relative h-20 w-20 overflow-hidden rounded-lg border"
           >
             <Image
               src={url}
@@ -101,7 +101,7 @@ export function ImageUploader({
               <button
                 type="button"
                 onClick={() => handleRemove(index)}
-                className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                className="bg-destructive text-destructive-foreground absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full opacity-0 transition-opacity group-hover:opacity-100"
                 aria-label="移除圖片"
               >
                 <X className="h-3 w-3" />
@@ -112,12 +112,10 @@ export function ImageUploader({
 
         {/* 上傳中顯示 */}
         {isUploading && (
-          <div className="flex h-20 w-20 items-center justify-center rounded-lg border bg-muted">
+          <div className="bg-muted flex h-20 w-20 items-center justify-center rounded-lg border">
             <div className="flex flex-col items-center gap-1">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">
-                {Math.round(progress)}%
-              </span>
+              <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
+              <span className="text-muted-foreground text-xs">{Math.round(progress)}%</span>
             </div>
           </div>
         )}
@@ -130,11 +128,11 @@ export function ImageUploader({
             className={cn(
               'flex h-20 w-20 items-center justify-center rounded-lg border border-dashed transition-colors',
               'hover:bg-muted/50 cursor-pointer',
-              disabled && 'opacity-50 cursor-not-allowed'
+              disabled && 'cursor-not-allowed opacity-50'
             )}
             disabled={disabled}
           >
-            <Plus className="h-6 w-6 text-muted-foreground" />
+            <Plus className="text-muted-foreground h-6 w-6" />
           </button>
         )}
 
@@ -152,14 +150,14 @@ export function ImageUploader({
 
       {/* 錯誤訊息 */}
       {uploadError && (
-        <div className="flex items-center gap-2 text-sm text-destructive">
+        <div className="text-destructive flex items-center gap-2 text-sm">
           <AlertCircle className="h-4 w-4" />
           <span>{uploadError}</span>
         </div>
       )}
 
       {/* 提示文字 */}
-      <p className="text-xs text-muted-foreground">
+      <p className="text-muted-foreground text-xs">
         點擊上傳圖片，最多 {maxImages} 張（支援 JPG、PNG、GIF、WebP，每張最大 5MB）
       </p>
     </div>

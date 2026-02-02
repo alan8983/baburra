@@ -76,10 +76,7 @@ export function useStockSearch(query: string) {
 }
 
 // 取得標的相關文章列表
-export function useStockPosts(
-  ticker: string,
-  params?: { page?: number; limit?: number }
-) {
+export function useStockPosts(ticker: string, params?: { page?: number; limit?: number }) {
   return useQuery({
     queryKey: stockKeys.posts(ticker, params),
     queryFn: async (): Promise<{ data: PostWithPriceChanges[]; total: number }> => {
@@ -96,10 +93,7 @@ export function useStockPosts(
 }
 
 // 取得股價資料
-export function useStockPrices(
-  ticker: string,
-  params?: { startDate?: string; endDate?: string }
-) {
+export function useStockPrices(ticker: string, params?: { startDate?: string; endDate?: string }) {
   return useQuery({
     queryKey: stockKeys.prices(ticker, params),
     queryFn: async (): Promise<CandlestickData[]> => {
