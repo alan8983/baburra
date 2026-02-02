@@ -21,6 +21,15 @@ export interface AiUsageInfo {
  */
 export async function getAiUsage(userId: string): Promise<AiUsageInfo> {
   const supabase = createAdminClient();
+  if (!supabase) {
+    return {
+      usageCount: 0,
+      weeklyLimit: FREE_TIER_WEEKLY_LIMIT,
+      remaining: FREE_TIER_WEEKLY_LIMIT,
+      resetAt: null,
+      subscriptionTier: 'free',
+    };
+  }
 
   const { data, error } = await supabase
     .from('profiles')
@@ -76,6 +85,9 @@ export async function checkAiQuota(userId: string): Promise<boolean> {
  */
 export async function consumeAiQuota(userId: string): Promise<AiUsageInfo> {
   const supabase = createAdminClient();
+  if (!supabase) {
+    throw new Error('Missing Supabase admin credentials');
+  }
 
   // 先取得目前的使用狀況
   const { data: profile, error: fetchError } = await supabase
@@ -145,6 +157,9 @@ export async function consumeAiQuota(userId: string): Promise<AiUsageInfo> {
  */
 export async function resetAiQuota(userId: string): Promise<void> {
   const supabase = createAdminClient();
+  if (!supabase) {
+    throw new Error('Missing Supabase admin credentials');
+  }
 
   const nextWeek = new Date();
   nextWeek.setDate(nextWeek.getDate() + 7);

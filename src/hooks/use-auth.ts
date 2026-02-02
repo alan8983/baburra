@@ -4,7 +4,7 @@
  * Auth Hook - 用於客戶端認證狀態管理
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/infrastructure/supabase/client';
 import type { User, Session, AuthError } from '@supabase/supabase-js';
@@ -34,16 +34,30 @@ export function useAuth(): UseAuthReturn {
     error: null,
   });
 
-  const supabase = createClient();
+  // 穩定參考，避免每次 render 建立新 client 導致 useEffect 無限重跑
+  const supabase = useMemo(() => createClient(), []);
 
-  // 初始化 - 取得當前 session
+  // router 用 ref 持有，避免 useRouter() 每次 render 新參考導致 effect 無限重跑（嚴重時會 crash）
+  const routerRef = useRef(router);
+  routerRef.current = router;
+
+  // 初始化 - 取得當前 session（含逾時，避免未設定 Supabase 時卡住）
   useEffect(() => {
+    let cancelled = false;
+
     const initAuth = async () => {
       try {
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('SESSION_TIMEOUT')), 5000)
+        );
+
         const {
           data: { session },
           error,
-        } = await supabase.auth.getSession();
+        } = await Promise.race([sessionPromise, timeoutPromise]);
+
+        if (cancelled) return;
         if (error) throw error;
 
         setState({
@@ -53,17 +67,18 @@ export function useAuth(): UseAuthReturn {
           error: null,
         });
       } catch (error) {
+        if (cancelled) return;
         setState((prev) => ({
           ...prev,
           loading: false,
-          error: error as AuthError,
+          error: (error as Error).message === 'SESSION_TIMEOUT' ? null : (error as AuthError),
         }));
       }
     };
 
     initAuth();
 
-    // 監聽 auth 狀態變化
+    // 監聽 auth 狀態變化（使用 routerRef 避免 router 進 dependency 造成無限循環）
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -74,16 +89,16 @@ export function useAuth(): UseAuthReturn {
         error: null,
       });
 
-      // 登出後導向登入頁
       if (event === 'SIGNED_OUT') {
-        router.push(ROUTES.LOGIN);
+        routerRef.current.push(ROUTES.LOGIN);
       }
     });
 
     return () => {
+      cancelled = true;
       subscription.unsubscribe();
     };
-  }, [supabase, router]);
+  }, [supabase]);
 
   // 註冊
   const signUp = useCallback(

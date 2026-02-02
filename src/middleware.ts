@@ -18,6 +18,11 @@ const isSupabaseConfigured =
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // 首頁直接重導向到 dashboard，避免 Server Component redirect 造成白畫面
+  if (pathname === '/') {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
   // 跳過靜態檔案和公開路由
   if (
     pathname.startsWith('/_next') ||
