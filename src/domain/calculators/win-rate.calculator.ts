@@ -4,13 +4,13 @@
  */
 
 import type { Sentiment, PriceChangeByPeriod } from '@/domain/models/post';
-import { PRICE_CHANGE_PERIODS, type PriceChangePeriod } from './price-change.calculator';
+import type { PriceChangePeriod } from './price-change.calculator';
 
 export interface WinRateResult {
   period: PriceChangePeriod;
-  total: number;      // 有效文章數（排除中立）
-  wins: number;       // 勝利次數
-  losses: number;     // 失敗次數
+  total: number; // 有效文章數（排除中立）
+  wins: number; // 勝利次數
+  losses: number; // 失敗次數
   rate: number | null; // 勝率 (0-1)，若無有效文章則為 null
 }
 
@@ -52,10 +52,7 @@ export function isWin(sentiment: Sentiment, priceChange: number | null): boolean
 /**
  * 計算特定期間的勝率
  */
-function calculatePeriodWinRate(
-  posts: PostForWinRate[],
-  period: PriceChangePeriod
-): WinRateResult {
+function calculatePeriodWinRate(posts: PostForWinRate[], period: PriceChangePeriod): WinRateResult {
   const periodKey = `day${period}` as keyof PriceChangeByPeriod;
   let wins = 0;
   let losses = 0;

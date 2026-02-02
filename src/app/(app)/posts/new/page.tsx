@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { Suspense, useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Check, AlertTriangle, Sparkles, Loader2 } from 'lucide-react';
@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { SentimentSelector, getSentimentLabel, getSentimentColorClass } from '@/components/forms/sentiment-selector';
+import { SentimentSelector } from '@/components/forms/sentiment-selector';
 import { ROUTES } from '@/lib/constants';
 import { useDraft, useDeleteDraft } from '@/hooks/use-drafts';
 import { useCreatePost, useCheckDuplicateUrl } from '@/hooks/use-posts';
@@ -20,7 +20,7 @@ import { useAnalyzeSentiment, useExtractArguments, useAiUsage } from '@/hooks/us
 import type { Sentiment, CreatePostInput } from '@/domain/models';
 import { toast } from 'sonner';
 
-export default function PostNewPage() {
+function PostNewContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const draftId = searchParams.get('draftId');
@@ -45,7 +45,7 @@ export default function PostNewPage() {
 
   // 重複 URL 檢測
   const sourceUrl = draft?.sourceUrl ?? '';
-  const { data: duplicateCheck, isLoading: isCheckingDuplicate } = useCheckDuplicateUrl(sourceUrl);
+  const { data: duplicateCheck } = useCheckDuplicateUrl(sourceUrl);
 
   // 初始化 sentiment
   useEffect(() => {
@@ -176,7 +176,7 @@ export default function PostNewPage() {
   if (isDraftLoading) {
     return (
       <div className="mx-auto max-w-3xl space-y-6">
-        <div className="flex items-center gap-2 text-muted-foreground">
+        <div className="text-muted-foreground flex items-center gap-2">
           <Loader2 className="h-4 w-4 animate-spin" />
           載入中...
         </div>
@@ -245,7 +245,7 @@ export default function PostNewPage() {
             </Avatar>
             <div className="space-y-1">
               <p className="font-semibold">{draft.kol?.name ?? '未選擇 KOL'}</p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 {draft.postedAt
                   ? format(new Date(draft.postedAt), 'yyyy/MM/dd HH:mm', { locale: zhTW })
                   : '未設定發文時間'}
@@ -257,7 +257,7 @@ export default function PostNewPage() {
                   </Badge>
                 ))}
                 {(!draft.stocks || draft.stocks.length === 0) && (
-                  <span className="text-sm text-muted-foreground">未選擇標的</span>
+                  <span className="text-muted-foreground text-sm">未選擇標的</span>
                 )}
               </div>
             </div>
@@ -267,8 +267,8 @@ export default function PostNewPage() {
 
           {/* 主文內容 */}
           <div className="space-y-2">
-            <h4 className="text-sm font-medium text-muted-foreground">主文內容</h4>
-            <div className="whitespace-pre-wrap rounded-lg bg-muted/50 p-4 text-sm">
+            <h4 className="text-muted-foreground text-sm font-medium">主文內容</h4>
+            <div className="bg-muted/50 rounded-lg p-4 text-sm whitespace-pre-wrap">
               {draft.content || '（無內容）'}
             </div>
           </div>
@@ -278,11 +278,12 @@ export default function PostNewPage() {
             <>
               <Separator />
               <div className="space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground">
+                <h4 className="text-muted-foreground text-sm font-medium">
                   附圖 ({draft.images.length})
                 </h4>
                 <div className="grid grid-cols-3 gap-2">
                   {draft.images.map((url, i) => (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       key={i}
                       src={url}
@@ -300,12 +301,12 @@ export default function PostNewPage() {
             <>
               <Separator />
               <div className="space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground">原始網址</h4>
+                <h4 className="text-muted-foreground text-sm font-medium">原始網址</h4>
                 <a
                   href={draft.sourceUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-sm text-primary hover:underline"
+                  className="text-primary text-sm hover:underline"
                 >
                   {draft.sourceUrl}
                 </a>
@@ -330,9 +331,7 @@ export default function PostNewPage() {
             size="sm"
             onClick={handleAnalyzeSentiment}
             disabled={
-              !draft.content ||
-              analyzeSentiment.isPending ||
-              (aiUsage?.remaining ?? 0) <= 0
+              !draft.content || analyzeSentiment.isPending || (aiUsage?.remaining ?? 0) <= 0
             }
           >
             {analyzeSentiment.isPending ? (
@@ -359,9 +358,9 @@ export default function PostNewPage() {
 
           {/* AI 分析結果詳情 */}
           {aiReasoning && aiConfidence !== null && (
-            <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm">
+            <div className="border-primary/20 bg-primary/5 rounded-lg border p-4 text-sm">
               <div className="mb-2 flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
+                <Sparkles className="text-primary h-4 w-4" />
                 <span className="font-medium">AI 分析結果</span>
                 <span className="text-muted-foreground">
                   (信心度: {Math.round(aiConfidence * 100)}%)
@@ -373,7 +372,7 @@ export default function PostNewPage() {
 
           {/* AI 配額提示 */}
           {aiUsage && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               AI 配額：{aiUsage.remaining} / {aiUsage.weeklyLimit} 本週剩餘
             </p>
           )}
@@ -393,7 +392,7 @@ export default function PostNewPage() {
             />
             <div>
               <span className="text-sm font-medium">發布後自動提取論點</span>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 使用 AI 自動分析並提取文章中的投資論點（消耗 1 次 AI 配額）
               </p>
             </div>
@@ -437,5 +436,22 @@ export default function PostNewPage() {
         </Card>
       )}
     </div>
+  );
+}
+
+export default function PostNewPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-3xl space-y-6">
+          <div className="text-muted-foreground flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            載入中...
+          </div>
+        </div>
+      }
+    >
+      <PostNewContent />
+    </Suspense>
   );
 }

@@ -6,7 +6,7 @@ import {
   getWinRateColorClass,
   type PostForWinRate,
 } from './win-rate.calculator';
-import type { Sentiment, PriceChangeByPeriod } from '@/domain/models/post';
+import type { Sentiment } from '@/domain/models/post';
 
 describe('win-rate.calculator', () => {
   describe('isWin', () => {
@@ -65,7 +65,7 @@ describe('win-rate.calculator', () => {
           sentiment: 1 as Sentiment, // 看多
           priceChanges: {
             'stock-1': {
-              day5: 5.0,  // 漲 = 勝
+              day5: 5.0, // 漲 = 勝
               day30: 10.0, // 漲 = 勝
               day90: -5.0, // 跌 = 敗
               day365: null, // 無資料

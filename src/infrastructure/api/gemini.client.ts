@@ -126,7 +126,7 @@ export async function generateJson<T>(
 
   try {
     return JSON.parse(cleanedText) as T;
-  } catch (error) {
+  } catch {
     throw new Error(`Failed to parse Gemini response as JSON: ${cleanedText.slice(0, 200)}...`);
   }
 }

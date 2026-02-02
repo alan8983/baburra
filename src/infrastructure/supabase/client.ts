@@ -3,9 +3,21 @@
 
 import { createBrowserClient } from '@supabase/ssr';
 
-export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+// 使用占位符值讓 build 可以通過，運行時會因為無效憑證而失敗
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key';
+
+// 在開發/運行時檢查並警告缺少環境變數
+if (
+  typeof window !== 'undefined' &&
+  (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY)
+) {
+  console.error(
+    '[Supabase] Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY. ' +
+      'Add them to your .env.local file or set them as repo secrets for CI.'
   );
+}
+
+export function createClient() {
+  return createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }

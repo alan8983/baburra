@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState, useEffect } from 'react';
+import { use, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, ArrowRight, Trash2 } from 'lucide-react';
@@ -20,39 +20,41 @@ import {
   DatetimeInput,
   ImageUploader,
 } from '@/components/forms';
-import type { KOLSearchResult, StockSearchResult, Sentiment } from '@/domain/models';
+import type {
+  KOLSearchResult,
+  StockSearchResult,
+  Sentiment,
+  DraftWithRelations,
+} from '@/domain/models';
 import { useDraft, useUpdateDraft, useDeleteDraft } from '@/hooks';
 
-export default function DraftEditPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+// 表單組件 - 接收 draft 作為 prop，使用 key 來重置狀態
+interface DraftEditFormProps {
+  draft: DraftWithRelations;
+  id: string;
+}
+
+function DraftEditForm({ draft, id }: DraftEditFormProps) {
   const router = useRouter();
-  const { data: draft, isLoading, error } = useDraft(id);
   const updateDraft = useUpdateDraft(id);
   const deleteDraft = useDeleteDraft();
 
-  // 表單狀態（由 API 資料初始化）
-  const [selectedKOL, setSelectedKOL] = useState<KOLSearchResult | null>(null);
-  const [selectedStocks, setSelectedStocks] = useState<StockSearchResult[]>([]);
-  const [content, setContent] = useState('');
-  const [sourceUrl, setSourceUrl] = useState('');
-  const [sentiment, setSentiment] = useState<Sentiment | null>(null);
-  const [postedAt, setPostedAt] = useState<Date | null>(null);
-  const [images, setImages] = useState<string[]>([]);
-
-  useEffect(() => {
-    if (!draft) return;
-    setSelectedKOL(
-      draft.kol ? { id: draft.kol.id, name: draft.kol.name, avatarUrl: draft.kol.avatarUrl } : null
-    );
-    setSelectedStocks(
-      draft.stocks.map((s) => ({ id: s.id, ticker: s.ticker, name: s.name, logoUrl: null }))
-    );
-    setContent(draft.content ?? '');
-    setSourceUrl(draft.sourceUrl ?? '');
-    setSentiment(draft.sentiment as Sentiment | null);
-    setPostedAt(draft.postedAt ? new Date(draft.postedAt) : null);
-    setImages(draft.images ?? []);
-  }, [draft]);
+  // 表單狀態（直接從 draft 初始化）
+  const [selectedKOL, setSelectedKOL] = useState<KOLSearchResult | null>(() =>
+    draft.kol ? { id: draft.kol.id, name: draft.kol.name, avatarUrl: draft.kol.avatarUrl } : null
+  );
+  const [selectedStocks, setSelectedStocks] = useState<StockSearchResult[]>(() =>
+    draft.stocks.map((s) => ({ id: s.id, ticker: s.ticker, name: s.name, logoUrl: null }))
+  );
+  const [content, setContent] = useState(() => draft.content ?? '');
+  const [sourceUrl, setSourceUrl] = useState(() => draft.sourceUrl ?? '');
+  const [sentiment, setSentiment] = useState<Sentiment | null>(
+    () => draft.sentiment as Sentiment | null
+  );
+  const [postedAt, setPostedAt] = useState<Date | null>(() =>
+    draft.postedAt ? new Date(draft.postedAt) : null
+  );
+  const [images, setImages] = useState<string[]>(() => draft.images ?? []);
 
   // Dialog 狀態
   const [kolDialogOpen, setKolDialogOpen] = useState(false);
@@ -106,24 +108,6 @@ export default function DraftEditPage({ params }: { params: Promise<{ id: string
     }
   };
 
-  if (isLoading || (!draft && !error)) {
-    return (
-      <div className="mx-auto max-w-3xl space-y-6">
-        <p className="text-muted-foreground">載入中...</p>
-      </div>
-    );
-  }
-  if (error || !draft) {
-    return (
-      <div className="mx-auto max-w-3xl space-y-6">
-        <p className="text-destructive">無法載入草稿</p>
-        <Button variant="outline" asChild>
-          <Link href={ROUTES.DRAFTS}>返回草稿列表</Link>
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       {/* Header */}
@@ -150,9 +134,7 @@ export default function DraftEditPage({ params }: { params: Promise<{ id: string
       <Card>
         <CardHeader>
           <CardTitle>編輯草稿</CardTitle>
-          <CardDescription>
-            完善文章資訊後即可發布
-          </CardDescription>
+          <CardDescription>完善文章資訊後即可發布</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* KOL Selector */}
@@ -226,21 +208,13 @@ export default function DraftEditPage({ params }: { params: Promise<{ id: string
           <Separator />
 
           {/* Images */}
-          <ImageUploader
-            value={images}
-            onChange={setImages}
-            maxImages={10}
-          />
+          <ImageUploader value={images} onChange={setImages} maxImages={10} />
         </CardContent>
       </Card>
 
       {/* Action Buttons */}
       <div className="flex justify-end gap-3">
-        <Button
-          variant="outline"
-          onClick={handleSave}
-          disabled={updateDraft.isPending}
-        >
+        <Button variant="outline" onClick={handleSave} disabled={updateDraft.isPending}>
           儲存草稿
         </Button>
         <Button asChild>
@@ -255,9 +229,7 @@ export default function DraftEditPage({ params }: { params: Promise<{ id: string
       <Card>
         <CardHeader>
           <CardTitle>走勢情緒</CardTitle>
-          <CardDescription>
-            選擇這篇文章的整體看法方向
-          </CardDescription>
+          <CardDescription>選擇這篇文章的整體看法方向</CardDescription>
         </CardHeader>
         <CardContent>
           <SentimentSelector
@@ -287,4 +259,32 @@ export default function DraftEditPage({ params }: { params: Promise<{ id: string
       />
     </div>
   );
+}
+
+// 主頁面組件 - 處理 loading/error 狀態並使用 key 重置表單
+export default function DraftEditPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
+  const { data: draft, isLoading, error } = useDraft(id);
+
+  if (isLoading || (!draft && !error)) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-6">
+        <p className="text-muted-foreground">載入中...</p>
+      </div>
+    );
+  }
+
+  if (error || !draft) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-6">
+        <p className="text-destructive">無法載入草稿</p>
+        <Button variant="outline" asChild>
+          <Link href={ROUTES.DRAFTS}>返回草稿列表</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  // 使用 draft.id 作為 key 來確保表單在 draft 改變時重新初始化
+  return <DraftEditForm key={draft.id} draft={draft} id={id} />;
 }

@@ -24,17 +24,19 @@ export default function DraftsPage() {
   const { data, isLoading, error } = useDrafts();
   const deleteDraft = useDeleteDraft();
 
-  const drafts = data?.data ?? [];
   const filteredDrafts = useMemo(() => {
+    const drafts = data?.data ?? [];
     const q = searchQuery.toLowerCase().trim();
     if (!q) return drafts;
     return drafts.filter(
       (draft) =>
         (draft.content ?? '').toLowerCase().includes(q) ||
         draft.kol?.name?.toLowerCase().includes(q) ||
-        draft.stocks.some((s) => s.ticker.toLowerCase().includes(q) || s.name.toLowerCase().includes(q))
+        draft.stocks.some(
+          (s) => s.ticker.toLowerCase().includes(q) || s.name.toLowerCase().includes(q)
+        )
     );
-  }, [drafts, searchQuery]);
+  }, [data?.data, searchQuery]);
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.preventDefault();
@@ -66,9 +68,7 @@ export default function DraftsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">草稿</h1>
-          <p className="text-muted-foreground">
-            管理尚未發布的文章草稿
-          </p>
+          <p className="text-muted-foreground">管理尚未發布的文章草稿</p>
         </div>
         <Button asChild>
           <Link href={ROUTES.INPUT}>
@@ -80,7 +80,7 @@ export default function DraftsPage() {
 
       {/* Search */}
       <div className="relative max-w-md">
-        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+        <Search className="text-muted-foreground absolute top-3 left-3 h-4 w-4" />
         <Input
           placeholder="搜尋草稿..."
           value={searchQuery}
@@ -92,9 +92,7 @@ export default function DraftsPage() {
       {/* Loading */}
       {isLoading && (
         <Card className="py-12">
-          <CardContent className="flex justify-center text-muted-foreground">
-            載入中...
-          </CardContent>
+          <CardContent className="text-muted-foreground flex justify-center">載入中...</CardContent>
         </Card>
       )}
 
@@ -106,23 +104,22 @@ export default function DraftsPage() {
             const stockTickers = draft.stocks.map((s) => s.ticker);
             const contentPreview = draft.content ?? '';
             const isComplete = Boolean(
-              draft.kolId && draft.content && draft.sentiment != null && draft.postedAt && draft.stockIds.length > 0
+              draft.kolId &&
+              draft.content &&
+              draft.sentiment != null &&
+              draft.postedAt &&
+              draft.stockIds.length > 0
             );
             return (
-              <Card key={draft.id} className="transition-colors hover:bg-muted/30">
+              <Card key={draft.id} className="hover:bg-muted/30 transition-colors">
                 <CardContent className="pt-4">
                   <div className="flex items-start justify-between gap-4">
-                    <Link
-                      href={ROUTES.DRAFT_DETAIL(draft.id)}
-                      className="flex-1 min-w-0"
-                    >
+                    <Link href={ROUTES.DRAFT_DETAIL(draft.id)} className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         {kolName ? (
                           <span className="font-medium">{kolName}</span>
                         ) : (
-                          <span className="text-muted-foreground italic">
-                            未選擇 KOL
-                          </span>
+                          <span className="text-muted-foreground italic">未選擇 KOL</span>
                         )}
                         {stockTickers.length > 0 && (
                           <>
@@ -146,10 +143,10 @@ export default function DraftsPage() {
                           </>
                         )}
                       </div>
-                      <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
+                      <p className="text-muted-foreground mt-2 line-clamp-2 text-sm">
                         {contentPreview || '（尚無內容）'}
                       </p>
-                      <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
+                      <div className="text-muted-foreground mt-2 flex items-center gap-4 text-xs">
                         <span>更新於 {formatRelativeTime(draft.updatedAt)}</span>
                         {isComplete ? (
                           <Badge variant="default" className="text-xs">
@@ -165,7 +162,7 @@ export default function DraftsPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="shrink-0 text-muted-foreground hover:text-destructive"
+                      className="text-muted-foreground hover:text-destructive shrink-0"
                       onClick={(e) => handleDelete(e, draft.id)}
                       disabled={deleteDraft.isPending}
                     >
@@ -183,12 +180,10 @@ export default function DraftsPage() {
       {!isLoading && filteredDrafts.length === 0 && (
         <Card className="py-12">
           <CardContent className="flex flex-col items-center justify-center text-center">
-            <FileText className="h-12 w-12 text-muted-foreground" />
+            <FileText className="text-muted-foreground h-12 w-12" />
             <h3 className="mt-4 text-lg font-semibold">沒有草稿</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {searchQuery
-                ? `沒有符合「${searchQuery}」的草稿`
-                : '開始輸入文章內容來建立草稿'}
+            <p className="text-muted-foreground mt-2 text-sm">
+              {searchQuery ? `沒有符合「${searchQuery}」的草稿` : '開始輸入文章內容來建立草稿'}
             </p>
             {!searchQuery && (
               <Button className="mt-4" asChild>
@@ -204,4 +199,3 @@ export default function DraftsPage() {
     </div>
   );
 }
-

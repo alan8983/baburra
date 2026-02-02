@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { TrendingUp, Loader2, Mail, Lock, AlertCircle } from 'lucide-react';
@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { ROUTES } from '@/lib/constants';
 import { useAuth } from '@/hooks/use-auth';
 
-export default function LoginPage() {
+function LoginForm() {
   const searchParams = useSearchParams();
   const message = searchParams.get('message');
 
@@ -49,8 +49,8 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary">
-            <TrendingUp className="h-6 w-6 text-primary-foreground" />
+          <div className="bg-primary mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg">
+            <TrendingUp className="text-primary-foreground h-6 w-6" />
           </div>
           <CardTitle className="text-2xl font-bold">Stock KOL Tracker</CardTitle>
           <CardDescription>登入以繼續使用</CardDescription>
@@ -66,7 +66,7 @@ export default function LoginPage() {
           {/* 錯誤訊息 */}
           {displayError && (
             <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-              <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
               <span>{displayError}</span>
             </div>
           )}
@@ -75,7 +75,7 @@ export default function LoginPage() {
             <div className="space-y-2">
               <Label htmlFor="email">電子郵件</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Mail className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                 <Input
                   id="email"
                   type="email"
@@ -94,13 +94,13 @@ export default function LoginPage() {
                 <Label htmlFor="password">密碼</Label>
                 <Link
                   href="/forgot-password"
-                  className="text-xs text-muted-foreground hover:text-primary"
+                  className="text-muted-foreground hover:text-primary text-xs"
                 >
                   忘記密碼？
                 </Link>
               </div>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Lock className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                 <Input
                   id="password"
                   type="password"
@@ -126,14 +126,31 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center text-sm text-muted-foreground">
+          <div className="text-muted-foreground mt-6 text-center text-sm">
             還沒有帳號？{' '}
-            <Link href={ROUTES.REGISTER} className="font-medium text-primary hover:underline">
+            <Link href={ROUTES.REGISTER} className="text-primary font-medium hover:underline">
               立即註冊
             </Link>
           </div>
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
+          <div className="text-muted-foreground flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            載入中...
+          </div>
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

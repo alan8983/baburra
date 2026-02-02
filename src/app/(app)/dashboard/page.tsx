@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, Users, FileText, Newspaper } from 'lucide-react';
 
@@ -35,9 +36,7 @@ export default function DashboardPage() {
       {/* Page Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          歡迎回來！以下是您的 KOL 追蹤概覽。
-        </p>
+        <p className="text-muted-foreground">歡迎回來！以下是您的 KOL 追蹤概覽。</p>
       </div>
 
       {/* Stats Grid */}
@@ -46,11 +45,11 @@ export default function DashboardPage() {
           <Card key={stat.title}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-              <stat.icon className="h-4 w-4 text-muted-foreground" />
+              <stat.icon className="text-muted-foreground h-4 w-4" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground">{stat.description}</p>
+              <p className="text-muted-foreground text-xs">{stat.description}</p>
             </CardContent>
           </Card>
         ))}
@@ -73,9 +72,7 @@ export default function DashboardPage() {
                 >
                   <div className="space-y-1">
                     <p className="text-sm font-medium">KOL 名稱 {i}</p>
-                    <p className="text-xs text-muted-foreground">
-                      AAPL, TSLA | 2026/01/30
-                    </p>
+                    <p className="text-muted-foreground text-xs">AAPL, TSLA | 2026/01/30</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
@@ -109,19 +106,17 @@ export default function DashboardPage() {
                   className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-medium">
+                    <span className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium">
                       {i + 1}
                     </span>
                     <div>
                       <p className="text-sm font-medium">{kol.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {kol.posts} 篇文章
-                      </p>
+                      <p className="text-muted-foreground text-xs">{kol.posts} 篇文章</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-bold text-primary">{kol.rate}</p>
-                    <p className="text-xs text-muted-foreground">30日勝率</p>
+                    <p className="text-primary text-lg font-bold">{kol.rate}</p>
+                    <p className="text-muted-foreground text-xs">30日勝率</p>
                   </div>
                 </div>
               ))}
@@ -137,46 +132,46 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <a
+            <Link
               href="/input"
-              className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-muted"
+              className="hover:bg-muted flex items-center gap-3 rounded-lg border p-4 transition-colors"
             >
-              <FileText className="h-8 w-8 text-primary" />
+              <FileText className="text-primary h-8 w-8" />
               <div>
                 <p className="font-medium">快速輸入</p>
-                <p className="text-sm text-muted-foreground">新增 KOL 觀點</p>
+                <p className="text-muted-foreground text-sm">新增 KOL 觀點</p>
               </div>
-            </a>
-            <a
+            </Link>
+            <Link
               href="/kols"
-              className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-muted"
+              className="hover:bg-muted flex items-center gap-3 rounded-lg border p-4 transition-colors"
             >
-              <Users className="h-8 w-8 text-primary" />
+              <Users className="text-primary h-8 w-8" />
               <div>
                 <p className="font-medium">KOL 管理</p>
-                <p className="text-sm text-muted-foreground">瀏覽所有 KOL</p>
+                <p className="text-muted-foreground text-sm">瀏覽所有 KOL</p>
               </div>
-            </a>
-            <a
+            </Link>
+            <Link
               href="/stocks"
-              className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-muted"
+              className="hover:bg-muted flex items-center gap-3 rounded-lg border p-4 transition-colors"
             >
-              <TrendingUp className="h-8 w-8 text-primary" />
+              <TrendingUp className="text-primary h-8 w-8" />
               <div>
                 <p className="font-medium">投資標的</p>
-                <p className="text-sm text-muted-foreground">瀏覽所有標的</p>
+                <p className="text-muted-foreground text-sm">瀏覽所有標的</p>
               </div>
-            </a>
-            <a
+            </Link>
+            <Link
               href="/posts"
-              className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-muted"
+              className="hover:bg-muted flex items-center gap-3 rounded-lg border p-4 transition-colors"
             >
-              <Newspaper className="h-8 w-8 text-primary" />
+              <Newspaper className="text-primary h-8 w-8" />
               <div>
                 <p className="font-medium">所有文章</p>
-                <p className="text-sm text-muted-foreground">瀏覽收錄文章</p>
+                <p className="text-muted-foreground text-sm">瀏覽收錄文章</p>
               </div>
-            </a>
+            </Link>
           </div>
         </CardContent>
       </Card>
