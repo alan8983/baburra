@@ -157,9 +157,9 @@ src/
 
 ### Seed Data
 
-測試資料位於 `supabase/seed.sql`，包含：
-- 測試用戶
-- 論點類別資料
+- **`supabase/seed.sql`**：完整測試資料（KOL、股票、文章、論點類別）。執行 `supabase db reset` 時會自動套用。
+- **`supabase/seed-minimal.sql`**：僅論點類別，無 KOL/文章等假資料，供「手動測試、空狀態」使用。  
+  → 詳細步驟見 [手動測試環境設定（無預建假資料）](docs/MANUAL_TESTING_SETUP.md)。
 
 ## 部署
 
@@ -179,6 +179,7 @@ src/
 - [架構設計](docs/ARCHITECTURE.md)
 - [API 規格](docs/API_SPEC.md)
 - [領域模型](docs/DOMAIN_MODELS.md)
+- [手動測試環境設定（無預建假資料）](docs/MANUAL_TESTING_SETUP.md)
 
 ## 授權
 
