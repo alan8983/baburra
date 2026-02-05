@@ -4,12 +4,19 @@
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-export function createAdminClient(): SupabaseClient | null {
+export function createAdminClient(): SupabaseClient {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!supabaseUrl || !supabaseServiceKey) {
-    return null;
+  const missing: string[] = [];
+  if (!supabaseUrl) missing.push('NEXT_PUBLIC_SUPABASE_URL');
+  if (!supabaseServiceKey) missing.push('SUPABASE_SERVICE_ROLE_KEY');
+
+  if (missing.length > 0) {
+    throw new Error(
+      `[Supabase Admin] 缺少必要的環境變數: ${missing.join(', ')}。` +
+        '請在 .env.local 中設定這些變數，並重啟開發伺服器。'
+    );
   }
 
   return createClient(supabaseUrl, supabaseServiceKey, {
