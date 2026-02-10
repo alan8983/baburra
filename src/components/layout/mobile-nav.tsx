@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   LayoutDashboard,
   PenLine,
@@ -11,6 +12,7 @@ import {
   Newspaper,
   Settings,
   X,
+  LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -20,6 +22,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useUIStore } from '@/stores';
 import { ROUTES } from '@/lib/constants';
+import { useAuth } from '@/hooks/use-auth';
 
 const iconMap = {
   LayoutDashboard,
@@ -32,23 +35,34 @@ const iconMap = {
 };
 
 const allNavItems: Array<{
-  label: string;
+  key: string;
   href: string;
   icon: keyof typeof iconMap;
   showBadge?: boolean;
 }> = [
-  { label: 'Dashboard', href: ROUTES.DASHBOARD, icon: 'LayoutDashboard' },
-  { label: '快速輸入', href: ROUTES.INPUT, icon: 'PenLine' },
-  { label: '草稿', href: ROUTES.DRAFTS, icon: 'FileText', showBadge: true },
-  { label: 'KOL 列表', href: ROUTES.KOLS, icon: 'Users' },
-  { label: '投資標的', href: ROUTES.STOCKS, icon: 'TrendingUp' },
-  { label: '所有文章', href: ROUTES.POSTS, icon: 'Newspaper' },
-  { label: '設定', href: ROUTES.SETTINGS, icon: 'Settings' },
+  { key: 'dashboard', href: ROUTES.DASHBOARD, icon: 'LayoutDashboard' },
+  { key: 'quickInput', href: ROUTES.INPUT, icon: 'PenLine' },
+  { key: 'drafts', href: ROUTES.DRAFTS, icon: 'FileText', showBadge: true },
+  { key: 'kolList', href: ROUTES.KOLS, icon: 'Users' },
+  { key: 'stocks', href: ROUTES.STOCKS, icon: 'TrendingUp' },
+  { key: 'allPosts', href: ROUTES.POSTS, icon: 'Newspaper' },
+  { key: 'settings', href: ROUTES.SETTINGS, icon: 'Settings' },
 ];
 
 export function MobileNav() {
+  const t = useTranslations('common');
   const pathname = usePathname();
   const { mobileMenuOpen, setMobileMenuOpen } = useUIStore();
+  const { signOut, loading } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      setMobileMenuOpen(false);
+    } catch {
+      // 錯誤已在 hook 中處理
+    }
+  };
 
   return (
     <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
@@ -83,7 +97,7 @@ export function MobileNav() {
                     className={cn('w-full justify-start', isActive && 'bg-accent')}
                   >
                     <Icon className="mr-2 h-4 w-4" />
-                    <span className="flex-1 text-left">{item.label}</span>
+                    <span className="flex-1 text-left">{t(`nav.${item.key}`)}</span>
                     {item.showBadge && (
                       <Badge variant="secondary" className="ml-auto">
                         3
@@ -100,14 +114,27 @@ export function MobileNav() {
           {/* AI Quota */}
           <div className="rounded-lg border p-3">
             <div className="text-muted-foreground text-xs">
-              <span>AI 配額: </span>
+              <span>{t('ai.quota')}: </span>
               <span className="text-foreground font-medium">12/15</span>
-              <span> 本週</span>
+              <span> {t('ai.quotaThisWeek')}</span>
             </div>
             <div className="bg-muted mt-2 h-1.5 w-full rounded-full">
               <div className="bg-primary h-full rounded-full" style={{ width: '80%' }} />
             </div>
           </div>
+
+          <Separator className="my-4" />
+
+          {/* Logout Button */}
+          <Button
+            variant="ghost"
+            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 w-full justify-start"
+            onClick={handleLogout}
+            disabled={loading}
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            {t('actions.logout')}
+          </Button>
         </ScrollArea>
       </SheetContent>
     </Sheet>

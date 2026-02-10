@@ -1,0 +1,70 @@
+{
+  "title": "KOL 列表",
+  "description": "瀏覽和管理所有追蹤中的 KOL",
+  "newKol": "新增 KOL",
+  "search": "搜尋 KOL...",
+  "stats": {
+    "recentPost": "最近發文:",
+    "postCount": "文章數:",
+    "winRate": "勝率 {percent}%"
+  },
+  "loading": "載入中...",
+  "errors": {
+    "loadFailed": "無法載入 KOL 列表，請稍後再試。"
+  },
+  "empty": {
+    "noKols": "找不到 KOL",
+    "noResults": "沒有符合「{query}」的 KOL",
+    "description": "還沒有任何 KOL，點擊上方按鈕新增"
+  },
+  "detail": {
+    "backToList": "返回 KOL 列表",
+    "stats": {
+      "postCount": "文章數:",
+      "overallWinRate": "總體勝率: {percent}%"
+    },
+    "postsByStock": {
+      "title": "依標的分組的文章",
+      "loading": "載入文章...",
+      "noPosts": "尚無文章",
+      "total": "共 {count} 篇文章",
+      "viewAll": "查看全部 {count} 篇"
+    },
+    "priceChange": "{percent}% (5日)",
+    "winRate": {
+      "title": "勝率統計",
+      "description": "依不同時間週期計算的預測勝率",
+      "analyzing": "計算勝率中...",
+      "overallAverage": "整體平均勝率",
+      "totalPosts": "共 {count} 篇有方向性文章",
+      "periods": {
+        "5d": "5日",
+        "30d": "30日",
+        "90d": "90日",
+        "365d": "365日"
+      },
+      "periodWinRate": "{days}日勝率",
+      "winLoss": "{wins}勝 / {losses}敗",
+      "validSamples": "({count} 筆有效樣本)",
+      "explanation": {
+        "title": "勝率計算說明",
+        "bullish": "看多文章：發文後股價上漲即為勝利",
+        "bearish": "看空文章：發文後股價下跌即為勝利",
+        "neutral": "中立文章不納入勝率計算",
+        "perStock": "每篇文章對應的每個標的分別計算"
+      },
+      "loadFailed": "無法載入勝率資料"
+    },
+    "about": {
+      "title": "關於 {name}",
+      "bio": "簡介",
+      "noBio": "尚無簡介",
+      "socialLinks": "社群連結",
+      "noSocialLinks": "尚無社群連結"
+    },
+    "loading": "載入中...",
+    "errors": {
+      "loadFailed": "無法載入 KOL 或找不到該 KOL"
+    }
+  }
+}

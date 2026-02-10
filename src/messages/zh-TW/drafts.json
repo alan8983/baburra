@@ -1,0 +1,28 @@
+{
+  "title": "草稿",
+  "description": "管理尚未發布的文章草稿",
+  "newDraft": "新增草稿",
+  "search": "搜尋草稿...",
+  "status": {
+    "stronglyBearish": "強烈看空",
+    "bearish": "看空",
+    "neutral": "中立",
+    "bullish": "看多",
+    "stronglyBullish": "強烈看多",
+    "noKol": "未選擇 KOL",
+    "empty": "（尚無內容）",
+    "updatedAt": "更新於",
+    "ready": "可發布",
+    "incomplete": "未完成"
+  },
+  "loading": "載入中...",
+  "errors": {
+    "loadFailed": "無法載入草稿，請稍後再試。"
+  },
+  "empty": {
+    "noDrafts": "沒有草稿",
+    "noResults": "沒有符合「{query}」的草稿",
+    "description": "開始輸入文章內容來建立草稿"
+  },
+  "deleteConfirm": "確定要刪除此草稿？"
+}

@@ -1,5 +1,7 @@
 // 格式化工具函數
 
+import type { SourcePlatform } from '@/domain/models/post';
+
 /**
  * 格式化價格變動百分比
  */
@@ -69,4 +71,16 @@ export function generateSlug(text: string): string {
     .replace(/[^\w\s-]/g, '')
     .replace(/[\s_-]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * 根據 URL 偵測來源平台
+ */
+export function detectPlatform(url?: string | null): SourcePlatform {
+  if (!url) return 'manual';
+  if (/twitter\.com|x\.com/i.test(url)) return 'twitter';
+  if (/facebook\.com|fb\.com/i.test(url)) return 'facebook';
+  if (/threads\.net/i.test(url)) return 'threads';
+  if (/instagram\.com/i.test(url)) return 'instagram';
+  return 'manual';
 }

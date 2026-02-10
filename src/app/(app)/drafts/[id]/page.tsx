@@ -3,13 +3,21 @@
 import { use, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, Trash2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Trash2, Link2, Loader2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { ROUTES } from '@/lib/constants';
 import {
   KOLSelector,
@@ -26,7 +34,8 @@ import type {
   Sentiment,
   DraftWithRelations,
 } from '@/domain/models';
-import { useDraft, useUpdateDraft, useDeleteDraft } from '@/hooks';
+import { useDraft, useUpdateDraft, useDeleteDraft, useFetchUrl, isUrlLike, getSupportedPlatform, getSupportedPlatformNames } from '@/hooks';
+import { toast } from 'sonner';
 
 // 表單組件 - 接收 draft 作為 prop，使用 key 來重置狀態
 interface DraftEditFormProps {
@@ -61,6 +70,21 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
   const [kolDialogDefaultName, setKolDialogDefaultName] = useState('');
   const [stockDialogOpen, setStockDialogOpen] = useState(false);
   const [stockDialogDefaultTicker, setStockDialogDefaultTicker] = useState('');
+  const [fetchDialogOpen, setFetchDialogOpen] = useState(false);
+  const [fetchResult, setFetchResult] = useState<{
+    content: string;
+    images: string[];
+    postedAt: Date | null;
+    kolName: string | null;
+  } | null>(null);
+  const [applyFields, setApplyFields] = useState({
+    content: false,
+    images: false,
+    postedAt: false,
+    kolName: false,
+  });
+
+  const fetchUrl = useFetchUrl();
 
   // 處理新增 KOL
   const handleCreateKOL = (name: string) => {
@@ -80,6 +104,97 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
 
   const handleStockCreated = (stock: StockSearchResult) => {
     setSelectedStocks((prev) => [...prev, stock]);
+  };
+
+  // 處理 URL 擷取
+  const handleFetchUrl = async () => {
+    if (!sourceUrl || !isUrlLike(sourceUrl)) {
+      toast.error('請輸入有效的 URL');
+      return;
+    }
+    try {
+      const result = await fetchUrl.mutateAsync(sourceUrl);
+      setFetchResult({
+        content: result.content,
+        images: result.images || [],
+        postedAt: result.postedAt ? new Date(result.postedAt) : null,
+        kolName: result.kolName,
+      });
+      // 預設勾選所有欄位
+      setApplyFields({
+        content: true,
+        images: true,
+        postedAt: true,
+        kolName: !selectedKOL && !!result.kolName, // 只有當沒有選 KOL 時才預設勾選
+      });
+      setFetchDialogOpen(true);
+      toast.success('內容擷取成功');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '擷取失敗，請稍後再試';
+      toast.error('擷取失敗', {
+        description: errorMessage,
+      });
+    }
+  };
+
+  // 套用擷取的欄位
+  const handleApplyFetchResult = async () => {
+    if (!fetchResult) return;
+
+    const updates: {
+      content?: string | null;
+      images?: string[];
+      postedAt?: Date | null;
+      kolNameInput?: string | null;
+    } = {};
+
+    if (applyFields.content) {
+      updates.content = fetchResult.content;
+    }
+    if (applyFields.images) {
+      updates.images = fetchResult.images;
+    }
+    if (applyFields.postedAt && fetchResult.postedAt) {
+      updates.postedAt = fetchResult.postedAt;
+    }
+    if (applyFields.kolName && fetchResult.kolName && !selectedKOL) {
+      updates.kolNameInput = fetchResult.kolName;
+    }
+
+    // 更新表單狀態
+    if (applyFields.content) {
+      setContent(fetchResult.content);
+    }
+    if (applyFields.images) {
+      setImages(fetchResult.images);
+    }
+    if (applyFields.postedAt && fetchResult.postedAt) {
+      setPostedAt(fetchResult.postedAt);
+    }
+    if (applyFields.kolName && fetchResult.kolName && !selectedKOL) {
+      setKolDialogDefaultName(fetchResult.kolName);
+    }
+
+    // 儲存到草稿
+    try {
+      await updateDraft.mutateAsync({
+        kolId: selectedKOL?.id ?? null,
+        content: applyFields.content ? fetchResult.content : content || null,
+        sourceUrl: sourceUrl || null,
+        sentiment: sentiment ?? null,
+        postedAt: applyFields.postedAt && fetchResult.postedAt ? fetchResult.postedAt : postedAt ?? null,
+        stockIds: selectedStocks.map((s) => s.id),
+        images: applyFields.images ? fetchResult.images : images,
+        kolNameInput: applyFields.kolName && fetchResult.kolName && !selectedKOL ? fetchResult.kolName : undefined,
+      });
+      setFetchDialogOpen(false);
+      setFetchResult(null);
+      toast.success('已套用擷取的內容');
+    } catch (error) {
+      toast.error('套用失敗', {
+        description: error instanceof Error ? error.message : '請稍後再試',
+      });
+    }
   };
 
   const handleSave = async () => {
@@ -197,12 +312,54 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
           {/* Source URL */}
           <div className="space-y-2">
             <Label>原始網址</Label>
-            <Input
-              type="url"
-              placeholder="https://..."
-              value={sourceUrl}
-              onChange={(e) => setSourceUrl(e.target.value)}
-            />
+            <div className="flex gap-2">
+              <Input
+                type="url"
+                placeholder="https://..."
+                value={sourceUrl}
+                onChange={(e) => setSourceUrl(e.target.value)}
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleFetchUrl}
+                disabled={
+                  !sourceUrl ||
+                  !isUrlLike(sourceUrl) ||
+                  !getSupportedPlatform(sourceUrl) ||
+                  fetchUrl.isPending
+                }
+              >
+                {fetchUrl.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    擷取中...
+                  </>
+                ) : (
+                  <>
+                    <Link2 className="mr-2 h-4 w-4" />
+                    擷取
+                  </>
+                )}
+              </Button>
+            </div>
+            {/* 不支援的 URL 警告 */}
+            {sourceUrl && isUrlLike(sourceUrl) && !getSupportedPlatform(sourceUrl) && (
+              <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3">
+                <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
+                <p className="text-sm text-amber-700">
+                  此網址平台尚不支援自動擷取內容（支援：{getSupportedPlatformNames().join('、')}）。
+                  網址仍會作為來源連結保存，但請手動填寫文章內容。
+                </p>
+              </div>
+            )}
+            {/* 支援的 URL 提示 */}
+            {sourceUrl && isUrlLike(sourceUrl) && getSupportedPlatform(sourceUrl) && !fetchUrl.isPending && (
+              <p className="text-muted-foreground text-xs">
+                偵測到 {getSupportedPlatform(sourceUrl)} 網址，點擊「擷取」可自動帶入文章內容
+              </p>
+            )}
           </div>
 
           <Separator />
@@ -257,6 +414,121 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
         defaultTicker={stockDialogDefaultTicker}
         onSuccess={handleStockCreated}
       />
+
+      {/* URL Fetch Result Dialog */}
+      <Dialog open={fetchDialogOpen} onOpenChange={setFetchDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>確認要套用的欄位</DialogTitle>
+            <DialogDescription>
+              請選擇要從擷取的內容中套用到草稿的欄位。已選取的欄位將會被覆蓋。
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* 主文內容 */}
+            <div className="flex items-start gap-3 rounded-lg border p-3">
+              <input
+                type="checkbox"
+                checked={applyFields.content}
+                onChange={(e) =>
+                  setApplyFields((prev) => ({ ...prev, content: e.target.checked }))
+                }
+                className="mt-1 h-4 w-4"
+              />
+              <div className="flex-1">
+                <Label className="font-medium">主文內容</Label>
+                <p className="text-muted-foreground mt-1 text-sm">
+                  {fetchResult?.content.slice(0, 150)}
+                  {fetchResult && fetchResult.content.length > 150 ? '...' : ''}
+                </p>
+              </div>
+            </div>
+
+            {/* 圖片 */}
+            {fetchResult && fetchResult.images.length > 0 && (
+              <div className="flex items-start gap-3 rounded-lg border p-3">
+                <input
+                  type="checkbox"
+                  checked={applyFields.images}
+                  onChange={(e) =>
+                    setApplyFields((prev) => ({ ...prev, images: e.target.checked }))
+                  }
+                  className="mt-1 h-4 w-4"
+                />
+                <div className="flex-1">
+                  <Label className="font-medium">圖片 ({fetchResult.images.length} 張)</Label>
+                  <div className="mt-2 grid grid-cols-4 gap-2">
+                    {fetchResult.images.slice(0, 4).map((url, i) => (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        key={i}
+                        src={url}
+                        alt={`擷取圖片 ${i + 1}`}
+                        className="aspect-square rounded-lg object-cover"
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 發文時間 */}
+            {fetchResult && fetchResult.postedAt && (
+              <div className="flex items-start gap-3 rounded-lg border p-3">
+                <input
+                  type="checkbox"
+                  checked={applyFields.postedAt}
+                  onChange={(e) =>
+                    setApplyFields((prev) => ({ ...prev, postedAt: e.target.checked }))
+                  }
+                  className="mt-1 h-4 w-4"
+                />
+                <div className="flex-1">
+                  <Label className="font-medium">發文時間</Label>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    {new Date(fetchResult.postedAt).toLocaleString('zh-TW')}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* KOL 名稱建議 */}
+            {fetchResult && fetchResult.kolName && !selectedKOL && (
+              <div className="flex items-start gap-3 rounded-lg border p-3">
+                <input
+                  type="checkbox"
+                  checked={applyFields.kolName}
+                  onChange={(e) =>
+                    setApplyFields((prev) => ({ ...prev, kolName: e.target.checked }))
+                  }
+                  className="mt-1 h-4 w-4"
+                />
+                <div className="flex-1">
+                  <Label className="font-medium">KOL 名稱建議</Label>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    {fetchResult.kolName}（將填入到 KOL 名稱輸入欄位）
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFetchDialogOpen(false)}>
+              取消
+            </Button>
+            <Button onClick={handleApplyFetchResult} disabled={updateDraft.isPending}>
+              {updateDraft.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  套用中...
+                </>
+              ) : (
+                '套用選取的欄位'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

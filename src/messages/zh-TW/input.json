@@ -1,0 +1,53 @@
+{
+  "title": "快速輸入",
+  "description": "貼上 KOL 的投資觀點文章，快速收錄到資料庫",
+  "inputCard": {
+    "title": "輸入文章內容",
+    "description": "貼上文章內容或網址，系統會自動識別 KOL 和投資標的",
+    "placeholder": "貼上 KOL 的發文內容或文章網址...\n\n例如：\n- 直接貼上 Facebook / Twitter 貼文內容\n- 貼上文章網址 (支援自動擷取)\n- 手動輸入觀點摘要"
+  },
+  "urlDetection": {
+    "detected": "偵測到 {platform} 網址",
+    "fetching": "擷取中...",
+    "fetch": "擷取內容",
+    "notSupported": "此網址平台尚不支援自動擷取",
+    "supportedPlatforms": "目前支援：{platforms}",
+    "manualInput": "請改為直接貼上文章內容..."
+  },
+  "actions": {
+    "createDraft": "建立草稿",
+    "creating": "建立中...",
+    "reset": "重新輸入",
+    "saving": "儲存中...",
+    "saveDraft": "儲存為草稿",
+    "analyzing": "AI 分析中...",
+    "directCreate": "直接建檔"
+  },
+  "aiPreview": {
+    "title": "AI 自動識別結果 (預覽)",
+    "kol": "KOL:",
+    "stocks": "標的:",
+    "sentiment": "情緒:",
+    "pending": "待識別..."
+  },
+  "recentDrafts": {
+    "title": "最近草稿",
+    "clickToContinue": "點擊繼續編輯",
+    "viewAll": "查看全部",
+    "loading": "載入中...",
+    "empty": "（尚無內容）",
+    "noDrafts": "還沒有草稿"
+  },
+  "tips": {
+    "title": "使用提示",
+    "description": "支援直接貼上 Facebook、Twitter、Threads 的貼文網址..."
+  },
+  "success": {
+    "fetchSuccess": "內容擷取成功",
+    "fetchSuccessDesc": "已從 {platform} 擷取內容"
+  },
+  "errors": {
+    "fetchFailed": "擷取失敗，請稍後再試",
+    "createDraftFailed": "建立草稿失敗"
+  }
+}

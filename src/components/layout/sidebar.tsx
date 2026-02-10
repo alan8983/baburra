@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   LayoutDashboard,
   PenLine,
@@ -35,19 +36,33 @@ const iconMap = {
   Settings,
 };
 
-const navItems = [
-  { label: 'Dashboard', href: ROUTES.DASHBOARD, icon: 'LayoutDashboard' },
-  { label: '快速輸入', href: ROUTES.INPUT, icon: 'PenLine' },
-  { label: '草稿', href: ROUTES.DRAFTS, icon: 'FileText', showBadge: true },
-] as const;
+// Navigation items will be translated in component
+const navItems: Array<{
+  key: string;
+  href: string;
+  icon: keyof typeof iconMap;
+  showBadge?: boolean;
+}> = [
+  { key: 'dashboard', href: ROUTES.DASHBOARD, icon: 'LayoutDashboard' },
+  { key: 'quickInput', href: ROUTES.INPUT, icon: 'PenLine' },
+  { key: 'drafts', href: ROUTES.DRAFTS, icon: 'FileText', showBadge: true },
+];
 
-const resourceItems = [
-  { label: 'KOL 列表', href: ROUTES.KOLS, icon: 'Users' },
-  { label: '投資標的', href: ROUTES.STOCKS, icon: 'TrendingUp' },
-  { label: '所有文章', href: ROUTES.POSTS, icon: 'Newspaper' },
-] as const;
+const resourceItems: Array<{
+  key: string;
+  href: string;
+  icon: keyof typeof iconMap;
+}> = [
+  { key: 'kolList', href: ROUTES.KOLS, icon: 'Users' },
+  { key: 'stocks', href: ROUTES.STOCKS, icon: 'TrendingUp' },
+  { key: 'allPosts', href: ROUTES.POSTS, icon: 'Newspaper' },
+];
 
-const settingsItems = [{ label: '設定', href: ROUTES.SETTINGS, icon: 'Settings' }] as const;
+const settingsItems: Array<{
+  key: string;
+  href: string;
+  icon: keyof typeof iconMap;
+}> = [{ key: 'settings', href: ROUTES.SETTINGS, icon: 'Settings' }];
 
 interface NavItemProps {
   label: string;
@@ -89,6 +104,7 @@ function NavItem({ label, href, icon, showBadge, isCollapsed }: NavItemProps) {
 }
 
 function AiQuotaFooter({ isCollapsed }: { isCollapsed: boolean }) {
+  const t = useTranslations('common');
   const { data: usage, isLoading } = useAiUsage();
 
   if (isCollapsed) {
@@ -110,8 +126,8 @@ function AiQuotaFooter({ isCollapsed }: { isCollapsed: boolean }) {
     return (
       <div className="border-t p-4">
         <div className="text-muted-foreground animate-pulse text-xs">
-          <span>AI 配額: </span>
-          <span className="font-medium">載入中...</span>
+          <span>{t('ai.quota')}: </span>
+          <span className="font-medium">{t('ai.quotaLoading')}</span>
         </div>
         <div className="bg-muted mt-2 h-1.5 w-full rounded-full" />
       </div>
@@ -132,9 +148,9 @@ function AiQuotaFooter({ isCollapsed }: { isCollapsed: boolean }) {
     const reset = new Date(usage.resetAt);
     const now = new Date();
     const diffDays = Math.ceil((reset.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays <= 0) return '今天重置';
-    if (diffDays === 1) return '明天重置';
-    return `${diffDays}天後重置`;
+    if (diffDays <= 0) return t('time.resetToday');
+    if (diffDays === 1) return t('time.resetTomorrow');
+    return t('time.resetInDays', { days: diffDays });
   };
 
   return (
@@ -142,13 +158,13 @@ function AiQuotaFooter({ isCollapsed }: { isCollapsed: boolean }) {
       <div className="flex items-center justify-between text-xs">
         <div className="text-muted-foreground flex items-center gap-1">
           <Sparkles className="h-3 w-3" />
-          <span>AI 配額</span>
+          <span>{t('ai.quota')}</span>
         </div>
         <span className="text-muted-foreground">{formatResetTime()}</span>
       </div>
       <div className="mt-1 flex items-baseline gap-1">
         <span className="text-lg font-bold">{usage.remaining}</span>
-        <span className="text-muted-foreground text-sm">/ {usage.weeklyLimit} 本週</span>
+        <span className="text-muted-foreground text-sm">/ {usage.weeklyLimit} {t('ai.quotaThisWeek')}</span>
       </div>
       <div className="bg-muted mt-2 h-1.5 w-full rounded-full">
         <div
@@ -161,6 +177,7 @@ function AiQuotaFooter({ isCollapsed }: { isCollapsed: boolean }) {
 }
 
 export function Sidebar() {
+  const t = useTranslations('common');
   const { sidebarOpen, toggleSidebar } = useUIStore();
 
   return (
@@ -192,7 +209,14 @@ export function Sidebar() {
       <ScrollArea className="flex-1 px-2 py-4">
         <div className="space-y-1">
           {navItems.map((item) => (
-            <NavItem key={item.href} {...item} isCollapsed={!sidebarOpen} />
+            <NavItem 
+              key={item.href} 
+              label={t(`nav.${item.key}`)} 
+              href={item.href} 
+              icon={item.icon} 
+              showBadge={item.showBadge}
+              isCollapsed={!sidebarOpen} 
+            />
           ))}
         </div>
 
@@ -200,7 +224,13 @@ export function Sidebar() {
 
         <div className="space-y-1">
           {resourceItems.map((item) => (
-            <NavItem key={item.href} {...item} isCollapsed={!sidebarOpen} />
+            <NavItem 
+              key={item.href} 
+              label={t(`nav.${item.key}`)} 
+              href={item.href} 
+              icon={item.icon} 
+              isCollapsed={!sidebarOpen} 
+            />
           ))}
         </div>
 
@@ -208,7 +238,13 @@ export function Sidebar() {
 
         <div className="space-y-1">
           {settingsItems.map((item) => (
-            <NavItem key={item.href} {...item} isCollapsed={!sidebarOpen} />
+            <NavItem 
+              key={item.href} 
+              label={t(`nav.${item.key}`)} 
+              href={item.href} 
+              icon={item.icon} 
+              isCollapsed={!sidebarOpen} 
+            />
           ))}
         </div>
       </ScrollArea>
@@ -223,13 +259,8 @@ export function Sidebar() {
 }
 
 function LogoutButton({ isCollapsed }: { isCollapsed: boolean }) {
-  const { signOut, loading, user } = useAuth();
-
-  // 開發模式下如果沒有真實用戶，不顯示登出按鈕
-  const isDev = process.env.NODE_ENV === 'development';
-  if (isDev && !user) {
-    return null;
-  }
+  const t = useTranslations('common');
+  const { signOut, loading } = useAuth();
 
   const handleLogout = async () => {
     try {
@@ -264,7 +295,7 @@ function LogoutButton({ isCollapsed }: { isCollapsed: boolean }) {
         disabled={loading}
       >
         <LogOut className="mr-2 h-4 w-4" />
-        登出
+        {t('actions.logout')}
       </Button>
     </div>
   );

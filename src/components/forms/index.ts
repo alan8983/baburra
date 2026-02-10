@@ -16,13 +16,7 @@ export { StockFormDialog } from './stock-form-dialog';
 export type { StockFormDialogProps } from './stock-form-dialog';
 
 // 情緒選擇器
-export {
-  SentimentSelector,
-  SENTIMENT_OPTIONS,
-  getSentimentOption,
-  getSentimentLabel,
-  getSentimentColorClass,
-} from './sentiment-selector';
+export { SentimentSelector } from './sentiment-selector';
 export type { SentimentSelectorProps, SentimentOption } from './sentiment-selector';
 
 // 時間輸入器

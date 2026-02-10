@@ -1,20 +1,86 @@
 'use client';
 
-import { User } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { User, Loader2, AlertCircle } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import { LocaleSwitcher } from '@/components/layout/locale-switcher';
+import { useAuth } from '@/hooks/use-auth';
+import { createClient } from '@/infrastructure/supabase/client';
 
 export default function SettingsPage() {
+  const t = useTranslations('settings');
+  const tCommon = useTranslations('common');
+  const { user, loading: authLoading } = useAuth();
+  const [displayName, setDisplayName] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // 初始化顯示名稱
+  useEffect(() => {
+    if (user) {
+      setDisplayName(user.user_metadata?.display_name || '');
+    }
+  }, [user]);
+
+  const handleSave = async () => {
+    if (!user) return;
+
+    setIsSaving(true);
+    setSaveError(null);
+    setSaveSuccess(false);
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          display_name: displayName || null,
+        },
+      });
+
+      if (error) throw error;
+
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : '儲存失敗，請稍後再試');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <div className="text-center">
+          <p className="text-muted-foreground">{t('loginRequired')}</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">設定</h1>
-        <p className="text-muted-foreground">管理您的帳戶設定和偏好</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-muted-foreground">{t('description')}</p>
+        </div>
+        <LocaleSwitcher />
       </div>
 
       {/* Profile Section */}
@@ -26,34 +92,57 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
             <Avatar className="h-16 w-16">
-              <AvatarImage src="/avatars/user.png" />
+              <AvatarImage src={user.user_metadata?.avatar_url || '/avatars/user.png'} />
               <AvatarFallback>
-                <User className="h-8 w-8" />
+                {user.user_metadata?.display_name?.[0]?.toUpperCase() ||
+                  user.email?.[0]?.toUpperCase() || <User className="h-8 w-8" />}
               </AvatarFallback>
             </Avatar>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" disabled>
               更換頭像
             </Button>
           </div>
 
+          {saveError && (
+            <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+              <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+              <span>{saveError}</span>
+            </div>
+          )}
+
+          {saveSuccess && (
+            <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+              變更已儲存
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="displayName">顯示名稱</Label>
-            <Input id="displayName" placeholder="您的顯示名稱" defaultValue="開發者" />
+            <Input
+              id="displayName"
+              placeholder="您的顯示名稱"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              disabled={isSaving}
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="your@email.com"
-              defaultValue="dev@example.com"
-              disabled
-            />
+            <Input id="email" type="email" placeholder="your@email.com" value={user.email || ''} disabled />
             <p className="text-muted-foreground text-xs">Email 無法更改</p>
           </div>
 
-          <Button>儲存變更</Button>
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                儲存中...
+              </>
+            ) : (
+              '儲存變更'
+            )}
+          </Button>
         </CardContent>
       </Card>
 

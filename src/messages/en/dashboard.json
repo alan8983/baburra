@@ -1,0 +1,52 @@
+{
+  "title": "Dashboard",
+  "description": "Welcome back! Here's your KOL tracking overview.",
+  "stats": {
+    "kolTotal": "Total KOLs",
+    "kolMonthlyNew": "+{count} added this month",
+    "kolMonthlyNoNew": "No new additions this month",
+    "stocks": "Stocks",
+    "stocksMonthlyNew": "+{count} added this month",
+    "stocksMonthlyNoNew": "No new additions this month",
+    "posts": "Posts",
+    "postsWeeklyNew": "+{count} added this week",
+    "postsWeeklyNoNew": "No new additions this week",
+    "drafts": "Pending Drafts"
+  },
+  "drafts": {
+    "recentUpdate": "Recently updated",
+    "noDrafts": "No drafts",
+    "justNow": "Just now",
+    "minutesAgo": "{count} minutes ago",
+    "hoursAgo": "{count} hours ago",
+    "daysAgo": "{count} days ago"
+  },
+  "recentPosts": {
+    "title": "Recent Posts",
+    "description": "Latest 5 KOL opinion posts",
+    "noPosts": "No posts",
+    "noStocks": "No stocks"
+  },
+  "topKols": {
+    "title": "Top KOLs by Post Count",
+    "description": "Top 5 KOLs by number of posts",
+    "noKols": "No KOLs",
+    "postCount": "{count} posts",
+    "lastPost": "Last post"
+  },
+  "quickActions": {
+    "title": "Quick Actions",
+    "quickInput": "Quick Input",
+    "quickInputDesc": "Add KOL opinion",
+    "kolManagement": "KOL Management",
+    "kolManagementDesc": "Browse all KOLs",
+    "stocks": "Stocks",
+    "stocksDesc": "Browse all stocks",
+    "allPosts": "All Posts",
+    "allPostsDesc": "Browse all posts"
+  },
+  "errors": {
+    "loadError": "Error loading data: {error}",
+    "unknownError": "Unknown error"
+  }
+}

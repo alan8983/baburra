@@ -1,0 +1,71 @@
+{
+  "title": "投資標的",
+  "description": "瀏覽所有被追蹤的投資標的",
+  "newStock": "新增標的",
+  "search": "搜尋股票代碼或名稱...",
+  "stats": {
+    "postCount": "文章數",
+    "winRate30d": "30日勝率",
+    "recentPost": "最近發文"
+  },
+  "loading": "載入中...",
+  "errors": {
+    "loadFailed": "無法載入標的列表，請稍後再試。"
+  },
+  "empty": {
+    "noStocks": "找不到標的",
+    "noResults": "沒有符合「{query}」的投資標的",
+    "description": "還沒有任何投資標的，點擊上方按鈕新增"
+  },
+  "detail": {
+    "backToList": "返回標的列表",
+    "chart": {
+      "title": "K 線圖",
+      "description": "股價走勢圖與 KOL 觀點標記"
+    },
+    "stats": {
+      "postCount": "文章數:",
+      "winRate30d": "30日勝率: {percent}%"
+    },
+    "posts": {
+      "title": "相關文章",
+      "loading": "載入文章...",
+      "noPosts": "尚無相關文章"
+    },
+    "priceChange": {
+      "5d": "5日:",
+      "30d": "30日:"
+    },
+    "winRate": {
+      "title": "勝率統計",
+      "description": "KOL 對此標的的預測勝率（依不同時間週期計算）",
+      "analyzing": "計算勝率中...",
+      "overallAverage": "整體平均勝率",
+      "totalPosts": "共 {count} 篇有方向性文章",
+      "periods": {
+        "5d": "5日",
+        "30d": "30日",
+        "90d": "90日",
+        "365d": "365日"
+      },
+      "periodWinRate": "{days}日勝率",
+      "winLoss": "{wins}勝 / {losses}敗",
+      "validSamples": "({count} 筆有效樣本)",
+      "explanation": {
+        "title": "勝率計算說明",
+        "bullish": "看多文章：發文後股價上漲即為勝利",
+        "bearish": "看空文章：發文後股價下跌即為勝利",
+        "neutral": "中立文章不納入勝率計算",
+        "allKols": "計算基於所有 KOL 對此標的的文章"
+      },
+      "loadFailed": "無法載入勝率資料"
+    },
+    "loading": "載入中...",
+    "priceLoading": "載入股價中...",
+    "errors": {
+      "priceError": "無法載入股價，請確認標的代碼或 Tiingo API 設定",
+      "noPriceData": "此標的暫無股價資料",
+      "loadFailed": "無法載入標的或找不到該標的"
+    }
+  }
+}

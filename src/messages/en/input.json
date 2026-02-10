@@ -1,0 +1,53 @@
+{
+  "title": "Quick Input",
+  "description": "Paste KOL investment opinion articles to quickly add them to the database",
+  "inputCard": {
+    "title": "Enter Article Content",
+    "description": "Paste article content or URL, the system will automatically identify KOLs and investment targets",
+    "placeholder": "Paste KOL post content or article URL...\n\nFor example:\n- Directly paste Facebook / Twitter post content\n- Paste article URL (supports auto-extraction)\n- Manually enter opinion summary"
+  },
+  "urlDetection": {
+    "detected": "Detected {platform} URL",
+    "fetching": "Fetching...",
+    "fetch": "Fetch Content",
+    "notSupported": "This URL platform does not support auto-extraction yet",
+    "supportedPlatforms": "Currently supported: {platforms}",
+    "manualInput": "Please paste the article content directly instead..."
+  },
+  "actions": {
+    "createDraft": "Create Draft",
+    "creating": "Creating...",
+    "reset": "Reset",
+    "saving": "Saving...",
+    "saveDraft": "Save as Draft",
+    "analyzing": "Analyzing...",
+    "directCreate": "Create Directly"
+  },
+  "aiPreview": {
+    "title": "AI Auto-Identification Result (Preview)",
+    "kol": "KOL:",
+    "stocks": "Stocks:",
+    "sentiment": "Sentiment:",
+    "pending": "Pending identification..."
+  },
+  "recentDrafts": {
+    "title": "Recent Drafts",
+    "clickToContinue": "Click to continue editing",
+    "viewAll": "View All",
+    "loading": "Loading...",
+    "empty": "(No content)",
+    "noDrafts": "No drafts yet"
+  },
+  "tips": {
+    "title": "Usage Tips",
+    "description": "Supports directly pasting Facebook, Twitter, Threads post URLs..."
+  },
+  "success": {
+    "fetchSuccess": "Content fetched successfully",
+    "fetchSuccessDesc": "Content fetched from {platform}"
+  },
+  "errors": {
+    "fetchFailed": "Fetch failed, please try again later",
+    "createDraftFailed": "Failed to create draft"
+  }
+}

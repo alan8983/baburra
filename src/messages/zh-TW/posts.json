@@ -1,0 +1,98 @@
+{
+  "title": "所有文章",
+  "description": "瀏覽所有收錄的 KOL 投資觀點文章",
+  "search": "搜尋文章、KOL、標的...",
+  "sentimentFilter": {
+    "title": "情緒篩選",
+    "all": "全部情緒",
+    "stronglyBullish": "強烈看多",
+    "bullish": "看多",
+    "neutral": "中立",
+    "bearish": "看空",
+    "stronglyBearish": "強烈看空"
+  },
+  "loading": "載入中...",
+  "empty": {
+    "noPosts": "找不到文章",
+    "description": "沒有符合搜尋條件的文章"
+  },
+  "detail": {
+    "backToList": "返回文章列表",
+    "bookmark": "加入書籤",
+    "priceChange5d": "5日:",
+    "priceChange30d": "30日:",
+    "sourceLink": "查看原文 ({platform})",
+    "aiGenerated": "（AI 分析）",
+    "image": "圖片 {index}",
+    "loadingPrice": "載入股價中...",
+    "priceError": "無法載入股價",
+    "noStocks": "此文章無關聯標的",
+    "noPriceData": "此標的暫無股價資料",
+    "chartDescription": "股價走勢與本篇發文標記"
+  },
+  "new": {
+    "backToEdit": "返回編輯",
+    "backToDrafts": "返回草稿列表",
+    "duplicateWarning": {
+      "title": "此文章網址已存在於資料庫中",
+      "createdAt": "建立於",
+      "viewExisting": "查看現有文章 →"
+    },
+    "preview": {
+      "title": "文章預覽",
+      "description": "請確認文章內容無誤後再發布",
+      "noKol": "未選擇 KOL",
+      "noPostedAt": "未設定發文時間",
+      "noStocks": "未選擇標的",
+      "content": "主文內容",
+      "noContent": "（無內容）",
+      "images": "附圖 ({count})",
+      "image": "附圖 {index}",
+      "sourceUrl": "原始網址"
+    },
+    "sentiment": {
+      "title": "走勢情緒",
+      "description": "選擇這篇文章的整體看法方向",
+      "analyzing": "分析中...",
+      "analyze": "AI 分析",
+      "analyzeResult": "AI 分析結果",
+      "confidence": "信心度: {percent}%",
+      "quota": "AI 配額：{used} / {limit} 本週剩餘"
+    },
+    "argumentsExtraction": {
+      "label": "發布後自動提取論點",
+      "description": "使用 AI 自動分析並提取文章中的投資論點（消耗 1 次 AI 配額）"
+    },
+    "actions": {
+      "publishing": "發布中...",
+      "confirmCreate": "確認建檔"
+    },
+    "validation": {
+      "title": "請確認以下必填欄位已填寫：",
+      "kol": "KOL",
+      "stocks": "投資標的",
+      "content": "主文內容",
+      "postedAt": "發文時間",
+      "sentiment": "走勢情緒"
+    },
+    "errors": {
+      "analyzeFailed": "AI 分析失敗",
+      "tryAgain": "請稍後再試",
+      "selectKol": "請選擇 KOL",
+      "selectStocks": "請選擇至少一個投資標的",
+      "fillContent": "請填寫主文內容",
+      "selectPostedAt": "請選擇發文時間",
+      "publishFailed": "發布失敗"
+    },
+    "success": {
+      "publishSuccessWithArguments": "文章發布成功，已提取論點",
+      "publishSuccess": "文章發布成功",
+      "argumentsExtractFailed": "論點提取失敗，可稍後手動提取"
+    },
+    "loading": {
+      "loading": "載入中...",
+      "loadFailed": "無法載入草稿",
+      "missingId": "缺少草稿 ID，請從草稿編輯頁進入"
+    }
+  }
+}

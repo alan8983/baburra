@@ -18,6 +18,7 @@ import { useDraft, useDeleteDraft } from '@/hooks/use-drafts';
 import { useCreatePost, useCheckDuplicateUrl } from '@/hooks/use-posts';
 import { useAnalyzeSentiment, useExtractArguments, useAiUsage } from '@/hooks/use-ai';
 import type { Sentiment, CreatePostInput } from '@/domain/models';
+import { detectPlatform } from '@/lib/utils/format';
 import { toast } from 'sonner';
 
 function PostNewContent() {
@@ -105,7 +106,7 @@ function PostNewContent() {
         stockIds: draft.stocks.map((s) => s.id),
         content: draft.content,
         sourceUrl: draft.sourceUrl || undefined,
-        sourcePlatform: 'manual',
+        sourcePlatform: detectPlatform(draft.sourceUrl),
         images: draft.images || [],
         sentiment,
         sentimentAiGenerated: sentiment === aiSuggestion,

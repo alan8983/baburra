@@ -1,0 +1,28 @@
+{
+  "title": "Drafts",
+  "description": "Manage unpublished article drafts",
+  "newDraft": "New Draft",
+  "search": "Search drafts...",
+  "status": {
+    "stronglyBearish": "Strongly Bearish",
+    "bearish": "Bearish",
+    "neutral": "Neutral",
+    "bullish": "Bullish",
+    "stronglyBullish": "Strongly Bullish",
+    "noKol": "No KOL selected",
+    "empty": "(No content)",
+    "updatedAt": "Updated",
+    "ready": "Ready to publish",
+    "incomplete": "Incomplete"
+  },
+  "loading": "Loading...",
+  "errors": {
+    "loadFailed": "Failed to load drafts, please try again later."
+  },
+  "empty": {
+    "noDrafts": "No drafts",
+    "noResults": "No drafts matching \"{query}\"",
+    "description": "Start entering article content to create a draft"
+  },
+  "deleteConfirm": "Are you sure you want to delete this draft?"
+}

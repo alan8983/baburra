@@ -1,0 +1,84 @@
+{
+  "kolSelector": {
+    "placeholder": "搜尋或選擇 KOL...",
+    "searchPlaceholder": "搜尋 KOL 名稱...",
+    "searching": "搜尋中...",
+    "notFound": "找不到「{query}」",
+    "noData": "沒有 KOL 資料",
+    "list": "KOL 列表",
+    "createNew": "新增 KOL「{name}」",
+    "createNewHint": "輸入名稱以新增 KOL"
+  },
+  "stockSelector": {
+    "placeholder": "搜尋或選擇標的...",
+    "searchPlaceholder": "搜尋代碼或名稱...",
+    "searching": "搜尋中...",
+    "notFound": "找不到「{query}」",
+    "noData": "沒有投資標的資料",
+    "selected": "已選擇 {count} 個標的 (最多 {max})",
+    "createNew": "新增標的「{ticker}」",
+    "createNewHint": "輸入代碼以新增標的"
+  },
+  "kolForm": {
+    "title": "新增 KOL",
+    "description": "建立新的 KOL 資料，之後可以在 KOL 管理頁面編輯詳細資訊",
+    "name": "名稱",
+    "bio": "簡介 (可選)",
+    "twitter": "Twitter / X (可選)",
+    "facebook": "Facebook (可選)",
+    "namePlaceholder": "輸入 KOL 名稱",
+    "bioPlaceholder": "簡短介紹這位 KOL...",
+    "cancel": "取消",
+    "creating": "建立中...",
+    "create": "建立 KOL"
+  },
+  "stockForm": {
+    "title": "新增投資標的",
+    "description": "建立新的投資標的，之後系統會自動抓取股價資料",
+    "ticker": "股票代碼",
+    "name": "公司名稱",
+    "market": "市場",
+    "tickerPlaceholder": "例如：AAPL、TSLA、2330",
+    "namePlaceholder": "例如：Apple Inc.",
+    "marketPlaceholder": "選擇市場",
+    "markets": {
+      "us": "美股 (US)",
+      "tw": "台股 (TW)",
+      "hk": "港股 (HK)",
+      "crypto": "加密貨幣"
+    },
+    "helpText": "請輸入股票代碼，例如美股輸入 AAPL，台股輸入 2330",
+    "cancel": "取消",
+    "creating": "建立中...",
+    "create": "建立標的"
+  },
+  "sentimentSelector": {
+    "aiSuggestion": "AI 建議：",
+    "accept": "採用",
+    "notSet": "未設定"
+  },
+  "datetimeInput": {
+    "quickOptions": {
+      "now": "現在",
+      "1hAgo": "1小時前",
+      "3hAgo": "3小時前",
+      "1dAgo": "1天前",
+      "3dAgo": "3天前",
+      "1wAgo": "1週前"
+    },
+    "selected": "已選擇：",
+    "justNow": "剛剛",
+    "minutesAgo": "{count} 分鐘前",
+    "hoursAgo": "{count} 小時前",
+    "daysAgo": "{count} 天前",
+    "weeksAgo": "{count} 週前",
+    "monthsAgo": "{count} 個月前",
+    "yearsAgo": "{count} 年前"
+  },
+  "imageUploader": {
+    "label": "圖片",
+    "maxError": "最多只能上傳 {max} 張圖片",
+    "helpText": "點擊上傳圖片，最多 {max} 張（支援 JPG、PNG、GIF、WebP，每張最大 5MB）",
+    "removeImage": "移除圖片"
+  }
+}

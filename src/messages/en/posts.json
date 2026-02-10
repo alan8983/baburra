@@ -1,0 +1,98 @@
+{
+  "title": "All Posts",
+  "description": "Browse all collected KOL investment opinion articles",
+  "search": "Search posts, KOLs, stocks...",
+  "sentimentFilter": {
+    "title": "Sentiment Filter",
+    "all": "All Sentiments",
+    "stronglyBullish": "Strongly Bullish",
+    "bullish": "Bullish",
+    "neutral": "Neutral",
+    "bearish": "Bearish",
+    "stronglyBearish": "Strongly Bearish"
+  },
+  "loading": "Loading...",
+  "empty": {
+    "noPosts": "No posts found",
+    "description": "No posts matching the search criteria"
+  },
+  "detail": {
+    "backToList": "Back to Post List",
+    "bookmark": "Add to Bookmarks",
+    "priceChange5d": "5d:",
+    "priceChange30d": "30d:",
+    "sourceLink": "View Original ({platform})",
+    "aiGenerated": "(AI Analysis)",
+    "image": "Image {index}",
+    "loadingPrice": "Loading price...",
+    "priceError": "Failed to load price",
+    "noStocks": "This post has no associated stocks",
+    "noPriceData": "No price data available for this stock",
+    "chartDescription": "Stock price trend and post marker"
+  },
+  "new": {
+    "backToEdit": "Back to Edit",
+    "backToDrafts": "Back to Drafts",
+    "duplicateWarning": {
+      "title": "This article URL already exists in the database",
+      "createdAt": "Created at",
+      "viewExisting": "View existing post →"
+    },
+    "preview": {
+      "title": "Post Preview",
+      "description": "Please confirm the post content before publishing",
+      "noKol": "No KOL selected",
+      "noPostedAt": "No post time set",
+      "noStocks": "No stocks selected",
+      "content": "Main Content",
+      "noContent": "(No content)",
+      "images": "Attached Images ({count})",
+      "image": "Attached Image {index}",
+      "sourceUrl": "Source URL"
+    },
+    "sentiment": {
+      "title": "Sentiment",
+      "description": "Select the overall opinion direction of this post",
+      "analyzing": "Analyzing...",
+      "analyze": "AI Analyze",
+      "analyzeResult": "AI Analysis Result",
+      "confidence": "Confidence: {percent}%",
+      "quota": "AI Quota: {used} / {limit} remaining this week"
+    },
+    "argumentsExtraction": {
+      "label": "Auto-extract arguments after publishing",
+      "description": "Use AI to automatically analyze and extract investment arguments from the article (consumes 1 AI quota)"
+    },
+    "actions": {
+      "publishing": "Publishing...",
+      "confirmCreate": "Confirm Create"
+    },
+    "validation": {
+      "title": "Please confirm the following required fields are filled:",
+      "kol": "KOL",
+      "stocks": "Stocks",
+      "content": "Main Content",
+      "postedAt": "Post Time",
+      "sentiment": "Sentiment"
+    },
+    "errors": {
+      "analyzeFailed": "AI analysis failed",
+      "tryAgain": "Please try again later",
+      "selectKol": "Please select a KOL",
+      "selectStocks": "Please select at least one stock",
+      "fillContent": "Please fill in the main content",
+      "selectPostedAt": "Please select post time",
+      "publishFailed": "Publish failed"
+    },
+    "success": {
+      "publishSuccessWithArguments": "Post published successfully, arguments extracted",
+      "publishSuccess": "Post published successfully",
+      "argumentsExtractFailed": "Argument extraction failed, can be extracted manually later"
+    },
+    "loading": {
+      "loading": "Loading...",
+      "loadFailed": "Failed to load draft",
+      "missingId": "Missing draft ID, please enter from draft edit page"
+    }
+  }
+}

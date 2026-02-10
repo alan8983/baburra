@@ -1,7 +1,7 @@
 // Post 領域模型
 
 export type Sentiment = -2 | -1 | 0 | 1 | 2;
-export type SourcePlatform = 'twitter' | 'facebook' | 'manual';
+export type SourcePlatform = 'twitter' | 'facebook' | 'threads' | 'instagram' | 'manual';
 
 export const SENTIMENT_LABELS: Record<Sentiment, string> = {
   [-2]: '強烈看空',

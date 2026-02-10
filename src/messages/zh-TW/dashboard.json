@@ -1,0 +1,52 @@
+{
+  "title": "Dashboard",
+  "description": "歡迎回來！以下是您的 KOL 追蹤概覽。",
+  "stats": {
+    "kolTotal": "KOL 總數",
+    "kolMonthlyNew": "+{count} 本月新增",
+    "kolMonthlyNoNew": "本月無新增",
+    "stocks": "投資標的",
+    "stocksMonthlyNew": "+{count} 本月新增",
+    "stocksMonthlyNoNew": "本月無新增",
+    "posts": "收錄文章",
+    "postsWeeklyNew": "+{count} 本週新增",
+    "postsWeeklyNoNew": "本週無新增",
+    "drafts": "待處理草稿"
+  },
+  "drafts": {
+    "recentUpdate": "最近更新",
+    "noDrafts": "尚無草稿",
+    "justNow": "剛剛",
+    "minutesAgo": "{count} 分鐘前",
+    "hoursAgo": "{count} 小時前",
+    "daysAgo": "{count} 天前"
+  },
+  "recentPosts": {
+    "title": "最近收錄文章",
+    "description": "最近 5 篇收錄的 KOL 觀點文章",
+    "noPosts": "尚無文章",
+    "noStocks": "無標的"
+  },
+  "topKols": {
+    "title": "KOL 文章數排行",
+    "description": "文章數前 5 名的 KOL",
+    "noKols": "尚無 KOL",
+    "postCount": "{count} 篇文章",
+    "lastPost": "最後發文"
+  },
+  "quickActions": {
+    "title": "快速操作",
+    "quickInput": "快速輸入",
+    "quickInputDesc": "新增 KOL 觀點",
+    "kolManagement": "KOL 管理",
+    "kolManagementDesc": "瀏覽所有 KOL",
+    "stocks": "投資標的",
+    "stocksDesc": "瀏覽所有標的",
+    "allPosts": "所有文章",
+    "allPostsDesc": "瀏覽收錄文章"
+  },
+  "errors": {
+    "loadError": "載入資料時發生錯誤：{error}",
+    "unknownError": "未知錯誤"
+  }
+}

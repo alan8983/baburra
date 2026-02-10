@@ -28,12 +28,6 @@ export const ROUTES = {
 
 // API 路由
 export const API_ROUTES = {
-  // Auth
-  AUTH_SIGNUP: '/api/auth/signup',
-  AUTH_LOGIN: '/api/auth/login',
-  AUTH_LOGOUT: '/api/auth/logout',
-  AUTH_SESSION: '/api/auth/session',
-
   // KOLs
   KOLS: '/api/kols',
   KOL_DETAIL: (id: string) => `/api/kols/${id}`,
@@ -57,6 +51,9 @@ export const API_ROUTES = {
   DRAFTS: '/api/drafts',
   DRAFT_DETAIL: (id: string) => `/api/drafts/${id}`,
 
+  // Dashboard
+  DASHBOARD: '/api/dashboard',
+
   // AI
   AI_ANALYZE: '/api/ai/analyze',
   AI_EXTRACT_ARGUMENTS: '/api/ai/extract-arguments',
@@ -67,6 +64,9 @@ export const API_ROUTES = {
 
   // Upload
   UPLOAD: '/api/upload',
+
+  // URL Fetch
+  FETCH_URL: '/api/fetch-url',
 } as const;
 
 // 導航項目

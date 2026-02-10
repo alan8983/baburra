@@ -1,0 +1,70 @@
+{
+  "title": "KOL List",
+  "description": "Browse and manage all tracked KOLs",
+  "newKol": "New KOL",
+  "search": "Search KOLs...",
+  "stats": {
+    "recentPost": "Recent post:",
+    "postCount": "Posts:",
+    "winRate": "Win rate {percent}%"
+  },
+  "loading": "Loading...",
+  "errors": {
+    "loadFailed": "Failed to load KOL list, please try again later."
+  },
+  "empty": {
+    "noKols": "No KOLs found",
+    "noResults": "No KOLs matching \"{query}\"",
+    "description": "No KOLs yet, click the button above to add"
+  },
+  "detail": {
+    "backToList": "Back to KOL List",
+    "stats": {
+      "postCount": "Posts:",
+      "overallWinRate": "Overall Win Rate: {percent}%"
+    },
+    "postsByStock": {
+      "title": "Posts Grouped by Stock",
+      "loading": "Loading posts...",
+      "noPosts": "No posts",
+      "total": "Total {count} posts",
+      "viewAll": "View all {count} posts"
+    },
+    "priceChange": "{percent}% (5d)",
+    "winRate": {
+      "title": "Win Rate Statistics",
+      "description": "Prediction win rate calculated by different time periods",
+      "analyzing": "Calculating win rate...",
+      "overallAverage": "Overall Average Win Rate",
+      "totalPosts": "Total {count} directional posts",
+      "periods": {
+        "5d": "5d",
+        "30d": "30d",
+        "90d": "90d",
+        "365d": "365d"
+      },
+      "periodWinRate": "{days}d Win Rate",
+      "winLoss": "{wins}W / {losses}L",
+      "validSamples": "({count} valid samples)",
+      "explanation": {
+        "title": "Win Rate Calculation Explanation",
+        "bullish": "Bullish posts: Victory if stock price rises after posting",
+        "bearish": "Bearish posts: Victory if stock price falls after posting",
+        "neutral": "Neutral posts are not included in win rate calculation",
+        "perStock": "Each post's win rate is calculated separately for each stock"
+      },
+      "loadFailed": "Failed to load win rate data"
+    },
+    "about": {
+      "title": "About {name}",
+      "bio": "Bio",
+      "noBio": "No bio",
+      "socialLinks": "Social Links",
+      "noSocialLinks": "No social links"
+    },
+    "loading": "Loading...",
+    "errors": {
+      "loadFailed": "Failed to load KOL or KOL not found"
+    }
+  }
+}

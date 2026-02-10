@@ -1,0 +1,40 @@
+{
+  "title": "設定",
+  "description": "管理您的帳戶設定和偏好",
+  "profile": {
+    "title": "個人資料",
+    "description": "更新您的個人資訊",
+    "changeAvatar": "更換頭像",
+    "displayName": "顯示名稱",
+    "displayNamePlaceholder": "您的顯示名稱",
+    "emailCannotChange": "Email 無法更改",
+    "saving": "儲存中...",
+    "save": "儲存變更",
+    "saveError": "儲存失敗，請稍後再試",
+    "saveSuccess": "變更已儲存"
+  },
+  "aiQuota": {
+    "title": "AI 配額",
+    "description": "您的 AI 功能使用狀況",
+    "weeklyUsage": "本週使用量",
+    "resetWeekly": "每週一重置",
+    "times": "次",
+    "freeUserDescription": "免費用戶每週可使用 15 次 AI 分析功能。升級至 Premium 可獲得更多配額。",
+    "upgradeToPremium": "升級至 Premium"
+  },
+  "subscription": {
+    "title": "訂閱方案",
+    "description": "管理您的訂閱",
+    "freeDescription": "基本功能，每週 15 次 AI 分析",
+    "currentPlan": "目前方案",
+    "premiumDescription": "每週 100 次 AI 分析、優先支援",
+    "upgrade": "升級"
+  },
+  "dangerZone": {
+    "title": "危險區域",
+    "description": "這些操作無法復原，請謹慎操作",
+    "deleteAccount": "刪除帳戶",
+    "deleteAccountDescription": "永久刪除您的帳戶和所有資料"
+  },
+  "loginRequired": "請先登入以查看設定"
+}

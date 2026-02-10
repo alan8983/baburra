@@ -1,0 +1,71 @@
+{
+  "title": "Stocks",
+  "description": "Browse all tracked investment targets",
+  "newStock": "New Stock",
+  "search": "Search ticker or name...",
+  "stats": {
+    "postCount": "Posts",
+    "winRate30d": "30d Win Rate",
+    "recentPost": "Recent Post"
+  },
+  "loading": "Loading...",
+  "errors": {
+    "loadFailed": "Failed to load stock list, please try again later."
+  },
+  "empty": {
+    "noStocks": "No stocks found",
+    "noResults": "No stocks matching \"{query}\"",
+    "description": "No stocks yet, click the button above to add"
+  },
+  "detail": {
+    "backToList": "Back to Stock List",
+    "chart": {
+      "title": "Candlestick Chart",
+      "description": "Stock price trend chart with KOL opinion markers"
+    },
+    "stats": {
+      "postCount": "Posts:",
+      "winRate30d": "30d Win Rate: {percent}%"
+    },
+    "posts": {
+      "title": "Related Posts",
+      "loading": "Loading posts...",
+      "noPosts": "No related posts"
+    },
+    "priceChange": {
+      "5d": "5d:",
+      "30d": "30d:"
+    },
+    "winRate": {
+      "title": "Win Rate Statistics",
+      "description": "KOL prediction win rate for this stock (calculated by different time periods)",
+      "analyzing": "Calculating win rate...",
+      "overallAverage": "Overall Average Win Rate",
+      "totalPosts": "Total {count} directional posts",
+      "periods": {
+        "5d": "5d",
+        "30d": "30d",
+        "90d": "90d",
+        "365d": "365d"
+      },
+      "periodWinRate": "{days}d Win Rate",
+      "winLoss": "{wins}W / {losses}L",
+      "validSamples": "({count} valid samples)",
+      "explanation": {
+        "title": "Win Rate Calculation Explanation",
+        "bullish": "Bullish posts: Victory if stock price rises after posting",
+        "bearish": "Bearish posts: Victory if stock price falls after posting",
+        "neutral": "Neutral posts are not included in win rate calculation",
+        "allKols": "Calculation based on all KOL posts for this stock"
+      },
+      "loadFailed": "Failed to load win rate data"
+    },
+    "loading": "Loading...",
+    "priceLoading": "Loading price...",
+    "errors": {
+      "priceError": "Failed to load price, please check ticker code or Tiingo API settings",
+      "noPriceData": "No price data available for this stock",
+      "loadFailed": "Failed to load stock or stock not found"
+    }
+  }
+}

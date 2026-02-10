@@ -1,0 +1,84 @@
+{
+  "kolSelector": {
+    "placeholder": "Search or select KOL...",
+    "searchPlaceholder": "Search KOL name...",
+    "searching": "Searching...",
+    "notFound": "No results for \"{query}\"",
+    "noData": "No KOL data",
+    "list": "KOL List",
+    "createNew": "Create KOL \"{name}\"",
+    "createNewHint": "Enter name to create KOL"
+  },
+  "stockSelector": {
+    "placeholder": "Search or select stock...",
+    "searchPlaceholder": "Search ticker or name...",
+    "searching": "Searching...",
+    "notFound": "No results for \"{query}\"",
+    "noData": "No stock data",
+    "selected": "Selected {count} stocks (max {max})",
+    "createNew": "Create stock \"{ticker}\"",
+    "createNewHint": "Enter ticker to create stock"
+  },
+  "kolForm": {
+    "title": "New KOL",
+    "description": "Create new KOL data, you can edit detailed information later in the KOL management page",
+    "name": "Name",
+    "bio": "Bio (optional)",
+    "twitter": "Twitter / X (optional)",
+    "facebook": "Facebook (optional)",
+    "namePlaceholder": "Enter KOL name",
+    "bioPlaceholder": "Brief introduction of this KOL...",
+    "cancel": "Cancel",
+    "creating": "Creating...",
+    "create": "Create KOL"
+  },
+  "stockForm": {
+    "title": "New Stock",
+    "description": "Create new investment target, the system will automatically fetch stock price data",
+    "ticker": "Ticker",
+    "name": "Company Name",
+    "market": "Market",
+    "tickerPlaceholder": "e.g., AAPL, TSLA, 2330",
+    "namePlaceholder": "e.g., Apple Inc.",
+    "marketPlaceholder": "Select market",
+    "markets": {
+      "us": "US Stocks (US)",
+      "tw": "Taiwan Stocks (TW)",
+      "hk": "Hong Kong Stocks (HK)",
+      "crypto": "Cryptocurrency"
+    },
+    "helpText": "Please enter stock ticker, e.g., AAPL for US stocks, 2330 for Taiwan stocks",
+    "cancel": "Cancel",
+    "creating": "Creating...",
+    "create": "Create Stock"
+  },
+  "sentimentSelector": {
+    "aiSuggestion": "AI Suggestion:",
+    "accept": "Accept",
+    "notSet": "Not Set"
+  },
+  "datetimeInput": {
+    "quickOptions": {
+      "now": "Now",
+      "1hAgo": "1 hour ago",
+      "3hAgo": "3 hours ago",
+      "1dAgo": "1 day ago",
+      "3dAgo": "3 days ago",
+      "1wAgo": "1 week ago"
+    },
+    "selected": "Selected:",
+    "justNow": "Just now",
+    "minutesAgo": "{count} minutes ago",
+    "hoursAgo": "{count} hours ago",
+    "daysAgo": "{count} days ago",
+    "weeksAgo": "{count} weeks ago",
+    "monthsAgo": "{count} months ago",
+    "yearsAgo": "{count} years ago"
+  },
+  "imageUploader": {
+    "label": "Images",
+    "maxError": "Maximum {max} images allowed",
+    "helpText": "Click to upload images, up to {max} (supports JPG, PNG, GIF, WebP, max 5MB each)",
+    "removeImage": "Remove image"
+  }
+}

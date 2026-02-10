@@ -1,0 +1,40 @@
+{
+  "title": "Settings",
+  "description": "Manage your account settings and preferences",
+  "profile": {
+    "title": "Profile",
+    "description": "Update your personal information",
+    "changeAvatar": "Change Avatar",
+    "displayName": "Display Name",
+    "displayNamePlaceholder": "Your display name",
+    "emailCannotChange": "Email cannot be changed",
+    "saving": "Saving...",
+    "save": "Save Changes",
+    "saveError": "Save failed, please try again later",
+    "saveSuccess": "Changes saved"
+  },
+  "aiQuota": {
+    "title": "AI Quota",
+    "description": "Your AI feature usage",
+    "weeklyUsage": "Weekly Usage",
+    "resetWeekly": "Resets every Monday",
+    "times": "times",
+    "freeUserDescription": "Free users can use AI analysis 15 times per week. Upgrade to Premium for more quota.",
+    "upgradeToPremium": "Upgrade to Premium"
+  },
+  "subscription": {
+    "title": "Subscription Plan",
+    "description": "Manage your subscription",
+    "freeDescription": "Basic features, 15 AI analyses per week",
+    "currentPlan": "Current Plan",
+    "premiumDescription": "100 AI analyses per week, priority support",
+    "upgrade": "Upgrade"
+  },
+  "dangerZone": {
+    "title": "Danger Zone",
+    "description": "These actions cannot be undone, please proceed with caution",
+    "deleteAccount": "Delete Account",
+    "deleteAccountDescription": "Permanently delete your account and all data"
+  },
+  "loginRequired": "Please login to view settings"
+}
