@@ -1,0 +1,130 @@
+'use client';
+
+import Link from 'next/link';
+import { Bookmark, User, Trash2 } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ROUTES } from '@/lib/constants';
+import { SENTIMENT_LABELS, SENTIMENT_COLORS } from '@/domain/models/post';
+import { formatDateTime } from '@/lib/utils/date';
+import { useBookmarks, useRemoveBookmark } from '@/hooks';
+import { toast } from 'sonner';
+
+export default function BookmarksPage() {
+  const { data, isLoading, error } = useBookmarks();
+  const removeBookmark = useRemoveBookmark();
+
+  const bookmarks = data?.data ?? [];
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold tracking-tight">我的書籤</h1>
+        <Card className="py-12">
+          <CardContent className="flex flex-col items-center justify-center text-center">
+            <p className="text-destructive">無法載入書籤列表，請稍後再試。</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">我的書籤</h1>
+        <p className="text-muted-foreground">您收藏的文章</p>
+      </div>
+
+      {/* Loading */}
+      {isLoading && (
+        <Card className="py-12">
+          <CardContent className="text-muted-foreground flex justify-center">載入中...</CardContent>
+        </Card>
+      )}
+
+      {/* Bookmark List */}
+      {!isLoading && bookmarks.length > 0 && (
+        <div className="space-y-4">
+          {bookmarks.map((bookmark) => {
+            const post = bookmark.post;
+            return (
+              <Card key={bookmark.id} className="hover:bg-muted/50 transition-colors">
+                <CardContent className="pt-4">
+                  <div className="flex items-start gap-4">
+                    <Link href={ROUTES.POST_DETAIL(post.id)} className="flex min-w-0 flex-1 items-start gap-4">
+                      <Avatar className="h-10 w-10 shrink-0">
+                        <AvatarImage src={post.kol.avatarUrl || undefined} />
+                        <AvatarFallback>
+                          <User className="h-5 w-5" />
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-medium">{post.kol.name}</span>
+                          <Badge
+                            variant="outline"
+                            className={SENTIMENT_COLORS[post.sentiment as keyof typeof SENTIMENT_COLORS]}
+                          >
+                            {SENTIMENT_LABELS[post.sentiment as keyof typeof SENTIMENT_LABELS]}
+                          </Badge>
+                          <span className="text-muted-foreground text-sm">
+                            {formatDateTime(post.postedAt)}
+                          </span>
+                        </div>
+
+                        {/* Stocks */}
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {post.stocks.map((stock) => (
+                            <Badge key={stock.ticker} variant="outline">
+                              {stock.ticker}
+                            </Badge>
+                          ))}
+                        </div>
+
+                        <p className="text-muted-foreground mt-2 line-clamp-2 text-sm">
+                          {post.content}
+                        </p>
+                      </div>
+                    </Link>
+
+                    {/* Remove button */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-destructive shrink-0"
+                      onClick={() =>
+                        removeBookmark.mutate(post.id, {
+                          onSuccess: () => toast.success('已移除書籤'),
+                        })
+                      }
+                      disabled={removeBookmark.isPending}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!isLoading && bookmarks.length === 0 && (
+        <Card className="py-12">
+          <CardContent className="flex flex-col items-center justify-center text-center">
+            <Bookmark className="text-muted-foreground h-12 w-12" />
+            <h3 className="mt-4 text-lg font-semibold">尚無書籤</h3>
+            <p className="text-muted-foreground mt-2 text-sm">
+              在文章詳情頁點擊書籤按鈕來收藏文章
+            </p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}

@@ -19,6 +19,9 @@
   "detail": {
     "backToList": "Back to Post List",
     "bookmark": "Add to Bookmarks",
+    "bookmarked": "Bookmarked",
+    "bookmarkAdded": "Bookmark added",
+    "bookmarkRemoved": "Bookmark removed",
     "priceChange5d": "5d:",
     "priceChange30d": "30d:",
     "sourceLink": "View Original ({platform})",

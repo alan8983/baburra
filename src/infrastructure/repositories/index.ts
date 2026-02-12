@@ -6,3 +6,4 @@ export * from './draft.repository';
 export * from './post.repository';
 export * from './ai-usage.repository';
 export * from './argument.repository';
+export * from './bookmark.repository';

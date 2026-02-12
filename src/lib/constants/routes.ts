@@ -23,6 +23,7 @@ export const ROUTES = {
   POSTS: '/posts',
   POST_DETAIL: (id: string) => `/posts/${id}`,
   POST_NEW: '/posts/new',
+  BOOKMARKS: '/bookmarks',
   SETTINGS: '/settings',
 } as const;
 
@@ -50,6 +51,10 @@ export const API_ROUTES = {
   // Drafts
   DRAFTS: '/api/drafts',
   DRAFT_DETAIL: (id: string) => `/api/drafts/${id}`,
+
+  // Bookmarks
+  BOOKMARKS: '/api/bookmarks',
+  BOOKMARK_STATUS: (postId: string) => `/api/bookmarks/${postId}`,
 
   // Dashboard
   DASHBOARD: '/api/dashboard',

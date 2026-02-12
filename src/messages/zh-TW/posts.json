@@ -19,6 +19,9 @@
   "detail": {
     "backToList": "返回文章列表",
     "bookmark": "加入書籤",
+    "bookmarked": "已加入書籤",
+    "bookmarkAdded": "已加入書籤",
+    "bookmarkRemoved": "已移除書籤",
     "priceChange5d": "5日:",
     "priceChange30d": "30日:",
     "sourceLink": "查看原文 ({platform})",

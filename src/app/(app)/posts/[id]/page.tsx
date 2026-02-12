@@ -3,7 +3,8 @@
 import { use } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Bookmark, ExternalLink, User } from 'lucide-react';
+import { ArrowLeft, Bookmark, BookmarkCheck, ExternalLink, User } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -19,7 +20,7 @@ import {
   postToSentimentMarker,
   SentimentMarkerLegend,
 } from '@/components/charts';
-import { usePost } from '@/hooks';
+import { usePost, useBookmarkStatus, useToggleBookmark } from '@/hooks';
 
 function toDateString(postedAt: Date | string): string {
   if (postedAt instanceof Date) return postedAt.toISOString().slice(0, 10);
@@ -139,6 +140,9 @@ function PostStockChart({
 export default function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data: post, isLoading, error } = usePost(id);
+  const { data: bookmarkData } = useBookmarkStatus(id);
+  const toggleBookmark = useToggleBookmark(id);
+  const isBookmarked = bookmarkData?.isBookmarked ?? false;
 
   if (error || (!isLoading && !post)) {
     return (
@@ -175,9 +179,29 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
             返回文章列表
           </Link>
         </Button>
-        <Button variant="outline" size="sm">
-          <Bookmark className="mr-2 h-4 w-4" />
-          加入書籤
+        <Button
+          variant={isBookmarked ? 'default' : 'outline'}
+          size="sm"
+          onClick={() =>
+            toggleBookmark.mutate(isBookmarked, {
+              onSuccess: () => {
+                toast.success(isBookmarked ? '已移除書籤' : '已加入書籤');
+              },
+            })
+          }
+          disabled={toggleBookmark.isPending}
+        >
+          {isBookmarked ? (
+            <>
+              <BookmarkCheck className="mr-2 h-4 w-4" />
+              已加入書籤
+            </>
+          ) : (
+            <>
+              <Bookmark className="mr-2 h-4 w-4" />
+              加入書籤
+            </>
+          )}
         </Button>
       </div>
 

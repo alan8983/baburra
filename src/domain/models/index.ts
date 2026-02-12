@@ -6,3 +6,4 @@ export * from './stock';
 export * from './post';
 export * from './draft';
 export * from './user';
+export * from './bookmark';

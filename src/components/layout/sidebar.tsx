@@ -10,6 +10,7 @@ import {
   Users,
   TrendingUp,
   Newspaper,
+  Bookmark,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -33,6 +34,7 @@ const iconMap = {
   Users,
   TrendingUp,
   Newspaper,
+  Bookmark,
   Settings,
 };
 
@@ -46,6 +48,7 @@ const navItems: Array<{
   { key: 'dashboard', href: ROUTES.DASHBOARD, icon: 'LayoutDashboard' },
   { key: 'quickInput', href: ROUTES.INPUT, icon: 'PenLine' },
   { key: 'drafts', href: ROUTES.DRAFTS, icon: 'FileText', showBadge: true },
+  { key: 'bookmarks', href: ROUTES.BOOKMARKS, icon: 'Bookmark' },
 ];
 
 const resourceItems: Array<{
