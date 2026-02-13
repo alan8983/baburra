@@ -1,34 +1,14 @@
 {
   "title": "Quick Input",
-  "description": "Paste KOL investment opinion articles to quickly add them to the database",
+  "description": "Paste KOL investment opinion articles, AI auto-identifies KOL, tickers and sentiment",
   "inputCard": {
     "title": "Enter Article Content",
     "description": "Paste article content or URL, the system will automatically identify KOLs and investment targets",
-    "placeholder": "Paste KOL post content or article URL...\n\nFor example:\n- Directly paste Facebook / Twitter post content\n- Paste article URL (supports auto-extraction)\n- Manually enter opinion summary"
-  },
-  "urlDetection": {
-    "detected": "Detected {platform} URL",
-    "fetching": "Fetching...",
-    "fetch": "Fetch Content",
-    "notSupported": "This URL platform does not support auto-extraction yet",
-    "supportedPlatforms": "Currently supported: {platforms}",
-    "manualInput": "Please paste the article content directly instead..."
+    "placeholder": "Paste KOL post content or article URL...\n\nFor example:\n- Paste Twitter / X post URL (supports auto-extraction)\n- Directly paste article content\n- Manually enter opinion summary"
   },
   "actions": {
     "createDraft": "Create Draft",
-    "creating": "Creating...",
-    "reset": "Reset",
-    "saving": "Saving...",
-    "saveDraft": "Save as Draft",
-    "analyzing": "Analyzing...",
-    "directCreate": "Create Directly"
-  },
-  "aiPreview": {
-    "title": "AI Auto-Identification Result (Preview)",
-    "kol": "KOL:",
-    "stocks": "Stocks:",
-    "sentiment": "Sentiment:",
-    "pending": "Pending identification..."
+    "analyzing": "Analyzing..."
   },
   "recentDrafts": {
     "title": "Recent Drafts",
@@ -40,14 +20,12 @@
   },
   "tips": {
     "title": "Usage Tips",
-    "description": "Supports directly pasting Facebook, Twitter, Threads post URLs..."
-  },
-  "success": {
-    "fetchSuccess": "Content fetched successfully",
-    "fetchSuccessDesc": "Content fetched from {platform}"
+    "tip1": "Supports pasting Twitter / X post URLs for auto-extraction and analysis",
+    "tip2": "Paste article content directly, AI will auto-identify KOL, stock tickers and sentiment",
+    "tip3": "AI results can be adjusted on the draft editing page"
   },
   "errors": {
-    "fetchFailed": "Fetch failed, please try again later",
-    "createDraftFailed": "Failed to create draft"
+    "createDraftFailed": "Failed to create draft",
+    "tryAgain": "Please try again later"
   }
 }

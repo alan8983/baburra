@@ -6,38 +6,14 @@ import { useMutation } from '@tanstack/react-query';
 import type { UrlFetchResult } from '@/infrastructure/extractors';
 import { API_ROUTES } from '@/lib/constants';
 
-/**
- * 判斷文字是否為 URL 格式
- */
-export function isUrlLike(text: string): boolean {
-  return /^https?:\/\/\S+/.test(text.trim());
-}
-
-/** 目前支援自動擷取的平台 */
-const SUPPORTED_PATTERNS: { platform: string; pattern: RegExp }[] = [
-  { platform: 'Facebook', pattern: /facebook\.com|fb\.com|fb\.watch/i },
-  { platform: 'Twitter / X', pattern: /twitter\.com|x\.com/i },
-  { platform: 'Threads', pattern: /threads\.net/i },
-];
-
-/**
- * 判斷 URL 是否為支援自動擷取的平台
- * 回傳平台名稱，不支援則回傳 null
- */
-export function getSupportedPlatform(text: string): string | null {
-  const trimmed = text.trim();
-  for (const { platform, pattern } of SUPPORTED_PATTERNS) {
-    if (pattern.test(trimmed)) return platform;
-  }
-  return null;
-}
-
-/**
- * 取得支援的平台列表（用於顯示給使用者）
- */
-export function getSupportedPlatformNames(): string[] {
-  return SUPPORTED_PATTERNS.map((p) => p.platform);
-}
+// Re-export URL utilities from shared module for backward compatibility
+export {
+  isUrlLike,
+  getSupportedPlatform,
+  getPlannedPlatform,
+  getSupportedPlatformNames,
+  getPlannedPlatformNames,
+} from '@/lib/utils/url';
 
 /**
  * URL 擷取 hook
@@ -66,7 +42,8 @@ export function useFetchUrl() {
           NETWORK_ERROR: '網路連線錯誤，請稍後再試',
         };
 
-        const message = (code && friendlyMessages[code]) || serverMessage || '擷取失敗，請稍後再試';
+        const message =
+          (code && friendlyMessages[code]) || serverMessage || '擷取失敗，請稍後再試';
         const error = new Error(message);
         (error as Error & { code?: string }).code = code;
         throw error;

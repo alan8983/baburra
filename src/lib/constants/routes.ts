@@ -61,6 +61,7 @@ export const API_ROUTES = {
 
   // AI
   AI_ANALYZE: '/api/ai/analyze',
+  AI_IDENTIFY_TICKERS: '/api/ai/identify-tickers',
   AI_EXTRACT_ARGUMENTS: '/api/ai/extract-arguments',
   AI_USAGE: '/api/ai/usage',
 
@@ -72,6 +73,9 @@ export const API_ROUTES = {
 
   // URL Fetch
   FETCH_URL: '/api/fetch-url',
+
+  // Quick Input (orchestration)
+  QUICK_INPUT: '/api/quick-input',
 } as const;
 
 // 導航項目

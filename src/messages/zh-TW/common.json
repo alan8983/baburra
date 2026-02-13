@@ -85,7 +85,15 @@
     "analyzeResult": "AI 分析結果",
     "confidence": "信心度",
     "aiGenerated": "（AI 分析）",
-    "quotaLabel": "AI 配額: "
+    "quotaLabel": "AI 配額: ",
+    "identifyTickers": "AI 識別標的",
+    "identifyingTickers": "AI 正在識別標的...",
+    "tickersFound": "AI 識別到 {count} 個投資標的",
+    "noTickersFound": "未識別到投資標的",
+    "addTicker": "加入",
+    "addAllTickers": "全部加入",
+    "alreadyAdded": "已加入",
+    "mentionedAs": "文中提及"
   },
   "errors": {
     "generic": "發生錯誤，請稍後再試",

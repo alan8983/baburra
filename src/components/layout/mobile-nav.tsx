@@ -11,7 +11,6 @@ import {
   TrendingUp,
   Newspaper,
   Settings,
-  X,
   LogOut,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -22,7 +21,9 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useUIStore } from '@/stores';
 import { ROUTES } from '@/lib/constants';
+import { APP_CONFIG } from '@/lib/constants/config';
 import { useAuth } from '@/hooks/use-auth';
+import { useDashboard } from '@/hooks/use-dashboard';
 
 const iconMap = {
   LayoutDashboard,
@@ -54,6 +55,8 @@ export function MobileNav() {
   const pathname = usePathname();
   const { mobileMenuOpen, setMobileMenuOpen } = useUIStore();
   const { signOut, loading } = useAuth();
+  const { data: dashboardData } = useDashboard();
+  const draftCount = dashboardData?.stats.draftCount ?? 0;
 
   const handleLogout = async () => {
     try {
@@ -68,20 +71,10 @@ export function MobileNav() {
     <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
       <SheetContent side="left" className="w-72 p-0">
         <SheetHeader className="border-b p-4">
-          <div className="flex items-center justify-between">
-            <SheetTitle className="flex items-center gap-2">
-              <TrendingUp className="text-primary h-5 w-5" />
-              KOL Tracker
-            </SheetTitle>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
+          <SheetTitle className="flex items-center gap-2">
+            <TrendingUp className="text-primary h-5 w-5" />
+            {APP_CONFIG.APP_NAME}
+          </SheetTitle>
         </SheetHeader>
 
         <ScrollArea className="flex-1 p-4">
@@ -94,13 +87,13 @@ export function MobileNav() {
                 <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)}>
                   <Button
                     variant={isActive ? 'secondary' : 'ghost'}
-                    className={cn('w-full justify-start', isActive && 'bg-accent')}
+                    className={cn('w-full justify-start', isActive && 'bg-primary/10 font-semibold')}
                   >
                     <Icon className="mr-2 h-4 w-4" />
                     <span className="flex-1 text-left">{t(`nav.${item.key}`)}</span>
-                    {item.showBadge && (
+                    {item.showBadge && draftCount > 0 && (
                       <Badge variant="secondary" className="ml-auto">
-                        3
+                        {draftCount}
                       </Badge>
                     )}
                   </Button>

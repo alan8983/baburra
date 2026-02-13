@@ -15,6 +15,18 @@ export interface SentimentAnalysisResult {
   reasoning: string;
 }
 
+export interface IdentifiedTicker {
+  ticker: string;
+  name: string;
+  market: 'US' | 'TW' | 'HK' | 'CRYPTO';
+  confidence: number;
+  mentionedAs: string;
+}
+
+export interface TickerIdentificationResult {
+  tickers: IdentifiedTicker[];
+}
+
 export interface ArgumentCategory {
   code: string;
   name: string;
@@ -31,6 +43,15 @@ export interface ExtractedArgument {
 
 export interface ArgumentExtractionResult {
   arguments: ExtractedArgument[];
+}
+
+export interface DraftAnalysisResult {
+  kolName: string | null;
+  stockTickers: IdentifiedTicker[];
+  sentiment: Sentiment;
+  confidence: number;
+  reasoning: string;
+  postedAt: string | null; // ISO 8601
 }
 
 // =====================
@@ -90,6 +111,84 @@ const ARGUMENT_EXTRACTION_PROMPT = `
 2. 每個論點需對應到框架中的類別
 3. 如果文章沒有提到某類別，不需要硬填
 4. sentiment 數值: 2(強烈看多), 1(看多), 0(中立), -1(看空), -2(強烈看空)
+
+只回傳 JSON，不要有其他文字。
+`;
+
+const DRAFT_ANALYSIS_PROMPT = `
+你是一個投資文章分析助手。請分析以下投資相關文章，一次提取所有關鍵資訊。
+
+今天的日期是: {today}
+
+文章內容:
+{content}
+
+請以 JSON 格式回傳:
+{
+  "kolName": "<發文者/作者名稱，若無法判斷則為 null>",
+  "tickers": [
+    {
+      "ticker": "<標準代碼，如 AAPL、2330.TW、BTC>",
+      "name": "<標的全名>",
+      "market": "<市場: US / TW / HK / CRYPTO>",
+      "confidence": <0 到 1 的小數>,
+      "mentionedAs": "<文章中出現的原始文字>"
+    }
+  ],
+  "sentiment": <-2 到 2 的整數>,
+  "confidence": <0 到 1 的小數>,
+  "reasoning": "<簡短說明判斷理由>",
+  "postedAt": "<發文時間的 ISO 8601 格式，若無法判斷則為 null>"
+}
+
+提取規則:
+1. KOL 名稱：文章開頭通常會出現發文者名稱（如「XXX 表示」、「@XXX」、暱稱等），請仔細辨識
+2. 投資標的識別：
+   - 支援英文代碼 (如 AAPL, TSLA, NVDA)
+   - 支援中文名稱 (如 台積電、鴻海、蘋果) 並轉換為標準代碼
+   - 支援台股代碼 (如 2330、2317)，台股代碼請加上 .TW 後綴
+   - 支援港股代碼 (如 0700.HK、9988.HK)
+   - 支援加密貨幣 (如 BTC、ETH)
+   - 如果文章沒有提及任何標的，回傳空陣列
+   - 不要猜測，只識別文章中明確提及的標的
+3. 情緒判斷 (sentiment):
+   - 2: 強烈看多 (明確表示非常看好，建議買入)
+   - 1: 看多 (正面評價，認為會上漲)
+   - 0: 中立 (沒有明確方向性判斷)
+   - -1: 看空 (負面評價，認為會下跌)
+   - -2: 強烈看空 (明確表示非常不看好，建議賣出)
+4. 發文時間：文章中若有提及日期時間（如「2024/1/15」、「今天」、「昨天」、「3小時前」），請根據今天日期轉換為 ISO 8601 格式。若無法判斷則回傳 null
+
+只回傳 JSON，不要有其他文字。
+`;
+
+const TICKER_IDENTIFICATION_PROMPT = `
+分析以下投資相關文章，找出所有提及的投資標的（股票、ETF、加密貨幣等）。
+
+文章內容:
+{content}
+
+請以 JSON 格式回傳所有識別到的投資標的:
+{
+  "tickers": [
+    {
+      "ticker": "<標準代碼，如 AAPL、2330.TW、BTC>",
+      "name": "<標的全名>",
+      "market": "<市場: US / TW / HK / CRYPTO>",
+      "confidence": <0 到 1 的小數>,
+      "mentionedAs": "<文章中出現的原始文字>"
+    }
+  ]
+}
+
+識別規則:
+1. 支援英文代碼 (如 AAPL, TSLA, NVDA)
+2. 支援中文名稱 (如 台積電、鴻海、蘋果)
+3. 支援台股代碼 (如 2330、2317)，台股代碼請加上 .TW 後綴
+4. 支援港股代碼 (如 0700.HK、9988.HK)
+5. 支援加密貨幣 (如 BTC、ETH)
+6. 如果文章沒有提及任何標的，回傳空陣列
+7. 不要猜測，只識別文章中明確提及的標的
 
 只回傳 JSON，不要有其他文字。
 `;
@@ -202,6 +301,92 @@ export async function extractArguments(
     }));
 
   return { arguments: validatedArguments };
+}
+
+/**
+ * 識別文章中提及的投資標的
+ */
+export async function identifyTickers(content: string): Promise<TickerIdentificationResult> {
+  const prompt = TICKER_IDENTIFICATION_PROMPT.replace('{content}', content);
+
+  const result = await generateJson<TickerIdentificationResult>(prompt, {
+    temperature: 0.2,
+    maxOutputTokens: 1024,
+  });
+
+  const validMarkets = ['US', 'TW', 'HK', 'CRYPTO'];
+  const tickers = (result.tickers || [])
+    .filter((t) => t.ticker && t.name && validMarkets.includes(t.market))
+    .map((t) => ({
+      ticker: t.ticker.trim().toUpperCase(),
+      name: t.name.trim(),
+      market: t.market as IdentifiedTicker['market'],
+      confidence: Math.max(0, Math.min(1, t.confidence || 0.5)),
+      mentionedAs: (t.mentionedAs || t.name).slice(0, 100),
+    }));
+
+  return { tickers };
+}
+
+/**
+ * 綜合分析草稿內容 — 一次提取 KOL、標的、情緒、發文時間
+ */
+export async function analyzeDraftContent(content: string): Promise<DraftAnalysisResult> {
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const prompt = DRAFT_ANALYSIS_PROMPT.replace('{content}', content).replace('{today}', today);
+
+  interface RawDraftAnalysis {
+    kolName: string | null;
+    tickers: Array<{
+      ticker: string;
+      name: string;
+      market: string;
+      confidence: number;
+      mentionedAs: string;
+    }>;
+    sentiment: number;
+    confidence: number;
+    reasoning: string;
+    postedAt: string | null;
+  }
+
+  const result = await generateJson<RawDraftAnalysis>(prompt, {
+    temperature: 0.3,
+    maxOutputTokens: 1024,
+  });
+
+  // 驗證並清理 tickers
+  const validMarkets = ['US', 'TW', 'HK', 'CRYPTO'];
+  const stockTickers: IdentifiedTicker[] = (result.tickers || [])
+    .filter((t) => t.ticker && t.name && validMarkets.includes(t.market))
+    .map((t) => ({
+      ticker: t.ticker.trim().toUpperCase(),
+      name: t.name.trim(),
+      market: t.market as IdentifiedTicker['market'],
+      confidence: Math.max(0, Math.min(1, t.confidence || 0.5)),
+      mentionedAs: (t.mentionedAs || t.name).slice(0, 100),
+    }));
+
+  // 驗證 sentiment
+  const sentiment = Math.max(-2, Math.min(2, Math.round(result.sentiment || 0))) as Sentiment;
+
+  // 驗證 postedAt
+  let postedAt: string | null = null;
+  if (result.postedAt) {
+    const parsed = new Date(result.postedAt);
+    if (!isNaN(parsed.getTime())) {
+      postedAt = parsed.toISOString();
+    }
+  }
+
+  return {
+    kolName: result.kolName?.trim() || null,
+    stockTickers,
+    sentiment,
+    confidence: Math.max(0, Math.min(1, result.confidence || 0.5)),
+    reasoning: result.reasoning || '',
+    postedAt,
+  };
 }
 
 /**

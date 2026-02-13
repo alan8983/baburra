@@ -24,8 +24,10 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useUIStore } from '@/stores';
 import { ROUTES } from '@/lib/constants';
+import { APP_CONFIG } from '@/lib/constants/config';
 import { useAiUsage } from '@/hooks/use-ai';
 import { useAuth } from '@/hooks/use-auth';
+import { useDashboard } from '@/hooks/use-dashboard';
 
 const iconMap = {
   LayoutDashboard,
@@ -71,11 +73,11 @@ interface NavItemProps {
   label: string;
   href: string;
   icon: keyof typeof iconMap;
-  showBadge?: boolean;
+  badgeCount?: number;
   isCollapsed: boolean;
 }
 
-function NavItem({ label, href, icon, showBadge, isCollapsed }: NavItemProps) {
+function NavItem({ label, href, icon, badgeCount, isCollapsed }: NavItemProps) {
   const pathname = usePathname();
   const isActive = pathname === href || pathname.startsWith(`${href}/`);
   const Icon = iconMap[icon];
@@ -87,16 +89,16 @@ function NavItem({ label, href, icon, showBadge, isCollapsed }: NavItemProps) {
         className={cn(
           'w-full justify-start',
           isCollapsed ? 'px-2' : 'px-3',
-          isActive && 'bg-accent'
+          isActive && 'bg-primary/10 font-semibold'
         )}
       >
         <Icon className={cn('h-4 w-4', !isCollapsed && 'mr-2')} />
         {!isCollapsed && (
           <>
             <span className="flex-1 text-left">{label}</span>
-            {showBadge && (
+            {badgeCount != null && badgeCount > 0 && (
               <Badge variant="secondary" className="ml-auto">
-                3
+                {badgeCount}
               </Badge>
             )}
           </>
@@ -182,6 +184,8 @@ function AiQuotaFooter({ isCollapsed }: { isCollapsed: boolean }) {
 export function Sidebar() {
   const t = useTranslations('common');
   const { sidebarOpen, toggleSidebar } = useUIStore();
+  const { data: dashboardData } = useDashboard();
+  const draftCount = dashboardData?.stats.draftCount ?? 0;
 
   return (
     <aside
@@ -200,7 +204,7 @@ export function Sidebar() {
         {sidebarOpen && (
           <Link href={ROUTES.DASHBOARD} className="flex items-center gap-2">
             <TrendingUp className="text-primary h-6 w-6" />
-            <span className="font-semibold">KOL Tracker</span>
+            <span className="font-semibold">{APP_CONFIG.APP_NAME}</span>
           </Link>
         )}
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={toggleSidebar}>
@@ -212,13 +216,13 @@ export function Sidebar() {
       <ScrollArea className="flex-1 px-2 py-4">
         <div className="space-y-1">
           {navItems.map((item) => (
-            <NavItem 
-              key={item.href} 
-              label={t(`nav.${item.key}`)} 
-              href={item.href} 
-              icon={item.icon} 
-              showBadge={item.showBadge}
-              isCollapsed={!sidebarOpen} 
+            <NavItem
+              key={item.href}
+              label={t(`nav.${item.key}`)}
+              href={item.href}
+              icon={item.icon}
+              badgeCount={item.showBadge ? draftCount : undefined}
+              isCollapsed={!sidebarOpen}
             />
           ))}
         </div>

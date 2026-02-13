@@ -56,6 +56,23 @@ export interface ExtractArgumentsResult {
   };
 }
 
+export interface IdentifiedTicker {
+  ticker: string;
+  name: string;
+  market: 'US' | 'TW' | 'HK' | 'CRYPTO';
+  confidence: number;
+  mentionedAs: string;
+}
+
+export interface TickerIdentificationResult {
+  tickers: IdentifiedTicker[];
+  usage: {
+    remaining: number;
+    weeklyLimit: number;
+    resetAt: string;
+  };
+}
+
 export interface ArgumentCategory {
   id: string;
   code: string;
@@ -128,6 +145,35 @@ export function useExtractArguments() {
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.error || 'Failed to extract arguments');
+      }
+
+      return res.json();
+    },
+    onSuccess: () => {
+      // 更新配額資訊
+      queryClient.invalidateQueries({ queryKey: ['ai-usage'] });
+    },
+  });
+}
+
+// =====================
+// Ticker Identification Hook
+// =====================
+
+export function useIdentifyTickers() {
+  const queryClient = useQueryClient();
+
+  return useMutation<TickerIdentificationResult, Error, string>({
+    mutationFn: async (content: string) => {
+      const res = await fetch(API_ROUTES.AI_IDENTIFY_TICKERS, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to identify tickers');
       }
 
       return res.json();

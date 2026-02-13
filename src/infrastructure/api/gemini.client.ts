@@ -33,7 +33,7 @@ export interface GeminiGenerateOptions {
 }
 
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
-const DEFAULT_MODEL = 'gemini-1.5-flash';
+const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
 
 function getApiKey(): string {
   const apiKey = process.env.GEMINI_API_KEY;

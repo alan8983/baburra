@@ -10,3 +10,4 @@ export * from './use-ai';
 export * from './use-auth';
 export * from './use-fetch-url';
 export * from './use-bookmarks';
+export * from './use-quick-input';

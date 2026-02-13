@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:ai.google.dev)",
+      "Bash(Select-String -Pattern \"quick-input|use-quick-input|url\\\\.ts|input.page|ai\\\\.service\")"
+    ]
+  }
+}

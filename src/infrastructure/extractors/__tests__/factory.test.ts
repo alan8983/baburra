@@ -8,34 +8,25 @@ import type { ExtractorError } from '../types';
 
 describe('ExtractorFactory', () => {
   describe('getSupportedPlatforms', () => {
-    it('should return all registered platforms', () => {
+    it('should return only twitter platform', () => {
       const platforms = extractorFactory.getSupportedPlatforms();
 
-      expect(platforms).toContain('facebook');
       expect(platforms).toContain('twitter');
-      expect(platforms).toContain('threads');
-      expect(platforms).toHaveLength(3);
+      expect(platforms).toHaveLength(1);
     });
   });
 
   describe('getExtractor', () => {
-    it('should return the correct extractor for a platform', () => {
+    it('should return the correct extractor for twitter', () => {
       const twitter = extractorFactory.getExtractor('twitter');
       expect(twitter).toBeDefined();
       expect(twitter!.platform).toBe('twitter');
-
-      const facebook = extractorFactory.getExtractor('facebook');
-      expect(facebook).toBeDefined();
-      expect(facebook!.platform).toBe('facebook');
-
-      const threads = extractorFactory.getExtractor('threads');
-      expect(threads).toBeDefined();
-      expect(threads!.platform).toBe('threads');
     });
 
-    it('should return undefined for unregistered platform', () => {
-      const extractor = extractorFactory.getExtractor('instagram');
-      expect(extractor).toBeUndefined();
+    it('should return undefined for unregistered platforms', () => {
+      expect(extractorFactory.getExtractor('facebook')).toBeUndefined();
+      expect(extractorFactory.getExtractor('threads')).toBeUndefined();
+      expect(extractorFactory.getExtractor('instagram')).toBeUndefined();
     });
   });
 
@@ -45,17 +36,13 @@ describe('ExtractorFactory', () => {
       expect(extractorFactory.isSupported('https://twitter.com/user/status/123')).toBe(true);
     });
 
-    it('should return true for supported Facebook URLs', () => {
-      expect(extractorFactory.isSupported('https://www.facebook.com/share/p/abc/')).toBe(true);
-      expect(extractorFactory.isSupported('https://www.facebook.com/user/posts/123')).toBe(true);
-    });
-
-    it('should return true for supported Threads URLs', () => {
-      expect(extractorFactory.isSupported('https://threads.net/@user/post/abc')).toBe(true);
-    });
-
-    it('should return false for unsupported URLs', () => {
-      expect(extractorFactory.isSupported('https://reddit.com/r/stocks/comments/abc')).toBe(false);
+    it('should return false for unsupported URLs including Facebook and Threads', () => {
+      expect(extractorFactory.isSupported('https://www.facebook.com/share/p/abc/')).toBe(false);
+      expect(extractorFactory.isSupported('https://www.facebook.com/user/posts/123')).toBe(false);
+      expect(extractorFactory.isSupported('https://threads.net/@user/post/abc')).toBe(false);
+      expect(extractorFactory.isSupported('https://reddit.com/r/stocks/comments/abc')).toBe(
+        false
+      );
       expect(extractorFactory.isSupported('https://youtube.com/watch?v=abc')).toBe(false);
       expect(extractorFactory.isSupported('not-a-url')).toBe(false);
     });
@@ -71,27 +58,25 @@ describe('ExtractorFactory', () => {
     });
 
     it('should route Twitter URLs to Twitter extractor', async () => {
-      const html = '<html><head><meta property="og:description" content="Twitter tweet content that is long enough for validation"/></head></html>';
-      vi.mocked(fetch).mockResolvedValueOnce(new Response(html, { status: 200 }));
+      const oembedResponse = {
+        url: 'https://twitter.com/user/status/123',
+        author_name: 'Test User',
+        author_url: 'https://twitter.com/user',
+        html: '<blockquote class="twitter-tweet"><p lang="en" dir="ltr">Twitter tweet content that is long enough for validation</p>&mdash; Test User (@user)</blockquote>',
+        width: 550,
+        type: 'rich',
+        provider_name: 'Twitter',
+        version: '1.0',
+      };
+      vi.mocked(fetch).mockResolvedValueOnce(
+        new Response(JSON.stringify(oembedResponse), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
 
       const result = await extractorFactory.extractFromUrl('https://x.com/user/status/123');
       expect(result.sourcePlatform).toBe('twitter');
-    });
-
-    it('should route Facebook URLs to Facebook extractor', async () => {
-      const html = '<html><head><meta property="og:description" content="Facebook post content that is long enough for validation"/></head></html>';
-      vi.mocked(fetch).mockResolvedValueOnce(new Response(html, { status: 200 }));
-
-      const result = await extractorFactory.extractFromUrl('https://www.facebook.com/share/p/abc/');
-      expect(result.sourcePlatform).toBe('facebook');
-    });
-
-    it('should route Threads URLs to Threads extractor', async () => {
-      const html = '<html><head><meta property="og:description" content="Threads post content that is long enough for validation"/></head></html>';
-      vi.mocked(fetch).mockResolvedValueOnce(new Response(html, { status: 200 }));
-
-      const result = await extractorFactory.extractFromUrl('https://threads.net/@user/post/abc');
-      expect(result.sourcePlatform).toBe('threads');
     });
 
     it('should throw INVALID_URL for unsupported URLs', async () => {
@@ -102,15 +87,29 @@ describe('ExtractorFactory', () => {
         message: expect.stringContaining('No extractor found'),
       } as ExtractorError);
     });
+
+    it('should throw INVALID_URL for Facebook URLs', async () => {
+      await expect(
+        extractorFactory.extractFromUrl('https://www.facebook.com/share/p/abc/')
+      ).rejects.toMatchObject({
+        code: 'INVALID_URL',
+      } as ExtractorError);
+    });
+
+    it('should throw INVALID_URL for Threads URLs', async () => {
+      await expect(
+        extractorFactory.extractFromUrl('https://threads.net/@user/post/abc')
+      ).rejects.toMatchObject({
+        code: 'INVALID_URL',
+      } as ExtractorError);
+    });
   });
 
   describe('register', () => {
-    it('should allow registering a custom extractor', () => {
+    it('should start with twitter extractor registered', () => {
       const factory = new ExtractorFactory();
-      const initialCount = factory.getSupportedPlatforms().length;
-
-      // The factory starts with 3 extractors (facebook, twitter, threads)
-      expect(initialCount).toBe(3);
+      expect(factory.getSupportedPlatforms()).toHaveLength(1);
+      expect(factory.getSupportedPlatforms()).toContain('twitter');
     });
   });
 });

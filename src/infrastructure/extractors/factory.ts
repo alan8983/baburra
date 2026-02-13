@@ -1,7 +1,9 @@
 /**
  * Social Media Extractor Factory
  *
- * Automatically routes URLs to the appropriate extractor
+ * Automatically routes URLs to the appropriate extractor.
+ * Release 01: Only Twitter/X is supported (via free oEmbed API).
+ * Facebook and Threads will be re-enabled in Release 02.
  */
 
 import {
@@ -10,17 +12,13 @@ import {
   ExtractorConfig,
   ExtractorError,
 } from './types';
-import { facebookExtractor } from './facebook.extractor';
 import { twitterExtractor } from './twitter.extractor';
-import { threadsExtractor } from './threads.extractor';
 
 export class ExtractorFactory {
   private extractors: Map<string, SocialMediaExtractor> = new Map();
 
   constructor() {
-    this.register(facebookExtractor);
     this.register(twitterExtractor);
-    this.register(threadsExtractor);
   }
 
   register(extractor: SocialMediaExtractor): void {
@@ -63,6 +61,4 @@ export class ExtractorFactory {
 
 export const extractorFactory = new ExtractorFactory();
 
-export { facebookExtractor } from './facebook.extractor';
 export { twitterExtractor } from './twitter.extractor';
-export { threadsExtractor } from './threads.extractor';

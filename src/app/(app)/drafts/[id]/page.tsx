@@ -1,9 +1,9 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, Trash2, Link2, Loader2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Trash2, Link2, Loader2, AlertTriangle, CheckCircle2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -27,6 +27,7 @@ import {
   SentimentSelector,
   DatetimeInput,
   ImageUploader,
+  AiTickerSuggestions,
 } from '@/components/forms';
 import type {
   KOLSearchResult,
@@ -35,6 +36,10 @@ import type {
   DraftWithRelations,
 } from '@/domain/models';
 import { useDraft, useUpdateDraft, useDeleteDraft, useFetchUrl, isUrlLike, getSupportedPlatform, getSupportedPlatformNames } from '@/hooks';
+import { useIdentifyTickers, useAiUsage } from '@/hooks/use-ai';
+import type { IdentifiedTicker } from '@/hooks/use-ai';
+import { API_ROUTES } from '@/lib/constants/routes';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 
 // 表單組件 - 接收 draft 作為 prop，使用 key 來重置狀態
@@ -86,6 +91,55 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
 
   const fetchUrl = useFetchUrl();
 
+  // AI ticker identification
+  const t = useTranslations('common.ai');
+  const [tickerSuggestions, setTickerSuggestions] = useState<IdentifiedTicker[]>([]);
+  const identifyTickers = useIdentifyTickers();
+  const { data: aiUsage } = useAiUsage();
+
+  // Auto-save state
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isInitialMount = useRef(true);
+
+  const doAutoSave = useCallback(async () => {
+    setAutoSaveStatus('saving');
+    try {
+      await updateDraft.mutateAsync({
+        kolId: selectedKOL?.id ?? null,
+        content: content || null,
+        sourceUrl: sourceUrl || null,
+        sentiment: sentiment ?? null,
+        postedAt: postedAt ?? null,
+        stockIds: selectedStocks.map((s) => s.id),
+        images,
+      });
+      setAutoSaveStatus('saved');
+      setTimeout(() => setAutoSaveStatus('idle'), 2000);
+    } catch {
+      setAutoSaveStatus('idle');
+    }
+  }, [updateDraft, selectedKOL, content, sourceUrl, sentiment, postedAt, selectedStocks, images]);
+
+  // Debounced auto-save: trigger 3 seconds after last change
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+    autoSaveTimerRef.current = setTimeout(() => {
+      doAutoSave();
+    }, 3000);
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [content, sourceUrl, sentiment, selectedKOL, selectedStocks, postedAt, images]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // 處理新增 KOL
   const handleCreateKOL = (name: string) => {
     setKolDialogDefaultName(name);
@@ -104,6 +158,52 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
 
   const handleStockCreated = (stock: StockSearchResult) => {
     setSelectedStocks((prev) => [...prev, stock]);
+  };
+
+  // AI 識別標的
+  const handleIdentifyTickers = async () => {
+    if (!content || content.length < 10) return;
+    try {
+      const result = await identifyTickers.mutateAsync(content);
+      setTickerSuggestions(result.tickers);
+      if (result.tickers.length === 0) {
+        toast.info(t('noTickersFound'));
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t('noTickersFound'));
+    }
+  };
+
+  const handleAcceptTicker = async (identified: IdentifiedTicker) => {
+    try {
+      const searchRes = await fetch(
+        `${API_ROUTES.STOCKS}?search=${encodeURIComponent(identified.ticker)}&limit=5`
+      );
+      if (searchRes.ok) {
+        const searchData = await searchRes.json();
+        const match = searchData.data?.find(
+          (s: StockSearchResult) => s.ticker.toUpperCase() === identified.ticker.toUpperCase()
+        );
+        if (match && !selectedStocks.some((s) => s.id === match.id)) {
+          setSelectedStocks((prev) => [...prev, match]);
+          return;
+        }
+      }
+    } catch {
+      // 搜尋失敗，fallback 到建立新 stock
+    }
+    setStockDialogDefaultTicker(identified.ticker);
+    setStockDialogOpen(true);
+  };
+
+  const handleAcceptAllTickers = async () => {
+    const existingSet = new Set(selectedStocks.map((s) => s.ticker.toUpperCase()));
+    const unadded = tickerSuggestions.filter(
+      (s) => !existingSet.has(s.ticker.toUpperCase())
+    );
+    for (const ticker of unadded) {
+      await handleAcceptTicker(ticker);
+    }
   };
 
   // 處理 URL 擷取
@@ -233,16 +333,30 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
             返回草稿列表
           </Link>
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-destructive"
-          onClick={handleDelete}
-          disabled={deleteDraft.isPending}
-        >
-          <Trash2 className="mr-2 h-4 w-4" />
-          刪除草稿
-        </Button>
+        <div className="flex items-center gap-3">
+          {autoSaveStatus === 'saving' && (
+            <span className="text-muted-foreground flex items-center gap-1 text-xs">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              儲存中...
+            </span>
+          )}
+          {autoSaveStatus === 'saved' && (
+            <span className="flex items-center gap-1 text-xs text-green-600">
+              <CheckCircle2 className="h-3 w-3" />
+              已儲存
+            </span>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive"
+            onClick={handleDelete}
+            disabled={deleteDraft.isPending}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            刪除草稿
+          </Button>
+        </div>
       </div>
 
       {/* Form */}
@@ -269,14 +383,45 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
 
           {/* Stock Selector */}
           <div className="space-y-2">
-            <Label>
-              投資標的 <span className="text-destructive">*</span>
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label>
+                投資標的 <span className="text-destructive">*</span>
+              </Label>
+              {content.length >= 10 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleIdentifyTickers}
+                  disabled={identifyTickers.isPending || (aiUsage?.remaining ?? 0) <= 0}
+                >
+                  {identifyTickers.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {t('identifyingTickers')}
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      {t('identifyTickers')}
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
             <StockSelector
               value={selectedStocks}
               onChange={setSelectedStocks}
               onCreateNew={handleCreateStock}
               placeholder="搜尋或選擇標的 (可多選)..."
+            />
+            <AiTickerSuggestions
+              suggestions={tickerSuggestions}
+              existingStocks={selectedStocks}
+              onAccept={handleAcceptTicker}
+              onAcceptAll={handleAcceptAllTickers}
+              onDismiss={() => setTickerSuggestions([])}
+              isLoading={identifyTickers.isPending}
             />
           </div>
 

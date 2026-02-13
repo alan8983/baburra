@@ -9,11 +9,7 @@ export { SocialMediaExtractor } from './types';
 export {
   extractorFactory,
   ExtractorFactory,
-  facebookExtractor,
   twitterExtractor,
-  threadsExtractor,
 } from './factory';
 
-export { FacebookExtractor } from './facebook.extractor';
 export { TwitterExtractor } from './twitter.extractor';
-export { ThreadsExtractor } from './threads.extractor';

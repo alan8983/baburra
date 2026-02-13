@@ -26,3 +26,7 @@ export type { DatetimeInputProps } from './datetime-input';
 // 圖片上傳
 export { ImageUploader } from './image-uploader';
 export type { ImageUploaderProps } from './image-uploader';
+
+// AI 標的識別建議
+export { AiTickerSuggestions } from './ai-ticker-suggestions';
+export type { AiTickerSuggestionsProps } from './ai-ticker-suggestions';

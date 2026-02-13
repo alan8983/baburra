@@ -1,7 +1,7 @@
 /**
  * Twitter/X Content Extractor
  *
- * Extracts post content from Twitter/X URLs
+ * Extracts post content from Twitter/X URLs using the free oEmbed API.
  * Supports various Twitter/X URL formats:
  * - https://twitter.com/{username}/status/{id}
  * - https://x.com/{username}/status/{id}
@@ -14,6 +14,18 @@ import {
   ExtractorConfig,
   ExtractorError,
 } from './types';
+
+/** Shape of the Twitter oEmbed API JSON response */
+interface TwitterOEmbedResponse {
+  url: string;
+  author_name: string;
+  author_url: string;
+  html: string;
+  width: number;
+  type: string;
+  provider_name: string;
+  version: string;
+}
 
 export class TwitterExtractor extends SocialMediaExtractor {
   platform: UrlFetchResult['sourcePlatform'] = 'twitter';
@@ -45,7 +57,7 @@ export class TwitterExtractor extends SocialMediaExtractor {
 
     for (let attempt = 0; attempt < retryAttempts; attempt++) {
       try {
-        const result = await this.fetchWithTimeout(url, timeout, config);
+        const result = await this.fetchOEmbed(url, timeout);
         return result;
       } catch (error) {
         lastError = error as Error;
@@ -62,43 +74,27 @@ export class TwitterExtractor extends SocialMediaExtractor {
     } as ExtractorError;
   }
 
-  private async fetchWithTimeout(
+  private async fetchOEmbed(
     url: string,
-    timeout: number,
-    config?: ExtractorConfig
+    timeout: number
   ): Promise<UrlFetchResult> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
     try {
-      const normalizedUrl = url
-        .replace('twitter.com', 'x.com')
-        .replace('mobile.', '');
+      const oembedUrl = `https://publish.twitter.com/oembed?url=${encodeURIComponent(url)}&omit_script=true`;
 
-      const headers: HeadersInit = {
-        'User-Agent':
-          config?.userAgent ||
-          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        Accept:
-          'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate, br',
-        DNT: '1',
-        Connection: 'keep-alive',
-        'Upgrade-Insecure-Requests': '1',
-      };
-
-      const response = await fetch(normalizedUrl, {
-        headers,
+      const response = await fetch(oembedUrl, {
         signal: controller.signal,
+        headers: { Accept: 'application/json' },
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(`oEmbed API HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const html = await response.text();
-      return this.parseHtml(html, normalizedUrl);
+      const data: TwitterOEmbedResponse = await response.json();
+      return this.parseOEmbedResponse(data, url);
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         throw {
@@ -113,117 +109,15 @@ export class TwitterExtractor extends SocialMediaExtractor {
     }
   }
 
-  private parseHtml(html: string, sourceUrl: string): UrlFetchResult {
+  private parseOEmbedResponse(
+    data: TwitterOEmbedResponse,
+    originalUrl: string
+  ): UrlFetchResult {
     try {
-      let content = '';
-      let title: string | null = null;
-      let kolName: string | null = null;
-      let kolAvatarUrl: string | null = null;
-      let postedAt: string | null = null;
-      const images: string[] = [];
-
-      const ogDescription = html.match(
-        /<meta property="og:description" content="([^"]+)"/
-      );
-      if (ogDescription) {
-        content = this.decodeHtmlEntities(ogDescription[1]);
-        const tweetMatch = content.match(/^"(.+?)"/);
-        if (tweetMatch) content = tweetMatch[1];
-      }
-
-      const ogTitle = html.match(
-        /<meta property="og:title" content="([^"]+)"/
-      );
-      if (ogTitle) {
-        const titleText = this.decodeHtmlEntities(ogTitle[1]);
-        const titleMatch = titleText.match(/^(.+?) on X: "(.+)"/);
-        if (titleMatch) {
-          kolName = titleMatch[1].trim();
-          if (!content) content = titleMatch[2].trim();
-        } else {
-          title = titleText;
-        }
-      }
-
-      if (!kolName) {
-        const twitterTitle = html.match(
-          /<meta name="twitter:title" content="([^"]+)"/
-        );
-        if (twitterTitle) {
-          kolName = this.decodeHtmlEntities(twitterTitle[1]);
-        }
-      }
-
-      const twitterImage = html.match(
-        /<meta name="twitter:image" content="([^"]+)"/
-      );
-      if (twitterImage) {
-        const imageUrl = this.decodeHtmlEntities(twitterImage[1]);
-        if (imageUrl.includes('profile_images')) {
-          kolAvatarUrl = imageUrl;
-        } else {
-          images.push(imageUrl);
-        }
-      }
-
-      const ogImageMatches = html.matchAll(
-        /<meta property="og:image" content="([^"]+)"/g
-      );
-      for (const match of ogImageMatches) {
-        const imageUrl = this.decodeHtmlEntities(match[1]);
-        if (
-          !images.includes(imageUrl) &&
-          !imageUrl.includes('profile_images')
-        ) {
-          images.push(imageUrl);
-        }
-      }
-
-      if (!content) {
-        const jsonLdMatch = html.match(
-          /<script type="application\/ld\+json">([\s\S]*?)<\/script>/
-        );
-        if (jsonLdMatch) {
-          try {
-            const jsonLd = JSON.parse(jsonLdMatch[1]);
-            if (jsonLd.articleBody) content = jsonLd.articleBody;
-            if (jsonLd.headline && !title) title = jsonLd.headline;
-            if (jsonLd.author?.name && !kolName) kolName = jsonLd.author.name;
-            if (jsonLd.datePublished) postedAt = jsonLd.datePublished;
-          } catch {
-            // JSON parsing failed
-          }
-        }
-      }
-
-      if (!content) {
-        const twitterDesc = html.match(
-          /<meta name="twitter:description" content="([^"]+)"/
-        );
-        if (twitterDesc) {
-          content = this.decodeHtmlEntities(twitterDesc[1]);
-        }
-      }
-
-      if (!content) {
-        const pageTitle = html.match(/<title>([^<]+)<\/title>/);
-        if (pageTitle) {
-          const titleText = this.decodeHtmlEntities(pageTitle[1]);
-          const match = titleText.match(/on X: "(.+)"/);
-          if (match) content = match[1];
-        }
-      }
-
-      if (!postedAt) {
-        const timestampMatch = html.match(
-          /<meta property="article:published_time" content="([^"]+)"/
-        );
-        if (timestampMatch) postedAt = timestampMatch[1];
-      }
+      let content = this.extractTextFromHtml(data.html);
 
       content = this.sanitizeText(content);
       content = content
-        .replace(/^"|"$/g, '')
         .replace(/\s+pic\.twitter\.com\/\w+/g, '')
         .replace(/\s+https?:\/\/t\.co\/\w+/g, '');
       content = this.sanitizeText(content);
@@ -232,22 +126,41 @@ export class TwitterExtractor extends SocialMediaExtractor {
 
       return {
         content,
-        sourceUrl,
+        sourceUrl: data.url || originalUrl,
         sourcePlatform: 'twitter',
-        title: title ? this.sanitizeText(title) : null,
-        images: images.slice(0, 10),
-        postedAt,
-        kolName,
-        kolAvatarUrl,
+        title: null,
+        images: [],
+        postedAt: null,
+        kolName: data.author_name || null,
+        kolAvatarUrl: null,
       };
     } catch (error) {
       if ((error as ExtractorError).code) throw error;
       throw {
         code: 'PARSE_FAILED',
-        message: 'Failed to parse Twitter content',
+        message: 'Failed to parse Twitter oEmbed response',
         originalError: error as Error,
       } as ExtractorError;
     }
+  }
+
+  private extractTextFromHtml(html: string): string {
+    // Extract content from the <p> tag inside the blockquote
+    const pMatch = html.match(/<p[^>]*>([\s\S]*?)<\/p>/);
+    if (!pMatch) {
+      // Fallback: strip all tags from the full HTML
+      return this.decodeHtmlEntities(this.stripHtmlTags(html));
+    }
+
+    let text = pMatch[1];
+    text = this.stripHtmlTags(text);
+    text = this.decodeHtmlEntities(text);
+
+    return text;
+  }
+
+  private stripHtmlTags(html: string): string {
+    return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
   private decodeHtmlEntities(text: string): string {
@@ -261,6 +174,7 @@ export class TwitterExtractor extends SocialMediaExtractor {
       '&#x27;': "'",
       '&#x2F;': '/',
       '&nbsp;': ' ',
+      '&mdash;': '—',
     };
     return text.replace(/&[#\w]+;/g, (entity) => entities[entity] || entity);
   }

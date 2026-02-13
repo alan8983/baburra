@@ -85,7 +85,15 @@
     "analyzeResult": "AI Analysis Result",
     "confidence": "Confidence",
     "aiGenerated": "(AI Analysis)",
-    "quotaLabel": "AI Quota: "
+    "quotaLabel": "AI Quota: ",
+    "identifyTickers": "AI Identify Tickers",
+    "identifyingTickers": "AI is identifying tickers...",
+    "tickersFound": "AI identified {count} investment targets",
+    "noTickersFound": "No investment targets identified",
+    "addTicker": "Add",
+    "addAllTickers": "Add All",
+    "alreadyAdded": "Already added",
+    "mentionedAs": "mentioned as"
   },
   "errors": {
     "generic": "An error occurred, please try again later",

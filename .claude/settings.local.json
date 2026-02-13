@@ -3,7 +3,18 @@
     "allow": [
       "Bash(grep:*)",
       "Bash(npm run type-check:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(npm test:*)",
+      "Bash(npx next lint)",
+      "Bash(npm run lint:*)",
+      "Read(//c/**)",
+      "Bash(npx tsc:*)",
+      "Bash(findstr:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npm run build:*)",
+      "Bash(git stash:*)",
+      "Bash(git stash pop:*)",
+      "Bash(git reset:*)"
     ]
   }
 }

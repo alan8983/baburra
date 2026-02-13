@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { FileText, Plus, Search, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,15 +12,16 @@ import { ROUTES } from '@/lib/constants';
 import { formatRelativeTime } from '@/lib/utils/date';
 import { useDrafts, useDeleteDraft } from '@/hooks';
 
-const sentimentLabels: Record<number, { label: string; color: string }> = {
-  [-2]: { label: '強烈看空', color: 'bg-red-100 text-red-700' },
-  [-1]: { label: '看空', color: 'bg-red-50 text-red-600' },
-  [0]: { label: '中立', color: 'bg-gray-100 text-gray-600' },
-  [1]: { label: '看多', color: 'bg-green-50 text-green-600' },
-  [2]: { label: '強烈看多', color: 'bg-green-100 text-green-700' },
+const sentimentKeys: Record<number, { key: string; color: string }> = {
+  [-2]: { key: 'stronglyBearish', color: 'bg-red-100 text-red-700' },
+  [-1]: { key: 'bearish', color: 'bg-red-50 text-red-600' },
+  [0]: { key: 'neutral', color: 'bg-gray-100 text-gray-600' },
+  [1]: { key: 'bullish', color: 'bg-green-50 text-green-600' },
+  [2]: { key: 'stronglyBullish', color: 'bg-green-100 text-green-700' },
 };
 
 export default function DraftsPage() {
+  const t = useTranslations('drafts');
   const [searchQuery, setSearchQuery] = useState('');
   const { data, isLoading, error } = useDrafts();
   const deleteDraft = useDeleteDraft();
@@ -41,7 +43,7 @@ export default function DraftsPage() {
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!confirm('確定要刪除此草稿？')) return;
+    if (!confirm(t('deleteConfirm'))) return;
     try {
       await deleteDraft.mutateAsync(id);
     } catch {
@@ -52,10 +54,10 @@ export default function DraftsPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold tracking-tight">草稿</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
         <Card className="py-12">
           <CardContent className="flex flex-col items-center justify-center text-center">
-            <p className="text-destructive">無法載入草稿，請稍後再試。</p>
+            <p className="text-destructive">{t('errors.loadFailed')}</p>
           </CardContent>
         </Card>
       </div>
@@ -67,13 +69,13 @@ export default function DraftsPage() {
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">草稿</h1>
-          <p className="text-muted-foreground">管理尚未發布的文章草稿</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-muted-foreground">{t('description')}</p>
         </div>
         <Button asChild>
           <Link href={ROUTES.INPUT}>
             <Plus className="mr-2 h-4 w-4" />
-            新增草稿
+            {t('newDraft')}
           </Link>
         </Button>
       </div>
@@ -82,7 +84,7 @@ export default function DraftsPage() {
       <div className="relative max-w-md">
         <Search className="text-muted-foreground absolute top-3 left-3 h-4 w-4" />
         <Input
-          placeholder="搜尋草稿..."
+          placeholder={t('search')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-9"
@@ -92,7 +94,7 @@ export default function DraftsPage() {
       {/* Loading */}
       {isLoading && (
         <Card className="py-12">
-          <CardContent className="text-muted-foreground flex justify-center">載入中...</CardContent>
+          <CardContent className="text-muted-foreground flex justify-center">{t('loading')}</CardContent>
         </Card>
       )}
 
@@ -119,7 +121,7 @@ export default function DraftsPage() {
                         {kolName ? (
                           <span className="font-medium">{kolName}</span>
                         ) : (
-                          <span className="text-muted-foreground italic">未選擇 KOL</span>
+                          <span className="text-muted-foreground italic">{t('status.noKol')}</span>
                         )}
                         {stockTickers.length > 0 && (
                           <>
@@ -131,30 +133,30 @@ export default function DraftsPage() {
                             ))}
                           </>
                         )}
-                        {draft.sentiment !== null && (
+                        {draft.sentiment !== null && sentimentKeys[draft.sentiment as number] && (
                           <>
                             <span className="text-muted-foreground">·</span>
                             <Badge
                               variant="outline"
-                              className={sentimentLabels[draft.sentiment as number]?.color}
+                              className={sentimentKeys[draft.sentiment as number]?.color}
                             >
-                              {sentimentLabels[draft.sentiment as number]?.label}
+                              {t(`status.${sentimentKeys[draft.sentiment as number]?.key}`)}
                             </Badge>
                           </>
                         )}
                       </div>
                       <p className="text-muted-foreground mt-2 line-clamp-2 text-sm">
-                        {contentPreview || '（尚無內容）'}
+                        {contentPreview || t('status.empty')}
                       </p>
                       <div className="text-muted-foreground mt-2 flex items-center gap-4 text-xs">
-                        <span>更新於 {formatRelativeTime(draft.updatedAt)}</span>
+                        <span>{t('status.updatedAt')} {formatRelativeTime(draft.updatedAt)}</span>
                         {isComplete ? (
                           <Badge variant="default" className="text-xs">
-                            可發布
+                            {t('status.ready')}
                           </Badge>
                         ) : (
                           <Badge variant="secondary" className="text-xs">
-                            未完成
+                            {t('status.incomplete')}
                           </Badge>
                         )}
                       </div>
@@ -181,15 +183,15 @@ export default function DraftsPage() {
         <Card className="py-12">
           <CardContent className="flex flex-col items-center justify-center text-center">
             <FileText className="text-muted-foreground h-12 w-12" />
-            <h3 className="mt-4 text-lg font-semibold">沒有草稿</h3>
+            <h3 className="mt-4 text-lg font-semibold">{t('empty.noDrafts')}</h3>
             <p className="text-muted-foreground mt-2 text-sm">
-              {searchQuery ? `沒有符合「${searchQuery}」的草稿` : '開始輸入文章內容來建立草稿'}
+              {searchQuery ? t('empty.noResults', { query: searchQuery }) : t('empty.description')}
             </p>
             {!searchQuery && (
               <Button className="mt-4" asChild>
                 <Link href={ROUTES.INPUT}>
                   <Plus className="mr-2 h-4 w-4" />
-                  新增草稿
+                  {t('newDraft')}
                 </Link>
               </Button>
             )}
