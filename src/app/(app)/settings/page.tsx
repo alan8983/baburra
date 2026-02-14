@@ -15,7 +15,6 @@ import { createClient } from '@/infrastructure/supabase/client';
 
 export default function SettingsPage() {
   const t = useTranslations('settings');
-  const tCommon = useTranslations('common');
   const { user, loading: authLoading } = useAuth();
   const [displayName, setDisplayName] = useState('');
   const [isSaving, setIsSaving] = useState(false);

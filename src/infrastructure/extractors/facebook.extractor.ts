@@ -120,7 +120,7 @@ export class FacebookExtractor extends SocialMediaExtractor {
       let content = '';
       let title: string | null = null;
       let kolName: string | null = null;
-      let kolAvatarUrl: string | null = null;
+      const kolAvatarUrl: string | null = null;
       let postedAt: string | null = null;
       const images: string[] = [];
 

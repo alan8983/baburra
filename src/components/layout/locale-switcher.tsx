@@ -2,7 +2,7 @@
 
 import { Globe } from 'lucide-react';
 import { useLocale } from 'next-intl';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -15,10 +15,10 @@ import { locales, localeNames, localeCookieName } from '@/i18n/config';
 export function LocaleSwitcher() {
   const locale = useLocale();
   const router = useRouter();
-  const pathname = usePathname();
 
   const handleLocaleChange = (newLocale: string) => {
-    // 設定 Cookie
+    // 設定 Cookie (DOM API, not a React state mutation)
+    // eslint-disable-next-line react-hooks/immutability
     document.cookie = `${localeCookieName}=${newLocale}; path=/; max-age=31536000`; // 1 year
     // 重新載入頁面以套用新語系
     router.refresh();

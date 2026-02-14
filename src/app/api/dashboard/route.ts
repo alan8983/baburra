@@ -1,11 +1,10 @@
 // GET /api/dashboard - Dashboard 統計資料
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { createAdminClient } from '@/infrastructure/supabase/admin';
 import { listPosts } from '@/infrastructure/repositories/post.repository';
 import { listKols } from '@/infrastructure/repositories/kol.repository';
-import type { PostWithPriceChanges } from '@/domain/models';
 
 // 計算本月開始時間（UTC）
 function getMonthStart(): Date {
@@ -23,7 +22,7 @@ function getWeekStart(): Date {
   return monday;
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const userId = await getCurrentUserId();
     const supabase = createAdminClient();

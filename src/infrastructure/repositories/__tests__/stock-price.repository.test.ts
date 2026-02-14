@@ -6,13 +6,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock Supabase admin client
-const mockSelect = vi.fn();
-const mockEq = vi.fn();
-const mockGte = vi.fn();
-const mockLte = vi.fn();
-const mockOrder = vi.fn();
-const mockSingle = vi.fn();
-const mockUpsert = vi.fn();
 const mockFrom = vi.fn();
 
 vi.mock('@/infrastructure/supabase/admin', () => ({

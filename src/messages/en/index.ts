@@ -10,7 +10,7 @@ import settings from './settings.json';
 import auth from './auth.json';
 import forms from './forms.json';
 
-export default {
+const enMessages = {
   common,
   dashboard,
   posts,
@@ -22,3 +22,5 @@ export default {
   auth,
   forms,
 };
+
+export default enMessages;

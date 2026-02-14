@@ -22,13 +22,10 @@ import { createClient } from '@supabase/supabase-js';
 const TEST_CONTENT = '這是一篇測試文章，內容提到 AAPL 股票，我認為未來會上漲。';
 const TEST_KOL_NAME = 'E2E Test KOL';
 const TEST_STOCK_TICKER = 'AAPL';
-const TEST_SENTIMENT = 1; // 看多
 
 // 儲存測試產生的 ID，用於 teardown
 let testDraftId: string | null = null;
 let testPostId: string | null = null;
-let testKolId: string | null = null;
-let testStockId: string | null = null;
 
 test.describe('核心輸入流程 - Happy Path', () => {
   test.beforeAll(async () => {
@@ -234,13 +231,20 @@ test.describe('核心輸入流程 - Happy Path', () => {
 
     // Step 11: 確認情緒已設定為「看多」（如果尚未設定，則設定它）
     // 檢查情緒選擇器是否已選中「看多」
-    const sentimentButton = page.locator('button:has-text("看多")').first();
-    const isSelected = await sentimentButton.evaluate((el) => {
-      return el.classList.contains('bg-green-100') || el.classList.contains('bg-green-600');
-    });
-    
+    const previewSentimentButton = page.locator('button:has-text("看多")').first();
+    await previewSentimentButton.waitFor({ state: 'visible', timeout: 5000 });
+
+    // 等待一下讓樣式渲染完成
+    await page.waitForTimeout(500);
+
+    // 檢查按鈕是否已被選中（bg-green-100 用於看多，bg-green-600 用於強烈看多）
+    const classList = await previewSentimentButton.evaluate((el) => Array.from(el.classList));
+    const isSelected = classList.some((cls) => cls.includes('bg-green'));
+
     if (!isSelected) {
-      await sentimentButton.click();
+      await previewSentimentButton.click();
+      // 等待點擊後的狀態更新
+      await page.waitForTimeout(500);
     }
 
     // Step 12: 點擊「確認建檔」按鈕

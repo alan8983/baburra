@@ -91,7 +91,7 @@ export function Header() {
                 onClick={async () => {
                   try {
                     await signOut();
-                  } catch (error) {
+                  } catch {
                     // 錯誤已在 hook 中處理
                   }
                 }}

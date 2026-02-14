@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "node scripts/clean-dev.js",
+    "predev": "node scripts/clean-dev.mjs",
     "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",

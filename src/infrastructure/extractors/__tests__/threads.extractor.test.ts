@@ -2,7 +2,7 @@
  * Threads Extractor Tests
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { threadsExtractor } from '../threads.extractor';
 import type { ExtractorError } from '../types';
 
