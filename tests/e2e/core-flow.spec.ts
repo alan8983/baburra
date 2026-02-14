@@ -26,6 +26,10 @@ const TEST_STOCK_TICKER = 'AAPL';
 // 儲存測試產生的 ID，用於 teardown
 let testDraftId: string | null = null;
 let testPostId: string | null = null;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+let testKolId: string | null = null;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+let testStockId: string | null = null;
 
 test.describe('核心輸入流程 - Happy Path', () => {
   test.beforeAll(async () => {

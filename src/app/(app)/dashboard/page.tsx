@@ -20,7 +20,10 @@ function formatDate(date: Date | string, locale: string): string {
 }
 
 // 格式化相對時間（用於草稿最近更新）
-function formatRelativeTime(date: Date | string, t: (key: string, params?: Record<string, unknown>) => string): string {
+function formatRelativeTime(
+  date: Date | string,
+  t: (key: string, values?: Record<string, string | number | Date>) => string
+): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   const now = new Date();
   const diffMs = now.getTime() - d.getTime();

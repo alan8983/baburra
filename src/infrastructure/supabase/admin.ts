@@ -19,7 +19,8 @@ export function createAdminClient(): SupabaseClient {
     );
   }
 
-  return createClient(supabaseUrl, supabaseServiceKey, {
+  // TypeScript now knows these are defined after the validation above
+  return createClient(supabaseUrl!, supabaseServiceKey!, {
     auth: {
       autoRefreshToken: false,
       persistSession: false,
