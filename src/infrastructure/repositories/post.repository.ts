@@ -54,27 +54,32 @@ export async function listPosts(params: {
   const supabase = createAdminClient();
   const { search = '', kolId, stockTicker, page = 1, limit = 20 } = params;
 
-  let query = supabase.from('posts').select('*', { count: 'exact', head: false });
-
-  if (kolId) query = query.eq('kol_id', kolId);
+  // stockTicker 篩選仍需要預查詢
+  let stockFilterPostIds: string[] | null = null;
   if (stockTicker) {
     const { data: stock } = await supabase
       .from('stocks')
       .select('id')
       .eq('ticker', stockTicker)
       .single();
-    if (stock?.id) {
-      const { data: postIds } = await supabase
-        .from('post_stocks')
-        .select('post_id')
-        .eq('stock_id', stock.id);
-      const ids = (postIds ?? []).map((p) => p.post_id as string);
-      if (ids.length === 0) return { data: [], total: 0 };
-      query = query.in('id', ids);
-    } else {
-      return { data: [], total: 0 };
-    }
+    if (!stock?.id) return { data: [], total: 0 };
+    const { data: postIds } = await supabase
+      .from('post_stocks')
+      .select('post_id')
+      .eq('stock_id', stock.id);
+    const ids = (postIds ?? []).map((p) => p.post_id as string);
+    if (ids.length === 0) return { data: [], total: 0 };
+    stockFilterPostIds = ids;
   }
+
+  // 使用 FK embedding 一次查詢取得文章 + KOL + 股票
+  let query = supabase.from('posts').select(
+    `*, kols(id, name, avatar_url), post_stocks(stock_id, stocks(id, ticker, name))`,
+    { count: 'exact' }
+  );
+
+  if (kolId) query = query.eq('kol_id', kolId);
+  if (stockFilterPostIds) query = query.in('id', stockFilterPostIds);
   if (search.trim()) {
     query = query.or(`content.ilike.%${search.trim()}%,title.ilike.%${search.trim()}%`);
   }
@@ -90,57 +95,27 @@ export async function listPosts(params: {
   if (error) throw new Error(error.message);
   if (!rows?.length) return { data: [], total: count ?? 0 };
 
-  const posts = rows as DbPost[];
-  const kolIds = [...new Set(posts.map((p) => p.kol_id))];
-  const postIds = posts.map((p) => p.id);
-
-  const { data: postStocks } = await supabase
-    .from('post_stocks')
-    .select('post_id, stock_id')
-    .in('post_id', postIds);
-  const stockIds = [...new Set((postStocks ?? []).map((ps) => ps.stock_id as string))];
-
-  const [kolRows, stockRows] = await Promise.all([
-    supabase.from('kols').select('id, name, avatar_url').in('id', kolIds),
-    stockIds.length
-      ? supabase.from('stocks').select('id, ticker, name').in('id', stockIds)
-      : { data: [] },
-  ]);
-
-  const kolMap: Record<string, { id: string; name: string; avatarUrl: string | null }> = {};
-  for (const k of kolRows.data ?? []) {
-    kolMap[k.id as string] = {
-      id: k.id as string,
-      name: k.name as string,
-      avatarUrl: (k.avatar_url as string) ?? null,
-    };
-  }
-  const stockMap: Record<string, { id: string; ticker: string; name: string }> = {};
-  for (const s of stockRows.data ?? []) {
-    stockMap[s.id as string] = {
-      id: s.id as string,
-      ticker: s.ticker as string,
-      name: s.name as string,
-    };
-  }
-
-  const stocksByPost: Record<string, { id: string; ticker: string; name: string }[]> = {};
-  for (const ps of postStocks ?? []) {
-    const pid = ps.post_id as string;
-    const stock = stockMap[ps.stock_id as string];
-    if (stock) {
-      if (!stocksByPost[pid]) stocksByPost[pid] = [];
-      stocksByPost[pid].push(stock);
-    }
-  }
-
-  const data: PostWithPriceChanges[] = posts.map((p) => {
-    const post = mapDbToPost(p);
-    const kol = kolMap[p.kol_id];
-    const stocks = stocksByPost[p.id] ?? [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data: PostWithPriceChanges[] = rows.map((row: any) => {
+    const post = mapDbToPost(row as DbPost);
+    const kol = row.kols
+      ? {
+          id: row.kols.id as string,
+          name: row.kols.name as string,
+          avatarUrl: (row.kols.avatar_url as string) ?? null,
+        }
+      : { id: post.kolId, name: '', avatarUrl: null };
+    const stocks = (row.post_stocks ?? [])
+      .map((ps: any) => ps.stocks) // eslint-disable-line @typescript-eslint/no-explicit-any
+      .filter(Boolean)
+      .map((s: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+        id: s.id as string,
+        ticker: s.ticker as string,
+        name: s.name as string,
+      }));
     return {
       ...post,
-      kol: kol!,
+      kol,
       stocks,
       priceChanges: {} as Record<string, PriceChangeByPeriod>,
     };
@@ -151,42 +126,33 @@ export async function listPosts(params: {
 
 export async function getPostById(id: string): Promise<PostWithPriceChanges | null> {
   const supabase = createAdminClient();
-  const { data: row, error } = await supabase.from('posts').select('*').eq('id', id).single();
+  const { data: row, error } = await supabase
+    .from('posts')
+    .select(`*, kols(id, name, avatar_url), post_stocks(stock_id, stocks(id, ticker, name))`)
+    .eq('id', id)
+    .single();
   if (error || !row) return null;
 
-  const post = mapDbToPost(row as DbPost);
-  const { data: kol } = await supabase
-    .from('kols')
-    .select('id, name, avatar_url')
-    .eq('id', post.kolId)
-    .single();
-  const { data: psRows } = await supabase.from('post_stocks').select('stock_id').eq('post_id', id);
-  const stockIds = (psRows ?? []).map((p) => p.stock_id as string);
-  let stocks: PostWithRelations['stocks'] = [];
-  if (stockIds.length > 0) {
-    const { data: sRows } = await supabase
-      .from('stocks')
-      .select('id, ticker, name')
-      .in('id', stockIds);
-    stocks = (sRows ?? []).map((s) => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const r = row as any;
+  const post = mapDbToPost(r as DbPost);
+  const kol = r.kols
+    ? {
+        id: r.kols.id as string,
+        name: r.kols.name as string,
+        avatarUrl: (r.kols.avatar_url as string) ?? null,
+      }
+    : { id: post.kolId, name: '', avatarUrl: null };
+  const stocks = (r.post_stocks ?? [])
+    .map((ps: any) => ps.stocks) // eslint-disable-line @typescript-eslint/no-explicit-any
+    .filter(Boolean)
+    .map((s: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
       id: s.id as string,
       ticker: s.ticker as string,
       name: s.name as string,
     }));
-  }
 
-  return {
-    ...post,
-    kol: kol
-      ? {
-          id: kol.id as string,
-          name: kol.name as string,
-          avatarUrl: (kol.avatar_url as string) ?? null,
-        }
-      : { id: post.kolId, name: '', avatarUrl: null },
-    stocks,
-    priceChanges: {},
-  };
+  return { ...post, kol, stocks, priceChanges: {} };
 }
 
 export async function createPost(input: CreatePostInput, createdBy: string | null): Promise<Post> {

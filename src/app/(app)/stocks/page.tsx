@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Plus, Search, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +13,7 @@ import { formatDate } from '@/lib/utils/date';
 import { useStocks } from '@/hooks';
 
 export default function StocksPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const { data, isLoading, error } = useStocks({ search: searchQuery || undefined });
 
@@ -67,46 +69,48 @@ export default function StocksPage() {
       {!isLoading && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredStocks.map((stock) => (
-            <Link key={stock.id} href={ROUTES.STOCK_DETAIL(stock.ticker)}>
-              <Card className="hover:bg-muted/50 transition-colors">
-                <CardHeader className="pb-3">
+            <Card
+              key={stock.id}
+              className="hover:bg-muted/50 cursor-pointer transition-colors"
+              onClick={() => router.push(ROUTES.STOCK_DETAIL(stock.ticker))}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg">{stock.ticker}</CardTitle>
+                    <CardDescription className="truncate text-xs">{stock.name}</CardDescription>
+                  </div>
+                  <Badge variant="outline">{stock.market}</Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 text-sm">
                   <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{stock.ticker}</CardTitle>
-                      <CardDescription className="truncate text-xs">{stock.name}</CardDescription>
-                    </div>
-                    <Badge variant="outline">{stock.market}</Badge>
+                    <span className="text-muted-foreground">文章數</span>
+                    <span className="font-medium">{stock.postCount}</span>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">文章數</span>
-                      <span className="font-medium">{stock.postCount}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">30日勝率</span>
-                      <Badge
-                        variant={
-                          stock.winRate != null && stock.winRate >= 0.6 ? 'default' : 'secondary'
-                        }
-                        className={
-                          stock.winRate != null && stock.winRate >= 0.6 ? 'bg-green-600' : ''
-                        }
-                      >
-                        {stock.winRate != null ? `${(stock.winRate * 100).toFixed(0)}%` : '—'}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-muted-foreground">最近發文</span>
-                      <span className="text-xs">
-                        {stock.lastPostAt ? formatDate(stock.lastPostAt) : '—'}
-                      </span>
-                    </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">30日勝率</span>
+                    <Badge
+                      variant={
+                        stock.winRate != null && stock.winRate >= 0.6 ? 'default' : 'secondary'
+                      }
+                      className={
+                        stock.winRate != null && stock.winRate >= 0.6 ? 'bg-green-600' : ''
+                      }
+                    >
+                      {stock.winRate != null ? `${(stock.winRate * 100).toFixed(0)}%` : '—'}
+                    </Badge>
                   </div>
-                </CardContent>
-              </Card>
-            </Link>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">最近發文</span>
+                    <span className="text-xs">
+                      {stock.lastPostAt ? formatDate(stock.lastPostAt) : '—'}
+                    </span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}

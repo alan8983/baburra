@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Search, User, Filter } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,6 +21,7 @@ import { formatDateTime } from '@/lib/utils/date';
 import { usePosts } from '@/hooks';
 
 export default function PostsPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [sentimentFilter, setSentimentFilter] = useState<string>('all');
   const { data, isLoading, error } = usePosts({
@@ -104,60 +106,62 @@ export default function PostsPage() {
           {filteredPosts.map((post) => {
             const priceByStockId = post.priceChanges ?? {};
             return (
-              <Link key={post.id} href={ROUTES.POST_DETAIL(post.id)}>
-                <Card className="hover:bg-muted/50 transition-colors">
-                  <CardContent className="pt-4">
-                    <div className="flex items-start gap-4">
-                      <Avatar className="h-10 w-10 shrink-0">
-                        <AvatarImage src={post.kol.avatarUrl || undefined} />
-                        <AvatarFallback>
-                          <User className="h-5 w-5" />
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-medium">{post.kol.name}</span>
-                          <Badge variant="outline" className={SENTIMENT_COLORS[post.sentiment]}>
-                            {SENTIMENT_LABELS[post.sentiment]}
-                          </Badge>
-                          <span className="text-muted-foreground text-sm">
-                            {formatDateTime(post.postedAt)}
-                          </span>
-                        </div>
-
-                        {/* Stocks */}
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {post.stocks.map((stock) => {
-                            const change = priceByStockId[stock.id]?.day30 ?? null;
-                            return (
-                              <div key={stock.ticker} className="flex items-center gap-2 text-sm">
-                                <Badge variant="outline">{stock.ticker}</Badge>
-                                <span
-                                  className={
-                                    change == null
-                                      ? 'text-muted-foreground'
-                                      : change >= 0
-                                        ? 'text-green-600'
-                                        : 'text-red-600'
-                                  }
-                                >
-                                  {change != null
-                                    ? `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`
-                                    : '—'}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        <p className="text-muted-foreground mt-2 line-clamp-2 text-sm">
-                          {post.content}
-                        </p>
+              <Card
+                key={post.id}
+                className="hover:bg-muted/50 cursor-pointer transition-colors"
+                onClick={() => router.push(ROUTES.POST_DETAIL(post.id))}
+              >
+                <CardContent className="pt-4">
+                  <div className="flex items-start gap-4">
+                    <Avatar className="h-10 w-10 shrink-0">
+                      <AvatarImage src={post.kol.avatarUrl || undefined} />
+                      <AvatarFallback>
+                        <User className="h-5 w-5" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium">{post.kol.name}</span>
+                        <Badge variant="outline" className={SENTIMENT_COLORS[post.sentiment]}>
+                          {SENTIMENT_LABELS[post.sentiment]}
+                        </Badge>
+                        <span className="text-muted-foreground text-sm">
+                          {formatDateTime(post.postedAt)}
+                        </span>
                       </div>
+
+                      {/* Stocks */}
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {post.stocks.map((stock) => {
+                          const change = priceByStockId[stock.id]?.day30 ?? null;
+                          return (
+                            <div key={stock.ticker} className="flex items-center gap-2 text-sm">
+                              <Badge variant="outline">{stock.ticker}</Badge>
+                              <span
+                                className={
+                                  change == null
+                                    ? 'text-muted-foreground'
+                                    : change >= 0
+                                      ? 'text-green-600'
+                                      : 'text-red-600'
+                                }
+                              >
+                                {change != null
+                                  ? `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`
+                                  : '—'}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <p className="text-muted-foreground mt-2 line-clamp-2 text-sm">
+                        {post.content}
+                      </p>
                     </div>
-                  </CardContent>
-                </Card>
-              </Link>
+                  </div>
+                </CardContent>
+              </Card>
             );
           })}
         </div>

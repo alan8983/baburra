@@ -23,7 +23,7 @@ import { useUIStore } from '@/stores';
 import { ROUTES } from '@/lib/constants';
 import { APP_CONFIG } from '@/lib/constants/config';
 import { useAuth } from '@/hooks/use-auth';
-import { useDashboard } from '@/hooks/use-dashboard';
+import { useDraftCount } from '@/hooks/use-drafts';
 
 const iconMap = {
   LayoutDashboard,
@@ -55,8 +55,7 @@ export function MobileNav() {
   const pathname = usePathname();
   const { mobileMenuOpen, setMobileMenuOpen } = useUIStore();
   const { signOut, loading } = useAuth();
-  const { data: dashboardData } = useDashboard();
-  const draftCount = dashboardData?.stats.draftCount ?? 0;
+  const { data: draftCount = 0 } = useDraftCount();
 
   const handleLogout = async () => {
     try {

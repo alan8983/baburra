@@ -18,6 +18,7 @@ export const draftKeys = {
   list: (filters: Record<string, unknown>) => [...draftKeys.lists(), filters] as const,
   details: () => [...draftKeys.all, 'detail'] as const,
   detail: (id: string) => [...draftKeys.details(), id] as const,
+  count: () => [...draftKeys.all, 'count'] as const,
 };
 
 // 取得草稿列表
@@ -49,6 +50,19 @@ export function useDraft(id: string) {
   });
 }
 
+// 取得草稿數量（供 sidebar badge 使用，輕量查詢）
+export function useDraftCount() {
+  return useQuery({
+    queryKey: draftKeys.count(),
+    queryFn: async (): Promise<number> => {
+      const res = await fetch(API_ROUTES.DRAFTS_COUNT);
+      if (!res.ok) return 0;
+      const { count } = await res.json();
+      return count ?? 0;
+    },
+  });
+}
+
 // 新增草稿
 export function useCreateDraft() {
   const queryClient = useQueryClient();
@@ -64,6 +78,7 @@ export function useCreateDraft() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: draftKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: draftKeys.count() });
     },
   });
 }
@@ -98,6 +113,7 @@ export function useDeleteDraft() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: draftKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: draftKeys.count() });
     },
   });
 }

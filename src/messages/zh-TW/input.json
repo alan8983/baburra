@@ -24,6 +24,13 @@
     "tip2": "直接貼上文章內容，AI 會自動識別 KOL、股票代碼與看法情緒",
     "tip3": "AI 識別的結果可在草稿編輯頁面中調整"
   },
+  "limitations": {
+    "title": "Twitter / X 網址擷取限制",
+    "textOnly": "僅能擷取貼文文字與作者名稱，無法取得圖片、發文時間或頭像",
+    "singleTweet": "每次只能擷取單則貼文，不支援整個討論串（Thread）",
+    "noArticles": "不支援 Twitter 長文（Articles），僅支援一般貼文網址（/status/ 格式）",
+    "comingSoon": "Facebook 與 Threads 的網址擷取功能預計於後續版本推出"
+  },
   "errors": {
     "createDraftFailed": "建立草稿失敗",
     "tryAgain": "請稍後再試"

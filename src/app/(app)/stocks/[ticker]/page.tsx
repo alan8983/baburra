@@ -2,6 +2,7 @@
 
 import { use } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, Loader2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,13 +13,32 @@ import { ROUTES } from '@/lib/constants';
 import { formatDateTime } from '@/lib/utils/date';
 import { SENTIMENT_LABELS, SENTIMENT_COLORS } from '@/domain/models/post';
 import { useStockPricesForChart } from '@/hooks/use-stock-prices';
-import { CandlestickChart } from '@/components/charts';
+import { CandlestickChart, SentimentLineChart } from '@/components/charts';
+import type { LineChartMarker } from '@/components/charts';
 import { useStock, useStockPosts, useStockWinRate } from '@/hooks';
 import { formatWinRate, getWinRateColorClass } from '@/domain/calculators';
 import { StockArgumentsTab } from '@/components/ai';
 
+function toDateStr(postedAt: Date | string): string {
+  if (postedAt instanceof Date) return postedAt.toISOString().slice(0, 10);
+  const s = String(postedAt);
+  return s.includes('T') ? s.slice(0, 10) : s.slice(0, 10);
+}
+
 function StockChartTab({ ticker }: { ticker: string }) {
+  const router = useRouter();
   const { data, isLoading, error } = useStockPricesForChart(ticker);
+  const { data: postsData } = useStockPosts(ticker);
+  const posts = postsData?.data ?? [];
+
+  // Convert posts to line chart markers
+  const markers: LineChartMarker[] = posts.map((post) => ({
+    time: toDateStr(post.postedAt),
+    sentiment: post.sentiment,
+    text: post.kol.name,
+    postId: post.id,
+  }));
+
   if (isLoading) {
     return (
       <Card>
@@ -49,24 +69,42 @@ function StockChartTab({ ticker }: { ticker: string }) {
     );
   }
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>K 線圖</CardTitle>
-        <CardDescription>股價走勢圖與 KOL 觀點標記</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <CandlestickChart
-          candles={data.candles}
-          volumes={data.volumes}
-          height={400}
-          className="rounded-lg border"
-        />
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>K 線圖</CardTitle>
+          <CardDescription>股價走勢圖</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CandlestickChart
+            candles={data.candles}
+            volumes={data.volumes}
+            height={400}
+            className="rounded-lg border"
+          />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>KOL 觀點分析</CardTitle>
+          <CardDescription>收盤價走勢與 KOL 觀點標記</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <SentimentLineChart
+            candles={data.candles}
+            sentimentMarkers={markers}
+            onMarkerClick={(postId) => router.push(ROUTES.POST_DETAIL(postId))}
+            height={250}
+            className="rounded-lg border"
+          />
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
 export default function StockDetailPage({ params }: { params: Promise<{ ticker: string }> }) {
+  const router = useRouter();
   const { ticker } = use(params);
   const decodedTicker = decodeURIComponent(ticker);
   const { data: stock, isLoading: stockLoading, error: stockError } = useStock(decodedTicker);
@@ -158,32 +196,37 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
               const changes =
                 currentStock && post.priceChanges ? post.priceChanges[currentStock.id] : null;
               return (
-                <Link key={post.id} href={ROUTES.POST_DETAIL(post.id)}>
-                  <Card className="hover:bg-muted/50 transition-colors">
-                    <CardContent className="pt-4">
-                      <div className="flex items-start gap-4">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={post.kol.avatarUrl || undefined} />
-                          <AvatarFallback>
-                            <User className="h-5 w-5" />
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Link
-                              href={ROUTES.KOL_DETAIL(post.kol.id)}
-                              className="font-medium hover:underline"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {post.kol.name}
-                            </Link>
-                            <Badge variant="outline" className={SENTIMENT_COLORS[post.sentiment]}>
-                              {SENTIMENT_LABELS[post.sentiment]}
-                            </Badge>
-                            <span className="text-muted-foreground text-sm">
-                              {formatDateTime(post.postedAt)}
-                            </span>
-                          </div>
+                <Card
+                  key={post.id}
+                  className="hover:bg-muted/50 cursor-pointer transition-colors"
+                  onClick={() => {
+                    router.push(ROUTES.POST_DETAIL(post.id));
+                  }}
+                >
+                  <CardContent className="pt-4">
+                    <div className="flex items-start gap-4">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={post.kol.avatarUrl || undefined} />
+                        <AvatarFallback>
+                          <User className="h-5 w-5" />
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Link
+                            href={ROUTES.KOL_DETAIL(post.kol.id)}
+                            className="font-medium hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {post.kol.name}
+                          </Link>
+                          <Badge variant="outline" className={SENTIMENT_COLORS[post.sentiment]}>
+                            {SENTIMENT_LABELS[post.sentiment]}
+                          </Badge>
+                          <span className="text-muted-foreground text-sm">
+                            {formatDateTime(post.postedAt)}
+                          </span>
+                        </div>
                           <p className="text-muted-foreground mt-2 line-clamp-2 text-sm">
                             {post.content}
                           </p>
@@ -221,7 +264,6 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                       </div>
                     </CardContent>
                   </Card>
-                </Link>
               );
             })}
         </TabsContent>
@@ -299,7 +341,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
 
         {/* Chart Tab */}
         <TabsContent value="chart" className="space-y-4">
-          <StockChartTab ticker={ticker} />
+          <StockChartTab ticker={decodedTicker} />
         </TabsContent>
 
         {/* Arguments Tab */}

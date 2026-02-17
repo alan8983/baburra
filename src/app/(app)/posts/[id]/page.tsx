@@ -9,17 +9,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
 import { ROUTES } from '@/lib/constants';
 import { formatDateTime } from '@/lib/utils/date';
 import { SENTIMENT_LABELS, SENTIMENT_COLORS } from '@/domain/models/post';
 import { useStockPricesForChart } from '@/hooks/use-stock-prices';
-import {
-  CandlestickChart,
-  postToSentimentMarker,
-  SentimentMarkerLegend,
-} from '@/components/charts';
+import { CandlestickChart, SentimentLineChart } from '@/components/charts';
+import type { LineChartMarker } from '@/components/charts';
 import { usePost, useBookmarkStatus, useToggleBookmark } from '@/hooks';
 
 function toDateString(postedAt: Date | string): string {
@@ -36,15 +31,23 @@ function PostChartTab({
   stocks,
   postedAt,
   sentiment,
+  kolName,
+  postId,
 }: {
   stocks: { id: string; ticker: string; name: string }[];
   postedAt: Date | string;
   sentiment: number;
+  kolName: string;
+  postId: string;
 }) {
   const dateStr = toDateString(postedAt);
-  const sentimentMarker = postToSentimentMarker(dateStr, sentiment, {
-    text: '本篇發文',
-  });
+  const marker: LineChartMarker = {
+    time: dateStr,
+    sentiment,
+    text: kolName,
+    postId,
+  };
+
   if (stocks.length === 0) {
     return (
       <Card>
@@ -61,7 +64,7 @@ function PostChartTab({
           key={stock.id}
           ticker={stock.ticker}
           name={stock.name}
-          sentimentMarkers={[sentimentMarker]}
+          sentimentMarker={marker}
         />
       ))}
     </div>
@@ -71,11 +74,11 @@ function PostChartTab({
 function PostStockChart({
   ticker,
   name,
-  sentimentMarkers,
+  sentimentMarker,
 }: {
   ticker: string;
   name: string;
-  sentimentMarkers: { time: string; sentiment: number; text?: string }[];
+  sentimentMarker: LineChartMarker;
 }) {
   const { data, isLoading, error } = useStockPricesForChart(ticker);
   if (isLoading) {
@@ -118,22 +121,36 @@ function PostStockChart({
     );
   }
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{ticker}</CardTitle>
-        <CardDescription>{name} · 股價走勢與本篇發文標記</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <CandlestickChart
-          candles={data.candles}
-          volumes={data.volumes}
-          sentimentMarkers={sentimentMarkers}
-          height={360}
-          className="rounded-lg border"
-        />
-        <SentimentMarkerLegend markers={sentimentMarkers} />
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>{ticker}</CardTitle>
+          <CardDescription>{name} · K 線圖</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CandlestickChart
+            candles={data.candles}
+            volumes={data.volumes}
+            height={360}
+            className="rounded-lg border"
+          />
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>KOL 觀點分析</CardTitle>
+          <CardDescription>{name} · 收盤價走勢與本篇發文標記</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <SentimentLineChart
+            candles={data.candles}
+            sentimentMarkers={[sentimentMarker]}
+            height={200}
+            className="rounded-lg border"
+          />
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -146,7 +163,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
 
   if (error || (!isLoading && !post)) {
     return (
-      <div className="mx-auto max-w-3xl space-y-6">
+      <div className="mx-auto max-w-7xl space-y-6">
         <Button variant="ghost" size="sm" asChild>
           <Link href={ROUTES.POSTS}>返回文章列表</Link>
         </Button>
@@ -160,7 +177,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   }
   if (isLoading || !post) {
     return (
-      <div className="mx-auto max-w-3xl space-y-6">
+      <div className="mx-auto max-w-7xl space-y-6">
         <Button variant="ghost" size="sm" asChild>
           <Link href={ROUTES.POSTS}>返回文章列表</Link>
         </Button>
@@ -170,7 +187,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-7xl space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <Button variant="ghost" size="sm" asChild>
@@ -205,122 +222,116 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
         </Button>
       </div>
 
-      {/* Post Header */}
-      <Card>
-        <CardContent className="pt-6">
-          {/* KOL Info */}
-          <div className="flex items-center gap-3">
-            <Avatar className="h-12 w-12">
-              <AvatarImage src={post.kol.avatarUrl || undefined} />
-              <AvatarFallback>
-                <User className="h-6 w-6" />
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <Link href={ROUTES.KOL_DETAIL(post.kol.id)} className="font-medium hover:underline">
+      {/* Shared Heading */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={post.kol.avatarUrl || undefined} />
+            <AvatarFallback>
+              <User className="h-5 w-5" />
+            </AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href={ROUTES.KOL_DETAIL(post.kol.id)}
+                className="font-semibold hover:underline"
+              >
                 {post.kol.name}
               </Link>
-              <p className="text-muted-foreground text-sm">{formatDateTime(post.postedAt)}</p>
+              <Badge variant="outline" className={SENTIMENT_COLORS[post.sentiment]}>
+                {SENTIMENT_LABELS[post.sentiment]}
+              </Badge>
+              {post.sentimentAiGenerated && (
+                <span className="text-muted-foreground text-xs">(AI 分析)</span>
+              )}
             </div>
+            <p className="text-muted-foreground text-sm">{formatDateTime(post.postedAt)}</p>
           </div>
+          {post.sourceUrl && (
+            <a
+              href={post.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hidden items-center gap-1 text-sm hover:underline sm:inline-flex"
+            >
+              <ExternalLink className="h-3 w-3" />
+              查看原文 ({post.sourcePlatform})
+            </a>
+          )}
+        </div>
 
-          <Separator className="my-4" />
-
-          {/* Stocks & Price Changes */}
-          <div className="space-y-3">
+        {/* Stock targets with price changes */}
+        {post.stocks.length > 0 && (
+          <div className="flex flex-wrap gap-2">
             {post.stocks.map((stock) => {
               const changes = post.priceChanges?.[stock.id];
               return (
                 <div
                   key={stock.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
+                  className="flex flex-wrap items-center gap-2 rounded-lg border px-3 py-1.5 text-sm"
                 >
-                  <div className="flex items-center gap-2">
-                    <Link
-                      href={ROUTES.STOCK_DETAIL(stock.ticker)}
-                      className="font-medium hover:underline"
-                    >
-                      {stock.ticker}
-                    </Link>
-                    <span className="text-muted-foreground text-sm">{stock.name}</span>
-                    <Badge variant="outline" className={SENTIMENT_COLORS[post.sentiment]}>
-                      {SENTIMENT_LABELS[post.sentiment]}
-                    </Badge>
-                  </div>
-                  <div className="flex flex-wrap gap-3 text-sm">
-                    <span
-                      className={
-                        changes?.day5 != null
-                          ? changes.day5 >= 0
-                            ? 'text-green-600'
-                            : 'text-red-600'
-                          : 'text-muted-foreground'
-                      }
-                    >
-                      5日:{' '}
-                      {changes?.day5 != null
-                        ? `${changes.day5 >= 0 ? '+' : ''}${changes.day5.toFixed(1)}%`
-                        : '—'}
-                    </span>
-                    <span
-                      className={
-                        changes?.day30 != null
-                          ? changes.day30 >= 0
-                            ? 'text-green-600'
-                            : 'text-red-600'
-                          : 'text-muted-foreground'
-                      }
-                    >
-                      30日:{' '}
-                      {changes?.day30 != null
-                        ? `${changes.day30 >= 0 ? '+' : ''}${changes.day30.toFixed(1)}%`
-                        : '—'}
-                    </span>
-                  </div>
+                  <Link
+                    href={ROUTES.STOCK_DETAIL(stock.ticker)}
+                    className="font-medium hover:underline"
+                  >
+                    {stock.ticker}
+                  </Link>
+                  <span className="text-muted-foreground">{stock.name}</span>
+                  <span
+                    className={
+                      changes?.day5 != null
+                        ? changes.day5 >= 0
+                          ? 'text-green-600'
+                          : 'text-red-600'
+                        : 'text-muted-foreground'
+                    }
+                  >
+                    5日:{' '}
+                    {changes?.day5 != null
+                      ? `${changes.day5 >= 0 ? '+' : ''}${changes.day5.toFixed(1)}%`
+                      : '—'}
+                  </span>
+                  <span
+                    className={
+                      changes?.day30 != null
+                        ? changes.day30 >= 0
+                          ? 'text-green-600'
+                          : 'text-red-600'
+                        : 'text-muted-foreground'
+                    }
+                  >
+                    30日:{' '}
+                    {changes?.day30 != null
+                      ? `${changes.day30 >= 0 ? '+' : ''}${changes.day30.toFixed(1)}%`
+                      : '—'}
+                  </span>
                 </div>
               );
             })}
           </div>
+        )}
 
-          {/* Source URL */}
-          {post.sourceUrl && (
-            <div className="mt-4">
-              <a
-                href={post.sourceUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary inline-flex items-center gap-1 text-sm hover:underline"
-              >
-                <ExternalLink className="h-3 w-3" />
-                查看原文 ({post.sourcePlatform})
-              </a>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        {/* Source URL for mobile */}
+        {post.sourceUrl && (
+          <a
+            href={post.sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary inline-flex items-center gap-1 text-sm hover:underline sm:hidden"
+          >
+            <ExternalLink className="h-3 w-3" />
+            查看原文 ({post.sourcePlatform})
+          </a>
+        )}
+      </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="content" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="content">Content</TabsTrigger>
-          <TabsTrigger value="chart">Chart</TabsTrigger>
-        </TabsList>
-
-        {/* Content Tab */}
-        <TabsContent value="content">
+      {/* Two-column layout */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Left column: Post content */}
+        <div className="min-w-0">
           <Card>
             <CardContent className="pt-6">
-              {/* Sentiment Badge */}
-              <div className="mb-4 flex items-center gap-2">
-                <Badge variant="outline" className={SENTIMENT_COLORS[post.sentiment]}>
-                  {SENTIMENT_LABELS[post.sentiment]}
-                </Badge>
-                {post.sentimentAiGenerated && (
-                  <span className="text-muted-foreground text-xs">(AI 分析)</span>
-                )}
-              </div>
-
-              {/* Content */}
               <div className="prose prose-sm dark:prose-invert max-w-none">
                 {post.content.split('\n').map((line, i) => (
                   <p key={i} className={line === '' ? 'h-4' : ''}>
@@ -329,7 +340,6 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                 ))}
               </div>
 
-              {/* Images */}
               {post.images.length > 0 && (
                 <div className="mt-4 grid grid-cols-2 gap-2">
                   {post.images.map((img, i) => (
@@ -341,13 +351,19 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
               )}
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
 
-        {/* Chart Tab */}
-        <TabsContent value="chart">
-          <PostChartTab stocks={post.stocks} postedAt={post.postedAt} sentiment={post.sentiment} />
-        </TabsContent>
-      </Tabs>
+        {/* Right column: Charts */}
+        <div className="min-w-0">
+          <PostChartTab
+            stocks={post.stocks}
+            postedAt={post.postedAt}
+            sentiment={post.sentiment}
+            kolName={post.kol.name}
+            postId={post.id}
+          />
+        </div>
+      </div>
     </div>
   );
 }

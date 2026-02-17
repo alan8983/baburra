@@ -237,7 +237,7 @@ export default function DashboardPage() {
               <div className="space-y-4">
                 {topKols.map((kol, i) => (
                   <div
-                    key={kol.name}
+                    key={`${kol.name}-${i}`}
                     className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0"
                   >
                     <div className="flex items-center gap-3">

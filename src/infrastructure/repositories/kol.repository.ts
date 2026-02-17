@@ -72,23 +72,17 @@ export async function listKols(params: {
     return { data: [], total: count ?? 0 };
   }
 
-  const { data: postStats } = await supabase.from('posts').select('kol_id').in('kol_id', ids);
+  const { data: postStats } = await supabase
+    .from('posts')
+    .select('kol_id, posted_at')
+    .in('kol_id', ids)
+    .order('posted_at', { ascending: false });
 
   const countByKol: Record<string, number> = {};
   const lastPostByKol: Record<string, string> = {};
   for (const p of postStats ?? []) {
     const kid = p.kol_id as string;
     countByKol[kid] = (countByKol[kid] ?? 0) + 1;
-  }
-
-  const { data: lastPosts } = await supabase
-    .from('posts')
-    .select('kol_id, posted_at')
-    .in('kol_id', ids)
-    .order('posted_at', { ascending: false });
-
-  for (const p of lastPosts ?? []) {
-    const kid = p.kol_id as string;
     if (!lastPostByKol[kid]) lastPostByKol[kid] = p.posted_at as string;
   }
 

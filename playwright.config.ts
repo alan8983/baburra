@@ -59,5 +59,12 @@ export default defineConfig({
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
+    env: {
+      // 傳遞測試用戶 ID，讓 middleware 跳過認證檢查
+      TEST_USER_ID: process.env.TEST_USER_ID || '00000000-0000-0000-0000-000000000001',
+      // 確保 Supabase 環境變數也被傳遞
+      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+    },
   },
 });

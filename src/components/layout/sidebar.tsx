@@ -27,7 +27,7 @@ import { ROUTES } from '@/lib/constants';
 import { APP_CONFIG } from '@/lib/constants/config';
 import { useAiUsage } from '@/hooks/use-ai';
 import { useAuth } from '@/hooks/use-auth';
-import { useDashboard } from '@/hooks/use-dashboard';
+import { useDraftCount } from '@/hooks/use-drafts';
 
 const iconMap = {
   LayoutDashboard,
@@ -184,8 +184,7 @@ function AiQuotaFooter({ isCollapsed }: { isCollapsed: boolean }) {
 export function Sidebar() {
   const t = useTranslations('common');
   const { sidebarOpen, toggleSidebar } = useUIStore();
-  const { data: dashboardData } = useDashboard();
-  const draftCount = dashboardData?.stats.draftCount ?? 0;
+  const { data: draftCount = 0 } = useDraftCount();
 
   return (
     <aside

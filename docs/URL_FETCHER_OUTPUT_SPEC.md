@@ -1,7 +1,7 @@
 # URL 文章抓取模塊 - Output Spec
 
-> **版本**: 1.0  
-> **適用於**: Release 01 - URL 自動匯入功能  
+> **版本**: 1.1
+> **適用於**: Release 01 (Twitter/X) & Release 02 (Facebook, Threads, YouTube)
 > **目標**: 確保輸出格式符合 Phase 8 AI 分析需求
 
 ---
@@ -52,9 +52,11 @@ interface UrlFetchResult {
    * 來源平台
    * - 'twitter': Twitter/X 平台
    * - 'facebook': Facebook 平台
+   * - 'threads': Meta Threads 平台
+   * - 'youtube': YouTube 影片（逐字稿擷取）
    * - 'manual': 其他來源或手動輸入
    */
-  sourcePlatform: 'twitter' | 'facebook' | 'manual';
+  sourcePlatform: 'twitter' | 'facebook' | 'threads' | 'youtube' | 'manual';
   
   // ========== 選填欄位 ==========
   
@@ -316,20 +318,37 @@ try {
 ### 5.3 平台特定處理
 
 ```typescript
-// Twitter/X 平台
-function parseTwitter(url: string, html: string): UrlFetchResult {
-  // 提取推文內容
-  // 移除 @mention、#hashtag 等格式標記（保留文字）
+// Twitter/X 平台（Release 01 — 已實作）
+// 使用免費 oEmbed API (https://publish.twitter.com/oembed)
+// 限制：僅提取文字與作者名稱，無圖片/時間/頭像；不支援討論串與長文 Articles
+function parseTwitter(url: string): UrlFetchResult {
+  // 呼叫 oEmbed API 取得 HTML
+  // 從 <p> 標籤提取文字
+  // 移除 t.co / pic.twitter.com 短網址
+  // 解碼 HTML entities
+}
+
+// Facebook 平台（Release 02 — stub 已存在）
+function parseFacebook(url: string, html: string): UrlFetchResult {
+  // 提取貼文內容（HTML + JSON-LD + Open Graph 解析）
+  // 移除 Facebook 特定元素
   // 提取圖片
   // 提取發文時間
 }
 
-// Facebook 平台
-function parseFacebook(url: string, html: string): UrlFetchResult {
-  // 提取貼文內容
-  // 移除 Facebook 特定元素
-  // 提取圖片
-  // 提取發文時間
+// Threads 平台（Release 02 — stub 已存在）
+function parseThreads(url: string, html: string): UrlFetchResult {
+  // HTML 解析提取內容
+  // 提取圖片、KOL 名稱、頭像、發文時間
+}
+
+// YouTube 平台（Release 02 — 待實作）
+function parseYouTube(url: string): UrlFetchResult {
+  // 1. 從 URL 提取 video ID
+  // 2. 擷取影片逐字稿（Transcript）
+  // 3. 將逐字稿作為 content 回傳
+  // 4. 提取頻道名稱作為 kolName
+  // 注意：content 可能較長，需注意 10,000 字元上限
 }
 ```
 
@@ -356,7 +375,28 @@ const url = 'https://twitter.com/user/status/1234567890';
 }
 ```
 
-### 6.2 錯誤案例
+### 6.2 YouTube 成功案例
+
+```typescript
+// 輸入
+const url = 'https://www.youtube.com/watch?v=abcdefg1234';
+
+// 預期輸出
+{
+  content: "大家好，今天來分析台積電最新的季度財報。從營收數據來看，AI 相關業務持續成長...\n\n我認為目前的估值仍然合理，建議長期持有。",
+  sourceUrl: "https://www.youtube.com/watch?v=abcdefg1234",
+  sourcePlatform: "youtube",
+  title: "台積電 Q3 財報深度分析｜AI 晶片需求爆發",
+  images: [],
+  postedAt: "2026-01-20T08:00:00Z",
+  kolName: "投資頻道名稱",
+  kolAvatarUrl: null
+}
+```
+
+> **注意**: YouTube 逐字稿可能很長，超過 10,000 字元時需截斷或摘要處理。
+
+### 6.3 錯誤案例
 
 ```typescript
 // 內容過短
@@ -386,7 +426,7 @@ const url = 'https://twitter.com/user/status/1234567890';
 - [ ] `content` 長度在 10-10,000 字元之間
 - [ ] `content` 保留適當的換行符號
 - [ ] `sourceUrl` 是完整的 URL
-- [ ] `sourcePlatform` 正確識別平台類型
+- [ ] `sourcePlatform` 正確識別平台類型（twitter / facebook / threads / youtube / manual）
 - [ ] `images` 陣列包含完整的圖片 URL
 - [ ] `postedAt` 是有效的日期格式
 - [ ] 錯誤情況都有適當的錯誤代碼和訊息
@@ -400,3 +440,4 @@ const url = 'https://twitter.com/user/status/1234567890';
 | 版本 | 日期 | 修改內容 |
 |------|------|----------|
 | 1.0 | 2026-02-05 | 初始版本 - 定義 URL 抓取模塊 Output Spec |
+| 1.1 | 2026-02-18 | 新增 Threads、YouTube 平台至 sourcePlatform；補充各平台解析說明與 Twitter oEmbed 限制；新增 YouTube 逐字稿測試案例 |

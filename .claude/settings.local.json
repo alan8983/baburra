@@ -17,7 +17,11 @@
       "Bash(git reset:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nSync package-lock.json to fix CI npm ci failure\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git push:*)",
-      "Bash(npm run lint:fix:*)"
+      "Bash(npm run lint:fix:*)",
+      "Bash(git diff:*)",
+      "Bash(cd:*)",
+      "Bash(cat:*)",
+      "Bash(node scripts/add-e2e-case.mjs:*)"
     ]
   }
 }

@@ -133,8 +133,8 @@ test.describe('核心輸入流程 - Happy Path', () => {
     await expect(textarea).toBeVisible();
     await textarea.fill(TEST_CONTENT);
 
-    // Step 3: 點擊「直接建檔」按鈕
-    const createButton = page.locator('button:has-text("直接建檔")');
+    // Step 3: 點擊「建立草稿」按鈕
+    const createButton = page.locator('button:has-text("建立草稿")');
     await expect(createButton).toBeVisible();
     await createButton.click();
 

@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "WebFetch(domain:ai.google.dev)",
-      "Bash(Select-String -Pattern \"quick-input|use-quick-input|url\\\\.ts|input.page|ai\\\\.service\")"
+      "Bash(Select-String -Pattern \"quick-input|use-quick-input|url\\\\.ts|input.page|ai\\\\.service\")",
+      "Bash(npx vitest run:*)",
+      "Bash(xargs:*)",
+      "Bash(ls:*)"
     ]
   }
 }

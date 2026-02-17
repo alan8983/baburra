@@ -10,7 +10,7 @@ export const APP_CONFIG = {
   MAX_PAGE_SIZE: 100,
 
   // 快取設定
-  STOCK_PRICE_CACHE_DAYS: 7,
+  STOCK_PRICE_CACHE_DAYS: 1095,
 
   // AI 配額
   AI_FREE_WEEKLY_LIMIT: 15,

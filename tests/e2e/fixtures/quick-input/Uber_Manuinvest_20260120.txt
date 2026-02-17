@@ -1,0 +1,116 @@
+# UBER — ManuInvests 2026/01/20
+---
+
+Manu Invests
+@ManuInvests
+The Broken Yardstick: Why Your “Historic” P/E Chart is Lying to You
+There is a lot of talk about an ‘AI bubble’ and elevated SP500 multiples these days. If you have spent any time in financial social media circles you have certainly seen a chart like this.
+It’s usually a graph of the S&P 500’s Price-to-Earnings (PE) ratio. The current multiple looks elevated, compared against a long-term average of ~15/16x. The conclusion is always the same: “The market is expensive. A mean reversion is inevitable. We are in an AI bubble.”
+Let me start by making clear, this post is intended to provide some perspective and insight into the context of the current multiples, not to say the market PE isn’t elevated.
+I am not saying that ‘this time is different’… BUT some things are different. Notably, the accounting rules we use to define the ‘E’ in P/E.”
+Comparing the S&P500 PE ratio of today to that of the past is apples-to-oranges comparison. This common comparison assumes that the “E” (Earnings) in the 1990s and early 2000s measures the same thing as the “E” in 2025. It doesn’t.
+Over the last two decades, there have been several major accounting changes that have changed the way companies report profits. Almost every single change has made today’s accounting more conservative, suppressing reported earnings compared to the past. Those changes were made for a reason, much of today’s accounting is more transparent, it is more rational, but it makes comparison cloudy.
+Let’s look at what’s changed and what the impact has been…
+The SBC Distortion: The Core 10-15% Earnings Drag:
+The major difference of now vs then is the way GAAP requires companies to account for stock-based compensation (SBC).
+Did you know that stock-based compensation was only required to be recorded as an expense as of 2006? Before 2006, companies could issue massive stock options, dilute shareholders, and report zero expense on the income statement. SBC prior to 2006 has zero impact on Earnings Per Share (EPS). That ended with FAS 123(R), which requires companies to expense the fair value of employee stock options and other share-based payments on their income statements instead of just disclosing it in footnotes.
+Today, rightfully so, SBC is a required, non-cash, impact on earnings. It belongs in the income statement as an expense.
+Buffett and Munger agree, commenting on it in the 1998 Shareholder Letter, prior to the accounting rule changes described above.
+A few years ago we asked three questions in these pages to which we have not yet received an answer: “If options aren’t a form of compensation, what are they? If compensation isn’t an expense, what is it? And, if expenses shouldn’t go into the calculation of earnings, where in the world should they go?”
+(Cool Note: Berkshire terminated their stock options program at this time, opting to pay cash incentives so that their financials reporting reflected the true expense to their shareholders, voluntarily.)
+On the change: Though the two (incentive) plans are an economic wash, the cash plan we are putting in will produce a vastly different accounting result. This Alice-in-Wonderland outcome occurs because existing accounting principles ignore the cost of stock options when earnings are being calculated, even though options are a huge and increasing expense at a great many corporations. In effect, accounting principles offer management a choice: Pay employees in one form and count the cost, or pay them in another form and ignore the cost. Small wonder then that the use of options has mushroomed.
+(Berkshire voluntarily chose to count the cost.)
+The Impact: SBC now accounts for roughly 10-15% of total S&P 500 earnings. If we reverted to 1999 rules, we would add that expense right back into the bottom line, drastically increasing bottom line earnings.
+Here’s a real world example.
+Let’s look at Microsoft ($MSFT) using current numbers (Q3 2025 Numbers). Looking at the financials, we can see the SBC impact on its valuation.
+Current Numbers:
+Price (12/6/25): $483.15
+Market Cap: ~$3.59 trillion
+TTM Net Income: $104.91 billion
+Diluted EPS: $14.1
+GAAP PE: ~34.26x
+Pre-2006 Accounting Adjustment:
+TTM Stock Based Compensation: $12.12 billion
+Adjusted Net Income (excluding SBC): $104.91b + $12.12b = $117.03b (-12.12% expense)
+Adjusted PE Ratio: ~30.6x or a roughly 11% discount
+Now let’s look at Microsoft ($MSFT) during the 2000 peak.
+Reported Numbers 2000:
+Market Cap (Peak): ~$600 billion
+Reported Operating Income: $11b
+Reported Net Income: ~9.4 billion
+Diluted EPS: $1.70
+Headline PE: ~62.82x
+Adjusted Numbers (applying current day accounting rules):
+Market Cap (Peak): ~$600 billion
+Pro Forma Footnote Operating Income to adjust for SBC: $9.11b (-17.2% impact)
+Pro Forma Footnote Net Income to adjust for SBC: ~8.1b (-13% impact)
+Diluted EPS: $1.57 (-12.9% impact)
+Adjusted PE: ~74.07x
+MSFT 2001 and 2002: The gap widens…
+2001:
+Reported Operating Income: $11.72b vs. Pro Forma: $8.34b (-28.8% impact)
+Reported Net Income: $7.35b vs Pro Forma: $5.08b (-30.9% impact)
+Reported Diluted EPS: $1.32 vs Pro Forma: $0.91 (-31.1% impact)
+Quarter Ending June 30, 2001 High Price: $73.68
+Headline ‘reported’ PE: 55.81x vs Adjusted PE (current day SBC accounting): 80.96x
+2002:
+Reported Operating Income: $11.91b vs. Pro Forma: $8.27b (-30.6% impact)
+Reported Net Income: $7.83b vs Pro Forma: $5.36b (-31.5% impact)
+Reported Diluted EPS: $1.41 vs Pro Forma: $0.98 (-30.5% impact)
+Quarter Ending June 30, 2001 High Price: $60.38
+Headline ‘reported’ PE: 42.82x vs Adjusted PE (current day SBC accounting): 63.65x
+When you take required reporting changes into account, the picture changes.
+But SBC isn’t the only accounting change holding back earnings... Regarding Intangibles:
+Beyond SBC, the American economy has changed and the companies that make up the S&P500 have shifted from companies with tangible assets (factories, plants, equipment) to intangible assets (IP, software) and current day accounting rules penalize this shift in regards to valuation.
+For reference: Back in 1975, intangible assets made up just 17% of assets on the balance sheets of S&P 500 companies. Less than 50 years later, intangible assets exceed 90% of total assets on balance sheets. This is due to the domination of software in the economy and tech companies becoming the heaviest weighted sector in the S&P 500 by market capitalization.
+While Goodwill amortization went away, in 2002 a new accounting rule replaced it with a new, massive expense: Amortization of Definite-Lived Intangibles.
+When Tech Company A buys Tech Company B, a large percentage of the purchase price is allocated to intangible assets (Patents, Developed Technology, Customer Lists, etc.) Unlike Goodwill, these MUST be amortized. Because M&A volume is so much higher today (and tech valuations are higher), this amortization expense has exploded. For the S&P 500, this is now often the single largest adjustment between GAAP (reported) earnings and Non-GAAP (adjusted) earnings, amounting to over $140 Billion per year in expenses.
+In other words, that is a -6% drag on the S&P 500s net income, further compressing earnings and expanding multiples when compared to previous periods.
+Regarding R&D and the ‘Missing Amortization’:
+The US economic and S&P500 transition from a manufacturing capex heavy composition to a tech/innovation driven composition also creates challenges for comparison of as reported earnings multiples. The companies and the economy have changed but the expensing of investment in research and development is treated very differently than investment in manufacturing buildouts. This may be the biggest distortion to current day earnings vs historic.
+Keep in mind, we are obviously in a major capex cycle so many of the typically “capex light” tech companies are becoming more “capex heavy,” yet, the point still stands.
+Old Economy: If you build a factory, you capitalize the cost and depreciate it over 30 years. The hit to earnings is spread out via straight line depreciation.
+New Economy (Software/Tech): If you spend billions on R&D to build software, you must expense it immediately. Because Amazon, Microsoft, Meta and Google spend massive amounts on R&D ($211B+ combined annually as of FY2024), their reported earnings are impacted immediately, where an industrial company re-investing in its business smooths out the cost over multiple decades, drastically reducing the annual impact on earnings.
+According to a 2022 Morgan Stanley report by Michael Mauboussin:
+The global economy continues to shift from one built on tangible assets to one built on intangible assets. Accounting, the means by which financial information is presented, treats tangible and intangible investments differently. This introduces bias into common metrics such as earnings.
+Most intangible investments appear on the income statement. Capitalizing those investments treats them in a fashion similar to capital expenditures. The result is that earnings and investments increase the same amount. This leaves free cash flow unchanged but provides a more accurate picture of a company’s operations.
+Given the assumptions we use, the capitalization of intangible investments would lead to net income for the S&P 500 that is about 12 percent higher than what is reported. These figures suggest great caution in comparing earnings or multiples over time.
+Taking this into account, earnings would be higher than 12% currently and the PE Ratio would be lower.
+So, while reported earnings are benefiting from the lack of old school Goodwill amortization, they are being impacted far more by the immediate expensing of R&D and the amortization of acquired tech. The net result is that current PE ratios are overstated relative to history because the earnings are being conservatively suppressed new modern day accounting rules.
+But What Even Is the S&P 500?
+Finally, let’s address the common complaint about the index itself: “The S&P 500 is too top-heavy. The market is so concentrated.”
+Somewhere along the way, the S&P 500 transitioned from being a passive tracking index of the US economy to an active financial product itself, serving as the favorite proxy for the overall stock market.
+But the S&P500 is a market-cap weighted index by design. It is not meant to be a representation of the average business; it is a momentum strategy. The index is built to reward our economy’s best companies by letting winners run and dropping the worst performers. When people complain that “the Mag7 is driving the index” they are essentially complaining that the winners are winning and that the strategy is working as intended.
+I see so many arguments that the “Mag 7” (Microsoft, Apple, Google, Nvidia, etc.) are distorting the market. But looking at them as just “7 stocks” is a mistake. They are diversified conglomerates. The Mag7 is more akin to the Mag70.
+Amazon is a retailer, a logistics company, an advertising agency, and a Cloud hyperscaler, that is building satellites and working on robots…
+Microsoft is enterprise SaaS, Cloud hyperscaler, Gaming studio.
+Google is a Cloud hyperscaler, leading AI developer, the largest search business, advertiser, streaming service, AV operator, soon to be TPU business.
+These companies are the most diversified businesses in the world and rightfully command a higher multiple not because of hype, but because they delivering seemingly unimaginable products, services, and financial results to match. Their net profit margins hover around ~26%, roughly double the S&P 500 average of ~13%. They are twice as efficient at turning revenue into profit and their earnings growth is keeping pace with their multiple expansion.
+The S&P500 Index is not your only access to the stock market. You are not a forced buyer. Viewing the S&P 500 as the only “investable universe” is misleading. We live in the golden age of ETFs and individual access to stock market research. No one is forcing you to buy the market-cap weighted index. Not happy with the composition? Stop viewing it as a product and view it as a tracking index as it initially was intended.
+Worried about concentration? Buy the Equal Weight S&P 500.
+If you choose to buy the S&P500 index, you are making an active choice to bet on the winners. Stop being upset when they win.
+Conclusion: The Normalizing Adjustment
+I started this post by saying I wasn’t arguing “this time is different,” but rather that the accounting is different.
+To create a consistent comparison of S&P500 valuations, we have to level the playing field. Remember, this is an exercise in expanding your perspective. I strongly prefer today’s accounting standards to those of the 1990s and use GAAP reported numbers as my baseline for company valuation. In no way am I suggesting you to do otherwise or that things should be changed. What I am suggesting is that you view the comparison of current day financial reporting with that of the past with a holistic perspective and acknowledge that things are different.
+Lets strip away the layers of modern current day accounting changes to see what the market really looks like compared to the rules of the 1990s.
+Here is the step-by-step impact on the S&P 500 P/E ratio (currently ~29x) if we revert to historical rules:
+The “SBC” Adjustment
+The Change: We add back the mandatory 10-15% Stock-Based Compensation expense that was hidden in the 90s.
+The Impact: Earnings rise ~12.5% (midpoint).
+The Result: The P/E drops from 29x to ~25.8x.
+The “R&D Innovation” Adjustment
+The Change: We keep the SBC add-back AND we capitalize R&D expenses (treating them as assets/investments like factories, rather than immediate costs).
+The Impact: As noted by Morgan Stanley, this boosts earnings by another ~12%.
+The Result: The P/E drops from 25.8x to ~23.0x.
+A “Full Scope” Adjustment
+The Change: We include the above, PLUS we adjust for the aggressive amortization of acquired intangibles through M&A.
+The Impact: We add back a conservative ~3% drag (discounting from the full 6% to account for historical M&A activity).
+The Result: The P/E drops from 23.0x to ~22.3x.
+The Reverse Adjustment: Today’s accounting applied to the past
+Finally, let’s look at it the other way. What happens if we take the historical markets of the dot-com era and apply today’s accounting rules?
+If we applied today’s SBC expensing rules to the 2000 peak, earnings would have been ~10-20% lower.
+The peak P/E of the Dot-Com bubble wasn’t 30x... by today’s standards it was ~34x - 38x.
+When you compare a 22.3 - 25.8x market (Adjusted to 1990s Rules) to a 30.5x market (The 2000 Peak under 1990s Rules), some of the bubble talk can subside. Especially when you acknowledge that the average PE of the last 50 years is 19.5x vs the often cited all-time average of 16x.
+The market is trading at a premium, but, in my opinion, is not in a bubble. We are in the midst of a technological revolution and company earnings are driving their multiples.
+Thanks for reading. I hope you found this article interesting and helpful. 
+-Manu

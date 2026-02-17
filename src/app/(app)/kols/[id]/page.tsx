@@ -2,6 +2,7 @@
 
 import { use, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, ExternalLink, Loader2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +17,7 @@ import { useKol, useKolPosts, useKolWinRate } from '@/hooks';
 import { formatWinRate, getWinRateColorClass } from '@/domain/calculators';
 
 export default function KolDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const router = useRouter();
   const { id } = use(params);
   const { data: kol, isLoading: kolLoading, error: kolError } = useKol(id);
   const { data: postsData, isLoading: postsLoading } = useKolPosts(id);
@@ -166,36 +168,38 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {stock.posts.slice(0, 5).map((post) => (
-                    <Link key={post.id} href={ROUTES.POST_DETAIL(post.id)}>
-                      <div className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3">
-                        <div className="flex items-center gap-3">
-                          <Badge
-                            variant="outline"
-                            className={
-                              SENTIMENT_COLORS[post.sentiment as keyof typeof SENTIMENT_COLORS]
-                            }
-                          >
-                            {SENTIMENT_LABELS[post.sentiment as keyof typeof SENTIMENT_LABELS]}
-                          </Badge>
-                          <span className="text-muted-foreground text-sm">
-                            {formatDate(post.postedAt)}
-                          </span>
-                        </div>
-                        <span
-                          className={`text-sm font-medium ${
-                            post.priceChange == null
-                              ? 'text-muted-foreground'
-                              : post.priceChange >= 0
-                                ? 'text-green-600'
-                                : 'text-red-600'
-                          }`}
+                    <div
+                      key={post.id}
+                      className="hover:bg-muted/50 cursor-pointer flex items-center justify-between rounded-lg border p-3"
+                      onClick={() => router.push(ROUTES.POST_DETAIL(post.id))}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Badge
+                          variant="outline"
+                          className={
+                            SENTIMENT_COLORS[post.sentiment as keyof typeof SENTIMENT_COLORS]
+                          }
                         >
-                          {post.priceChange != null
-                            ? `${post.priceChange >= 0 ? '+' : ''}${post.priceChange.toFixed(1)}% (5日)`
-                            : '—'}
+                          {SENTIMENT_LABELS[post.sentiment as keyof typeof SENTIMENT_LABELS]}
+                        </Badge>
+                        <span className="text-muted-foreground text-sm">
+                          {formatDate(post.postedAt)}
                         </span>
                       </div>
-                    </Link>
+                      <span
+                        className={`text-sm font-medium ${
+                          post.priceChange == null
+                            ? 'text-muted-foreground'
+                            : post.priceChange >= 0
+                              ? 'text-green-600'
+                              : 'text-red-600'
+                        }`}
+                      >
+                        {post.priceChange != null
+                          ? `${post.priceChange >= 0 ? '+' : ''}${post.priceChange.toFixed(1)}% (5日)`
+                          : '—'}
+                      </span>
+                    </div>
                   ))}
                   {stock.posts.length > 5 && (
                     <Button variant="ghost" size="sm" className="w-full" asChild>

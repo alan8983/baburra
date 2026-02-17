@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ArrowRight, FileText, Loader2 } from 'lucide-react';
+import { ArrowRight, FileText, Info, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 
 export default function InputPage() {
   const t = useTranslations('input');
+  const tLimits = useTranslations('input.limitations');
   const router = useRouter();
   const [content, setContent] = useState('');
 
@@ -143,6 +144,22 @@ export default function InputPage() {
             <li>• {t('tips.tip1')}</li>
             <li>• {t('tips.tip2')}</li>
             <li>• {t('tips.tip3')}</li>
+          </ul>
+        </CardContent>
+      </Card>
+
+      {/* Twitter Extraction Limitations */}
+      <Card className="border-muted">
+        <CardContent className="pt-6">
+          <h3 className="flex items-center gap-2 font-medium">
+            <Info className="text-muted-foreground h-4 w-4" />
+            {tLimits('title')}
+          </h3>
+          <ul className="text-muted-foreground mt-2 space-y-1 text-sm">
+            <li>• {tLimits('textOnly')}</li>
+            <li>• {tLimits('singleTweet')}</li>
+            <li>• {tLimits('noArticles')}</li>
+            <li>• {tLimits('comingSoon')}</li>
           </ul>
         </CardContent>
       </Card>

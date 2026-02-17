@@ -9,6 +9,7 @@ import {
   createSeriesMarkers,
 } from 'lightweight-charts';
 import type { CandlestickData, VolumeData } from '@/domain/models/stock';
+import { resolveThemeColors } from './chart-utils';
 
 export interface SentimentMarkerItem {
   time: string;
@@ -50,10 +51,12 @@ export function CandlestickChart({
   useEffect(() => {
     if (!containerRef.current || candles.length === 0) return;
 
+    const { foregroundColor, gridColor } = resolveThemeColors(containerRef.current);
+
     const chart = createChart(containerRef.current, {
       layout: {
         background: { type: ColorType.Solid, color: 'transparent' },
-        textColor: 'hsl(var(--foreground))',
+        textColor: foregroundColor,
       },
       width: containerRef.current.clientWidth,
       height,
@@ -67,8 +70,8 @@ export function CandlestickChart({
         secondsVisible: false,
       },
       grid: {
-        vertLines: { color: 'hsl(var(--border) / 0.3)' },
-        horzLines: { color: 'hsl(var(--border) / 0.3)' },
+        vertLines: { color: gridColor },
+        horzLines: { color: gridColor },
       },
       autoSize: true,
     });

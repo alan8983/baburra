@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Plus, Search, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +14,7 @@ import { formatDate } from '@/lib/utils/date';
 import { useKols } from '@/hooks';
 
 export default function KolsPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const { data, isLoading, error } = useKols({ search: searchQuery || undefined });
 
@@ -68,40 +70,42 @@ export default function KolsPage() {
       {!isLoading && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredKols.map((kol) => (
-            <Link key={kol.id} href={ROUTES.KOL_DETAIL(kol.id)}>
-              <Card className="hover:bg-muted/50 transition-colors">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={kol.avatarUrl || undefined} />
-                      <AvatarFallback>
-                        <User className="h-6 w-6" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
-                      <CardTitle className="truncate text-base">{kol.name}</CardTitle>
-                      <CardDescription className="text-xs">
-                        最近發文: {kol.lastPostAt ? formatDate(kol.lastPostAt) : '—'}
-                      </CardDescription>
-                    </div>
+            <Card
+              key={kol.id}
+              className="hover:bg-muted/50 cursor-pointer transition-colors"
+              onClick={() => router.push(ROUTES.KOL_DETAIL(kol.id))}
+            >
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-12 w-12">
+                    <AvatarImage src={kol.avatarUrl || undefined} />
+                    <AvatarFallback>
+                      <User className="h-6 w-6" />
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="truncate text-base">{kol.name}</CardTitle>
+                    <CardDescription className="text-xs">
+                      最近發文: {kol.lastPostAt ? formatDate(kol.lastPostAt) : '—'}
+                    </CardDescription>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between text-sm">
-                    <div>
-                      <span className="text-muted-foreground">文章數: </span>
-                      <span className="font-medium">{kol.postCount}</span>
-                    </div>
-                    <Badge
-                      variant={kol.winRate != null && kol.winRate >= 0.6 ? 'default' : 'secondary'}
-                      className={kol.winRate != null && kol.winRate >= 0.6 ? 'bg-green-600' : ''}
-                    >
-                      勝率 {kol.winRate != null ? `${(kol.winRate * 100).toFixed(0)}%` : '—'}
-                    </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between text-sm">
+                  <div>
+                    <span className="text-muted-foreground">文章數: </span>
+                    <span className="font-medium">{kol.postCount}</span>
                   </div>
-                </CardContent>
-              </Card>
-            </Link>
+                  <Badge
+                    variant={kol.winRate != null && kol.winRate >= 0.6 ? 'default' : 'secondary'}
+                    className={kol.winRate != null && kol.winRate >= 0.6 ? 'bg-green-600' : ''}
+                  >
+                    勝率 {kol.winRate != null ? `${(kol.winRate * 100).toFixed(0)}%` : '—'}
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}

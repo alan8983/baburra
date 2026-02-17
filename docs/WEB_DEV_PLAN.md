@@ -22,7 +22,7 @@ Stock KOL Tracker Web 是一個**社群共享**的投資觀點追蹤平台，讓
 |------|----------|----------|
 | **MVP** | 核心功能驗證 | 手動輸入、基本檢視、勝率計算、K線圖 |
 | **Release 01** | 體驗優化 | URL 自動匯入(Twitter/X)、RWD、書籤管理、AI摘要 |
-| **Release 02** | 功能擴展 | URL 自動匯入(FB/Threads via oEmbed)、多市場支援、Dark Mode、付費機制、熱度統計 |
+| **Release 02** | 功能擴展 | URL 自動匯入(FB/Threads)、YouTube 逐字稿擷取、多市場支援、Dark Mode、付費機制、熱度統計 |
 
 ### 1.3 技術架構確認
 
@@ -1246,6 +1246,13 @@ K線圖          勝率計算         AI 整合
 
 ### Release 02
 - [ ] URL 自動匯入 - Facebook & Threads (需申請 Meta Developer App，使用 oEmbed API + App Access Token)
+  - Extractor stub 已存在：`infrastructure/extractors/facebook.extractor.ts`、`threads.extractor.ts`
+  - 需完成 HTML/JSON-LD 解析實作
+- [ ] YouTube 影片逐字稿擷取
+  - 使用者輸入 YouTube 影片網址
+  - 系統擷取影片逐字稿（Transcript）
+  - 將逐字稿填入文字區域，交由 AI 進行 KOL、標的與情緒分析
+  - 需新增 `YouTubeExtractor`，並在 `ExtractorFactory` 中註冊
 - [ ] 多市場支援 (台股、港股、加密貨幣)
 - [ ] Dark Mode
 - [ ] 付費機制設計
@@ -1260,3 +1267,4 @@ K線圖          勝率計算         AI 整合
 | 1.0 | 2026-02-01 | 初始版本 - MVP 開發計畫 |
 | 1.1 | 2026-02-01 | 調整開發順序：認證系統移至最後；擴充 Phase 8 AI 模組加入論點提取與彙整功能 |
 | 1.2 | 2026-02-13 | URL 自動匯入調整：Release 01 僅支援 Twitter/X (免費 oEmbed)；Facebook & Threads 移至 Release 02 (需 Meta Developer App + oEmbed API) |
+| 1.3 | 2026-02-18 | Release 02 新增 YouTube 影片逐字稿擷取功能；補充 Facebook/Threads extractor stub 說明 |

@@ -4,7 +4,6 @@ import { NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { createAdminClient } from '@/infrastructure/supabase/admin';
 import { listPosts } from '@/infrastructure/repositories/post.repository';
-import { listKols } from '@/infrastructure/repositories/kol.repository';
 
 // 計算本月開始時間（UTC）
 function getMonthStart(): Date {
@@ -40,7 +39,7 @@ export async function GET() {
       postWeeklyResult,
       draftsResult,
       recentPostsResult,
-      allKolsResult,
+      postKolIdsResult,
     ] = await Promise.all([
       // KOL 總數
       supabase.from('kols').select('id', { count: 'exact', head: true }),
@@ -74,8 +73,8 @@ export async function GET() {
         : Promise.resolve({ data: [], count: 0, error: null }),
       // 最近 5 篇文章
       listPosts({ limit: 5 }),
-      // 所有 KOL（用於排序）
-      listKols({ limit: 1000 }), // 取得足夠的 KOL 來排序
+      // 取得所有文章的 kol_id（輕量查詢，只取一欄）
+      supabase.from('posts').select('kol_id'),
     ]);
 
     // 處理錯誤
@@ -86,6 +85,7 @@ export async function GET() {
     if (postTotalResult.error) throw postTotalResult.error;
     if (postWeeklyResult.error) throw postWeeklyResult.error;
     if (draftsResult.error) throw draftsResult.error;
+    if (postKolIdsResult.error) throw postKolIdsResult.error;
 
     // 取得草稿最近更新時間
     const draftLastUpdated =
@@ -93,15 +93,44 @@ export async function GET() {
         ? (draftsResult.data[0] as { updated_at: string }).updated_at
         : null;
 
-    // 取得前 5 名 KOL（按文章數排序）
-    const topKols = allKolsResult.data
-      .sort((a, b) => (b.postCount ?? 0) - (a.postCount ?? 0))
+    // 取得前 5 名 KOL（按文章數排序）— 在 JS 中聚合輕量 kol_id 列表
+    const postsByKol: Record<string, number> = {};
+    for (const p of postKolIdsResult.data ?? []) {
+      const kid = p.kol_id as string;
+      postsByKol[kid] = (postsByKol[kid] ?? 0) + 1;
+    }
+    const topKolIds = Object.entries(postsByKol)
+      .sort(([, a], [, b]) => b - a)
       .slice(0, 5)
-      .map((kol) => ({
-        name: kol.name,
-        postCount: kol.postCount ?? 0,
-        lastPostAt: kol.lastPostAt?.toISOString() ?? null,
+      .map(([id]) => id);
+
+    let topKols: Array<{ name: string; postCount: number; lastPostAt: string | null }> = [];
+    if (topKolIds.length > 0) {
+      const [kolNamesResult, lastPostsResult] = await Promise.all([
+        supabase.from('kols').select('id, name').in('id', topKolIds),
+        supabase
+          .from('posts')
+          .select('kol_id, posted_at')
+          .in('kol_id', topKolIds)
+          .order('posted_at', { ascending: false }),
+      ]);
+
+      const kolNameMap: Record<string, string> = {};
+      for (const k of kolNamesResult.data ?? []) {
+        kolNameMap[k.id as string] = k.name as string;
+      }
+      const lastPostByKol: Record<string, string> = {};
+      for (const p of lastPostsResult.data ?? []) {
+        const kid = p.kol_id as string;
+        if (!lastPostByKol[kid]) lastPostByKol[kid] = p.posted_at as string;
+      }
+
+      topKols = topKolIds.map((id) => ({
+        name: kolNameMap[id] ?? '',
+        postCount: postsByKol[id],
+        lastPostAt: lastPostByKol[id] ?? null,
       }));
+    }
 
     return NextResponse.json({
       stats: {

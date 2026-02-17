@@ -44,6 +44,6 @@ export function useDashboard() {
       if (!res.ok) throw new Error('Failed to fetch dashboard data');
       return res.json();
     },
-    staleTime: 30_000, // 30 秒內不重複請求
+    staleTime: 5 * 60 * 1000, // 5 分鐘 - 與全域預設一致
   });
 }

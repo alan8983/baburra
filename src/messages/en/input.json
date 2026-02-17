@@ -24,6 +24,13 @@
     "tip2": "Paste article content directly, AI will auto-identify KOL, stock tickers and sentiment",
     "tip3": "AI results can be adjusted on the draft editing page"
   },
+  "limitations": {
+    "title": "Twitter / X URL Extraction Limitations",
+    "textOnly": "Only tweet text and author name can be extracted — images, posted time, and avatar are not available",
+    "singleTweet": "Only a single tweet is extracted per URL — full threads are not supported",
+    "noArticles": "Twitter long-form Articles are not supported — only regular post URLs (/status/ format)",
+    "comingSoon": "URL extraction for Facebook and Threads is planned for a future release"
+  },
   "errors": {
     "createDraftFailed": "Failed to create draft",
     "tryAgain": "Please try again later"

@@ -50,6 +50,7 @@ export const API_ROUTES = {
 
   // Drafts
   DRAFTS: '/api/drafts',
+  DRAFTS_COUNT: '/api/drafts/count',
   DRAFT_DETAIL: (id: string) => `/api/drafts/${id}`,
 
   // Bookmarks
