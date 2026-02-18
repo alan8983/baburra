@@ -34,6 +34,7 @@ export interface GeminiGenerateOptions {
 
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
+const DEFAULT_TIMEOUT_MS = 30_000;
 
 function getApiKey(): string {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -70,31 +71,44 @@ export async function generateContent(
     },
   };
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(requestBody),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
 
-  if (!res.ok) {
-    const errorText = await res.text();
-    throw new Error(`Gemini API error ${res.status}: ${errorText || res.statusText}`);
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Gemini API error ${res.status}: ${errorText || res.statusText}`);
+    }
+
+    const data = (await res.json()) as GeminiResponse;
+
+    if (!data.candidates || data.candidates.length === 0) {
+      throw new Error('Gemini API returned no candidates');
+    }
+
+    const candidate = data.candidates[0];
+    if (!candidate.content?.parts || candidate.content.parts.length === 0) {
+      throw new Error('Gemini API returned empty content');
+    }
+
+    return candidate.content.parts.map((p) => p.text).join('');
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(`Gemini API request timed out after ${DEFAULT_TIMEOUT_MS}ms`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  const data = (await res.json()) as GeminiResponse;
-
-  if (!data.candidates || data.candidates.length === 0) {
-    throw new Error('Gemini API returned no candidates');
-  }
-
-  const candidate = data.candidates[0];
-  if (!candidate.content?.parts || candidate.content.parts.length === 0) {
-    throw new Error('Gemini API returned empty content');
-  }
-
-  return candidate.content.parts.map((p) => p.text).join('');
 }
 
 /**

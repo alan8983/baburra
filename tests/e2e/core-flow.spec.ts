@@ -116,8 +116,7 @@ test.describe('核心輸入流程 - Happy Path', () => {
       await supabase.from('drafts').delete().eq('id', testDraftId);
     }
 
-    // 注意：KOL 和 Stock 可能被其他測試使用，所以不刪除
-    // 如果需要完全清理，可以使用 service role key
+    // KOL 由 Playwright globalTeardown (test-teardown.ts) 統一清理
   });
 
   test('從輸入頁面到建檔完成的完整流程', async ({ page }) => {

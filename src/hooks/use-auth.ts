@@ -130,7 +130,7 @@ export function useAuth(): UseAuthReturn {
         if (data.user && !data.session) {
           router.push(`${ROUTES.LOGIN}?message=請檢查您的電子郵件以完成註冊`);
         } else {
-          router.push(ROUTES.DASHBOARD);
+          router.push(ROUTES.INPUT);
         }
       } catch (error) {
         setState((prev) => ({
@@ -164,7 +164,7 @@ export function useAuth(): UseAuthReturn {
           error: null,
         });
 
-        router.push(ROUTES.DASHBOARD);
+        router.push(ROUTES.INPUT);
       } catch (error) {
         setState((prev) => ({
           ...prev,

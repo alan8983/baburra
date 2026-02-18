@@ -2,7 +2,6 @@
 
 import { use, useMemo } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { ArrowLeft, ExternalLink, Loader2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,7 +16,6 @@ import { useKol, useKolPosts, useKolWinRate } from '@/hooks';
 import { formatWinRate, getWinRateColorClass } from '@/domain/calculators';
 
 export default function KolDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const router = useRouter();
   const { id } = use(params);
   const { data: kol, isLoading: kolLoading, error: kolError } = useKol(id);
   const { data: postsData, isLoading: postsLoading } = useKolPosts(id);
@@ -168,10 +166,10 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {stock.posts.slice(0, 5).map((post) => (
-                    <div
+                    <Link
                       key={post.id}
-                      className="hover:bg-muted/50 flex cursor-pointer items-center justify-between rounded-lg border p-3"
-                      onClick={() => router.push(ROUTES.POST_DETAIL(post.id))}
+                      href={ROUTES.POST_DETAIL(post.id)}
+                      className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3"
                     >
                       <div className="flex items-center gap-3">
                         <Badge
@@ -199,7 +197,7 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
                           ? `${post.priceChange >= 0 ? '+' : ''}${post.priceChange.toFixed(1)}% (5日)`
                           : '—'}
                       </span>
-                    </div>
+                    </Link>
                   ))}
                   {stock.posts.length > 5 && (
                     <Button variant="ghost" size="sm" className="w-full" asChild>

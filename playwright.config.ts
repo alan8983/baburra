@@ -6,6 +6,8 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests/e2e',
+  // 測試結束後自動清理 E2E 測試產生的資料（KOL、Posts、Drafts）
+  globalTeardown: './tests/e2e/test-teardown.ts',
   // 測試報告輸出目錄
   outputDir: './tests/e2e/test-results',
   // 測試執行超時
@@ -64,6 +66,9 @@ export default defineConfig({
       // 確保 Supabase 環境變數也被傳遞
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
       NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+      // Gemini API key for AI analysis
+      GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
     },
   },
 });

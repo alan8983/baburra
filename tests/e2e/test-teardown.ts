@@ -22,10 +22,8 @@ async function cleanupTestData() {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    console.error('❌ 缺少 Supabase 環境變數：');
-    console.error('   NEXT_PUBLIC_SUPABASE_URL');
-    console.error('   NEXT_PUBLIC_SUPABASE_ANON_KEY');
-    process.exit(1);
+    console.warn('⚠️  缺少 Supabase 環境變數，跳過測試資料清理');
+    return;
   }
 
   console.log('🧹 開始清理測試資料...\n');
@@ -130,52 +128,37 @@ async function cleanupTestData() {
       }
     }
 
-    // 3. 可選：刪除測試 KOL（如果沒有其他資料關聯）
-    // 注意：這可能會影響其他測試，所以預設不執行
-    // 如果需要完全清理，可以取消註解以下代碼
-    /*
+    // 3. 刪除測試 KOL（關聯的 posts/drafts 已在上方清理完畢）
     console.log('\n👤 清理測試 KOL...');
     if (testKols && testKols.length > 0) {
       const kolIds = testKols.map((k) => k.id);
-      
-      // 檢查是否還有其他 posts 或 drafts 關聯
-      const { data: remainingPosts } = await supabase
-        .from('posts')
-        .select('id')
-        .in('kol_id', kolIds)
-        .limit(1);
-      
-      const { data: remainingDrafts } = await supabase
-        .from('drafts')
-        .select('id')
-        .in('kol_id', kolIds)
-        .limit(1);
-      
-      if (!remainingPosts?.length && !remainingDrafts?.length) {
-        const { error: kolsError } = await supabase
-          .from('kols')
-          .delete()
-          .in('id', kolIds);
-        
-        if (kolsError) {
-          console.error('  ⚠️  刪除 KOLs 時發生錯誤:', kolsError.message);
-        } else {
-          console.log(`  ✅ 已刪除 ${testKols.length} 筆測試 KOLs`);
-        }
+
+      const { error: kolsError } = await supabase.from('kols').delete().in('id', kolIds);
+
+      if (kolsError) {
+        console.error('  ⚠️  刪除 KOLs 時發生錯誤:', kolsError.message);
       } else {
-        console.log('  ℹ️  跳過刪除 KOL（仍有其他資料關聯）');
+        console.log(`  ✅ 已刪除 ${testKols.length} 筆測試 KOLs`);
       }
+    } else {
+      console.log('  ℹ️  未找到測試 KOL，跳過');
     }
-    */
 
     console.log('\n✨ 清理完成！');
   } catch (error) {
     console.error('\n❌ 清理過程中發生錯誤:', error);
-    process.exit(1);
   }
 }
 
-// 執行清理
+/**
+ * Playwright globalTeardown entry point.
+ * Also works as a standalone CLI script via `npx tsx tests/e2e/test-teardown.ts`.
+ */
+export default async function globalTeardown() {
+  await cleanupTestData();
+}
+
+// 允許直接執行：npx tsx tests/e2e/test-teardown.ts
 if (require.main === module) {
   cleanupTestData()
     .then(() => {

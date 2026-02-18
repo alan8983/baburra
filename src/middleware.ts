@@ -18,9 +18,9 @@ const isSupabaseConfigured =
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 首頁直接重導向到 dashboard，避免 Server Component redirect 造成白畫面
+  // 首頁直接重導向到快速輸入，避免 Server Component redirect 造成白畫面
   if (pathname === '/') {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    return NextResponse.redirect(new URL('/input', request.url));
   }
 
   // 跳過靜態檔案和公開路由
@@ -95,9 +95,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // 如果已登入但訪問登入/註冊頁，重導向到 dashboard
+  // 如果已登入但訪問登入/註冊頁，重導向到快速輸入
   if (user && (pathname === '/login' || pathname === '/register')) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    return NextResponse.redirect(new URL('/input', request.url));
   }
 
   return response;

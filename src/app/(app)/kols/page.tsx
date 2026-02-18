@@ -76,7 +76,7 @@ export default function KolsPage() {
               onClick={() => router.push(ROUTES.KOL_DETAIL(kol.id))}
             >
               <CardHeader className="pb-3">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 overflow-hidden">
                   <Avatar className="h-12 w-12">
                     <AvatarImage src={kol.avatarUrl || undefined} />
                     <AvatarFallback>

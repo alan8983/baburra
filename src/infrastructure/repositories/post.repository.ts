@@ -26,6 +26,17 @@ type DbPost = {
   created_by: string | null;
 };
 
+type DbStock = {
+  id: string;
+  ticker: string;
+  name: string;
+};
+
+type DbPostStock = {
+  stock_id: string;
+  stocks: DbStock | null;
+};
+
 function mapDbToPost(row: DbPost): Post {
   return {
     id: row.id,
@@ -96,25 +107,19 @@ export async function listPosts(params: {
   if (error) throw new Error(error.message);
   if (!rows?.length) return { data: [], total: count ?? 0 };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const data: PostWithPriceChanges[] = rows.map((row: any) => {
-    const post = mapDbToPost(row as DbPost);
+  const data: PostWithPriceChanges[] = (rows as (DbPost & { kols: { id: string; name: string; avatar_url: string | null } | null; post_stocks: DbPostStock[] })[]).map((row) => {
+    const post = mapDbToPost(row);
     const kol = row.kols
       ? {
-          id: row.kols.id as string,
-          name: row.kols.name as string,
-          avatarUrl: (row.kols.avatar_url as string) ?? null,
+          id: row.kols.id,
+          name: row.kols.name,
+          avatarUrl: row.kols.avatar_url ?? null,
         }
       : { id: post.kolId, name: '', avatarUrl: null };
     const stocks = (row.post_stocks ?? [])
-      .map((ps: any) => ps.stocks) // eslint-disable-line @typescript-eslint/no-explicit-any
-      .filter(Boolean)
-      .map((s: any) => ({
-        // eslint-disable-line @typescript-eslint/no-explicit-any
-        id: s.id as string,
-        ticker: s.ticker as string,
-        name: s.name as string,
-      }));
+      .map((ps) => ps.stocks)
+      .filter((s): s is DbStock => s !== null)
+      .map((s) => ({ id: s.id, ticker: s.ticker, name: s.name }));
     return {
       ...post,
       kol,
@@ -135,25 +140,19 @@ export async function getPostById(id: string): Promise<PostWithPriceChanges | nu
     .single();
   if (error || !row) return null;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const r = row as any;
-  const post = mapDbToPost(r as DbPost);
+  const r = row as DbPost & { kols: { id: string; name: string; avatar_url: string | null } | null; post_stocks: DbPostStock[] };
+  const post = mapDbToPost(r);
   const kol = r.kols
     ? {
-        id: r.kols.id as string,
-        name: r.kols.name as string,
-        avatarUrl: (r.kols.avatar_url as string) ?? null,
+        id: r.kols.id,
+        name: r.kols.name,
+        avatarUrl: r.kols.avatar_url ?? null,
       }
     : { id: post.kolId, name: '', avatarUrl: null };
   const stocks = (r.post_stocks ?? [])
-    .map((ps: any) => ps.stocks) // eslint-disable-line @typescript-eslint/no-explicit-any
-    .filter(Boolean)
-    .map((s: any) => ({
-      // eslint-disable-line @typescript-eslint/no-explicit-any
-      id: s.id as string,
-      ticker: s.ticker as string,
-      name: s.name as string,
-    }));
+    .map((ps) => ps.stocks)
+    .filter((s): s is DbStock => s !== null)
+    .map((s) => ({ id: s.id, ticker: s.ticker, name: s.name }));
 
   return { ...post, kol, stocks, priceChanges: {} };
 }
