@@ -29,7 +29,10 @@ const FIXTURES_DIR = path.join(__dirname, 'fixtures', 'quick-input');
 
 function loadTestCases(): Array<{ name: string; input: string }> {
   if (!fs.existsSync(FIXTURES_DIR)) return [];
-  const files = fs.readdirSync(FIXTURES_DIR).filter((f) => f.endsWith('.txt')).sort();
+  const files = fs
+    .readdirSync(FIXTURES_DIR)
+    .filter((f) => f.endsWith('.txt'))
+    .sort();
   return files.map((file) => {
     const raw = fs.readFileSync(path.join(FIXTURES_DIR, file), 'utf-8');
     const match = raw.match(/^(.*?)\r?\n---\r?\n([\s\S]*)$/);

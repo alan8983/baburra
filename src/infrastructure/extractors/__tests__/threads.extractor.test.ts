@@ -7,17 +7,19 @@ import { threadsExtractor } from '../threads.extractor';
 import type { ExtractorError } from '../types';
 
 // Helper to build minimal Threads HTML
-function buildThreadsHtml(options: {
-  ogTitle?: string;
-  ogDescription?: string;
-  ogImages?: string[];
-  twitterDescription?: string;
-  twitterTitle?: string;
-  twitterImage?: string;
-  jsonLd?: Record<string, unknown>;
-  pageTitle?: string;
-  publishedTime?: string;
-} = {}): string {
+function buildThreadsHtml(
+  options: {
+    ogTitle?: string;
+    ogDescription?: string;
+    ogImages?: string[];
+    twitterDescription?: string;
+    twitterTitle?: string;
+    twitterImage?: string;
+    jsonLd?: Record<string, unknown>;
+    pageTitle?: string;
+    publishedTime?: string;
+  } = {}
+): string {
   const parts: string[] = ['<html><head>'];
 
   if (options.ogTitle) {
@@ -56,25 +58,29 @@ function buildThreadsHtml(options: {
 
 /** Create a mock fetch that returns a fresh Response each time */
 function mockFetchResponse(html: string) {
-  return vi.fn().mockImplementation(() =>
-    Promise.resolve(new Response(html, { status: 200 }))
-  );
+  return vi.fn().mockImplementation(() => Promise.resolve(new Response(html, { status: 200 })));
 }
 
 describe('ThreadsExtractor', () => {
   describe('isValidUrl', () => {
     it('should validate threads.net URLs', () => {
-      expect(threadsExtractor.isValidUrl('https://www.threads.net/@username/post/ABC123')).toBe(true);
+      expect(threadsExtractor.isValidUrl('https://www.threads.net/@username/post/ABC123')).toBe(
+        true
+      );
     });
 
     it('should validate URLs without www', () => {
-      expect(threadsExtractor.isValidUrl('https://threads.net/@stockmktnewz/post/DUV528IDCkx')).toBe(true);
+      expect(
+        threadsExtractor.isValidUrl('https://threads.net/@stockmktnewz/post/DUV528IDCkx')
+      ).toBe(true);
     });
 
     it('should validate URLs with query parameters', () => {
-      expect(threadsExtractor.isValidUrl(
-        'https://www.threads.net/@stockmktnewz/post/DUV528IDCkx?xmt=AQF0ItXydd6cM70DM3YYkw'
-      )).toBe(true);
+      expect(
+        threadsExtractor.isValidUrl(
+          'https://www.threads.net/@stockmktnewz/post/DUV528IDCkx?xmt=AQF0ItXydd6cM70DM3YYkw'
+        )
+      ).toBe(true);
     });
 
     it('should validate URLs with dots in username', () => {
@@ -100,7 +106,9 @@ describe('ThreadsExtractor', () => {
     });
 
     it('should throw INVALID_URL error for invalid URLs', async () => {
-      await expect(threadsExtractor.extract('https://twitter.com/user/status/123')).rejects.toMatchObject({
+      await expect(
+        threadsExtractor.extract('https://twitter.com/user/status/123')
+      ).rejects.toMatchObject({
         code: 'INVALID_URL',
         message: expect.stringContaining('Invalid Threads URL'),
       } as ExtractorError);
@@ -113,10 +121,9 @@ describe('ThreadsExtractor', () => {
       });
       vi.stubGlobal('fetch', mockFetchResponse(html));
 
-      const result = await threadsExtractor.extract(
-        'https://threads.net/@testuser/post/ABC123',
-        { retryAttempts: 1 }
-      );
+      const result = await threadsExtractor.extract('https://threads.net/@testuser/post/ABC123', {
+        retryAttempts: 1,
+      });
 
       expect(result.sourcePlatform).toBe('threads');
       expect(result.content).toContain('test post content');
@@ -155,33 +162,35 @@ describe('ThreadsExtractor', () => {
       const html = buildThreadsHtml({
         ogDescription: 'This is a long enough test post content for retry testing',
       });
-      const mockFn = vi.fn()
+      const mockFn = vi
+        .fn()
         .mockRejectedValueOnce(new Error('Network error'))
-        .mockImplementationOnce(() =>
-          Promise.resolve(new Response(html, { status: 200 }))
-        );
+        .mockImplementationOnce(() => Promise.resolve(new Response(html, { status: 200 })));
       vi.stubGlobal('fetch', mockFn);
 
-      const result = await threadsExtractor.extract(
-        'https://threads.net/@user/post/ABC123',
-        { retryAttempts: 2, timeout: 10000 }
-      );
+      const result = await threadsExtractor.extract('https://threads.net/@user/post/ABC123', {
+        retryAttempts: 2,
+        timeout: 10000,
+      });
 
       expect(result.sourcePlatform).toBe('threads');
       expect(mockFn).toHaveBeenCalledTimes(2);
     });
 
     it('should throw FETCH_FAILED after all retries exhausted', async () => {
-      vi.stubGlobal('fetch', vi.fn()
-        .mockRejectedValueOnce(new Error('fail 1'))
-        .mockRejectedValueOnce(new Error('fail 2'))
+      vi.stubGlobal(
+        'fetch',
+        vi
+          .fn()
+          .mockRejectedValueOnce(new Error('fail 1'))
+          .mockRejectedValueOnce(new Error('fail 2'))
       );
 
       await expect(
-        threadsExtractor.extract(
-          'https://threads.net/@user/post/ABC123',
-          { retryAttempts: 2, timeout: 10000 }
-        )
+        threadsExtractor.extract('https://threads.net/@user/post/ABC123', {
+          retryAttempts: 2,
+          timeout: 10000,
+        })
       ).rejects.toMatchObject({
         code: 'FETCH_FAILED',
       });
@@ -193,10 +202,10 @@ describe('ThreadsExtractor', () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(abortError));
 
       await expect(
-        threadsExtractor.extract(
-          'https://threads.net/@user/post/ABC123',
-          { retryAttempts: 1, timeout: 100 }
-        )
+        threadsExtractor.extract('https://threads.net/@user/post/ABC123', {
+          retryAttempts: 1,
+          timeout: 100,
+        })
       ).rejects.toMatchObject({
         code: 'FETCH_FAILED',
       });
@@ -214,10 +223,9 @@ describe('ThreadsExtractor', () => {
       });
       vi.stubGlobal('fetch', mockFetchResponse(html));
 
-      const result = await threadsExtractor.extract(
-        'https://threads.net/@user/post/ABC123',
-        { retryAttempts: 1 }
-      );
+      const result = await threadsExtractor.extract('https://threads.net/@user/post/ABC123', {
+        retryAttempts: 1,
+      });
 
       expect(result.content).toBe('This is the post content from og description meta tag');
     });
@@ -228,10 +236,9 @@ describe('ThreadsExtractor', () => {
       });
       vi.stubGlobal('fetch', mockFetchResponse(html));
 
-      const result = await threadsExtractor.extract(
-        'https://threads.net/@testuser/post/ABC123',
-        { retryAttempts: 1 }
-      );
+      const result = await threadsExtractor.extract('https://threads.net/@testuser/post/ABC123', {
+        retryAttempts: 1,
+      });
 
       expect(result.content).toContain('content from the og title');
       expect(result.kolName).toBe('@testuser');
@@ -243,10 +250,9 @@ describe('ThreadsExtractor', () => {
       });
       vi.stubGlobal('fetch', mockFetchResponse(html));
 
-      const result = await threadsExtractor.extract(
-        'https://threads.net/@user/post/ABC123',
-        { retryAttempts: 1 }
-      );
+      const result = await threadsExtractor.extract('https://threads.net/@user/post/ABC123', {
+        retryAttempts: 1,
+      });
 
       expect(result.content).not.toContain('| Threads');
       expect(result.content).toContain('stocks and markets');
@@ -258,10 +264,9 @@ describe('ThreadsExtractor', () => {
       });
       vi.stubGlobal('fetch', mockFetchResponse(html));
 
-      const result = await threadsExtractor.extract(
-        'https://threads.net/@username/post/ABC123',
-        { retryAttempts: 1 }
-      );
+      const result = await threadsExtractor.extract('https://threads.net/@username/post/ABC123', {
+        retryAttempts: 1,
+      });
 
       expect(result.content).not.toContain('- @username');
     });
@@ -277,10 +282,9 @@ describe('ThreadsExtractor', () => {
       });
       vi.stubGlobal('fetch', mockFetchResponse(html));
 
-      const result = await threadsExtractor.extract(
-        'https://threads.net/@user/post/ABC123',
-        { retryAttempts: 1 }
-      );
+      const result = await threadsExtractor.extract('https://threads.net/@user/post/ABC123', {
+        retryAttempts: 1,
+      });
 
       expect(result.kolAvatarUrl).toContain('profile');
       expect(result.images).not.toContainEqual(expect.stringContaining('profile'));
@@ -297,10 +301,9 @@ describe('ThreadsExtractor', () => {
       });
       vi.stubGlobal('fetch', mockFetchResponse(html));
 
-      const result = await threadsExtractor.extract(
-        'https://threads.net/@user/post/ABC123',
-        { retryAttempts: 1 }
-      );
+      const result = await threadsExtractor.extract('https://threads.net/@user/post/ABC123', {
+        retryAttempts: 1,
+      });
 
       expect(result.content).toContain('JSON-LD content body');
       expect(result.postedAt).toBe('2026-01-15T10:00:00Z');
@@ -312,10 +315,9 @@ describe('ThreadsExtractor', () => {
       });
       vi.stubGlobal('fetch', mockFetchResponse(html));
 
-      const result = await threadsExtractor.extract(
-        'https://threads.net/@user/post/ABC123',
-        { retryAttempts: 1 }
-      );
+      const result = await threadsExtractor.extract('https://threads.net/@user/post/ABC123', {
+        retryAttempts: 1,
+      });
 
       expect(result.content).toContain('Twitter card description');
     });
@@ -326,10 +328,9 @@ describe('ThreadsExtractor', () => {
       });
       vi.stubGlobal('fetch', mockFetchResponse(html));
 
-      const result = await threadsExtractor.extract(
-        'https://threads.net/@testuser/post/ABC123',
-        { retryAttempts: 1 }
-      );
+      const result = await threadsExtractor.extract('https://threads.net/@testuser/post/ABC123', {
+        retryAttempts: 1,
+      });
 
       expect(result.content).toContain('fallback content from page title');
     });
@@ -340,10 +341,9 @@ describe('ThreadsExtractor', () => {
       });
       vi.stubGlobal('fetch', mockFetchResponse(html));
 
-      const result = await threadsExtractor.extract(
-        'https://threads.net/@user/post/ABC123',
-        { retryAttempts: 1 }
-      );
+      const result = await threadsExtractor.extract('https://threads.net/@user/post/ABC123', {
+        retryAttempts: 1,
+      });
 
       expect(result.content).toContain('Stocks & bonds');
       expect(result.content).toContain('> expectations');
@@ -358,10 +358,9 @@ describe('ThreadsExtractor', () => {
       });
       vi.stubGlobal('fetch', mockFetchResponse(html));
 
-      const result = await threadsExtractor.extract(
-        'https://threads.net/@user/post/ABC123',
-        { retryAttempts: 1 }
-      );
+      const result = await threadsExtractor.extract('https://threads.net/@user/post/ABC123', {
+        retryAttempts: 1,
+      });
 
       expect(result.images.length).toBeLessThanOrEqual(10);
     });
@@ -373,10 +372,9 @@ describe('ThreadsExtractor', () => {
       });
       vi.stubGlobal('fetch', mockFetchResponse(html));
 
-      const result = await threadsExtractor.extract(
-        'https://threads.net/@user/post/ABC123',
-        { retryAttempts: 1 }
-      );
+      const result = await threadsExtractor.extract('https://threads.net/@user/post/ABC123', {
+        retryAttempts: 1,
+      });
 
       expect(result.postedAt).toBe('2026-02-01T12:00:00Z');
     });
@@ -388,10 +386,7 @@ describe('ThreadsExtractor', () => {
       vi.stubGlobal('fetch', mockFetchResponse(html));
 
       await expect(
-        threadsExtractor.extract(
-          'https://threads.net/@user/post/ABC123',
-          { retryAttempts: 1 }
-        )
+        threadsExtractor.extract('https://threads.net/@user/post/ABC123', { retryAttempts: 1 })
       ).rejects.toMatchObject({
         code: 'FETCH_FAILED',
       });

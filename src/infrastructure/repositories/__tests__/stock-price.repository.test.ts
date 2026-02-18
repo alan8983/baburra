@@ -97,10 +97,7 @@ describe('stock-price.repository', () => {
 
   describe('getStockPrices', () => {
     it('should return data from Supabase cache when valid (historical dates)', async () => {
-      setupMockChain(
-        { data: { id: STOCK_ID }, error: null },
-        { data: dbRows, error: null }
-      );
+      setupMockChain({ data: { id: STOCK_ID }, error: null }, { data: dbRows, error: null });
 
       const result = await getStockPrices('AAPL', {
         startDate: '2025-01-02',
@@ -178,10 +175,7 @@ describe('stock-price.repository', () => {
     });
 
     it('should skip DB cache when stock not in stocks table', async () => {
-      setupMockChain(
-        { data: null, error: { code: 'PGRST116' } },
-        { data: [], error: null }
-      );
+      setupMockChain({ data: null, error: { code: 'PGRST116' } }, { data: [], error: null });
       vi.mocked(fetchTiingoPrices).mockResolvedValueOnce(tiingoRows);
 
       const result = await getStockPrices('UNKNOWN', {
@@ -231,10 +225,7 @@ describe('stock-price.repository', () => {
     });
 
     it('should throw when Tiingo fails and no stale cache exists', async () => {
-      setupMockChain(
-        { data: { id: STOCK_ID }, error: null },
-        { data: [], error: null }
-      );
+      setupMockChain({ data: { id: STOCK_ID }, error: null }, { data: [], error: null });
       vi.mocked(fetchTiingoPrices).mockRejectedValueOnce(new Error('Tiingo API error 500'));
 
       await expect(
@@ -258,10 +249,7 @@ describe('stock-price.repository', () => {
         },
       ];
 
-      setupMockChain(
-        { data: { id: STOCK_ID }, error: null },
-        { data: freshDbRows, error: null }
-      );
+      setupMockChain({ data: { id: STOCK_ID }, error: null }, { data: freshDbRows, error: null });
 
       const result = await getStockPrices('AAPL', {
         startDate: '2025-01-10',

@@ -65,9 +65,13 @@ export function Header() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                 <Avatar className="h-9 w-9">
-                  <AvatarImage src={user.user_metadata?.avatar_url || '/avatars/user.png'} alt="User" />
+                  <AvatarImage
+                    src={user.user_metadata?.avatar_url || '/avatars/user.png'}
+                    alt="User"
+                  />
                   <AvatarFallback>
-                    {user.user_metadata?.display_name?.[0]?.toUpperCase() || user.email?.[0]?.toUpperCase() || <User className="h-4 w-4" />}
+                    {user.user_metadata?.display_name?.[0]?.toUpperCase() ||
+                      user.email?.[0]?.toUpperCase() || <User className="h-4 w-4" />}
                   </AvatarFallback>
                 </Avatar>
               </Button>

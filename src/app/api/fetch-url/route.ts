@@ -1,10 +1,7 @@
 // POST /api/fetch-url - 從 URL 擷取社群媒體內容
 
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  extractorFactory,
-  type ExtractorError,
-} from '@/infrastructure/extractors';
+import { extractorFactory, type ExtractorError } from '@/infrastructure/extractors';
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,8 +44,7 @@ export async function POST(request: NextRequest) {
       {
         error: {
           code: 'FETCH_FAILED',
-          message:
-            err instanceof Error ? err.message : 'Failed to fetch URL content',
+          message: err instanceof Error ? err.message : 'Failed to fetch URL content',
         },
       },
       { status: 500 }

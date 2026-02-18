@@ -8,12 +8,7 @@
  * - https://www.facebook.com/permalink.php?story_fbid={id}
  */
 
-import {
-  SocialMediaExtractor,
-  UrlFetchResult,
-  ExtractorConfig,
-  ExtractorError,
-} from './types';
+import { SocialMediaExtractor, UrlFetchResult, ExtractorConfig, ExtractorError } from './types';
 
 export class FacebookExtractor extends SocialMediaExtractor {
   platform: UrlFetchResult['sourcePlatform'] = 'facebook';
@@ -30,10 +25,7 @@ export class FacebookExtractor extends SocialMediaExtractor {
     return this.URL_PATTERNS.some((pattern) => pattern.test(url));
   }
 
-  async extract(
-    url: string,
-    config?: ExtractorConfig
-  ): Promise<UrlFetchResult> {
+  async extract(url: string, config?: ExtractorConfig): Promise<UrlFetchResult> {
     if (!this.isValidUrl(url)) {
       throw {
         code: 'INVALID_URL',
@@ -78,8 +70,7 @@ export class FacebookExtractor extends SocialMediaExtractor {
         'User-Agent':
           config?.userAgent ||
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        Accept:
-          'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.5',
         'Accept-Encoding': 'gzip, deflate, br',
         DNT: '1',
@@ -124,9 +115,7 @@ export class FacebookExtractor extends SocialMediaExtractor {
       let postedAt: string | null = null;
       const images: string[] = [];
 
-      const jsonLdMatch = html.match(
-        /<script type="application\/ld\+json">([\s\S]*?)<\/script>/
-      );
+      const jsonLdMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
       if (jsonLdMatch) {
         try {
           const jsonLd = JSON.parse(jsonLdMatch[1]);
@@ -140,24 +129,18 @@ export class FacebookExtractor extends SocialMediaExtractor {
       }
 
       if (!content) {
-        const ogDescription = html.match(
-          /<meta property="og:description" content="([^"]+)"/
-        );
+        const ogDescription = html.match(/<meta property="og:description" content="([^"]+)"/);
         if (ogDescription) {
           content = this.decodeHtmlEntities(ogDescription[1]);
         }
       }
 
       if (!title) {
-        const ogTitle = html.match(
-          /<meta property="og:title" content="([^"]+)"/
-        );
+        const ogTitle = html.match(/<meta property="og:title" content="([^"]+)"/);
         if (ogTitle) title = this.decodeHtmlEntities(ogTitle[1]);
       }
 
-      const ogImageMatches = html.matchAll(
-        /<meta property="og:image" content="([^"]+)"/g
-      );
+      const ogImageMatches = html.matchAll(/<meta property="og:image" content="([^"]+)"/g);
       for (const match of ogImageMatches) {
         const imageUrl = this.decodeHtmlEntities(match[1]);
         if (imageUrl && !images.includes(imageUrl)) images.push(imageUrl);
@@ -186,9 +169,7 @@ export class FacebookExtractor extends SocialMediaExtractor {
       }
 
       if (!kolName) {
-        const authorMatch = html.match(
-          /<meta property="og:site_name" content="([^"]+)"/
-        );
+        const authorMatch = html.match(/<meta property="og:site_name" content="([^"]+)"/);
         if (authorMatch) kolName = this.decodeHtmlEntities(authorMatch[1]);
       }
 

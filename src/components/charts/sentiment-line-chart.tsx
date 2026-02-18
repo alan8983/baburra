@@ -190,10 +190,7 @@ export function SentimentLineChart({
 
   return (
     <div className="relative">
-      <div
-        ref={containerRef}
-        className={`${className} ${onMarkerClick ? 'cursor-pointer' : ''}`}
-      />
+      <div ref={containerRef} className={`${className} ${onMarkerClick ? 'cursor-pointer' : ''}`} />
       {/* Floating tooltip */}
       <div
         ref={tooltipRef}

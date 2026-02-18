@@ -6,11 +6,11 @@ export default getRequestConfig(async () => {
   // 從 Cookie 讀取語系，如果沒有則使用預設語系
   const cookieStore = await cookies();
   const localeCookie = cookieStore.get('NEXT_LOCALE')?.value;
-  
+
   // 驗證語系是否有效
-  const locale = (locales.includes(localeCookie as Locale) 
-    ? localeCookie 
-    : defaultLocale) as Locale;
+  const locale = (
+    locales.includes(localeCookie as Locale) ? localeCookie : defaultLocale
+  ) as Locale;
 
   return {
     locale,

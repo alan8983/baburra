@@ -74,9 +74,7 @@ export async function listBookmarksByUserId(
   }
 
   // Fetch stock info
-  const stockIds = [
-    ...new Set((postStockResult.data ?? []).map((ps) => ps.stock_id as string)),
-  ];
+  const stockIds = [...new Set((postStockResult.data ?? []).map((ps) => ps.stock_id as string))];
   const stockResult = stockIds.length
     ? await supabase.from('stocks').select('id, ticker, name').in('id', stockIds)
     : { data: [] };

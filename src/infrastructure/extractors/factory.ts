@@ -6,12 +6,7 @@
  * Facebook and Threads will be re-enabled in Release 02.
  */
 
-import {
-  SocialMediaExtractor,
-  UrlFetchResult,
-  ExtractorConfig,
-  ExtractorError,
-} from './types';
+import { SocialMediaExtractor, UrlFetchResult, ExtractorConfig, ExtractorError } from './types';
 import { twitterExtractor } from './twitter.extractor';
 
 export class ExtractorFactory {
@@ -25,16 +20,11 @@ export class ExtractorFactory {
     this.extractors.set(extractor.platform, extractor);
   }
 
-  getExtractor(
-    platform: UrlFetchResult['sourcePlatform']
-  ): SocialMediaExtractor | undefined {
+  getExtractor(platform: UrlFetchResult['sourcePlatform']): SocialMediaExtractor | undefined {
     return this.extractors.get(platform);
   }
 
-  async extractFromUrl(
-    url: string,
-    config?: ExtractorConfig
-  ): Promise<UrlFetchResult> {
+  async extractFromUrl(url: string, config?: ExtractorConfig): Promise<UrlFetchResult> {
     for (const extractor of this.extractors.values()) {
       if (extractor.isValidUrl(url)) {
         return await extractor.extract(url, config);

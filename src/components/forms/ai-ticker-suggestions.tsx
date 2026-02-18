@@ -28,9 +28,9 @@ export function AiTickerSuggestions({
 
   if (isLoading) {
     return (
-      <div className="rounded-lg border border-dashed border-primary/50 bg-primary/5 p-4">
+      <div className="border-primary/50 bg-primary/5 rounded-lg border border-dashed p-4">
         <div className="flex items-center gap-2 text-sm">
-          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          <Loader2 className="text-primary h-4 w-4 animate-spin" />
           {t('identifyingTickers')}
         </div>
       </div>
@@ -46,10 +46,10 @@ export function AiTickerSuggestions({
   );
 
   return (
-    <div className="space-y-3 rounded-lg border border-dashed border-primary/50 bg-primary/5 p-4">
+    <div className="border-primary/50 bg-primary/5 space-y-3 rounded-lg border border-dashed p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm font-medium">
-          <Sparkles className="h-4 w-4 text-primary" />
+          <Sparkles className="text-primary h-4 w-4" />
           {t('tickersFound', { count: suggestions.length })}
         </div>
         <div className="flex items-center gap-2">
@@ -69,19 +69,18 @@ export function AiTickerSuggestions({
           return (
             <div
               key={ticker.ticker}
-              className="flex items-center justify-between rounded-md bg-background p-2"
+              className="bg-background flex items-center justify-between rounded-md p-2"
             >
               <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="font-mono font-semibold">
                   {ticker.ticker}
                 </Badge>
                 <span className="text-sm">{ticker.name}</span>
-                {ticker.mentionedAs !== ticker.name &&
-                  ticker.mentionedAs !== ticker.ticker && (
-                    <span className="text-xs text-muted-foreground">
-                      ({t('mentionedAs')} &quot;{ticker.mentionedAs}&quot;)
-                    </span>
-                  )}
+                {ticker.mentionedAs !== ticker.name && ticker.mentionedAs !== ticker.ticker && (
+                  <span className="text-muted-foreground text-xs">
+                    ({t('mentionedAs')} &quot;{ticker.mentionedAs}&quot;)
+                  </span>
+                )}
               </div>
               {alreadyAdded ? (
                 <span className="flex items-center gap-1 text-xs text-green-600">
@@ -89,12 +88,7 @@ export function AiTickerSuggestions({
                   {t('alreadyAdded')}
                 </span>
               ) : (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onAccept(ticker)}
-                >
+                <Button type="button" variant="outline" size="sm" onClick={() => onAccept(ticker)}>
                   <Plus className="mr-1 h-3 w-3" />
                   {t('addTicker')}
                 </Button>

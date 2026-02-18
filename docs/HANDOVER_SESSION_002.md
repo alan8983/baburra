@@ -10,26 +10,26 @@
 
 ### 表單元件建立 ✅
 
-| 任務 | 狀態 | 產出檔案 |
-|------|------|----------|
-| KOL Selector | ✅ 完成 | `src/components/forms/kol-selector.tsx` |
-| KOL Form Dialog | ✅ 完成 | `src/components/forms/kol-form-dialog.tsx` |
-| Stock Selector | ✅ 完成 | `src/components/forms/stock-selector.tsx` |
-| Stock Form Dialog | ✅ 完成 | `src/components/forms/stock-form-dialog.tsx` |
+| 任務               | 狀態    | 產出檔案                                      |
+| ------------------ | ------- | --------------------------------------------- |
+| KOL Selector       | ✅ 完成 | `src/components/forms/kol-selector.tsx`       |
+| KOL Form Dialog    | ✅ 完成 | `src/components/forms/kol-form-dialog.tsx`    |
+| Stock Selector     | ✅ 完成 | `src/components/forms/stock-selector.tsx`     |
+| Stock Form Dialog  | ✅ 完成 | `src/components/forms/stock-form-dialog.tsx`  |
 | Sentiment Selector | ✅ 完成 | `src/components/forms/sentiment-selector.tsx` |
-| Datetime Input | ✅ 完成 | `src/components/forms/datetime-input.tsx` |
-| 統一匯出 | ✅ 完成 | `src/components/forms/index.ts` |
+| Datetime Input     | ✅ 完成 | `src/components/forms/datetime-input.tsx`     |
+| 統一匯出           | ✅ 完成 | `src/components/forms/index.ts`               |
 
 ### 頁面整合 ✅
 
-| 頁面 | 狀態 | 備註 |
-|------|------|------|
+| 頁面                      | 狀態    | 備註                 |
+| ------------------------- | ------- | -------------------- |
 | 草稿編輯頁 `/drafts/[id]` | ✅ 完成 | 已使用所有新表單元件 |
 
 ### 新增 shadcn/ui 元件
 
-| 元件 | 狀態 |
-|------|------|
+| 元件    | 狀態      |
+| ------- | --------- |
 | Popover | ✅ 新安裝 |
 
 ---
@@ -40,26 +40,26 @@
 
 ### API Agent 完成項目 ✅
 
-| 項目 | 狀態 | 產出 |
-|------|------|------|
-| KOL API | ✅ 完成 | `src/app/api/kols/route.ts`、`[id]/route.ts`、`[id]/posts/route.ts` |
-| Stock API (CRUD) | ✅ 完成 | `src/app/api/stocks/route.ts`、`[ticker]/route.ts`、`[ticker]/posts/route.ts` |
-| Draft API | ✅ 完成 | `src/app/api/drafts/route.ts`、`[id]/route.ts` |
-| Post API | ✅ 完成 | `src/app/api/posts/route.ts`、`[id]/route.ts`、`check-duplicate/route.ts` |
-| Repositories | ✅ 完成 | `kol.repository`、`stock.repository`、`draft.repository`、`post.repository` |
-| Hooks 改為呼叫 API | ✅ 完成 | `use-kols`、`use-stocks`、`use-posts`、`use-drafts` 皆呼叫上述 API |
+| 項目               | 狀態    | 產出                                                                          |
+| ------------------ | ------- | ----------------------------------------------------------------------------- |
+| KOL API            | ✅ 完成 | `src/app/api/kols/route.ts`、`[id]/route.ts`、`[id]/posts/route.ts`           |
+| Stock API (CRUD)   | ✅ 完成 | `src/app/api/stocks/route.ts`、`[ticker]/route.ts`、`[ticker]/posts/route.ts` |
+| Draft API          | ✅ 完成 | `src/app/api/drafts/route.ts`、`[id]/route.ts`                                |
+| Post API           | ✅ 完成 | `src/app/api/posts/route.ts`、`[id]/route.ts`、`check-duplicate/route.ts`     |
+| Repositories       | ✅ 完成 | `kol.repository`、`stock.repository`、`draft.repository`、`post.repository`   |
+| Hooks 改為呼叫 API | ✅ 完成 | `use-kols`、`use-stocks`、`use-posts`、`use-drafts` 皆呼叫上述 API            |
 
 ### Phase 6 Agent 完成項目 ✅
 
-| 項目 | 狀態 | 產出 |
-|------|------|------|
-| 股價 API | ✅ 完成 | `src/app/api/stocks/[ticker]/prices/route.ts` |
-| Tiingo Client | ✅ 完成 | `src/infrastructure/api/tiingo.client.ts` |
-| 股價快取 Repository | ✅ 完成 | `src/infrastructure/repositories/stock-price.repository.ts` |
-| K 線圖元件 | ✅ 完成 | `src/components/charts/candlestick-chart.tsx`、`sentiment-marker.tsx`、`index.ts` |
-| 股價 Hook | ✅ 完成 | `src/hooks/use-stock-prices.ts`（`useStockPricesForChart`） |
-| 標的詳情頁 Chart Tab | ✅ 完成 | `src/app/(app)/stocks/[ticker]/page.tsx` 含 K 線圖 |
-| 文章詳情頁 Chart Tab | ✅ 完成 | `src/app/(app)/posts/[id]/page.tsx` 含 K 線圖與情緒標記 |
+| 項目                 | 狀態    | 產出                                                                              |
+| -------------------- | ------- | --------------------------------------------------------------------------------- |
+| 股價 API             | ✅ 完成 | `src/app/api/stocks/[ticker]/prices/route.ts`                                     |
+| Tiingo Client        | ✅ 完成 | `src/infrastructure/api/tiingo.client.ts`                                         |
+| 股價快取 Repository  | ✅ 完成 | `src/infrastructure/repositories/stock-price.repository.ts`                       |
+| K 線圖元件           | ✅ 完成 | `src/components/charts/candlestick-chart.tsx`、`sentiment-marker.tsx`、`index.ts` |
+| 股價 Hook            | ✅ 完成 | `src/hooks/use-stock-prices.ts`（`useStockPricesForChart`）                       |
+| 標的詳情頁 Chart Tab | ✅ 完成 | `src/app/(app)/stocks/[ticker]/page.tsx` 含 K 線圖                                |
+| 文章詳情頁 Chart Tab | ✅ 完成 | `src/app/(app)/posts/[id]/page.tsx` 含 K 線圖與情緒標記                           |
 
 ---
 
@@ -189,16 +189,16 @@ investment-idea-monitor/
 
 ## 五、已知問題 / 待解決事項（更新後）
 
-| # | 問題描述 | 優先度 | 狀態 |
-|---|----------|--------|------|
-| 1 | Supabase / Tiingo 等環境變數需在 `.env.local` 正確設定 | 高 | ⏳ 需確認 |
-| 2 | ~~API Routes 未建立~~ | ~~高~~ | ✅ 已完成 |
-| 3 | ~~Phase 6 K 線圖未開始~~ | ~~中~~ | ✅ 已完成 |
-| 4 | KOL/Stock Selector 仍用 mockData，需改為 API | 高 | ⏳ 待接手 Agent |
-| 5 | 草稿／輸入流程與 API 完整串接 | 高 | ⏳ 待接手 Agent |
-| 6 | 圖片上傳功能未實作 | 中 | ⏳ 需 Supabase Storage |
-| 7 | Phase 7 勝率計算 API 與 UI | 中 | ⏳ 待實作 |
-| 8 | Phase 8 AI 整合 | 低 | ⏳ 需 Gemini API Key |
+| #   | 問題描述                                               | 優先度 | 狀態                   |
+| --- | ------------------------------------------------------ | ------ | ---------------------- |
+| 1   | Supabase / Tiingo 等環境變數需在 `.env.local` 正確設定 | 高     | ⏳ 需確認              |
+| 2   | ~~API Routes 未建立~~                                  | ~~高~~ | ✅ 已完成              |
+| 3   | ~~Phase 6 K 線圖未開始~~                               | ~~中~~ | ✅ 已完成              |
+| 4   | KOL/Stock Selector 仍用 mockData，需改為 API           | 高     | ⏳ 待接手 Agent        |
+| 5   | 草稿／輸入流程與 API 完整串接                          | 高     | ⏳ 待接手 Agent        |
+| 6   | 圖片上傳功能未實作                                     | 中     | ⏳ 需 Supabase Storage |
+| 7   | Phase 7 勝率計算 API 與 UI                             | 中     | ⏳ 待實作              |
+| 8   | Phase 8 AI 整合                                        | 低     | ⏳ 需 Gemini API Key   |
 
 ---
 
@@ -224,15 +224,15 @@ npm run format      # 格式化
 
 ## 八、測試頁面建議
 
-| 頁面 | URL | 說明 |
-|------|-----|------|
-| Dashboard | `/dashboard` | 總覽 |
-| 快速輸入 | `/input` | 輸入與草稿入口 |
-| 草稿列表 | `/drafts` | 草稿列表（可接 API） |
-| 草稿編輯 | `/drafts/[id]` | 表單元件、待接 API |
-| KOL 列表 | `/kols` | KOL 列表與詳情 |
-| 標的列表 | `/stocks` | 標的列表與詳情（含 Chart Tab） |
-| 文章列表 | `/posts` | 文章列表與詳情（含 Chart Tab） |
+| 頁面      | URL            | 說明                           |
+| --------- | -------------- | ------------------------------ |
+| Dashboard | `/dashboard`   | 總覽                           |
+| 快速輸入  | `/input`       | 輸入與草稿入口                 |
+| 草稿列表  | `/drafts`      | 草稿列表（可接 API）           |
+| 草稿編輯  | `/drafts/[id]` | 表單元件、待接 API             |
+| KOL 列表  | `/kols`        | KOL 列表與詳情                 |
+| 標的列表  | `/stocks`      | 標的列表與詳情（含 Chart Tab） |
+| 文章列表  | `/posts`       | 文章列表與詳情（含 Chart Tab） |
 
 ---
 

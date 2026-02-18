@@ -45,15 +45,15 @@ interface ErrorResponse {
 
 ### 通用錯誤碼
 
-| 狀態碼 | 錯誤碼 | 說明 |
-|--------|--------|------|
-| 400 | VALIDATION_ERROR | 輸入驗證失敗 |
-| 401 | UNAUTHORIZED | 未認證 |
-| 403 | FORBIDDEN | 無權限 |
-| 404 | NOT_FOUND | 資源不存在 |
-| 409 | CONFLICT | 資源衝突 |
-| 429 | RATE_LIMITED | 請求過於頻繁 |
-| 500 | INTERNAL_ERROR | 伺服器錯誤 |
+| 狀態碼 | 錯誤碼           | 說明         |
+| ------ | ---------------- | ------------ |
+| 400    | VALIDATION_ERROR | 輸入驗證失敗 |
+| 401    | UNAUTHORIZED     | 未認證       |
+| 403    | FORBIDDEN        | 無權限       |
+| 404    | NOT_FOUND        | 資源不存在   |
+| 409    | CONFLICT         | 資源衝突     |
+| 429    | RATE_LIMITED     | 請求過於頻繁 |
+| 500    | INTERNAL_ERROR   | 伺服器錯誤   |
 
 ---
 
@@ -101,11 +101,11 @@ GET /api/kols
 
 **Query 參數**：
 
-| 參數 | 類型 | 必填 | 說明 |
-|------|------|------|------|
-| q | string | ❌ | 搜尋關鍵字（名稱） |
-| page | number | ❌ | 頁碼（預設 1） |
-| limit | number | ❌ | 每頁筆數（預設 20，最大 100） |
+| 參數  | 類型   | 必填 | 說明                          |
+| ----- | ------ | ---- | ----------------------------- |
+| q     | string | ❌   | 搜尋關鍵字（名稱）            |
+| page  | number | ❌   | 頁碼（預設 1）                |
+| limit | number | ❌   | 每頁筆數（預設 20，最大 100） |
 
 **回應**：
 
@@ -130,7 +130,7 @@ GET /api/kols/{id}
 
 ```typescript
 {
-  data: KOLWithStats
+  data: KOLWithStats;
 }
 ```
 
@@ -154,17 +154,17 @@ POST /api/kols
 
 ```typescript
 {
-  data: KOL
+  data: KOL;
 }
 ```
 
 **錯誤**：
 
-| 狀態碼 | 錯誤碼 | 情境 |
-|--------|--------|------|
-| 400 | VALIDATION_ERROR | 名稱為空或超過長度 |
-| 409 | DUPLICATE_NAME | 名稱已存在 |
-| 403 | QUOTA_EXCEEDED | 免費用戶超過 5 個 KOL |
+| 狀態碼 | 錯誤碼           | 情境                  |
+| ------ | ---------------- | --------------------- |
+| 400    | VALIDATION_ERROR | 名稱為空或超過長度    |
+| 409    | DUPLICATE_NAME   | 名稱已存在            |
+| 403    | QUOTA_EXCEEDED   | 免費用戶超過 5 個 KOL |
 
 ### 3.4 更新 KOL
 
@@ -186,7 +186,7 @@ PUT /api/kols/{id}
 
 ```typescript
 {
-  data: KOL
+  data: KOL;
 }
 ```
 
@@ -200,9 +200,9 @@ DELETE /api/kols/{id}
 
 **錯誤**：
 
-| 狀態碼 | 錯誤碼 | 情境 |
-|--------|--------|------|
-| 409 | HAS_POSTS | KOL 有關聯的 Post，無法刪除 |
+| 狀態碼 | 錯誤碼    | 情境                        |
+| ------ | --------- | --------------------------- |
+| 409    | HAS_POSTS | KOL 有關聯的 Post，無法刪除 |
 
 ---
 
@@ -216,11 +216,11 @@ GET /api/stocks
 
 **Query 參數**：
 
-| 參數 | 類型 | 必填 | 說明 |
-|------|------|------|------|
-| q | string | ❌ | 搜尋關鍵字（ticker 或名稱） |
-| page | number | ❌ | 頁碼 |
-| limit | number | ❌ | 每頁筆數 |
+| 參數  | 類型   | 必填 | 說明                        |
+| ----- | ------ | ---- | --------------------------- |
+| q     | string | ❌   | 搜尋關鍵字（ticker 或名稱） |
+| page  | number | ❌   | 頁碼                        |
+| limit | number | ❌   | 每頁筆數                    |
 
 **回應**：
 
@@ -245,7 +245,7 @@ GET /api/stocks/{ticker}
 
 ```typescript
 {
-  data: StockWithStats
+  data: StockWithStats;
 }
 ```
 
@@ -268,7 +268,7 @@ PUT /api/stocks/{ticker}
 
 ```typescript
 {
-  data: Stock
+  data: Stock;
 }
 ```
 
@@ -292,13 +292,13 @@ GET /api/posts
 
 **Query 參數**：
 
-| 參數 | 類型 | 必填 | 說明 |
-|------|------|------|------|
-| status | string | ❌ | 'Draft' \| 'Published' |
-| kol_id | string | ❌ | 篩選特定 KOL |
-| stock_ticker | string | ❌ | 篩選特定 Stock |
-| page | number | ❌ | 頁碼 |
-| limit | number | ❌ | 每頁筆數 |
+| 參數         | 類型   | 必填 | 說明                   |
+| ------------ | ------ | ---- | ---------------------- |
+| status       | string | ❌   | 'Draft' \| 'Published' |
+| kol_id       | string | ❌   | 篩選特定 KOL           |
+| stock_ticker | string | ❌   | 篩選特定 Stock         |
+| page         | number | ❌   | 頁碼                   |
+| limit        | number | ❌   | 每頁筆數               |
 
 **回應**：
 
@@ -339,7 +339,7 @@ POST /api/posts
 
 ```typescript
 {
-  content: string;  // 必填
+  content: string; // 必填
 }
 ```
 
@@ -347,7 +347,7 @@ POST /api/posts
 
 ```typescript
 {
-  data: Post
+  data: Post;
 }
 ```
 
@@ -374,15 +374,15 @@ PUT /api/posts/{id}
 
 ```typescript
 {
-  data: Post
+  data: Post;
 }
 ```
 
 **錯誤**：
 
-| 狀態碼 | 錯誤碼 | 情境 |
-|--------|--------|------|
-| 400 | ALREADY_PUBLISHED | 已發布的 Post 無法編輯 |
+| 狀態碼 | 錯誤碼            | 情境                   |
+| ------ | ----------------- | ---------------------- |
+| 400    | ALREADY_PUBLISHED | 已發布的 Post 無法編輯 |
 
 ### 5.5 發布 Post
 
@@ -394,10 +394,10 @@ PUT /api/posts/{id}/publish
 
 ```typescript
 {
-  kol_id: string;       // 必填
+  kol_id: string; // 必填
   stock_ticker: string; // 必填
   sentiment: 'Bullish' | 'Bearish' | 'Neutral'; // 必填
-  posted_at: string;    // 必填，ISO 8601
+  posted_at: string; // 必填，ISO 8601
 }
 ```
 
@@ -405,18 +405,18 @@ PUT /api/posts/{id}/publish
 
 ```typescript
 {
-  data: Post
+  data: Post;
 }
 ```
 
 **錯誤**：
 
-| 狀態碼 | 錯誤碼 | 情境 |
-|--------|--------|------|
-| 400 | MISSING_REQUIRED_FIELDS | 缺少必填欄位 |
-| 400 | ALREADY_PUBLISHED | 已發布的 Post 無法再次發布 |
-| 404 | KOL_NOT_FOUND | KOL 不存在 |
-| 404 | STOCK_NOT_FOUND | Stock 不存在 |
+| 狀態碼 | 錯誤碼                  | 情境                       |
+| ------ | ----------------------- | -------------------------- |
+| 400    | MISSING_REQUIRED_FIELDS | 缺少必填欄位               |
+| 400    | ALREADY_PUBLISHED       | 已發布的 Post 無法再次發布 |
+| 404    | KOL_NOT_FOUND           | KOL 不存在                 |
+| 404    | STOCK_NOT_FOUND         | Stock 不存在               |
 
 ### 5.6 刪除 Post
 
@@ -440,7 +440,7 @@ POST /api/ai/analyze
 
 ```typescript
 {
-  content: string;  // 必填，要分析的文本
+  content: string; // 必填，要分析的文本
 }
 ```
 
@@ -461,10 +461,10 @@ POST /api/ai/analyze
 
 **錯誤**：
 
-| 狀態碼 | 錯誤碼 | 情境 |
-|--------|--------|------|
-| 403 | QUOTA_EXCEEDED | 免費用戶超過 10 次/月 |
-| 503 | AI_SERVICE_ERROR | Gemini API 錯誤 |
+| 狀態碼 | 錯誤碼           | 情境                  |
+| ------ | ---------------- | --------------------- |
+| 403    | QUOTA_EXCEEDED   | 免費用戶超過 10 次/月 |
+| 503    | AI_SERVICE_ERROR | Gemini API 錯誤       |
 
 ### 6.2 取得用量
 
@@ -479,7 +479,7 @@ GET /api/ai/usage
   data: {
     used: number;
     limit: number;
-    resetAt: string;  // ISO 8601
+    resetAt: string; // ISO 8601
   }
 }
 ```
@@ -496,10 +496,10 @@ GET /api/stocks/{ticker}/prices
 
 **Query 參數**：
 
-| 參數 | 類型 | 必填 | 說明 |
-|------|------|------|------|
-| startDate | string | ❌ | 開始日期 (YYYY-MM-DD) |
-| endDate | string | ❌ | 結束日期 (YYYY-MM-DD) |
+| 參數      | 類型   | 必填 | 說明                  |
+| --------- | ------ | ---- | --------------------- |
+| startDate | string | ❌   | 開始日期 (YYYY-MM-DD) |
+| endDate   | string | ❌   | 結束日期 (YYYY-MM-DD) |
 
 **回應**：
 
@@ -521,16 +521,16 @@ GET /api/stocks/{ticker}/price-change
 
 **Query 參數**：
 
-| 參數 | 類型 | 必填 | 說明 |
-|------|------|------|------|
-| fromDate | string | ✅ | 起始日期 |
-| days | number | ❌ | 計算天數（預設 5） |
+| 參數     | 類型   | 必填 | 說明               |
+| -------- | ------ | ---- | ------------------ |
+| fromDate | string | ✅   | 起始日期           |
+| days     | number | ❌   | 計算天數（預設 5） |
 
 **回應**：
 
 ```typescript
 {
-  data: PriceChangeResult
+  data: PriceChangeResult;
 }
 ```
 
@@ -546,10 +546,10 @@ GET /api/kols/{id}/win-rate
 
 **Query 參數**：
 
-| 參數 | 類型 | 必填 | 說明 |
-|------|------|------|------|
-| periods | string | ❌ | 計算週期，逗號分隔（預設 "5,30,90,365"） |
-| stock_ticker | string | ❌ | 篩選特定 Stock |
+| 參數         | 類型   | 必填 | 說明                                     |
+| ------------ | ------ | ---- | ---------------------------------------- |
+| periods      | string | ❌   | 計算週期，逗號分隔（預設 "5,30,90,365"） |
+| stock_ticker | string | ❌   | 篩選特定 Stock                           |
 
 **回應**：
 
@@ -573,9 +573,9 @@ GET /api/stocks/{ticker}/win-rate
 
 **Query 參數**：
 
-| 參數 | 類型 | 必填 | 說明 |
-|------|------|------|------|
-| periods | string | ❌ | 計算週期 |
+| 參數    | 類型   | 必填 | 說明     |
+| ------- | ------ | ---- | -------- |
+| periods | string | ❌   | 計算週期 |
 
 **回應**：
 
@@ -594,12 +594,12 @@ GET /api/stocks/{ticker}/win-rate
 
 ### 限制規則
 
-| 用戶類型 | API | 限制 |
-|----------|-----|------|
-| Free | /api/ai/analyze | 10 次/月 |
-| Free | 其他 API | 100 次/分鐘 |
-| Pro | /api/ai/analyze | 無限制 |
-| Pro | 其他 API | 1000 次/分鐘 |
+| 用戶類型 | API             | 限制         |
+| -------- | --------------- | ------------ |
+| Free     | /api/ai/analyze | 10 次/月     |
+| Free     | 其他 API        | 100 次/分鐘  |
+| Pro      | /api/ai/analyze | 無限制       |
+| Pro      | 其他 API        | 1000 次/分鐘 |
 
 ### Rate Limit Headers
 
@@ -631,6 +631,6 @@ POST /api/webhooks/payment
 
 ## 十二、修改記錄
 
-| 版本 | 日期 | 修改內容 |
-|------|------|----------|
-| 1.0 | 2026-01-29 | 初始版本 |
+| 版本 | 日期       | 修改內容 |
+| ---- | ---------- | -------- |
+| 1.0  | 2026-01-29 | 初始版本 |

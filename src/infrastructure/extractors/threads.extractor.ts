@@ -7,28 +7,18 @@
  * - https://threads.net/@{username}/post/{id}
  */
 
-import {
-  SocialMediaExtractor,
-  UrlFetchResult,
-  ExtractorConfig,
-  ExtractorError,
-} from './types';
+import { SocialMediaExtractor, UrlFetchResult, ExtractorConfig, ExtractorError } from './types';
 
 export class ThreadsExtractor extends SocialMediaExtractor {
   platform: UrlFetchResult['sourcePlatform'] = 'threads';
 
-  private readonly URL_PATTERNS = [
-    /^https?:\/\/(www\.)?threads\.net\/@[\w.]+\/post\/[\w-]+/,
-  ];
+  private readonly URL_PATTERNS = [/^https?:\/\/(www\.)?threads\.net\/@[\w.]+\/post\/[\w-]+/];
 
   isValidUrl(url: string): boolean {
     return this.URL_PATTERNS.some((pattern) => pattern.test(url));
   }
 
-  async extract(
-    url: string,
-    config?: ExtractorConfig
-  ): Promise<UrlFetchResult> {
+  async extract(url: string, config?: ExtractorConfig): Promise<UrlFetchResult> {
     if (!this.isValidUrl(url)) {
       throw {
         code: 'INVALID_URL',
@@ -75,8 +65,7 @@ export class ThreadsExtractor extends SocialMediaExtractor {
         'User-Agent':
           config?.userAgent ||
           'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        Accept:
-          'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.5',
         'Accept-Encoding': 'gzip, deflate, br',
         DNT: '1',
@@ -124,16 +113,12 @@ export class ThreadsExtractor extends SocialMediaExtractor {
       const urlMatch = sourceUrl.match(/@([\w.]+)\/post\//);
       const username = urlMatch ? urlMatch[1] : null;
 
-      const ogDescription = html.match(
-        /<meta property="og:description" content="([^"]+)"/
-      );
+      const ogDescription = html.match(/<meta property="og:description" content="([^"]+)"/);
       if (ogDescription) {
         content = this.decodeHtmlEntities(ogDescription[1]);
       }
 
-      const ogTitle = html.match(
-        /<meta property="og:title" content="([^"]+)"/
-      );
+      const ogTitle = html.match(/<meta property="og:title" content="([^"]+)"/);
       if (ogTitle) {
         const titleText = this.decodeHtmlEntities(ogTitle[1]);
         const titleMatch = titleText.match(/^@([\w.]+) on Threads: (.+)/);
@@ -149,9 +134,7 @@ export class ThreadsExtractor extends SocialMediaExtractor {
 
       if (!kolName && username) kolName = '@' + username;
 
-      const ogImageMatches = html.matchAll(
-        /<meta property="og:image" content="([^"]+)"/g
-      );
+      const ogImageMatches = html.matchAll(/<meta property="og:image" content="([^"]+)"/g);
       for (const match of ogImageMatches) {
         const imageUrl = this.decodeHtmlEntities(match[1]);
         if (!images.includes(imageUrl)) images.push(imageUrl);
@@ -166,9 +149,7 @@ export class ThreadsExtractor extends SocialMediaExtractor {
       }
 
       if (!content) {
-        const jsonLdMatch = html.match(
-          /<script type="application\/ld\+json">([\s\S]*?)<\/script>/
-        );
+        const jsonLdMatch = html.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
         if (jsonLdMatch) {
           try {
             const jsonLd = JSON.parse(jsonLdMatch[1]);
@@ -188,18 +169,14 @@ export class ThreadsExtractor extends SocialMediaExtractor {
       }
 
       if (!content) {
-        const twitterDesc = html.match(
-          /<meta name="twitter:description" content="([^"]+)"/
-        );
+        const twitterDesc = html.match(/<meta name="twitter:description" content="([^"]+)"/);
         if (twitterDesc) {
           content = this.decodeHtmlEntities(twitterDesc[1]);
         }
       }
 
       if (!kolName) {
-        const twitterTitle = html.match(
-          /<meta name="twitter:title" content="([^"]+)"/
-        );
+        const twitterTitle = html.match(/<meta name="twitter:title" content="([^"]+)"/);
         if (twitterTitle) {
           const titleText = this.decodeHtmlEntities(twitterTitle[1]);
           const usernameMatch = titleText.match(/^@([\w.]+)/);
@@ -208,9 +185,7 @@ export class ThreadsExtractor extends SocialMediaExtractor {
       }
 
       if (!kolAvatarUrl) {
-        const twitterImage = html.match(
-          /<meta name="twitter:image" content="([^"]+)"/
-        );
+        const twitterImage = html.match(/<meta name="twitter:image" content="([^"]+)"/);
         if (twitterImage) {
           const imageUrl = this.decodeHtmlEntities(twitterImage[1]);
           if (imageUrl.includes('profile') || imageUrl.includes('avatar')) {

@@ -229,6 +229,7 @@ stock-kol-tracker-web/
 選擇 Next.js 14 (App Router)
 
 **理由**:
+
 1. App Router 提供更好的 Server Components 支援
 2. 內建的 API Routes 可作為 BFF (Backend for Frontend)
 3. 良好的 Vercel 整合
@@ -236,6 +237,7 @@ stock-kol-tracker-web/
 5. 活躍的社群和生態系統
 
 **替代方案考慮**:
+
 - Remix: 也是優秀選擇，但 Vercel 整合不如 Next.js
 - Flutter Web: 可復用現有程式碼，但 SEO 和首屏載入較差
 
@@ -253,6 +255,7 @@ stock-kol-tracker-web/
 選擇 Vercel
 
 **理由**:
+
 1. 與 Next.js 是同一公司產品，整合最佳
 2. 免費額度足夠初期使用
 3. 自動 CI/CD
@@ -260,6 +263,7 @@ stock-kol-tracker-web/
 5. Edge Functions 支援
 
 **成本考量**:
+
 - 免費方案：100GB 頻寬/月、100 GB-hrs Serverless
 - 預估初期流量在免費額度內
 
@@ -277,6 +281,7 @@ stock-kol-tracker-web/
 選擇 Supabase (PostgreSQL)
 
 **理由**:
+
 1. PostgreSQL 支援複雜查詢（勝率計算）
 2. Row Level Security (RLS) 實現用戶資料隔離
 3. 內建 Auth 服務
@@ -284,6 +289,7 @@ stock-kol-tracker-web/
 5. 開源，可自行部署
 
 **替代方案考慮**:
+
 - Firebase Firestore: 按讀寫計費，成本較難預測
 - PlanetScale: 也是好選擇，但 Supabase 提供更多整合服務
 
@@ -301,6 +307,7 @@ stock-kol-tracker-web/
 使用 Supabase Auth
 
 **理由**:
+
 1. 與 Supabase DB 整合，RLS 可直接使用 `auth.uid()`
 2. 支援多種 OAuth Provider
 3. 內建 Session 管理
@@ -317,10 +324,12 @@ stock-kol-tracker-web/
 需要管理客戶端狀態和伺服器狀態。
 
 **決策**:
+
 - 伺服器狀態: TanStack Query (React Query)
 - 客戶端狀態: Zustand
 
 **理由**:
+
 1. TanStack Query 提供優秀的快取、重新驗證、樂觀更新
 2. Zustand 輕量、簡單、TypeScript 支援好
 3. 兩者互補，分工明確
@@ -339,12 +348,14 @@ stock-kol-tracker-web/
 選擇 Lightweight Charts (by TradingView)
 
 **理由**:
+
 1. 輕量（~45KB gzipped）
 2. 免費開源
 3. API 友好，支援自定義 Overlay
 4. 效能好，支援大量資料
 
 **替代方案考慮**:
+
 - Apache ECharts: 功能更全但更重
 - Highcharts: 商業授權
 
@@ -362,6 +373,7 @@ stock-kol-tracker-web/
 Tailwind CSS + shadcn/ui
 
 **理由**:
+
 1. Tailwind CSS 快速開發
 2. shadcn/ui 提供高品質基礎元件
 3. 可客製化程度高
@@ -378,6 +390,7 @@ Tailwind CSS + shadcn/ui
 React Hook Form + Zod
 
 **理由**:
+
 1. React Hook Form 效能好，非受控元件
 2. Zod 提供類型安全的 Schema 驗證
 3. 兩者整合良好（@hookform/resolvers）
@@ -417,7 +430,7 @@ sequenceDiagram
     FE->>API: POST /api/ai/analyze
     API->>DB: 檢查配額
     DB-->>API: Profile (ai_usage_count)
-    
+
     alt 配額足夠
         API->>AI: 分析請求
         AI-->>API: 分析結果
@@ -439,7 +452,7 @@ sequenceDiagram
 
     FE->>API: GET /api/stocks/{ticker}/prices
     API->>DB: 查詢快取
-    
+
     alt 快取有效（7天內）
         DB-->>API: 快取資料
         API-->>FE: 股價資料
@@ -457,11 +470,11 @@ sequenceDiagram
 
 ### 5.1 環境配置
 
-| 環境 | 用途 | URL |
-|------|------|-----|
+| 環境        | 用途     | URL            |
+| ----------- | -------- | -------------- |
 | Development | 本地開發 | localhost:3000 |
-| Preview | PR 預覽 | *.vercel.app |
-| Production | 正式環境 | TBD |
+| Preview     | PR 預覽  | \*.vercel.app  |
+| Production  | 正式環境 | TBD            |
 
 ### 5.2 環境變數
 
@@ -564,12 +577,12 @@ jobs:
 
 ### 8.1 免費額度使用策略
 
-| 服務 | 策略 |
-|------|------|
-| Vercel | 監控頻寬，超過警告 |
-| Supabase | 監控儲存和連線數 |
-| Gemini | 用戶配額限制 |
-| Tiingo | 快取減少調用 |
+| 服務     | 策略               |
+| -------- | ------------------ |
+| Vercel   | 監控頻寬，超過警告 |
+| Supabase | 監控儲存和連線數   |
+| Gemini   | 用戶配額限制       |
+| Tiingo   | 快取減少調用       |
 
 ### 8.2 升級觸發點
 
@@ -581,6 +594,6 @@ jobs:
 
 ## 九、修改記錄
 
-| 版本 | 日期 | 修改內容 |
-|------|------|----------|
-| 1.0 | 2026-01-29 | 初始版本 |
+| 版本 | 日期       | 修改內容 |
+| ---- | ---------- | -------- |
+| 1.0  | 2026-01-29 | 初始版本 |

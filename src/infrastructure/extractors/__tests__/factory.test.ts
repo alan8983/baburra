@@ -40,9 +40,7 @@ describe('ExtractorFactory', () => {
       expect(extractorFactory.isSupported('https://www.facebook.com/share/p/abc/')).toBe(false);
       expect(extractorFactory.isSupported('https://www.facebook.com/user/posts/123')).toBe(false);
       expect(extractorFactory.isSupported('https://threads.net/@user/post/abc')).toBe(false);
-      expect(extractorFactory.isSupported('https://reddit.com/r/stocks/comments/abc')).toBe(
-        false
-      );
+      expect(extractorFactory.isSupported('https://reddit.com/r/stocks/comments/abc')).toBe(false);
       expect(extractorFactory.isSupported('https://youtube.com/watch?v=abc')).toBe(false);
       expect(extractorFactory.isSupported('not-a-url')).toBe(false);
     });

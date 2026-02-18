@@ -2,23 +2,24 @@
 
 ## Test Session Information
 
-| Item | Details |
-|------|---------|
-| **Tester** | Alan |
-| **Date** | 2026-02-13 |
-| **Start Time** | (17:40) |
-| **End Time** | (fill in when done) |
-| **Environment** | Development (localhost:3000) |
-| **Browser** | Cursor Browser |
-| **Database** | With seed data (supabase db reset) |
-| **Auth Mode** | DEV_USER_ID bypass enabled |
-| **Test User** | DEV_USER_ID=00000000-0000-0000-0000-000000000001 |
+| Item            | Details                                          |
+| --------------- | ------------------------------------------------ |
+| **Tester**      | Alan                                             |
+| **Date**        | 2026-02-13                                       |
+| **Start Time**  | (17:40)                                          |
+| **End Time**    | (fill in when done)                              |
+| **Environment** | Development (localhost:3000)                     |
+| **Browser**     | Cursor Browser                                   |
+| **Database**    | With seed data (supabase db reset)               |
+| **Auth Mode**   | DEV_USER_ID bypass enabled                       |
+| **Test User**   | DEV_USER_ID=00000000-0000-0000-0000-000000000001 |
 
 ---
 
 ## Testing Scope
 
 Focus areas for this session:
+
 - [ ] Phase 9: App Layout & Navigation
 - [ ] Phase 2: KOL Management
 - [ ] Phase 3: Stock Management
@@ -36,6 +37,7 @@ Focus areas for this session:
 ### Phase 9: App Layout & Navigation
 
 #### TC-09-001: Sidebar 導航切換
+
 - **Status**: ❌ Failed
 - **Execution Time**:1741-1745
 - **Notes**:
@@ -45,12 +47,12 @@ Focus areas for this session:
   - [o] 頁面內容正確載入
   - [o] 當前頁面在 Sidebar 有 active 狀態標示
 - **Issues Found**:
-   Sidebar 狀態顯示的對比太低
-   Sidebar 左上角出現兩個關閉符號，沒有正確顯示
-   讓產品名變得可維護。"KOL Tracker"不是最終定案。需要跟網址與整個網頁連動(Stock KOL Tracker- 追蹤 KOL 投資觀點)
-  
+  Sidebar 狀態顯示的對比太低
+  Sidebar 左上角出現兩個關閉符號，沒有正確顯示
+  讓產品名變得可維護。"KOL Tracker"不是最終定案。需要跟網址與整個網頁連動(Stock KOL Tracker- 追蹤 KOL 投資觀點)
 
 #### TC-09-002: Header 使用者資訊顯示
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -63,6 +65,7 @@ Focus areas for this session:
 ---
 
 #### TC-09-003: AI 配額顯示
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -75,6 +78,7 @@ Focus areas for this session:
 ---
 
 #### TC-09-004: Dashboard 總覽頁面
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -88,6 +92,7 @@ Focus areas for this session:
 ---
 
 #### TC-09-005: 語言切換功能
+
 - **Status**: ❌ Failed
 - **Execution Time**:1746-1747
 - **Notes**:
@@ -99,12 +104,12 @@ Focus areas for this session:
 - **Issues Found**:
   Side Bar, Dashboard, Header有正確切換，但Quickinput, Drafts等等子頁面沒有正確切換
 
-
 ---
 
 ### Phase 2: KOL 管理
 
 #### TC-02-001: KOL 列表顯示
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -118,6 +123,7 @@ Focus areas for this session:
 ---
 
 #### TC-02-002: 新增 KOL
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -131,6 +137,7 @@ Focus areas for this session:
 ---
 
 #### TC-02-003: KOL 詳情頁顯示
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -144,6 +151,7 @@ Focus areas for this session:
 ---
 
 #### TC-02-004: 編輯 KOL
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -157,6 +165,7 @@ Focus areas for this session:
 ---
 
 #### TC-02-005: 刪除 KOL
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -172,6 +181,7 @@ Focus areas for this session:
 ### Phase 3: 投資標的管理
 
 #### TC-03-001: Stock 列表顯示
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -185,6 +195,7 @@ Focus areas for this session:
 ---
 
 #### TC-03-002: 新增 Stock
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -198,6 +209,7 @@ Focus areas for this session:
 ---
 
 #### TC-03-003: Stock 詳情頁與相關文章
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -213,6 +225,7 @@ Focus areas for this session:
 ### Phase 4: 輸入與草稿核心
 
 #### TC-04-001: 快速輸入草稿
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:1755-1800
 - **Notes**:
@@ -226,6 +239,7 @@ Focus areas for this session:
 ---
 
 #### TC-04-002: 草稿自動儲存
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:1755-1800
 - **Notes**:
@@ -240,6 +254,7 @@ Focus areas for this session:
 ---
 
 #### TC-04-003: URL 自動擷取功能
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -250,9 +265,11 @@ Focus areas for this session:
   - [ ] 顯示載入狀態
 - **Issues Found**:
   擷取失敗 Post API fetch-url 400
+
 ---
 
 #### TC-04-004: URL 擷取錯誤處理
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -266,6 +283,7 @@ Focus areas for this session:
 ---
 
 #### TC-04-005: 草稿列表顯示
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -276,9 +294,11 @@ Focus areas for this session:
   - [o] 顯示預覽內容前 100 字
 - **Issues Found**:
   Sidebar顯示的草稿數量錯誤
+
 ---
 
 #### TC-04-006: 草稿編輯與標籤選擇
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -292,6 +312,7 @@ Focus areas for this session:
 ---
 
 #### TC-04-007: 草稿刪除
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -305,6 +326,7 @@ Focus areas for this session:
 ---
 
 #### TC-04-008: 預覽並確認情緒
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -318,6 +340,7 @@ Focus areas for this session:
 ---
 
 #### TC-04-009: 發布文章
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -331,6 +354,7 @@ Focus areas for this session:
 ---
 
 #### TC-04-010: 發布文章關聯資料
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -346,6 +370,7 @@ Focus areas for this session:
 ### Phase 5: 文章檢視
 
 #### TC-05-001: 文章列表顯示
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -359,6 +384,7 @@ Focus areas for this session:
 ---
 
 #### TC-05-002: 文章詳情頁顯示
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -372,6 +398,7 @@ Focus areas for this session:
 ---
 
 #### TC-05-003: 文章書籤功能
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -387,26 +414,28 @@ Focus areas for this session:
 ### Phase 6: K 線圖
 
 #### TC-06-001: K 線圖顯示
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
 - **Pass Criteria**:
   - [x] 正確顯示 K 線圖
-  - [X] 資料來源為 Tiingo API
-  - [X] 標記發文時間點
-  - [X] 圖表可互動（縮放、tooltip）
+  - [x] 資料來源為 Tiingo API
+  - [x] 標記發文時間點
+  - [x] 圖表可互動（縮放、tooltip）
 - **Issues Found**: Lethal Failed
 
 ---
 
 #### TC-06-002: 股價資料快取
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
 - **Pass Criteria**:
-  - [X] 首次載入呼叫 Tiingo API
-  - [X] 後續載入使用 Supabase 快取
-  - [X] 資料正確寫入 stock_prices 資料表
+  - [x] 首次載入呼叫 Tiingo API
+  - [x] 後續載入使用 Supabase 快取
+  - [x] 資料正確寫入 stock_prices 資料表
   - [ ] 快取過期後重新抓取
 - **Issues Found**: Lethal Failed
 
@@ -415,6 +444,7 @@ Focus areas for this session:
 ### Phase 7: 勝率計算
 
 #### TC-07-001: KOL 勝率計算
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -428,6 +458,7 @@ Focus areas for this session:
 ---
 
 #### TC-07-002: 價格漲跌計算
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -443,6 +474,7 @@ Focus areas for this session:
 ### Phase 8: AI 整合
 
 #### TC-08-001: AI 情緒分析
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -455,6 +487,7 @@ Focus areas for this session:
 ---
 
 #### TC-08-002: AI Ticker 識別
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -468,6 +501,7 @@ Focus areas for this session:
 ---
 
 #### TC-08-003: AI 配額限制
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -483,6 +517,7 @@ Focus areas for this session:
 ### Phase 1: 認證系統
 
 #### TC-01-001: 使用者註冊
+
 - **Status**: ⏭️ Skipped (DEV_USER_ID enabled)
 - **Execution Time**:
 - **Notes**: Skipped due to DEV_USER_ID bypass
@@ -496,6 +531,7 @@ Focus areas for this session:
 ---
 
 #### TC-01-002: 使用者登入
+
 - **Status**: ⏭️ Skipped (DEV_USER_ID enabled)
 - **Execution Time**:
 - **Notes**: Skipped due to DEV_USER_ID bypass
@@ -509,6 +545,7 @@ Focus areas for this session:
 ---
 
 #### TC-01-003: 使用者登出
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -521,6 +558,7 @@ Focus areas for this session:
 ---
 
 #### TC-01-004: RLS 資料隔離
+
 - **Status**: ⬜ Not Started
 - **Execution Time**:
 - **Notes**:
@@ -534,6 +572,7 @@ Focus areas for this session:
 ## Issues Found During Testing
 
 ### ISSUE-20260212-001: [Issue Title]
+
 - **Test Case**: TC-XX-XXX
 - **Severity**: Critical / High / Medium / Low
 - **Status**: Open
@@ -552,42 +591,46 @@ Focus areas for this session:
 
 ### Overall Results
 
-| Item | Count |
-|------|-------|
-| Total Test Cases | 35 |
-| ✅ Passed | 0 |
-| ❌ Failed | 0 |
-| ⏭️ Skipped | 0 |
-| 🚧 Blocked | 0 |
-| ⬜ Not Started | 33 |
-| **Pass Rate** | 0% |
+| Item             | Count |
+| ---------------- | ----- |
+| Total Test Cases | 35    |
+| ✅ Passed        | 0     |
+| ❌ Failed        | 0     |
+| ⏭️ Skipped       | 0     |
+| 🚧 Blocked       | 0     |
+| ⬜ Not Started   | 33    |
+| **Pass Rate**    | 0%    |
 
 ### Phase Breakdown
 
-| Phase | Total | Passed | Failed | Skipped | Pass Rate |
-|-------|-------|--------|--------|---------|-----------|
-| Phase 9: Layout & 導航 | 5 | 0 | 0 | 0 | 0% |
-| Phase 2: KOL 管理 | 5 | 0 | 0 | 0 | 0% |
-| Phase 3: Stock 管理 | 3 | 0 | 0 | 0 | 0% |
-| Phase 4: 輸入與草稿 | 10 | 0 | 0 | 0 | 0% |
-| Phase 5: 文章檢視 | 3 | 0 | 0 | 0 | 0% |
-| Phase 6: K 線圖 | 2 | 0 | 0 | 0 | 0% |
-| Phase 7: 勝率計算 | 2 | 0 | 0 | 0 | 0% |
-| Phase 8: AI 整合 | 3 | 0 | 0 | 0 | 0% |
-| Phase 1: 認證系統 | 2 | 0 | 0 | 2 | N/A |
+| Phase                  | Total | Passed | Failed | Skipped | Pass Rate |
+| ---------------------- | ----- | ------ | ------ | ------- | --------- |
+| Phase 9: Layout & 導航 | 5     | 0      | 0      | 0       | 0%        |
+| Phase 2: KOL 管理      | 5     | 0      | 0      | 0       | 0%        |
+| Phase 3: Stock 管理    | 3     | 0      | 0      | 0       | 0%        |
+| Phase 4: 輸入與草稿    | 10    | 0      | 0      | 0       | 0%        |
+| Phase 5: 文章檢視      | 3     | 0      | 0      | 0       | 0%        |
+| Phase 6: K 線圖        | 2     | 0      | 0      | 0       | 0%        |
+| Phase 7: 勝率計算      | 2     | 0      | 0      | 0       | 0%        |
+| Phase 8: AI 整合       | 3     | 0      | 0      | 0       | 0%        |
+| Phase 1: 認證系統      | 2     | 0      | 0      | 2       | N/A       |
 
 ### Key Findings
 
 #### Critical Issues
+
 - (list any P0/Critical issues here)
 
 #### High Priority Issues
+
 - (list any P1/High issues here)
 
 #### Medium/Low Issues
+
 - (list any P2/P3 issues here)
 
 #### Recommendations
+
 - (list recommendations for fixes or improvements)
 
 ---
@@ -595,18 +638,20 @@ Focus areas for this session:
 ## Notes & Observations
 
 ### General Comments
+
 -
 
 ### Browser-Specific Issues
+
 -
 
 ### Performance Observations
+
 -
 
 ### UX Feedback
--
 
----
+- ***
 
 ## Next Steps
 

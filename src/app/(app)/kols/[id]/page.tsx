@@ -170,7 +170,7 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
                   {stock.posts.slice(0, 5).map((post) => (
                     <div
                       key={post.id}
-                      className="hover:bg-muted/50 cursor-pointer flex items-center justify-between rounded-lg border p-3"
+                      className="hover:bg-muted/50 flex cursor-pointer items-center justify-between rounded-lg border p-3"
                       onClick={() => router.push(ROUTES.POST_DETAIL(post.id))}
                     >
                       <div className="flex items-center gap-3">

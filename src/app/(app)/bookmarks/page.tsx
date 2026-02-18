@@ -55,7 +55,10 @@ export default function BookmarksPage() {
               <Card key={bookmark.id} className="hover:bg-muted/50 transition-colors">
                 <CardContent className="pt-4">
                   <div className="flex items-start gap-4">
-                    <Link href={ROUTES.POST_DETAIL(post.id)} className="flex min-w-0 flex-1 items-start gap-4">
+                    <Link
+                      href={ROUTES.POST_DETAIL(post.id)}
+                      className="flex min-w-0 flex-1 items-start gap-4"
+                    >
                       <Avatar className="h-10 w-10 shrink-0">
                         <AvatarImage src={post.kol.avatarUrl || undefined} />
                         <AvatarFallback>
@@ -67,7 +70,9 @@ export default function BookmarksPage() {
                           <span className="font-medium">{post.kol.name}</span>
                           <Badge
                             variant="outline"
-                            className={SENTIMENT_COLORS[post.sentiment as keyof typeof SENTIMENT_COLORS]}
+                            className={
+                              SENTIMENT_COLORS[post.sentiment as keyof typeof SENTIMENT_COLORS]
+                            }
                           >
                             {SENTIMENT_LABELS[post.sentiment as keyof typeof SENTIMENT_LABELS]}
                           </Badge>
@@ -119,9 +124,7 @@ export default function BookmarksPage() {
           <CardContent className="flex flex-col items-center justify-center text-center">
             <Bookmark className="text-muted-foreground h-12 w-12" />
             <h3 className="mt-4 text-lg font-semibold">尚無書籤</h3>
-            <p className="text-muted-foreground mt-2 text-sm">
-              在文章詳情頁點擊書籤按鈕來收藏文章
-            </p>
+            <p className="text-muted-foreground mt-2 text-sm">在文章詳情頁點擊書籤按鈕來收藏文章</p>
           </CardContent>
         </Card>
       )}

@@ -14,17 +14,17 @@
 
 ## 技術架構
 
-| 層級 | 技術選型 |
-|------|----------|
-| 前端框架 | Next.js 14 (App Router) |
-| UI 套件 | Tailwind CSS + shadcn/ui |
+| 層級     | 技術選型                 |
+| -------- | ------------------------ |
+| 前端框架 | Next.js 14 (App Router)  |
+| UI 套件  | Tailwind CSS + shadcn/ui |
 | 狀態管理 | TanStack Query + Zustand |
-| 後端 | Next.js API Routes |
-| 資料庫 | Supabase (PostgreSQL) |
-| 認證 | Supabase Auth |
-| AI 服務 | Google Gemini API |
-| 股價資料 | Tiingo API |
-| K 線圖 | Lightweight Charts |
+| 後端     | Next.js API Routes       |
+| 資料庫   | Supabase (PostgreSQL)    |
+| 認證     | Supabase Auth            |
+| AI 服務  | Google Gemini API        |
+| 股價資料 | Tiingo API               |
+| K 線圖   | Lightweight Charts       |
 
 ## 開始使用
 

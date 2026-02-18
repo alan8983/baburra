@@ -169,7 +169,9 @@ function AiQuotaFooter({ isCollapsed }: { isCollapsed: boolean }) {
       </div>
       <div className="mt-1 flex items-baseline gap-1">
         <span className="text-lg font-bold">{usage.remaining}</span>
-        <span className="text-muted-foreground text-sm">/ {usage.weeklyLimit} {t('ai.quotaThisWeek')}</span>
+        <span className="text-muted-foreground text-sm">
+          / {usage.weeklyLimit} {t('ai.quotaThisWeek')}
+        </span>
       </div>
       <div className="bg-muted mt-2 h-1.5 w-full rounded-full">
         <div
@@ -230,12 +232,12 @@ export function Sidebar() {
 
         <div className="space-y-1">
           {resourceItems.map((item) => (
-            <NavItem 
-              key={item.href} 
-              label={t(`nav.${item.key}`)} 
-              href={item.href} 
-              icon={item.icon} 
-              isCollapsed={!sidebarOpen} 
+            <NavItem
+              key={item.href}
+              label={t(`nav.${item.key}`)}
+              href={item.href}
+              icon={item.icon}
+              isCollapsed={!sidebarOpen}
             />
           ))}
         </div>
@@ -244,12 +246,12 @@ export function Sidebar() {
 
         <div className="space-y-1">
           {settingsItems.map((item) => (
-            <NavItem 
-              key={item.href} 
-              label={t(`nav.${item.key}`)} 
-              href={item.href} 
-              icon={item.icon} 
-              isCollapsed={!sidebarOpen} 
+            <NavItem
+              key={item.href}
+              label={t(`nav.${item.key}`)}
+              href={item.href}
+              icon={item.icon}
+              isCollapsed={!sidebarOpen}
             />
           ))}
         </div>

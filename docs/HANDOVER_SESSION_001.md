@@ -9,71 +9,71 @@
 
 ### Phase 0: 專案初始化 ✅
 
-| 任務 | 狀態 | 備註 |
-|------|------|------|
-| 0.1 初始化 Next.js 14 專案 | ✅ 完成 | 使用 App Router + TypeScript |
-| 0.2 設定 Tailwind CSS + shadcn/ui | ✅ 完成 | 已安裝常用 UI 元件 |
-| 0.3 設定 Supabase 專案 | ⏳ 待用戶提供 | 需要用戶提供 Supabase 連線資訊 |
-| 0.4 建立資料庫 Schema | ✅ 完成 | `supabase/migrations/001_initial_schema.sql` |
-| 0.5 建立測試用戶 | ⏳ 待執行 | 需要先連接 Supabase |
-| 0.6 設定環境變數 | ✅ 完成 | `.env.example` 和 `.env.local` |
-| 0.7 建立目錄結構 | ✅ 完成 | 依 ARCHITECTURE.md 建立 |
-| 0.8 設定 ESLint + Prettier | ✅ 完成 | `.prettierrc` 已建立 |
+| 任務                              | 狀態          | 備註                                         |
+| --------------------------------- | ------------- | -------------------------------------------- |
+| 0.1 初始化 Next.js 14 專案        | ✅ 完成       | 使用 App Router + TypeScript                 |
+| 0.2 設定 Tailwind CSS + shadcn/ui | ✅ 完成       | 已安裝常用 UI 元件                           |
+| 0.3 設定 Supabase 專案            | ⏳ 待用戶提供 | 需要用戶提供 Supabase 連線資訊               |
+| 0.4 建立資料庫 Schema             | ✅ 完成       | `supabase/migrations/001_initial_schema.sql` |
+| 0.5 建立測試用戶                  | ⏳ 待執行     | 需要先連接 Supabase                          |
+| 0.6 設定環境變數                  | ✅ 完成       | `.env.example` 和 `.env.local`               |
+| 0.7 建立目錄結構                  | ✅ 完成       | 依 ARCHITECTURE.md 建立                      |
+| 0.8 設定 ESLint + Prettier        | ✅ 完成       | `.prettierrc` 已建立                         |
 
 ### Phase 9: App Layout & 導航 ✅
 
-| 任務 | 狀態 | 備註 |
-|------|------|------|
-| 9.1 建立 App Layout | ✅ 完成 | `src/app/(app)/layout.tsx` |
-| 9.2 建立 Sidebar | ✅ 完成 | 可收合，含 AI 配額顯示 |
-| 9.3 建立 Header | ✅ 完成 | 含搜尋欄、通知、用戶選單 |
+| 任務                  | 狀態    | 備註                           |
+| --------------------- | ------- | ------------------------------ |
+| 9.1 建立 App Layout   | ✅ 完成 | `src/app/(app)/layout.tsx`     |
+| 9.2 建立 Sidebar      | ✅ 完成 | 可收合，含 AI 配額顯示         |
+| 9.3 建立 Header       | ✅ 完成 | 含搜尋欄、通知、用戶選單       |
 | 9.4 建立 Dashboard 頁 | ✅ 完成 | 含統計卡片、最近文章、KOL 排行 |
-| 9.5 建立路由常數 | ✅ 完成 | `src/lib/constants/routes.ts` |
+| 9.5 建立路由常數      | ✅ 完成 | `src/lib/constants/routes.ts`  |
 
 ### Phase 2: KOL 管理模組 (部分完成)
 
-| 任務 | 狀態 | 備註 |
-|------|------|------|
-| 2.1-2.3 Domain Model & Repository | ✅ 完成 | 型別定義已建立 |
-| 2.4 KOL API Routes | ❌ 未開始 | 下個 Session 繼續 |
-| 2.5 KOL 列表頁 | ✅ 完成 | 含搜尋、模擬資料 |
-| 2.6 KOL 搜尋/選擇元件 | ✅ 完成 | `components/forms/kol-selector.tsx` |
-| 2.7 KOL 新增 Dialog | ✅ 完成 | `components/forms/kol-form-dialog.tsx` |
-| 2.8-2.9 KOL 詳情頁 | ✅ 完成 | 含 Tabs (Overview/Stats/About) |
-| 2.10 use-kols Hook | ✅ 完成 | TanStack Query 整合 |
+| 任務                              | 狀態      | 備註                                   |
+| --------------------------------- | --------- | -------------------------------------- |
+| 2.1-2.3 Domain Model & Repository | ✅ 完成   | 型別定義已建立                         |
+| 2.4 KOL API Routes                | ❌ 未開始 | 下個 Session 繼續                      |
+| 2.5 KOL 列表頁                    | ✅ 完成   | 含搜尋、模擬資料                       |
+| 2.6 KOL 搜尋/選擇元件             | ✅ 完成   | `components/forms/kol-selector.tsx`    |
+| 2.7 KOL 新增 Dialog               | ✅ 完成   | `components/forms/kol-form-dialog.tsx` |
+| 2.8-2.9 KOL 詳情頁                | ✅ 完成   | 含 Tabs (Overview/Stats/About)         |
+| 2.10 use-kols Hook                | ✅ 完成   | TanStack Query 整合                    |
 
 ### Phase 3: 投資標的模組 (部分完成)
 
-| 任務 | 狀態 | 備註 |
-|------|------|------|
-| 3.1-3.3 Domain Model & Repository | ✅ 完成 | 型別定義已建立 |
-| 3.4 Stock API Routes | ❌ 未開始 | 下個 Session 繼續 |
-| 3.5 Stock 列表頁 | ✅ 完成 | 含搜尋、模擬資料 |
-| 3.6 Stock 搜尋/選擇元件 | ✅ 完成 | `components/forms/stock-selector.tsx` |
-| 3.7 Stock 詳情頁 | ✅ 完成 | 含 Tabs (Posts/Chart/Arguments) |
-| 3.8 use-stocks Hook | ✅ 完成 | TanStack Query 整合 |
+| 任務                              | 狀態      | 備註                                  |
+| --------------------------------- | --------- | ------------------------------------- |
+| 3.1-3.3 Domain Model & Repository | ✅ 完成   | 型別定義已建立                        |
+| 3.4 Stock API Routes              | ❌ 未開始 | 下個 Session 繼續                     |
+| 3.5 Stock 列表頁                  | ✅ 完成   | 含搜尋、模擬資料                      |
+| 3.6 Stock 搜尋/選擇元件           | ✅ 完成   | `components/forms/stock-selector.tsx` |
+| 3.7 Stock 詳情頁                  | ✅ 完成   | 含 Tabs (Posts/Chart/Arguments)       |
+| 3.8 use-stocks Hook               | ✅ 完成   | TanStack Query 整合                   |
 
 ### Phase 4: 輸入與草稿模組 (部分完成)
 
-| 任務 | 狀態 | 備註 |
-|------|------|------|
-| 4.1-4.4 Domain Model & Repository | ✅ 完成 | 型別定義已建立 |
-| 4.5 快速輸入頁 | ✅ 完成 | `/input` |
-| 4.6 QuickInput 元件 | ✅ 完成 | 含 AI 識別預覽區塊 |
-| 4.7 草稿列表頁 | ✅ 完成 | `/drafts` |
-| 4.8 草稿編輯頁 | ✅ 完成 | `/drafts/[id]` |
-| 4.9-4.12 表單元件 | ✅ 完成 | KOL/Stock Selector, Sentiment, Datetime |
-| 4.13 重複 URL 比對 | ❌ 未開始 | |
-| 4.14 圖片上傳 | ❌ 未開始 | |
-| API Routes | ❌ 未開始 | |
+| 任務                              | 狀態      | 備註                                    |
+| --------------------------------- | --------- | --------------------------------------- |
+| 4.1-4.4 Domain Model & Repository | ✅ 完成   | 型別定義已建立                          |
+| 4.5 快速輸入頁                    | ✅ 完成   | `/input`                                |
+| 4.6 QuickInput 元件               | ✅ 完成   | 含 AI 識別預覽區塊                      |
+| 4.7 草稿列表頁                    | ✅ 完成   | `/drafts`                               |
+| 4.8 草稿編輯頁                    | ✅ 完成   | `/drafts/[id]`                          |
+| 4.9-4.12 表單元件                 | ✅ 完成   | KOL/Stock Selector, Sentiment, Datetime |
+| 4.13 重複 URL 比對                | ❌ 未開始 |                                         |
+| 4.14 圖片上傳                     | ❌ 未開始 |                                         |
+| API Routes                        | ❌ 未開始 |                                         |
 
 ### Phase 5: 文章檢視模組 (部分完成)
 
-| 任務 | 狀態 | 備註 |
-|------|------|------|
-| 5.1 文章列表頁 | ✅ 完成 | `/posts` |
-| 5.2 文章詳情頁 | ✅ 完成 | `/posts/[id]` 含 Tabs |
-| API Routes | ❌ 未開始 | |
+| 任務           | 狀態      | 備註                  |
+| -------------- | --------- | --------------------- |
+| 5.1 文章列表頁 | ✅ 完成   | `/posts`              |
+| 5.2 文章詳情頁 | ✅ 完成   | `/posts/[id]` 含 Tabs |
+| API Routes     | ❌ 未開始 |                       |
 
 ---
 
@@ -130,11 +130,13 @@ investment-idea-monitor/
 ### 1. 連接 Supabase (最高優先)
 
 用戶需要提供：
+
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 
 執行步驟：
+
 1. 在 Supabase 建立專案
 2. 執行 `supabase/migrations/001_initial_schema.sql`
 3. 執行 `supabase/seed.sql` 建立測試資料
@@ -143,8 +145,9 @@ investment-idea-monitor/
 ### 2. 建立 API Routes (Phase 2-5)
 
 優先順序：
+
 1. `/api/kols/*` - KOL CRUD
-2. `/api/stocks/*` - Stock CRUD  
+2. `/api/stocks/*` - Stock CRUD
 3. `/api/posts/*` - Post CRUD
 4. `/api/drafts/*` - Draft CRUD
 
@@ -163,14 +166,14 @@ investment-idea-monitor/
 
 ## 四、已知問題 / 待解決事項
 
-| # | 問題描述 | 優先度 | 備註 |
-|---|----------|--------|------|
-| 1 | 需要用戶提供 Supabase 連線資訊 | 高 | 阻擋後續開發 |
-| 2 | KOL/Stock Selector 元件尚未建立 | 高 | 草稿編輯頁需要 |
-| 3 | API Routes 全部未建立 | 高 | 核心功能 |
-| 4 | 圖片上傳功能未實作 | 中 | 需要 Supabase Storage |
-| 5 | K 線圖元件 (Phase 6) 未開始 | 中 | 已安裝 lightweight-charts |
-| 6 | AI 整合 (Phase 8) 未開始 | 低 | 需要 Gemini API Key |
+| #   | 問題描述                        | 優先度 | 備註                      |
+| --- | ------------------------------- | ------ | ------------------------- |
+| 1   | 需要用戶提供 Supabase 連線資訊  | 高     | 阻擋後續開發              |
+| 2   | KOL/Stock Selector 元件尚未建立 | 高     | 草稿編輯頁需要            |
+| 3   | API Routes 全部未建立           | 高     | 核心功能                  |
+| 4   | 圖片上傳功能未實作              | 中     | 需要 Supabase Storage     |
+| 5   | K 線圖元件 (Phase 6) 未開始     | 中     | 已安裝 lightweight-charts |
+| 6   | AI 整合 (Phase 8) 未開始        | 低     | 需要 Gemini API Key       |
 
 ---
 

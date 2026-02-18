@@ -20,7 +20,7 @@ export interface SentimentOption {
 // Helper function to get sentiment options with translations
 function useSentimentOptions(): SentimentOption[] {
   const t = useTranslations('common');
-  
+
   return [
     {
       value: -2,
@@ -101,7 +101,7 @@ export function SentimentSelector({
 }: SentimentSelectorProps) {
   const t = useTranslations('forms');
   const sentimentOptions = useSentimentOptions();
-  
+
   const aiSuggestionOption = React.useMemo(() => {
     if (aiSuggestion === null || aiSuggestion === undefined) return null;
     return sentimentOptions.find((opt) => opt.value === aiSuggestion);

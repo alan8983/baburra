@@ -9,6 +9,7 @@
 ## 一、概述
 
 本文件定義 URL 文章抓取模塊的輸出規格，確保抓取的文章內容能夠直接使用於：
+
 - Phase 8 情緒分析 (`analyzeSentiment`)
 - Phase 8 論點提取 (`extractArguments`)
 - 建立 Draft 草稿
@@ -23,31 +24,31 @@
 ```typescript
 interface UrlFetchResult {
   // ========== 必填欄位 ==========
-  
+
   /**
    * 文章主文內容（純文字）
-   * 
+   *
    * 格式要求：
    * - 類型：string（純文字，不包含 HTML/Markdown 標籤）
    * - 長度：最少 10 字元，最多 10,000 字元
    * - 格式：移除所有 HTML 標籤、Markdown 語法，保留純文字內容
    * - 換行：保留換行符號 \n（用於段落分隔）
    * - 清理：移除多餘空白、廣告內容、導覽列等無關文字
-   * 
+   *
    * 範例：
    * "台積電（TSMC）最新財報顯示，第三季營收創歷史新高。
-   * 
+   *
    * 主要成長動能來自 AI 晶片需求強勁，預期第四季將持續成長。"
    */
   content: string;
-  
+
   /**
    * 原始網址
    * - 用於重複檢測和來源追蹤
    * - 必須是完整的 URL（包含 protocol）
    */
   sourceUrl: string;
-  
+
   /**
    * 來源平台
    * - 'twitter': Twitter/X 平台
@@ -57,16 +58,16 @@ interface UrlFetchResult {
    * - 'manual': 其他來源或手動輸入
    */
   sourcePlatform: 'twitter' | 'facebook' | 'threads' | 'youtube' | 'manual';
-  
+
   // ========== 選填欄位 ==========
-  
+
   /**
    * 文章標題（如果有的話）
    * - 如果來源沒有標題，可為 null
    * - 長度限制：最多 200 字元
    */
   title: string | null;
-  
+
   /**
    * 圖片 URL 陣列
    * - 從文章中提取的圖片連結
@@ -74,7 +75,7 @@ interface UrlFetchResult {
    * - 空陣列表示沒有圖片
    */
   images: string[];
-  
+
   /**
    * 發文時間
    * - ISO 8601 格式字串或 Date 物件
@@ -82,7 +83,7 @@ interface UrlFetchResult {
    * - 用於記錄 KOL 實際發文時間
    */
   postedAt: string | Date | null;
-  
+
   /**
    * KOL 名稱（如果能夠識別）
    * - 從文章或頁面中提取的作者名稱
@@ -90,7 +91,7 @@ interface UrlFetchResult {
    * - 用於後續自動匹配 KOL
    */
   kolName: string | null;
-  
+
   /**
    * KOL 頭像 URL（如果能夠取得）
    * - 如果無法取得，可為 null
@@ -117,7 +118,7 @@ interface UrlFetchError {
      * - 'RATE_LIMITED': 請求過於頻繁
      * - 'PARSE_ERROR': 解析錯誤
      */
-    code: 
+    code:
       | 'INVALID_URL'
       | 'FETCH_FAILED'
       | 'CONTENT_TOO_SHORT'
@@ -125,12 +126,12 @@ interface UrlFetchError {
       | 'UNSUPPORTED_PLATFORM'
       | 'RATE_LIMITED'
       | 'PARSE_ERROR';
-    
+
     /**
      * 錯誤訊息（人類可讀）
      */
     message: string;
-    
+
     /**
      * 詳細資訊（可選）
      */
@@ -176,23 +177,23 @@ function validateContent(content: string): { valid: boolean; error?: string } {
   if (!content || typeof content !== 'string') {
     return { valid: false, error: 'Content must be a non-empty string' };
   }
-  
+
   const trimmed = content.trim();
-  
+
   if (trimmed.length < 10) {
-    return { 
-      valid: false, 
-      error: `Content too short: ${trimmed.length} characters (minimum: 10)` 
+    return {
+      valid: false,
+      error: `Content too short: ${trimmed.length} characters (minimum: 10)`,
     };
   }
-  
+
   if (trimmed.length > 10000) {
-    return { 
-      valid: false, 
-      error: `Content too long: ${trimmed.length} characters (maximum: 10000)` 
+    return {
+      valid: false,
+      error: `Content too long: ${trimmed.length} characters (maximum: 10000)`,
     };
   }
-  
+
   return { valid: true };
 }
 ```
@@ -200,6 +201,7 @@ function validateContent(content: string): { valid: boolean; error?: string } {
 ### 3.3 Content 範例
 
 **✅ 正確格式**：
+
 ```
 台積電（TSMC）最新財報顯示，第三季營收創歷史新高。
 
@@ -209,22 +211,26 @@ function validateContent(content: string): { valid: boolean; error?: string } {
 ```
 
 **❌ 錯誤格式**：
+
 ```
 <article>
   <h1>台積電財報</h1>
   <p>第三季營收創新高</p>
 </article>
 ```
+
 （包含 HTML 標籤）
 
 ```
 **台積電**財報顯示[連結](https://example.com)
 ```
+
 （包含 Markdown 語法）
 
 ```
 台積電
 ```
+
 （內容過短，少於 10 字元）
 
 ---
@@ -240,22 +246,18 @@ function validateContent(content: string): { valid: boolean; error?: string } {
 const sentimentResult = await analyzeSentiment(fetchResult.content);
 
 // 論點提取
-const argumentsResult = await extractArguments(
-  fetchResult.content,
-  stock.ticker,
-  stock.name
-);
+const argumentsResult = await extractArguments(fetchResult.content, stock.ticker, stock.name);
 ```
 
 ### 4.2 建立 Draft
 
 ```typescript
 const draft = await createDraft({
-  content: fetchResult.content,        // ✅ 直接使用
-  sourceUrl: fetchResult.sourceUrl,    // ✅ 記錄來源
-  images: fetchResult.images,          // ✅ 圖片陣列
-  postedAt: fetchResult.postedAt,      // ✅ 發文時間
-  kolNameInput: fetchResult.kolName,   // ✅ 可選：KOL 名稱
+  content: fetchResult.content, // ✅ 直接使用
+  sourceUrl: fetchResult.sourceUrl, // ✅ 記錄來源
+  images: fetchResult.images, // ✅ 圖片陣列
+  postedAt: fetchResult.postedAt, // ✅ 發文時間
+  kolNameInput: fetchResult.kolName, // ✅ 可選：KOL 名稱
 });
 ```
 
@@ -263,12 +265,12 @@ const draft = await createDraft({
 
 ```typescript
 const post = await createPost({
-  content: fetchResult.content,           // ✅ 直接使用
-  sourceUrl: fetchResult.sourceUrl,      // ✅ 記錄來源
+  content: fetchResult.content, // ✅ 直接使用
+  sourceUrl: fetchResult.sourceUrl, // ✅ 記錄來源
   sourcePlatform: fetchResult.sourcePlatform, // ✅ 平台類型
-  images: fetchResult.images,             // ✅ 圖片陣列
-  postedAt: fetchResult.postedAt,         // ✅ 發文時間
-  title: fetchResult.title,              // ✅ 標題（可選）
+  images: fetchResult.images, // ✅ 圖片陣列
+  postedAt: fetchResult.postedAt, // ✅ 發文時間
+  title: fetchResult.title, // ✅ 標題（可選）
   // ... 其他必填欄位
 });
 ```
@@ -296,13 +298,13 @@ interface FetchUrlResponse {
 // 範例錯誤處理
 try {
   const result = await fetchUrlContent(url);
-  
+
   // 驗證 content
   const validation = validateContent(result.content);
   if (!validation.valid) {
     throw new Error(validation.error);
   }
-  
+
   return { data: result };
 } catch (error) {
   if (error.code === 'FETCH_FAILED') {
@@ -437,7 +439,7 @@ const url = 'https://www.youtube.com/watch?v=abcdefg1234';
 
 ## 八、修改記錄
 
-| 版本 | 日期 | 修改內容 |
-|------|------|----------|
-| 1.0 | 2026-02-05 | 初始版本 - 定義 URL 抓取模塊 Output Spec |
-| 1.1 | 2026-02-18 | 新增 Threads、YouTube 平台至 sourcePlatform；補充各平台解析說明與 Twitter oEmbed 限制；新增 YouTube 逐字稿測試案例 |
+| 版本 | 日期       | 修改內容                                                                                                           |
+| ---- | ---------- | ------------------------------------------------------------------------------------------------------------------ |
+| 1.0  | 2026-02-05 | 初始版本 - 定義 URL 抓取模塊 Output Spec                                                                           |
+| 1.1  | 2026-02-18 | 新增 Threads、YouTube 平台至 sourcePlatform；補充各平台解析說明與 Twitter oEmbed 限制；新增 YouTube 逐字稿測試案例 |

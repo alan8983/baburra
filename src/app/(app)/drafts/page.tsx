@@ -94,7 +94,9 @@ export default function DraftsPage() {
       {/* Loading */}
       {isLoading && (
         <Card className="py-12">
-          <CardContent className="text-muted-foreground flex justify-center">{t('loading')}</CardContent>
+          <CardContent className="text-muted-foreground flex justify-center">
+            {t('loading')}
+          </CardContent>
         </Card>
       )}
 
@@ -149,7 +151,9 @@ export default function DraftsPage() {
                         {contentPreview || t('status.empty')}
                       </p>
                       <div className="text-muted-foreground mt-2 flex items-center gap-4 text-xs">
-                        <span>{t('status.updatedAt')} {formatRelativeTime(draft.updatedAt)}</span>
+                        <span>
+                          {t('status.updatedAt')} {formatRelativeTime(draft.updatedAt)}
+                        </span>
                         {isComplete ? (
                           <Badge variant="default" className="text-xs">
                             {t('status.ready')}

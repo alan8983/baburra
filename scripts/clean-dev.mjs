@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
  * clean-dev.js
- * 
+ *
  * 防止 "unable to acquire lock" 錯誤的清理腳本
  * 在 npm run dev 之前自動執行
- * 
+ *
  * 功能：
  * 1. 檢查並終止佔用 port 3000 的孤兒程序
  * 2. 刪除殘留的 .next/dev/lock 檔案
@@ -29,7 +29,7 @@ function killPortProcess() {
     // Windows: Use netstat to find PID
     const result = execSync(`netstat -ano | findstr :${PORT} | findstr LISTENING`, {
       encoding: 'utf-8',
-      stdio: ['pipe', 'pipe', 'pipe']
+      stdio: ['pipe', 'pipe', 'pipe'],
     });
 
     // Parse PID from netstat output (last column)

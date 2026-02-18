@@ -11,6 +11,7 @@
 本文件定義 Stock KOL Tracker Web 應用的不變量（Invariants）。不變量是系統中必須始終為真的規則，違反不變量會導致資料不一致或業務邏輯錯誤。
 
 **所有 Agent 在實作功能時必須**：
+
 1. 檢查相關的不變量
 2. 在程式碼中實作驗證邏輯
 3. 撰寫測試確保不變量被遵守
@@ -35,10 +36,12 @@ const I1_publishedPostMustHaveValidReferences = (post: Post): boolean => {
 ```
 
 **驗證時機**：
+
 - Post 狀態從 `Draft` 變為 `Published` 時
 - API Route: `PUT /api/posts/{id}/publish`
 
 **違反處理**：
+
 - 回傳 400 錯誤，錯誤碼 `MISSING_REQUIRED_FIELDS`
 
 ---
@@ -49,7 +52,7 @@ const I1_publishedPostMustHaveValidReferences = (post: Post): boolean => {
 
 ```typescript
 const VALID_SENTIMENTS = ['Bullish', 'Bearish', 'Neutral'] as const;
-type Sentiment = typeof VALID_SENTIMENTS[number];
+type Sentiment = (typeof VALID_SENTIMENTS)[number];
 
 const I2_sentimentMustBeValid = (sentiment: string | null): boolean => {
   if (sentiment === null) return true; // Draft 可為 null
@@ -58,6 +61,7 @@ const I2_sentimentMustBeValid = (sentiment: string | null): boolean => {
 ```
 
 **驗證時機**：
+
 - Post 建立/更新時
 - 資料庫層使用 CHECK 約束
 
@@ -81,6 +85,7 @@ const I3_postedAtMustBeBeforeCreatedAt = (post: Post): boolean => {
 ```
 
 **驗證時機**：
+
 - Post 建立/更新時
 - 特別注意時區處理
 
@@ -92,7 +97,7 @@ const I3_postedAtMustBeBeforeCreatedAt = (post: Post): boolean => {
 
 ```typescript
 const I4_kolNameMustBeUniquePerUser = async (
-  userId: string, 
+  userId: string,
   kolName: string,
   excludeId?: string // 更新時排除自己
 ): Promise<boolean> => {
@@ -103,12 +108,13 @@ const I4_kolNameMustBeUniquePerUser = async (
     .eq('name', kolName)
     .neq('id', excludeId ?? '')
     .single();
-  
+
   return existing.data === null;
 };
 ```
 
 **驗證時機**：
+
 - KOL 建立/更新時
 - 資料庫層使用 UNIQUE 約束
 
@@ -135,6 +141,7 @@ const I5_stockPriceCacheIsValid = (lastUpdated: Date): boolean => {
 ```
 
 **驗證時機**：
+
 - 查詢股價時
 - API Route: `GET /api/stocks/{ticker}/prices`
 
@@ -145,10 +152,7 @@ const I5_stockPriceCacheIsValid = (lastUpdated: Date): boolean => {
 **描述**：Post 狀態從 `Draft` 變為 `Published` 後不可逆。
 
 ```typescript
-const I6_statusTransitionIsValid = (
-  currentStatus: PostStatus, 
-  newStatus: PostStatus
-): boolean => {
+const I6_statusTransitionIsValid = (currentStatus: PostStatus, newStatus: PostStatus): boolean => {
   if (currentStatus === 'Published' && newStatus === 'Draft') {
     return false; // 不可逆
   }
@@ -157,6 +161,7 @@ const I6_statusTransitionIsValid = (
 ```
 
 **驗證時機**：
+
 - Post 更新時
 - 可考慮使用資料庫 Trigger
 
@@ -191,20 +196,22 @@ const FREE_AI_QUOTA = 10;
 
 const B1_freeUserAIQuota = async (userId: string): Promise<boolean> => {
   const profile = await getProfile(userId);
-  
+
   if (profile.plan === 'pro') {
     return true; // Pro 用戶無限制
   }
-  
+
   return profile.ai_usage_count < FREE_AI_QUOTA;
 };
 ```
 
 **驗證時機**：
+
 - AI 分析 API 調用前
 - API Route: `POST /api/ai/analyze`
 
 **違反處理**：
+
 - 回傳 403 錯誤，錯誤碼 `QUOTA_EXCEEDED`
 - 提示用戶升級方案
 
@@ -219,25 +226,27 @@ const FREE_KOL_LIMIT = 5;
 
 const B2_freeUserKOLLimit = async (userId: string): Promise<boolean> => {
   const profile = await getProfile(userId);
-  
+
   if (profile.plan === 'pro') {
     return true;
   }
-  
+
   const kolCount = await supabase
     .from('kols')
     .select('id', { count: 'exact' })
     .eq('user_id', userId);
-  
+
   return (kolCount.count ?? 0) < FREE_KOL_LIMIT;
 };
 ```
 
 **驗證時機**：
+
 - KOL 建立時
 - API Route: `POST /api/kols`
 
 **違反處理**：
+
 - 回傳 403 錯誤，錯誤碼 `QUOTA_EXCEEDED`
 
 ---
@@ -247,15 +256,13 @@ const B2_freeUserKOLLimit = async (userId: string): Promise<boolean> => {
 **描述**：用戶只能存取自己的資料。
 
 ```typescript
-const B3_userCanOnlyAccessOwnData = (
-  resourceUserId: string, 
-  currentUserId: string
-): boolean => {
+const B3_userCanOnlyAccessOwnData = (resourceUserId: string, currentUserId: string): boolean => {
   return resourceUserId === currentUserId;
 };
 ```
 
 **驗證時機**：
+
 - 所有 CRUD 操作
 - 主要透過 Supabase RLS 實現
 
@@ -280,14 +287,12 @@ CREATE POLICY "Users can only access own data" ON posts
 
 ```typescript
 const B4_aiAnalysisMustHaveSentiment = (result: AIAnalysisResult): boolean => {
-  return (
-    result.sentiment !== null &&
-    VALID_SENTIMENTS.includes(result.sentiment)
-  );
+  return result.sentiment !== null && VALID_SENTIMENTS.includes(result.sentiment);
 };
 ```
 
 **驗證時機**：
+
 - AI 分析回應處理時
 - 如果 AI 回傳無效結果，預設為 'Neutral'
 
@@ -310,12 +315,12 @@ const W1_evaluatePrediction = (
   if (sentiment === 'Neutral') {
     return 'excluded';
   }
-  
+
   // 震盪區間不計入
   if (Math.abs(priceChangePercent) <= WIN_RATE_THRESHOLD) {
     return 'excluded';
   }
-  
+
   // 判斷勝負
   const actualDirection = priceChangePercent > 0 ? 'Bullish' : 'Bearish';
   return sentiment === actualDirection ? 'win' : 'loss';
@@ -336,18 +341,18 @@ const W2_calculatePriceChange = async (
 ): Promise<PriceChangeResult | null> => {
   // 1. 找到 posted_at 當天或之後最近的交易日
   const startPrice = await findClosestTradingDay(ticker, postedAt, 'forward');
-  
+
   // 2. 找到 N 天後的收盤價
   const endDate = addDays(postedAt, days);
   const endPrice = await findClosestTradingDay(ticker, endDate, 'backward');
-  
+
   if (!startPrice || !endPrice) {
     return null; // 資料不足
   }
-  
+
   const change = endPrice.close - startPrice.close;
   const changePercent = change / startPrice.close;
-  
+
   return {
     days,
     startDate: startPrice.date,
@@ -361,6 +366,7 @@ const W2_calculatePriceChange = async (
 ```
 
 **注意**：
+
 - 需處理非交易日（順延到最近交易日）
 - 需處理資料不足的情況
 
@@ -404,27 +410,27 @@ export const WinRateInvariants = {
 
 // 驗證 Post（建立/更新時）
 export const validatePost = async (
-  post: Post, 
+  post: Post,
   previousStatus?: PostStatus
 ): Promise<ValidationResult> => {
   const errors: string[] = [];
-  
+
   if (!PostInvariants.I1_publishedPostMustHaveValidReferences(post)) {
     errors.push('Published post must have kol_id and stock_ticker');
   }
-  
+
   if (!PostInvariants.I2_sentimentMustBeValid(post.sentiment)) {
     errors.push('Invalid sentiment value');
   }
-  
+
   if (!PostInvariants.I3_postedAtMustBeBeforeCreatedAt(post)) {
     errors.push('posted_at cannot be after created_at');
   }
-  
+
   if (previousStatus && !PostInvariants.I6_statusTransitionIsValid(previousStatus, post.status)) {
     errors.push('Cannot unpublish a published post');
   }
-  
+
   return {
     valid: errors.length === 0,
     errors,
@@ -447,18 +453,18 @@ describe('Post Invariants', () => {
       const post = { status: 'Draft', kol_id: null, stock_ticker: null };
       expect(I1_publishedPostMustHaveValidReferences(post)).toBe(true);
     });
-    
+
     it('should return false when published post has no kol_id', () => {
       const post = { status: 'Published', kol_id: null, stock_ticker: 'AAPL' };
       expect(I1_publishedPostMustHaveValidReferences(post)).toBe(false);
     });
-    
+
     it('should return true when published post has all references', () => {
       const post = { status: 'Published', kol_id: 'xxx', stock_ticker: 'AAPL' };
       expect(I1_publishedPostMustHaveValidReferences(post)).toBe(true);
     });
   });
-  
+
   // ... 更多測試
 });
 ```
@@ -467,25 +473,25 @@ describe('Post Invariants', () => {
 
 ## 七、不變量總覽表
 
-| ID | 類別 | 規則 | 驗證時機 | 實作層級 |
-|----|------|------|----------|----------|
-| I1 | 資料 | 發布的Post必須有KOL和Stock | 發布時 | Service + DB |
-| I2 | 資料 | sentiment值域限制 | 建立/更新 | DB CHECK |
-| I3 | 資料 | posted_at ≤ created_at | 建立/更新 | Service |
-| I4 | 資料 | KOL名稱用戶內唯一 | 建立/更新 | DB UNIQUE |
-| I5 | 快取 | 股價快取7天有效 | 查詢時 | Service |
-| I6 | 資料 | 狀態轉換不可逆 | 更新時 | DB Trigger |
-| B1 | 業務 | 免費用戶AI ≤ 10次/月 | AI調用 | API Route |
-| B2 | 業務 | 免費用戶KOL ≤ 5位 | KOL建立 | API Route |
-| B3 | 業務 | 用戶資料隔離 | 所有CRUD | RLS |
-| B4 | 業務 | AI結果必須有sentiment | AI回應 | Service |
-| W1 | 勝率 | ±2%門檻判定 | 計算時 | Calculator |
-| W2 | 勝率 | 以posted_at為基準 | 計算時 | Calculator |
+| ID  | 類別 | 規則                       | 驗證時機  | 實作層級     |
+| --- | ---- | -------------------------- | --------- | ------------ |
+| I1  | 資料 | 發布的Post必須有KOL和Stock | 發布時    | Service + DB |
+| I2  | 資料 | sentiment值域限制          | 建立/更新 | DB CHECK     |
+| I3  | 資料 | posted_at ≤ created_at     | 建立/更新 | Service      |
+| I4  | 資料 | KOL名稱用戶內唯一          | 建立/更新 | DB UNIQUE    |
+| I5  | 快取 | 股價快取7天有效            | 查詢時    | Service      |
+| I6  | 資料 | 狀態轉換不可逆             | 更新時    | DB Trigger   |
+| B1  | 業務 | 免費用戶AI ≤ 10次/月       | AI調用    | API Route    |
+| B2  | 業務 | 免費用戶KOL ≤ 5位          | KOL建立   | API Route    |
+| B3  | 業務 | 用戶資料隔離               | 所有CRUD  | RLS          |
+| B4  | 業務 | AI結果必須有sentiment      | AI回應    | Service      |
+| W1  | 勝率 | ±2%門檻判定                | 計算時    | Calculator   |
+| W2  | 勝率 | 以posted_at為基準          | 計算時    | Calculator   |
 
 ---
 
 ## 八、修改記錄
 
-| 版本 | 日期 | 修改內容 |
-|------|------|----------|
-| 1.0 | 2026-01-29 | 初始版本 |
+| 版本 | 日期       | 修改內容 |
+| ---- | ---------- | -------- |
+| 1.0  | 2026-01-29 | 初始版本 |

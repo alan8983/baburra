@@ -86,7 +86,10 @@ export function MobileNav() {
                 <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)}>
                   <Button
                     variant={isActive ? 'secondary' : 'ghost'}
-                    className={cn('w-full justify-start', isActive && 'bg-primary/10 font-semibold')}
+                    className={cn(
+                      'w-full justify-start',
+                      isActive && 'bg-primary/10 font-semibold'
+                    )}
                   >
                     <Icon className="mr-2 h-4 w-4" />
                     <span className="flex-1 text-left">{t(`nav.${item.key}`)}</span>

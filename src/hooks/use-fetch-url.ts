@@ -42,8 +42,7 @@ export function useFetchUrl() {
           NETWORK_ERROR: '網路連線錯誤，請稍後再試',
         };
 
-        const message =
-          (code && friendlyMessages[code]) || serverMessage || '擷取失敗，請稍後再試';
+        const message = (code && friendlyMessages[code]) || serverMessage || '擷取失敗，請稍後再試';
         const error = new Error(message);
         (error as Error & { code?: string }).code = code;
         throw error;

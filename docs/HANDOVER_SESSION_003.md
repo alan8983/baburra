@@ -10,31 +10,31 @@
 
 ### 1. 表單元件改為使用 API ✅
 
-| 元件 | 狀態 | 修改內容 |
-|------|------|----------|
-| `KOLSelector` | ✅ 完成 | 移除 mockData，改用 `useKols` hook，加入 debounce 搜尋和 loading 狀態 |
-| `StockSelector` | ✅ 完成 | 移除 mockData，改用 `useStocks` hook，加入 debounce 搜尋和 loading 狀態 |
-| `KOLFormDialog` | ✅ 完成 | 改用 `useCreateKol` mutation 呼叫真實 API |
-| `StockFormDialog` | ✅ 完成 | 改用 `useCreateStock` mutation 呼叫真實 API |
+| 元件              | 狀態    | 修改內容                                                                |
+| ----------------- | ------- | ----------------------------------------------------------------------- |
+| `KOLSelector`     | ✅ 完成 | 移除 mockData，改用 `useKols` hook，加入 debounce 搜尋和 loading 狀態   |
+| `StockSelector`   | ✅ 完成 | 移除 mockData，改用 `useStocks` hook，加入 debounce 搜尋和 loading 狀態 |
+| `KOLFormDialog`   | ✅ 完成 | 改用 `useCreateKol` mutation 呼叫真實 API                               |
+| `StockFormDialog` | ✅ 完成 | 改用 `useCreateStock` mutation 呼叫真實 API                             |
 
 ### 2. 快速輸入頁面 API 串接 ✅
 
-| 頁面 | 狀態 | 修改內容 |
-|------|------|----------|
+| 頁面     | 狀態    | 修改內容                                                                      |
+| -------- | ------- | ----------------------------------------------------------------------------- |
 | `/input` | ✅ 完成 | 移除 mockDrafts，改用 `useDrafts` 取得最近草稿，`useCreateDraft` 實作儲存功能 |
 
 ### 3. Phase 7：勝率計算模組 ✅
 
-| 項目 | 狀態 | 產出檔案 |
-|------|------|----------|
+| 項目                   | 狀態    | 產出檔案                                            |
+| ---------------------- | ------- | --------------------------------------------------- |
 | PriceChange Calculator | ✅ 完成 | `src/domain/calculators/price-change.calculator.ts` |
-| WinRate Calculator | ✅ 完成 | `src/domain/calculators/win-rate.calculator.ts` |
-| Calculators 統一匯出 | ✅ 完成 | `src/domain/calculators/index.ts` |
-| KOL 勝率 API | ✅ 完成 | `src/app/api/kols/[id]/win-rate/route.ts` |
-| Stock 勝率 API | ✅ 完成 | `src/app/api/stocks/[ticker]/win-rate/route.ts` |
-| `useKolWinRate` hook | ✅ 完成 | 更新 `src/hooks/use-kols.ts` |
-| `useStockWinRate` hook | ✅ 完成 | 更新 `src/hooks/use-stocks.ts` |
-| KOL 詳情頁 Stats Tab | ✅ 完成 | 更新 `src/app/(app)/kols/[id]/page.tsx` |
+| WinRate Calculator     | ✅ 完成 | `src/domain/calculators/win-rate.calculator.ts`     |
+| Calculators 統一匯出   | ✅ 完成 | `src/domain/calculators/index.ts`                   |
+| KOL 勝率 API           | ✅ 完成 | `src/app/api/kols/[id]/win-rate/route.ts`           |
+| Stock 勝率 API         | ✅ 完成 | `src/app/api/stocks/[ticker]/win-rate/route.ts`     |
+| `useKolWinRate` hook   | ✅ 完成 | 更新 `src/hooks/use-kols.ts`                        |
+| `useStockWinRate` hook | ✅ 完成 | 更新 `src/hooks/use-stocks.ts`                      |
+| KOL 詳情頁 Stats Tab   | ✅ 完成 | 更新 `src/app/(app)/kols/[id]/page.tsx`             |
 
 ---
 
@@ -128,30 +128,30 @@ investment-idea-monitor/
 
 ### 勝率判定邏輯 (`win-rate.calculator.ts`)
 
-| 情緒 | 股價變化 | 結果 |
-|------|----------|------|
-| 看多 (1, 2) | 上漲 | ✅ 勝利 |
-| 看多 (1, 2) | 下跌 | ❌ 失敗 |
-| 看空 (-1, -2) | 下跌 | ✅ 勝利 |
-| 看空 (-1, -2) | 上漲 | ❌ 失敗 |
-| 中立 (0) | - | 不計入 |
+| 情緒          | 股價變化 | 結果    |
+| ------------- | -------- | ------- |
+| 看多 (1, 2)   | 上漲     | ✅ 勝利 |
+| 看多 (1, 2)   | 下跌     | ❌ 失敗 |
+| 看空 (-1, -2) | 下跌     | ✅ 勝利 |
+| 看空 (-1, -2) | 上漲     | ❌ 失敗 |
+| 中立 (0)      | -        | 不計入  |
 
 ### API 端點
 
-| 端點 | 說明 |
-|------|------|
-| `GET /api/kols/[id]/win-rate` | 取得 KOL 的勝率統計 |
-| `GET /api/stocks/[ticker]/win-rate` | 取得標的的勝率統計 |
+| 端點                                | 說明                |
+| ----------------------------------- | ------------------- |
+| `GET /api/kols/[id]/win-rate`       | 取得 KOL 的勝率統計 |
+| `GET /api/stocks/[ticker]/win-rate` | 取得標的的勝率統計  |
 
 ### 回傳格式
 
 ```typescript
 interface WinRateStats {
-  day5: { period: 5, total: number, wins: number, losses: number, rate: number | null };
-  day30: { period: 30, total: number, wins: number, losses: number, rate: number | null };
-  day90: { period: 90, total: number, wins: number, losses: number, rate: number | null };
-  day365: { period: 365, total: number, wins: number, losses: number, rate: number | null };
-  overall: { total: number, avgWinRate: number | null };
+  day5: { period: 5; total: number; wins: number; losses: number; rate: number | null };
+  day30: { period: 30; total: number; wins: number; losses: number; rate: number | null };
+  day90: { period: 90; total: number; wins: number; losses: number; rate: number | null };
+  day365: { period: 365; total: number; wins: number; losses: number; rate: number | null };
+  overall: { total: number; avgWinRate: number | null };
 }
 ```
 
@@ -192,13 +192,13 @@ interface WinRateStats {
 
 ## 五、已知問題 / 待解決事項
 
-| # | 問題描述 | 優先度 | 狀態 |
-|---|----------|--------|------|
-| 1 | 圖片上傳功能未實作 | 中 | ⏳ 待實作 |
-| 2 | Stock 詳情頁 Stats Tab 未實作 | 中 | ⏳ 待實作 |
-| 3 | Phase 8 AI 整合 | 低 | ⏳ 需 Gemini API Key |
-| 4 | 預覽確認頁 (`/posts/new`) 尚未完整實作 | 中 | ⏳ 待實作 |
-| 5 | 認證系統 (Phase 1) 尚未實作 | 低 | ⏳ 最後實作 |
+| #   | 問題描述                               | 優先度 | 狀態                 |
+| --- | -------------------------------------- | ------ | -------------------- |
+| 1   | 圖片上傳功能未實作                     | 中     | ⏳ 待實作            |
+| 2   | Stock 詳情頁 Stats Tab 未實作          | 中     | ⏳ 待實作            |
+| 3   | Phase 8 AI 整合                        | 低     | ⏳ 需 Gemini API Key |
+| 4   | 預覽確認頁 (`/posts/new`) 尚未完整實作 | 中     | ⏳ 待實作            |
+| 5   | 認證系統 (Phase 1) 尚未實作            | 低     | ⏳ 最後實作          |
 
 ---
 
@@ -224,17 +224,17 @@ npm run format      # 格式化
 
 ## 八、測試頁面建議
 
-| 頁面 | URL | 說明 |
-|------|-----|------|
-| Dashboard | `/dashboard` | 總覽 |
-| 快速輸入 | `/input` | ✅ 已接 API |
-| 草稿列表 | `/drafts` | ✅ 已接 API |
-| 草稿編輯 | `/drafts/[id]` | ✅ 表單元件已接 API |
-| KOL 列表 | `/kols` | KOL 列表 |
-| KOL 詳情 | `/kols/[id]` | ✅ Stats Tab 顯示勝率 |
-| 標的列表 | `/stocks` | 標的列表（含 Chart Tab） |
-| 標的詳情 | `/stocks/[ticker]` | Stats Tab 待實作 |
-| 文章列表 | `/posts` | 文章列表（含 Chart Tab） |
+| 頁面      | URL                | 說明                     |
+| --------- | ------------------ | ------------------------ |
+| Dashboard | `/dashboard`       | 總覽                     |
+| 快速輸入  | `/input`           | ✅ 已接 API              |
+| 草稿列表  | `/drafts`          | ✅ 已接 API              |
+| 草稿編輯  | `/drafts/[id]`     | ✅ 表單元件已接 API      |
+| KOL 列表  | `/kols`            | KOL 列表                 |
+| KOL 詳情  | `/kols/[id]`       | ✅ Stats Tab 顯示勝率    |
+| 標的列表  | `/stocks`          | 標的列表（含 Chart Tab） |
+| 標的詳情  | `/stocks/[ticker]` | Stats Tab 待實作         |
+| 文章列表  | `/posts`           | 文章列表（含 Chart Tab） |
 
 ---
 

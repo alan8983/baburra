@@ -73,10 +73,11 @@ export async function listPosts(params: {
   }
 
   // 使用 FK embedding 一次查詢取得文章 + KOL + 股票
-  let query = supabase.from('posts').select(
-    `*, kols(id, name, avatar_url), post_stocks(stock_id, stocks(id, ticker, name))`,
-    { count: 'exact' }
-  );
+  let query = supabase
+    .from('posts')
+    .select(`*, kols(id, name, avatar_url), post_stocks(stock_id, stocks(id, ticker, name))`, {
+      count: 'exact',
+    });
 
   if (kolId) query = query.eq('kol_id', kolId);
   if (stockFilterPostIds) query = query.in('id', stockFilterPostIds);
@@ -108,7 +109,8 @@ export async function listPosts(params: {
     const stocks = (row.post_stocks ?? [])
       .map((ps: any) => ps.stocks) // eslint-disable-line @typescript-eslint/no-explicit-any
       .filter(Boolean)
-      .map((s: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+      .map((s: any) => ({
+        // eslint-disable-line @typescript-eslint/no-explicit-any
         id: s.id as string,
         ticker: s.ticker as string,
         name: s.name as string,
@@ -146,7 +148,8 @@ export async function getPostById(id: string): Promise<PostWithPriceChanges | nu
   const stocks = (r.post_stocks ?? [])
     .map((ps: any) => ps.stocks) // eslint-disable-line @typescript-eslint/no-explicit-any
     .filter(Boolean)
-    .map((s: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+    .map((s: any) => ({
+      // eslint-disable-line @typescript-eslint/no-explicit-any
       id: s.id as string,
       ticker: s.ticker as string,
       name: s.name as string,

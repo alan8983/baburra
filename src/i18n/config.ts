@@ -7,5 +7,5 @@ export const localeCookieName = 'NEXT_LOCALE';
 
 export const localeNames: Record<Locale, string> = {
   'zh-TW': '繁體中文',
-  'en': 'English',
+  en: 'English',
 };

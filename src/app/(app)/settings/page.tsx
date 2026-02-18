@@ -128,7 +128,13 @@ export default function SettingsPage() {
 
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="your@email.com" value={user.email || ''} disabled />
+            <Input
+              id="email"
+              type="email"
+              placeholder="your@email.com"
+              value={user.email || ''}
+              disabled
+            />
             <p className="text-muted-foreground text-xs">Email 無法更改</p>
           </div>
 

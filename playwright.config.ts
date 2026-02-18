@@ -20,10 +20,7 @@ export default defineConfig({
   // CI 環境下使用較少的 worker
   workers: process.env.CI ? 1 : undefined,
   // 測試報告格式
-  reporter: [
-    ['html', { outputFolder: './tests/e2e/playwright-report' }],
-    ['list'],
-  ],
+  reporter: [['html', { outputFolder: './tests/e2e/playwright-report' }], ['list']],
   // 共用設定
   use: {
     // 基礎 URL

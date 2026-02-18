@@ -3,7 +3,16 @@
 import { use, useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, ArrowRight, Trash2, Link2, Loader2, AlertTriangle, CheckCircle2, Sparkles } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Trash2,
+  Link2,
+  Loader2,
+  AlertTriangle,
+  CheckCircle2,
+  Sparkles,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -35,7 +44,15 @@ import type {
   Sentiment,
   DraftWithRelations,
 } from '@/domain/models';
-import { useDraft, useUpdateDraft, useDeleteDraft, useFetchUrl, isUrlLike, getSupportedPlatform, getSupportedPlatformNames } from '@/hooks';
+import {
+  useDraft,
+  useUpdateDraft,
+  useDeleteDraft,
+  useFetchUrl,
+  isUrlLike,
+  getSupportedPlatform,
+  getSupportedPlatformNames,
+} from '@/hooks';
 import { useIdentifyTickers, useAiUsage } from '@/hooks/use-ai';
 import type { IdentifiedTicker } from '@/hooks/use-ai';
 import { API_ROUTES } from '@/lib/constants/routes';
@@ -198,9 +215,7 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
 
   const handleAcceptAllTickers = async () => {
     const existingSet = new Set(selectedStocks.map((s) => s.ticker.toUpperCase()));
-    const unadded = tickerSuggestions.filter(
-      (s) => !existingSet.has(s.ticker.toUpperCase())
-    );
+    const unadded = tickerSuggestions.filter((s) => !existingSet.has(s.ticker.toUpperCase()));
     for (const ticker of unadded) {
       await handleAcceptTicker(ticker);
     }
@@ -282,10 +297,14 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
         content: applyFields.content ? fetchResult.content : content || null,
         sourceUrl: sourceUrl || null,
         sentiment: sentiment ?? null,
-        postedAt: applyFields.postedAt && fetchResult.postedAt ? fetchResult.postedAt : postedAt ?? null,
+        postedAt:
+          applyFields.postedAt && fetchResult.postedAt ? fetchResult.postedAt : (postedAt ?? null),
         stockIds: selectedStocks.map((s) => s.id),
         images: applyFields.images ? fetchResult.images : images,
-        kolNameInput: applyFields.kolName && fetchResult.kolName && !selectedKOL ? fetchResult.kolName : undefined,
+        kolNameInput:
+          applyFields.kolName && fetchResult.kolName && !selectedKOL
+            ? fetchResult.kolName
+            : undefined,
       });
       setFetchDialogOpen(false);
       setFetchResult(null);
@@ -500,11 +519,14 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
               </div>
             )}
             {/* 支援的 URL 提示 */}
-            {sourceUrl && isUrlLike(sourceUrl) && getSupportedPlatform(sourceUrl) && !fetchUrl.isPending && (
-              <p className="text-muted-foreground text-xs">
-                偵測到 {getSupportedPlatform(sourceUrl)} 網址，點擊「擷取」可自動帶入文章內容
-              </p>
-            )}
+            {sourceUrl &&
+              isUrlLike(sourceUrl) &&
+              getSupportedPlatform(sourceUrl) &&
+              !fetchUrl.isPending && (
+                <p className="text-muted-foreground text-xs">
+                  偵測到 {getSupportedPlatform(sourceUrl)} 網址，點擊「擷取」可自動帶入文章內容
+                </p>
+              )}
           </div>
 
           <Separator />
@@ -575,9 +597,7 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
               <input
                 type="checkbox"
                 checked={applyFields.content}
-                onChange={(e) =>
-                  setApplyFields((prev) => ({ ...prev, content: e.target.checked }))
-                }
+                onChange={(e) => setApplyFields((prev) => ({ ...prev, content: e.target.checked }))}
                 className="mt-1 h-4 w-4"
               />
               <div className="flex-1">

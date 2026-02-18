@@ -7,17 +7,19 @@ import { facebookExtractor } from '../facebook.extractor';
 import type { ExtractorError } from '../types';
 
 // Helper to build minimal Facebook HTML
-function buildFacebookHtml(options: {
-  ogTitle?: string;
-  ogDescription?: string;
-  ogImages?: string[];
-  ogSiteName?: string;
-  jsonLd?: Record<string, unknown>;
-  dataAdPreview?: string;
-  userContent?: string;
-  postMessage?: string;
-  paragraph?: string;
-} = {}): string {
+function buildFacebookHtml(
+  options: {
+    ogTitle?: string;
+    ogDescription?: string;
+    ogImages?: string[];
+    ogSiteName?: string;
+    jsonLd?: Record<string, unknown>;
+    dataAdPreview?: string;
+    userContent?: string;
+    postMessage?: string;
+    paragraph?: string;
+  } = {}
+): string {
   const parts: string[] = ['<html><head>'];
 
   if (options.ogTitle) {
@@ -59,31 +61,39 @@ function buildFacebookHtml(options: {
 
 /** Create a mock fetch that returns a fresh Response each time */
 function mockFetchResponse(html: string) {
-  return vi.fn().mockImplementation(() =>
-    Promise.resolve(new Response(html, { status: 200 }))
-  );
+  return vi.fn().mockImplementation(() => Promise.resolve(new Response(html, { status: 200 })));
 }
 
 describe('FacebookExtractor', () => {
   describe('isValidUrl', () => {
     it('should validate facebook.com/share/p/ URLs', () => {
-      expect(facebookExtractor.isValidUrl('https://www.facebook.com/share/p/1X6c9WpESv/')).toBe(true);
+      expect(facebookExtractor.isValidUrl('https://www.facebook.com/share/p/1X6c9WpESv/')).toBe(
+        true
+      );
     });
 
     it('should validate facebook.com/{user}/posts/ URLs', () => {
-      expect(facebookExtractor.isValidUrl('https://www.facebook.com/zuck/posts/10114420763048161')).toBe(true);
+      expect(
+        facebookExtractor.isValidUrl('https://www.facebook.com/zuck/posts/10114420763048161')
+      ).toBe(true);
     });
 
     it('should validate facebook.com/permalink.php URLs', () => {
-      expect(facebookExtractor.isValidUrl('https://www.facebook.com/permalink.php?story_fbid=123456')).toBe(true);
+      expect(
+        facebookExtractor.isValidUrl('https://www.facebook.com/permalink.php?story_fbid=123456')
+      ).toBe(true);
     });
 
     it('should validate facebook.com video URLs', () => {
-      expect(facebookExtractor.isValidUrl('https://www.facebook.com/user/videos/123456')).toBe(true);
+      expect(facebookExtractor.isValidUrl('https://www.facebook.com/user/videos/123456')).toBe(
+        true
+      );
     });
 
     it('should validate facebook.com photo URLs', () => {
-      expect(facebookExtractor.isValidUrl('https://www.facebook.com/photo.php?fbid=123456')).toBe(true);
+      expect(facebookExtractor.isValidUrl('https://www.facebook.com/photo.php?fbid=123456')).toBe(
+        true
+      );
     });
 
     it('should reject non-Facebook URLs', () => {
@@ -101,7 +111,9 @@ describe('FacebookExtractor', () => {
     });
 
     it('should throw INVALID_URL error for invalid URLs', async () => {
-      await expect(facebookExtractor.extract('https://twitter.com/user/status/123')).rejects.toMatchObject({
+      await expect(
+        facebookExtractor.extract('https://twitter.com/user/status/123')
+      ).rejects.toMatchObject({
         code: 'INVALID_URL',
         message: expect.stringContaining('Invalid Facebook URL'),
       } as ExtractorError);
@@ -129,11 +141,10 @@ describe('FacebookExtractor', () => {
       const html = buildFacebookHtml({
         ogDescription: 'Retry test Facebook content that is long enough for validation',
       });
-      const mockFn = vi.fn()
+      const mockFn = vi
+        .fn()
         .mockRejectedValueOnce(new Error('Network error'))
-        .mockImplementationOnce(() =>
-          Promise.resolve(new Response(html, { status: 200 }))
-        );
+        .mockImplementationOnce(() => Promise.resolve(new Response(html, { status: 200 })));
       vi.stubGlobal('fetch', mockFn);
 
       const result = await facebookExtractor.extract(
@@ -146,16 +157,19 @@ describe('FacebookExtractor', () => {
     });
 
     it('should throw FETCH_FAILED after all retries exhausted', async () => {
-      vi.stubGlobal('fetch', vi.fn()
-        .mockRejectedValueOnce(new Error('fail 1'))
-        .mockRejectedValueOnce(new Error('fail 2'))
+      vi.stubGlobal(
+        'fetch',
+        vi
+          .fn()
+          .mockRejectedValueOnce(new Error('fail 1'))
+          .mockRejectedValueOnce(new Error('fail 2'))
       );
 
       await expect(
-        facebookExtractor.extract(
-          'https://www.facebook.com/share/p/1X6c9WpESv/',
-          { retryAttempts: 2, timeout: 10000 }
-        )
+        facebookExtractor.extract('https://www.facebook.com/share/p/1X6c9WpESv/', {
+          retryAttempts: 2,
+          timeout: 10000,
+        })
       ).rejects.toMatchObject({
         code: 'FETCH_FAILED',
       });
@@ -167,10 +181,10 @@ describe('FacebookExtractor', () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(abortError));
 
       await expect(
-        facebookExtractor.extract(
-          'https://www.facebook.com/share/p/1X6c9WpESv/',
-          { retryAttempts: 1, timeout: 100 }
-        )
+        facebookExtractor.extract('https://www.facebook.com/share/p/1X6c9WpESv/', {
+          retryAttempts: 1,
+          timeout: 100,
+        })
       ).rejects.toMatchObject({
         code: 'FETCH_FAILED',
       });
@@ -189,10 +203,9 @@ describe('FacebookExtractor', () => {
       vi.stubGlobal('fetch', mockFetchResponse(html));
 
       await expect(
-        facebookExtractor.extract(
-          'https://www.facebook.com/share/p/1X6c9WpESv/',
-          { retryAttempts: 1 }
-        )
+        facebookExtractor.extract('https://www.facebook.com/share/p/1X6c9WpESv/', {
+          retryAttempts: 1,
+        })
       ).rejects.toMatchObject({
         code: 'FETCH_FAILED',
       });
@@ -206,10 +219,9 @@ describe('FacebookExtractor', () => {
       vi.stubGlobal('fetch', mockFetchResponse(html));
 
       await expect(
-        facebookExtractor.extract(
-          'https://www.facebook.com/share/p/1X6c9WpESv/',
-          { retryAttempts: 1 }
-        )
+        facebookExtractor.extract('https://www.facebook.com/share/p/1X6c9WpESv/', {
+          retryAttempts: 1,
+        })
       ).rejects.toMatchObject({
         code: 'FETCH_FAILED',
       });
@@ -217,7 +229,8 @@ describe('FacebookExtractor', () => {
 
     it('should accept valid content length', async () => {
       const html = buildFacebookHtml({
-        ogDescription: 'This is a valid Facebook post content that has enough characters to pass validation',
+        ogDescription:
+          'This is a valid Facebook post content that has enough characters to pass validation',
       });
       vi.stubGlobal('fetch', mockFetchResponse(html));
 
@@ -354,7 +367,10 @@ describe('FacebookExtractor', () => {
     });
 
     it('should limit images to 10', async () => {
-      const images = Array.from({ length: 15 }, (_, i) => `https://scontent.fxx.fbcdn.net/image_${i}.jpg`);
+      const images = Array.from(
+        { length: 15 },
+        (_, i) => `https://scontent.fxx.fbcdn.net/image_${i}.jpg`
+      );
       const html = buildFacebookHtml({
         ogDescription: 'Facebook post content with many images for image limit testing',
         ogImages: images,

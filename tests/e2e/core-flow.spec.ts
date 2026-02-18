@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 
 /**
  * 核心輸入流程 E2E 測試
- * 
+ *
  * 此測試模擬完整的 Happy Path：
  * 1. 從 /input 頁面開始
  * 2. 貼上測試內容
@@ -11,7 +11,7 @@ import { createClient } from '@supabase/supabase-js';
  * 4. 選擇 KOL、股票、設定情緒
  * 5. 預覽並確認建檔
  * 6. 驗證導航和資料正確性
- * 
+ *
  * 環境變數需求：
  * - NEXT_PUBLIC_SUPABASE_URL
  * - NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -168,10 +168,7 @@ test.describe('核心輸入流程 - Happy Path', () => {
     await page.waitForTimeout(800); // 等待搜尋結果載入
 
     // 選擇匹配的 KOL（在 CommandItem 中）
-    const kolOption = page
-      .locator('[role="option"]')
-      .filter({ hasText: TEST_KOL_NAME })
-      .first();
+    const kolOption = page.locator('[role="option"]').filter({ hasText: TEST_KOL_NAME }).first();
     await expect(kolOption).toBeVisible({ timeout: 5000 });
     await kolOption.click();
 

@@ -7,12 +7,14 @@ import { twitterExtractor } from '../twitter.extractor';
 import type { ExtractorError } from '../types';
 
 /** Build a mock oEmbed JSON response */
-function buildOEmbedResponse(options: {
-  url?: string;
-  authorName?: string;
-  authorUrl?: string;
-  tweetText?: string;
-} = {}) {
+function buildOEmbedResponse(
+  options: {
+    url?: string;
+    authorName?: string;
+    authorUrl?: string;
+    tweetText?: string;
+  } = {}
+) {
   const text = options.tweetText || 'Default tweet text content for testing purposes';
   const authorName = options.authorName || 'Test User';
   return {
@@ -58,9 +60,7 @@ describe('TwitterExtractor', () => {
     });
 
     it('should validate mobile.twitter.com URLs', () => {
-      expect(twitterExtractor.isValidUrl('https://mobile.twitter.com/user/status/123')).toBe(
-        true
-      );
+      expect(twitterExtractor.isValidUrl('https://mobile.twitter.com/user/status/123')).toBe(true);
     });
 
     it('should reject non-Twitter URLs', () => {
@@ -97,10 +97,9 @@ describe('TwitterExtractor', () => {
       });
       vi.stubGlobal('fetch', mockOEmbedFetch(response));
 
-      const result = await twitterExtractor.extract(
-        'https://x.com/StockAnalyst/status/123456789',
-        { retryAttempts: 1 }
-      );
+      const result = await twitterExtractor.extract('https://x.com/StockAnalyst/status/123456789', {
+        retryAttempts: 1,
+      });
 
       expect(result.sourcePlatform).toBe('twitter');
       expect(result.content).toContain('Market analysis');
@@ -130,8 +129,7 @@ describe('TwitterExtractor', () => {
 
     it('should remove t.co links from content', async () => {
       const response = buildOEmbedResponse({
-        tweetText:
-          'Stock price is up today with great momentum https://t.co/abc123',
+        tweetText: 'Stock price is up today with great momentum https://t.co/abc123',
       });
       vi.stubGlobal('fetch', mockOEmbedFetch(response));
 
@@ -144,8 +142,7 @@ describe('TwitterExtractor', () => {
 
     it('should remove pic.twitter.com links from content', async () => {
       const response = buildOEmbedResponse({
-        tweetText:
-          'Stock chart analysis for this quarter pic.twitter.com/xyz789',
+        tweetText: 'Stock chart analysis for this quarter pic.twitter.com/xyz789',
       });
       vi.stubGlobal('fetch', mockOEmbedFetch(response));
 

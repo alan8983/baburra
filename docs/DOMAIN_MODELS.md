@@ -20,17 +20,17 @@ erDiagram
     User ||--o{ KOL : owns
     User ||--o{ Stock : owns
     User ||--o{ Post : owns
-    
+
     KOL ||--o{ Post : "authored_by"
     Stock ||--o{ Post : "mentions"
     Stock ||--o{ StockPrice : "has"
-    
+
     User {
         uuid id PK
         string email
         timestamp created_at
     }
-    
+
     Profile {
         uuid id PK_FK
         string display_name
@@ -38,7 +38,7 @@ erDiagram
         int ai_usage_count
         timestamp created_at
     }
-    
+
     KOL {
         uuid id PK
         uuid user_id FK
@@ -47,7 +47,7 @@ erDiagram
         string social_link
         timestamp created_at
     }
-    
+
     Stock {
         string ticker PK
         uuid user_id FK
@@ -55,7 +55,7 @@ erDiagram
         string exchange
         timestamp last_updated
     }
-    
+
     Post {
         uuid id PK
         uuid user_id FK
@@ -68,7 +68,7 @@ erDiagram
         string status
         jsonb ai_analysis_json
     }
-    
+
     StockPrice {
         serial id PK
         string ticker FK
@@ -89,13 +89,14 @@ erDiagram
 
 由 Supabase Auth 自動管理，存於 `auth.users` 表。
 
-| 欄位 | 類型 | 必填 | 說明 |
-|------|------|------|------|
-| id | UUID | ✅ | 主鍵，由 Supabase Auth 生成 |
-| email | string | ✅ | 用戶電子郵件 |
-| created_at | timestamp | ✅ | 註冊時間 |
+| 欄位       | 類型      | 必填 | 說明                        |
+| ---------- | --------- | ---- | --------------------------- |
+| id         | UUID      | ✅   | 主鍵，由 Supabase Auth 生成 |
+| email      | string    | ✅   | 用戶電子郵件                |
+| created_at | timestamp | ✅   | 註冊時間                    |
 
 **約束**：
+
 - `email` 必須唯一
 - 不可直接操作 `auth.users`，透過 Supabase Auth API
 
@@ -105,15 +106,16 @@ erDiagram
 
 用戶擴展資料，與 `auth.users` 一對一關聯。
 
-| 欄位 | 類型 | 必填 | 預設值 | 說明 |
-|------|------|------|--------|------|
-| id | UUID | ✅ | - | 主鍵，FK → auth.users |
-| display_name | string | ❌ | null | 顯示名稱 |
-| plan | string | ✅ | 'free' | 方案類型：'free' \| 'pro' |
-| ai_usage_count | int | ✅ | 0 | 當月 AI 分析次數 |
-| created_at | timestamp | ✅ | NOW() | 建立時間 |
+| 欄位           | 類型      | 必填 | 預設值 | 說明                      |
+| -------------- | --------- | ---- | ------ | ------------------------- |
+| id             | UUID      | ✅   | -      | 主鍵，FK → auth.users     |
+| display_name   | string    | ❌   | null   | 顯示名稱                  |
+| plan           | string    | ✅   | 'free' | 方案類型：'free' \| 'pro' |
+| ai_usage_count | int       | ✅   | 0      | 當月 AI 分析次數          |
+| created_at     | timestamp | ✅   | NOW()  | 建立時間                  |
 
 **約束**：
+
 - `plan` 只能是 `'free'` 或 `'pro'`
 - `ai_usage_count` 每月 1 日重置為 0
 
@@ -135,16 +137,17 @@ interface Profile {
 
 用戶追蹤的 KOL 資料。
 
-| 欄位 | 類型 | 必填 | 預設值 | 說明 |
-|------|------|------|--------|------|
-| id | UUID | ✅ | gen_random_uuid() | 主鍵 |
-| user_id | UUID | ✅ | - | FK → auth.users |
-| name | string | ✅ | - | KOL 名稱 |
-| bio | string | ❌ | null | 簡介 |
-| social_link | string | ❌ | null | 社群連結 |
-| created_at | timestamp | ✅ | NOW() | 建立時間 |
+| 欄位        | 類型      | 必填 | 預設值            | 說明            |
+| ----------- | --------- | ---- | ----------------- | --------------- |
+| id          | UUID      | ✅   | gen_random_uuid() | 主鍵            |
+| user_id     | UUID      | ✅   | -                 | FK → auth.users |
+| name        | string    | ✅   | -                 | KOL 名稱        |
+| bio         | string    | ❌   | null              | 簡介            |
+| social_link | string    | ❌   | null              | 社群連結        |
+| created_at  | timestamp | ✅   | NOW()             | 建立時間        |
 
 **約束**：
+
 - `UNIQUE(user_id, name)`：同一用戶的 KOL 名稱不可重複
 - 免費用戶最多建立 5 個 KOL
 
@@ -181,15 +184,16 @@ interface UpdateKOLInput {
 
 用戶追蹤的股票。
 
-| 欄位 | 類型 | 必填 | 預設值 | 說明 |
-|------|------|------|--------|------|
-| ticker | string | ✅ | - | 主鍵，股票代碼（如 AAPL） |
-| user_id | UUID | ✅ | - | FK → auth.users |
-| name | string | ❌ | null | 公司名稱 |
-| exchange | string | ❌ | null | 交易所（如 NASDAQ） |
-| last_updated | timestamp | ✅ | NOW() | 最後更新時間 |
+| 欄位         | 類型      | 必填 | 預設值 | 說明                      |
+| ------------ | --------- | ---- | ------ | ------------------------- |
+| ticker       | string    | ✅   | -      | 主鍵，股票代碼（如 AAPL） |
+| user_id      | UUID      | ✅   | -      | FK → auth.users           |
+| name         | string    | ❌   | null   | 公司名稱                  |
+| exchange     | string    | ❌   | null   | 交易所（如 NASDAQ）       |
+| last_updated | timestamp | ✅   | NOW()  | 最後更新時間              |
 
 **約束**：
+
 - `ticker` 為主鍵，格式為大寫英文（如 AAPL、TSLA）
 - `ticker` 長度 1-10 字元
 
@@ -218,20 +222,21 @@ interface UpsertStockInput {
 
 KOL 發言的記錄，核心業務實體。
 
-| 欄位 | 類型 | 必填 | 預設值 | 說明 |
-|------|------|------|--------|------|
-| id | UUID | ✅ | gen_random_uuid() | 主鍵 |
-| user_id | UUID | ✅ | - | FK → auth.users |
-| kol_id | UUID | ❌ | null | FK → kols |
-| stock_ticker | string | ❌ | null | FK → stocks |
-| content | string | ✅ | - | 原始文本內容 |
-| sentiment | string | ❌ | null | 情緒：'Bullish' \| 'Bearish' \| 'Neutral' |
-| posted_at | timestamp | ❌ | null | KOL 發文時間 |
-| created_at | timestamp | ✅ | NOW() | 建檔時間 |
-| status | string | ✅ | 'Draft' | 狀態：'Draft' \| 'Published' |
-| ai_analysis_json | JSONB | ❌ | null | AI 分析結果 |
+| 欄位             | 類型      | 必填 | 預設值            | 說明                                      |
+| ---------------- | --------- | ---- | ----------------- | ----------------------------------------- |
+| id               | UUID      | ✅   | gen_random_uuid() | 主鍵                                      |
+| user_id          | UUID      | ✅   | -                 | FK → auth.users                           |
+| kol_id           | UUID      | ❌   | null              | FK → kols                                 |
+| stock_ticker     | string    | ❌   | null              | FK → stocks                               |
+| content          | string    | ✅   | -                 | 原始文本內容                              |
+| sentiment        | string    | ❌   | null              | 情緒：'Bullish' \| 'Bearish' \| 'Neutral' |
+| posted_at        | timestamp | ❌   | null              | KOL 發文時間                              |
+| created_at       | timestamp | ✅   | NOW()             | 建檔時間                                  |
+| status           | string    | ✅   | 'Draft'           | 狀態：'Draft' \| 'Published'              |
+| ai_analysis_json | JSONB     | ❌   | null              | AI 分析結果                               |
 
 **約束**：
+
 - `sentiment` 只能是 `'Bullish'`、`'Bearish'`、`'Neutral'` 或 `null`
 - `status` 只能是 `'Draft'` 或 `'Published'`
 - `Published` 狀態的 Post 必須有 `kol_id` 和 `stock_ticker`
@@ -283,10 +288,10 @@ interface UpdateDraftInput {
 
 // 發布 Post 的輸入
 interface PublishPostInput {
-  kol_id: string;       // 必填
+  kol_id: string; // 必填
   stock_ticker: string; // 必填
   sentiment: Sentiment; // 必填
-  posted_at: string;    // 必填
+  posted_at: string; // 必填
 }
 ```
 
@@ -296,18 +301,19 @@ interface PublishPostInput {
 
 股價歷史資料，全域共享（不分用戶）。
 
-| 欄位 | 類型 | 必填 | 預設值 | 說明 |
-|------|------|------|--------|------|
-| id | SERIAL | ✅ | auto | 主鍵 |
-| ticker | string | ✅ | - | 股票代碼 |
-| date | DATE | ✅ | - | 股價日期 |
-| open | decimal | ❌ | null | 開盤價 |
-| close | decimal | ❌ | null | 收盤價（調整後） |
-| high | decimal | ❌ | null | 最高價 |
-| low | decimal | ❌ | null | 最低價 |
-| volume | bigint | ❌ | null | 交易量 |
+| 欄位   | 類型    | 必填 | 預設值 | 說明             |
+| ------ | ------- | ---- | ------ | ---------------- |
+| id     | SERIAL  | ✅   | auto   | 主鍵             |
+| ticker | string  | ✅   | -      | 股票代碼         |
+| date   | DATE    | ✅   | -      | 股價日期         |
+| open   | decimal | ❌   | null   | 開盤價           |
+| close  | decimal | ❌   | null   | 收盤價（調整後） |
+| high   | decimal | ❌   | null   | 最高價           |
+| low    | decimal | ❌   | null   | 最低價           |
+| volume | bigint  | ❌   | null   | 交易量           |
 
 **約束**：
+
 - `UNIQUE(ticker, date)`：同一股票同一日期唯一
 - 不設 `user_id`，所有用戶共享
 - 快取有效期：7 天
@@ -318,7 +324,7 @@ interface PublishPostInput {
 interface StockPrice {
   id: number;
   ticker: string;
-  date: string;      // YYYY-MM-DD
+  date: string; // YYYY-MM-DD
   open: number | null;
   close: number | null;
   high: number | null;
@@ -328,7 +334,7 @@ interface StockPrice {
 
 // K線圖資料格式
 interface CandlestickData {
-  time: string;      // YYYY-MM-DD
+  time: string; // YYYY-MM-DD
   open: number;
   high: number;
   low: number;
@@ -388,7 +394,7 @@ interface PriceChangeResult {
   endDate: string;
   startPrice: number;
   endPrice: number;
-  change: number;        // 絕對變化
+  change: number; // 絕對變化
   changePercent: number; // 百分比變化 (0.05 = 5%)
 }
 ```
@@ -397,11 +403,11 @@ interface PriceChangeResult {
 
 ```typescript
 interface WinRateStats {
-  period: number;        // 5, 30, 90, 365
+  period: number; // 5, 30, 90, 365
   totalPredictions: number;
   correctPredictions: number;
-  winRate: number;       // 0-1
-  excluded: number;      // 震盪區間排除數
+  winRate: number; // 0-1
+  excluded: number; // 震盪區間排除數
 }
 ```
 
@@ -450,6 +456,6 @@ sequenceDiagram
 
 ## 六、修改記錄
 
-| 版本 | 日期 | 修改內容 |
-|------|------|----------|
-| 1.0 | 2026-01-29 | 初始版本 |
+| 版本 | 日期       | 修改內容 |
+| ---- | ---------- | -------- |
+| 1.0  | 2026-01-29 | 初始版本 |

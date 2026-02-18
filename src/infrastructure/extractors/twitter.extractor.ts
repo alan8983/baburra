@@ -8,12 +8,7 @@
  * - https://mobile.twitter.com/{username}/status/{id}
  */
 
-import {
-  SocialMediaExtractor,
-  UrlFetchResult,
-  ExtractorConfig,
-  ExtractorError,
-} from './types';
+import { SocialMediaExtractor, UrlFetchResult, ExtractorConfig, ExtractorError } from './types';
 
 /** Shape of the Twitter oEmbed API JSON response */
 interface TwitterOEmbedResponse {
@@ -39,10 +34,7 @@ export class TwitterExtractor extends SocialMediaExtractor {
     return this.URL_PATTERNS.some((pattern) => pattern.test(url));
   }
 
-  async extract(
-    url: string,
-    config?: ExtractorConfig
-  ): Promise<UrlFetchResult> {
+  async extract(url: string, config?: ExtractorConfig): Promise<UrlFetchResult> {
     if (!this.isValidUrl(url)) {
       throw {
         code: 'INVALID_URL',
@@ -74,10 +66,7 @@ export class TwitterExtractor extends SocialMediaExtractor {
     } as ExtractorError;
   }
 
-  private async fetchOEmbed(
-    url: string,
-    timeout: number
-  ): Promise<UrlFetchResult> {
+  private async fetchOEmbed(url: string, timeout: number): Promise<UrlFetchResult> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
@@ -109,10 +98,7 @@ export class TwitterExtractor extends SocialMediaExtractor {
     }
   }
 
-  private parseOEmbedResponse(
-    data: TwitterOEmbedResponse,
-    originalUrl: string
-  ): UrlFetchResult {
+  private parseOEmbedResponse(data: TwitterOEmbedResponse, originalUrl: string): UrlFetchResult {
     try {
       let content = this.extractTextFromHtml(data.html);
 
@@ -160,7 +146,10 @@ export class TwitterExtractor extends SocialMediaExtractor {
   }
 
   private stripHtmlTags(html: string): string {
-    return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    return html
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   private decodeHtmlEntities(text: string): string {

@@ -270,9 +270,7 @@ describe('analyzeDraftContent', () => {
   it('confidence 未提供時應預設為 0.5', async () => {
     mockGenerateJson.mockResolvedValueOnce({
       kolName: null,
-      tickers: [
-        { ticker: 'AAPL', name: 'Apple', market: 'US', mentionedAs: 'AAPL' },
-      ],
+      tickers: [{ ticker: 'AAPL', name: 'Apple', market: 'US', mentionedAs: 'AAPL' }],
       sentiment: 0,
       reasoning: '',
       postedAt: null,
@@ -312,7 +310,13 @@ describe('identifyTickers', () => {
   it('有效的 tickers 應完整通過', async () => {
     mockGenerateJson.mockResolvedValueOnce({
       tickers: [
-        { ticker: 'AAPL', name: 'Apple Inc.', market: 'US', confidence: 0.95, mentionedAs: 'Apple' },
+        {
+          ticker: 'AAPL',
+          name: 'Apple Inc.',
+          market: 'US',
+          confidence: 0.95,
+          mentionedAs: 'Apple',
+        },
         { ticker: '2330.TW', name: '台積電', market: 'TW', confidence: 0.9, mentionedAs: '台積電' },
       ],
     });
@@ -363,9 +367,7 @@ describe('identifyTickers', () => {
 
   it('confidence 未提供時應預設為 0.5', async () => {
     mockGenerateJson.mockResolvedValueOnce({
-      tickers: [
-        { ticker: 'AAPL', name: 'Apple', market: 'US', mentionedAs: 'AAPL' },
-      ],
+      tickers: [{ ticker: 'AAPL', name: 'Apple', market: 'US', mentionedAs: 'AAPL' }],
     });
 
     const result = await identifyTickers('test');
@@ -381,9 +383,7 @@ describe('identifyTickers', () => {
 
   it('mentionedAs 未提供時應 fallback 到 name', async () => {
     mockGenerateJson.mockResolvedValueOnce({
-      tickers: [
-        { ticker: 'AAPL', name: 'Apple Inc.', market: 'US', confidence: 0.9 },
-      ],
+      tickers: [{ ticker: 'AAPL', name: 'Apple Inc.', market: 'US', confidence: 0.9 }],
     });
 
     const result = await identifyTickers('test');
@@ -671,7 +671,13 @@ const DRAFT_ANALYSIS_CASES: DraftAnalysisCaseInput[] = [
     mockResponse: {
       kolName: '老王',
       tickers: [
-        { ticker: 'AAPL', name: 'Apple Inc.', market: 'US', confidence: 0.9, mentionedAs: 'AAPL 蘋果' },
+        {
+          ticker: 'AAPL',
+          name: 'Apple Inc.',
+          market: 'US',
+          confidence: 0.9,
+          mentionedAs: 'AAPL 蘋果',
+        },
       ],
       sentiment: 1,
       confidence: 0.85,
@@ -691,7 +697,13 @@ const DRAFT_ANALYSIS_CASES: DraftAnalysisCaseInput[] = [
     mockResponse: {
       kolName: null,
       tickers: [
-        { ticker: '2330.TW', name: '台積電', market: 'TW', confidence: 0.95, mentionedAs: '台積電 2330' },
+        {
+          ticker: '2330.TW',
+          name: '台積電',
+          market: 'TW',
+          confidence: 0.95,
+          mentionedAs: '台積電 2330',
+        },
       ],
       sentiment: 1,
       confidence: 0.9,
@@ -712,7 +724,13 @@ const DRAFT_ANALYSIS_CASES: DraftAnalysisCaseInput[] = [
       kolName: '小李',
       tickers: [
         { ticker: 'TSLA', name: 'Tesla Inc.', market: 'US', confidence: 0.85, mentionedAs: 'TSLA' },
-        { ticker: 'NVDA', name: 'NVIDIA Corp.', market: 'US', confidence: 0.9, mentionedAs: 'NVDA' },
+        {
+          ticker: 'NVDA',
+          name: 'NVIDIA Corp.',
+          market: 'US',
+          confidence: 0.9,
+          mentionedAs: 'NVDA',
+        },
       ],
       sentiment: 0,
       confidence: 0.7,

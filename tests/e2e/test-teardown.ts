@@ -1,12 +1,12 @@
 /**
  * E2E 測試 Teardown 腳本
- * 
+ *
  * 此腳本用於清理測試過程中產生的資料，確保測試環境乾淨。
  * 可以手動執行或在 CI/CD 流程中自動執行。
- * 
+ *
  * 使用方法：
  *   npx tsx tests/e2e/test-teardown.ts
- * 
+ *
  * 或設定環境變數後執行：
  *   NEXT_PUBLIC_SUPABASE_URL=xxx NEXT_PUBLIC_SUPABASE_ANON_KEY=xxx npx tsx tests/e2e/test-teardown.ts
  */
@@ -35,36 +35,27 @@ async function cleanupTestData() {
   try {
     // 1. 刪除測試產生的 Posts（透過關聯的 KOL 或內容標記）
     console.log('📝 清理測試產生的 Posts...');
-    
+
     // 方法 1: 透過 KOL 名稱查找
-    const { data: testKols } = await supabase
-      .from('kols')
-      .select('id')
-      .eq('name', TEST_KOL_NAME);
+    const { data: testKols } = await supabase.from('kols').select('id').eq('name', TEST_KOL_NAME);
 
     if (testKols && testKols.length > 0) {
       const kolIds = testKols.map((k) => k.id);
-      
+
       // 查找這些 KOL 的 posts
-      const { data: testPosts } = await supabase
-        .from('posts')
-        .select('id')
-        .in('kol_id', kolIds);
+      const { data: testPosts } = await supabase.from('posts').select('id').in('kol_id', kolIds);
 
       if (testPosts && testPosts.length > 0) {
         // 刪除相關的 post_stocks 記錄
         const postIds = testPosts.map((p) => p.id);
         await supabase.from('post_stocks').delete().in('post_id', postIds);
-        
+
         // 刪除 post_arguments 記錄（如果存在）
         await supabase.from('post_arguments').delete().in('post_id', postIds);
-        
+
         // 刪除 posts
-        const { error: postsError } = await supabase
-          .from('posts')
-          .delete()
-          .in('id', postIds);
-        
+        const { error: postsError } = await supabase.from('posts').delete().in('id', postIds);
+
         if (postsError) {
           console.error('  ⚠️  刪除 Posts 時發生錯誤:', postsError.message);
         } else {
@@ -81,15 +72,12 @@ async function cleanupTestData() {
 
     if (markedPosts && markedPosts.length > 0) {
       const markedPostIds = markedPosts.map((p) => p.id);
-      
+
       await supabase.from('post_stocks').delete().in('post_id', markedPostIds);
       await supabase.from('post_arguments').delete().in('post_id', markedPostIds);
-      
-      const { error: markedError } = await supabase
-        .from('posts')
-        .delete()
-        .in('id', markedPostIds);
-      
+
+      const { error: markedError } = await supabase.from('posts').delete().in('id', markedPostIds);
+
       if (!markedError) {
         console.log(`  ✅ 已刪除 ${markedPosts.length} 筆標記的 Posts`);
       }
@@ -97,28 +85,22 @@ async function cleanupTestData() {
 
     // 2. 刪除測試產生的 Drafts
     console.log('\n📄 清理測試產生的 Drafts...');
-    
+
     // 透過 KOL 關聯查找
     if (testKols && testKols.length > 0) {
       const kolIds = testKols.map((k) => k.id);
-      
-      const { data: testDrafts } = await supabase
-        .from('drafts')
-        .select('id')
-        .in('kol_id', kolIds);
+
+      const { data: testDrafts } = await supabase.from('drafts').select('id').in('kol_id', kolIds);
 
       if (testDrafts && testDrafts.length > 0) {
         const draftIds = testDrafts.map((d) => d.id);
-        
+
         // 刪除相關的 draft_stocks 記錄
         await supabase.from('draft_stocks').delete().in('draft_id', draftIds);
-        
+
         // 刪除 drafts
-        const { error: draftsError } = await supabase
-          .from('drafts')
-          .delete()
-          .in('id', draftIds);
-        
+        const { error: draftsError } = await supabase.from('drafts').delete().in('id', draftIds);
+
         if (draftsError) {
           console.error('  ⚠️  刪除 Drafts 時發生錯誤:', draftsError.message);
         } else {
@@ -135,14 +117,14 @@ async function cleanupTestData() {
 
     if (markedDrafts && markedDrafts.length > 0) {
       const markedDraftIds = markedDrafts.map((d) => d.id);
-      
+
       await supabase.from('draft_stocks').delete().in('draft_id', markedDraftIds);
-      
+
       const { error: markedDraftError } = await supabase
         .from('drafts')
         .delete()
         .in('id', markedDraftIds);
-      
+
       if (!markedDraftError) {
         console.log(`  ✅ 已刪除 ${markedDrafts.length} 筆標記的 Drafts`);
       }

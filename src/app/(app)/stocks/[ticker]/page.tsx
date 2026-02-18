@@ -227,43 +227,43 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                             {formatDateTime(post.postedAt)}
                           </span>
                         </div>
-                          <p className="text-muted-foreground mt-2 line-clamp-2 text-sm">
-                            {post.content}
-                          </p>
-                          <div className="mt-2 flex flex-wrap gap-4 text-sm">
-                            <span
-                              className={
-                                changes?.day5 != null
-                                  ? changes.day5 >= 0
-                                    ? 'text-green-600'
-                                    : 'text-red-600'
-                                  : 'text-muted-foreground'
-                              }
-                            >
-                              5日:{' '}
-                              {changes?.day5 != null
-                                ? `${changes.day5 >= 0 ? '+' : ''}${changes.day5.toFixed(1)}%`
-                                : '—'}
-                            </span>
-                            <span
-                              className={
-                                changes?.day30 != null
-                                  ? changes.day30 >= 0
-                                    ? 'text-green-600'
-                                    : 'text-red-600'
-                                  : 'text-muted-foreground'
-                              }
-                            >
-                              30日:{' '}
-                              {changes?.day30 != null
-                                ? `${changes.day30 >= 0 ? '+' : ''}${changes.day30.toFixed(1)}%`
-                                : '—'}
-                            </span>
-                          </div>
+                        <p className="text-muted-foreground mt-2 line-clamp-2 text-sm">
+                          {post.content}
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-4 text-sm">
+                          <span
+                            className={
+                              changes?.day5 != null
+                                ? changes.day5 >= 0
+                                  ? 'text-green-600'
+                                  : 'text-red-600'
+                                : 'text-muted-foreground'
+                            }
+                          >
+                            5日:{' '}
+                            {changes?.day5 != null
+                              ? `${changes.day5 >= 0 ? '+' : ''}${changes.day5.toFixed(1)}%`
+                              : '—'}
+                          </span>
+                          <span
+                            className={
+                              changes?.day30 != null
+                                ? changes.day30 >= 0
+                                  ? 'text-green-600'
+                                  : 'text-red-600'
+                                : 'text-muted-foreground'
+                            }
+                          >
+                            30日:{' '}
+                            {changes?.day30 != null
+                              ? `${changes.day30 >= 0 ? '+' : ''}${changes.day30.toFixed(1)}%`
+                              : '—'}
+                          </span>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </CardContent>
+                </Card>
               );
             })}
         </TabsContent>

@@ -43,7 +43,7 @@ export default function DashboardPage() {
   const tCommon = useTranslations('common');
   const locale = useLocale();
   const { data, isLoading, error } = useDashboard();
-  
+
   // Helper to get sentiment label
   const getSentimentLabel = (sentiment: number) => {
     const sentimentMap: Record<number, string> = {
@@ -67,12 +67,12 @@ export default function DashboardPage() {
           {[1, 2, 3, 4].map((i) => (
             <Card key={i}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <div className="h-4 w-24 animate-pulse rounded bg-muted" />
-                <div className="h-4 w-4 animate-pulse rounded bg-muted" />
+                <div className="bg-muted h-4 w-24 animate-pulse rounded" />
+                <div className="bg-muted h-4 w-4 animate-pulse rounded" />
               </CardHeader>
               <CardContent>
-                <div className="mb-2 h-8 w-16 animate-pulse rounded bg-muted" />
-                <div className="h-4 w-32 animate-pulse rounded bg-muted" />
+                <div className="bg-muted mb-2 h-8 w-16 animate-pulse rounded" />
+                <div className="bg-muted h-4 w-32 animate-pulse rounded" />
               </CardContent>
             </Card>
           ))}
@@ -90,8 +90,10 @@ export default function DashboardPage() {
         </div>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-center text-destructive">
-              {t('errors.loadError', { error: error instanceof Error ? error.message : t('errors.unknownError') })}
+            <p className="text-destructive text-center">
+              {t('errors.loadError', {
+                error: error instanceof Error ? error.message : t('errors.unknownError'),
+              })}
             </p>
           </CardContent>
         </Card>
@@ -110,25 +112,28 @@ export default function DashboardPage() {
     {
       title: t('stats.kolTotal'),
       value: formatNumber(stats.kolCount, locale),
-      description: stats.kolMonthlyNew > 0 
-        ? t('stats.kolMonthlyNew', { count: formatNumber(stats.kolMonthlyNew, locale) })
-        : t('stats.kolMonthlyNoNew'),
+      description:
+        stats.kolMonthlyNew > 0
+          ? t('stats.kolMonthlyNew', { count: formatNumber(stats.kolMonthlyNew, locale) })
+          : t('stats.kolMonthlyNoNew'),
       icon: Users,
     },
     {
       title: t('stats.stocks'),
       value: formatNumber(stats.stockCount, locale),
-      description: stats.stockMonthlyNew > 0
-        ? t('stats.stocksMonthlyNew', { count: formatNumber(stats.stockMonthlyNew, locale) })
-        : t('stats.stocksMonthlyNoNew'),
+      description:
+        stats.stockMonthlyNew > 0
+          ? t('stats.stocksMonthlyNew', { count: formatNumber(stats.stockMonthlyNew, locale) })
+          : t('stats.stocksMonthlyNoNew'),
       icon: TrendingUp,
     },
     {
       title: t('stats.posts'),
       value: formatNumber(stats.postCount, locale),
-      description: stats.postWeeklyNew > 0
-        ? t('stats.postsWeeklyNew', { count: formatNumber(stats.postWeeklyNew, locale) })
-        : t('stats.postsWeeklyNoNew'),
+      description:
+        stats.postWeeklyNew > 0
+          ? t('stats.postsWeeklyNew', { count: formatNumber(stats.postWeeklyNew, locale) })
+          : t('stats.postsWeeklyNoNew'),
       icon: Newspaper,
     },
     {
@@ -178,7 +183,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {recentPosts.length === 0 ? (
-              <p className="text-center text-muted-foreground py-4">{t('recentPosts.noPosts')}</p>
+              <p className="text-muted-foreground py-4 text-center">{t('recentPosts.noPosts')}</p>
             ) : (
               <div className="space-y-4">
                 {recentPosts.map((post) => {
@@ -186,7 +191,9 @@ export default function DashboardPage() {
                   const firstStockId = post.stocks[0]?.id;
                   const priceChange =
                     firstStockId && post.priceChanges[firstStockId]
-                      ? post.priceChanges[firstStockId].day30 ?? post.priceChanges[firstStockId].day5 ?? null
+                      ? (post.priceChanges[firstStockId].day30 ??
+                        post.priceChanges[firstStockId].day5 ??
+                        null)
                       : null;
                   const sentimentColor = SENTIMENT_COLORS[post.sentiment];
 
@@ -198,11 +205,14 @@ export default function DashboardPage() {
                       <div className="space-y-1">
                         <p className="text-sm font-medium">{post.kol.name}</p>
                         <p className="text-muted-foreground text-xs">
-                          {stockTickers || t('recentPosts.noStocks')} | {formatDate(post.postedAt, locale)}
+                          {stockTickers || t('recentPosts.noStocks')} |{' '}
+                          {formatDate(post.postedAt, locale)}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`rounded px-2 py-0.5 text-xs font-medium ${sentimentColor}`}>
+                        <span
+                          className={`rounded px-2 py-0.5 text-xs font-medium ${sentimentColor}`}
+                        >
                           {getSentimentLabel(post.sentiment)}
                         </span>
                         {priceChange !== null && (
@@ -232,7 +242,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {topKols.length === 0 ? (
-              <p className="text-center text-muted-foreground py-4">{t('topKols.noKols')}</p>
+              <p className="text-muted-foreground py-4 text-center">{t('topKols.noKols')}</p>
             ) : (
               <div className="space-y-4">
                 {topKols.map((kol, i) => (
@@ -246,12 +256,16 @@ export default function DashboardPage() {
                       </span>
                       <div>
                         <p className="text-sm font-medium">{kol.name}</p>
-                        <p className="text-muted-foreground text-xs">{t('topKols.postCount', { count: formatNumber(kol.postCount, locale) })}</p>
+                        <p className="text-muted-foreground text-xs">
+                          {t('topKols.postCount', { count: formatNumber(kol.postCount, locale) })}
+                        </p>
                       </div>
                     </div>
                     {kol.lastPostAt && (
                       <div className="text-right">
-                        <p className="text-muted-foreground text-xs">{formatDate(kol.lastPostAt, locale)}</p>
+                        <p className="text-muted-foreground text-xs">
+                          {formatDate(kol.lastPostAt, locale)}
+                        </p>
                         <p className="text-muted-foreground text-xs">{t('topKols.lastPost')}</p>
                       </div>
                     )}
@@ -287,7 +301,9 @@ export default function DashboardPage() {
               <Users className="text-primary h-8 w-8" />
               <div>
                 <p className="font-medium">{t('quickActions.kolManagement')}</p>
-                <p className="text-muted-foreground text-sm">{t('quickActions.kolManagementDesc')}</p>
+                <p className="text-muted-foreground text-sm">
+                  {t('quickActions.kolManagementDesc')}
+                </p>
               </div>
             </Link>
             <Link

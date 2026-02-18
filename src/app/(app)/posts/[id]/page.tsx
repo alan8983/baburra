@@ -233,10 +233,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
           </Avatar>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <Link
-                href={ROUTES.KOL_DETAIL(post.kol.id)}
-                className="font-semibold hover:underline"
-              >
+              <Link href={ROUTES.KOL_DETAIL(post.kol.id)} className="font-semibold hover:underline">
                 {post.kol.name}
               </Link>
               <Badge variant="outline" className={SENTIMENT_COLORS[post.sentiment]}>
