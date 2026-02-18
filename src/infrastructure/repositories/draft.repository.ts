@@ -3,6 +3,7 @@
 import { createAdminClient } from '@/infrastructure/supabase/admin';
 import type {
   Draft,
+  DraftAiArguments,
   DraftWithRelations,
   CreateDraftInput,
   UpdateDraftInput,
@@ -20,6 +21,7 @@ type DbDraft = {
   posted_at: string | null;
   stock_ids: string[];
   stock_name_inputs: string[];
+  ai_arguments: unknown | null;
   created_at: string;
   updated_at: string;
 };
@@ -37,6 +39,7 @@ function mapDbToDraft(row: DbDraft): Draft {
     postedAt: row.posted_at ? new Date(row.posted_at) : null,
     stockIds: Array.isArray(row.stock_ids) ? row.stock_ids : [],
     stockNameInputs: Array.isArray(row.stock_name_inputs) ? row.stock_name_inputs : [],
+    aiArguments: (row.ai_arguments as DraftAiArguments[] | null) ?? null,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
   };
@@ -164,6 +167,7 @@ export async function createDraft(userId: string, input: CreateDraftInput): Prom
         : null,
       stock_ids: input.stockIds ?? [],
       stock_name_inputs: input.stockNameInputs ?? [],
+      ai_arguments: input.aiArguments ?? null,
     })
     .select()
     .single();
@@ -193,6 +197,7 @@ export async function updateDraft(
       : null;
   if (input.stockIds !== undefined) payload.stock_ids = input.stockIds;
   if (input.stockNameInputs !== undefined) payload.stock_name_inputs = input.stockNameInputs;
+  if (input.aiArguments !== undefined) payload.ai_arguments = input.aiArguments;
   if (Object.keys(payload).length === 0) return getDraftById(id, userId);
 
   const { error } = await supabase

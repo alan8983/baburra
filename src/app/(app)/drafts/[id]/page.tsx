@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState, useEffect, useRef, useCallback } from 'react';
+import { use, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -11,7 +11,6 @@ import {
   Loader2,
   AlertTriangle,
   CheckCircle2,
-  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,11 +37,13 @@ import {
   ImageUploader,
   AiTickerSuggestions,
 } from '@/components/forms';
+import { PostArguments } from '@/components/ai/post-arguments';
 import type {
   KOLSearchResult,
   StockSearchResult,
   Sentiment,
   DraftWithRelations,
+  DraftAiArguments,
 } from '@/domain/models';
 import {
   useDraft,
@@ -53,11 +54,85 @@ import {
   getSupportedPlatform,
   getSupportedPlatformNames,
 } from '@/hooks';
-import { useIdentifyTickers, useAiUsage } from '@/hooks/use-ai';
 import type { IdentifiedTicker } from '@/hooks/use-ai';
 import { API_ROUTES } from '@/lib/constants/routes';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
+
+// Framework categories for mapping AI argument categoryCode to display names
+const FRAMEWORK_CATEGORIES: Record<string, { name: string; parentName: string }> = {
+  FINANCIALS: { name: '財務體質', parentName: '量化分析' },
+  MOMENTUM: { name: '動能類', parentName: '量化分析' },
+  VALUATION: { name: '估值', parentName: '量化分析' },
+  MARKET_SIZE: { name: '市場規模', parentName: '質化分析' },
+  MOAT: { name: '護城河', parentName: '質化分析' },
+  OPERATIONAL_QUALITY: { name: '營運品質', parentName: '質化分析' },
+  CATALYST: { name: '催化劑', parentName: '催化劑' },
+};
+
+/**
+ * Parse draft.stockNameInputs (format: "TICKER (Name)") into IdentifiedTicker[]
+ */
+function parseStockNameInputs(inputs: string[]): IdentifiedTicker[] {
+  return inputs
+    .map((input) => {
+      const match = input.match(/^(.+?)\s*\((.+)\)$/);
+      if (match) {
+        const ticker = match[1].trim();
+        const name = match[2].trim();
+        // Infer market from ticker format
+        let market: IdentifiedTicker['market'] = 'US';
+        if (ticker.endsWith('.TW')) market = 'TW';
+        else if (ticker.endsWith('.HK')) market = 'HK';
+        else if (['BTC', 'ETH', 'SOL', 'DOGE', 'XRP'].includes(ticker)) market = 'CRYPTO';
+        return { ticker, name, market, confidence: 0.8, mentionedAs: name };
+      }
+      return null;
+    })
+    .filter((t): t is IdentifiedTicker => t !== null);
+}
+
+/**
+ * Transform DraftAiArguments[] to the flat Argument[] format expected by PostArguments
+ */
+function transformAiArguments(aiArguments: DraftAiArguments[]): {
+  id: string;
+  categoryCode: string;
+  categoryName: string;
+  parentName: string;
+  originalText: string | null;
+  summary: string | null;
+  sentiment: Sentiment;
+  confidence: number | null;
+}[] {
+  const result: {
+    id: string;
+    categoryCode: string;
+    categoryName: string;
+    parentName: string;
+    originalText: string | null;
+    summary: string | null;
+    sentiment: Sentiment;
+    confidence: number | null;
+  }[] = [];
+  for (const stockArgs of aiArguments) {
+    for (let i = 0; i < stockArgs.arguments.length; i++) {
+      const arg = stockArgs.arguments[i];
+      const category = FRAMEWORK_CATEGORIES[arg.categoryCode];
+      result.push({
+        id: `${stockArgs.ticker}-${arg.categoryCode}-${i}`,
+        categoryCode: arg.categoryCode,
+        categoryName: category?.name ?? arg.categoryCode,
+        parentName: category?.parentName ?? '其他',
+        originalText: arg.originalText,
+        summary: arg.summary,
+        sentiment: arg.sentiment,
+        confidence: arg.confidence,
+      });
+    }
+  }
+  return result;
+}
 
 // 表單組件 - 接收 draft 作為 prop，使用 key 來重置狀態
 interface DraftEditFormProps {
@@ -92,6 +167,10 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
   const [kolDialogDefaultName, setKolDialogDefaultName] = useState('');
   const [stockDialogOpen, setStockDialogOpen] = useState(false);
   const [stockDialogDefaultTicker, setStockDialogDefaultTicker] = useState('');
+  const [stockDialogDefaultName, setStockDialogDefaultName] = useState('');
+  const [stockDialogDefaultMarket, setStockDialogDefaultMarket] = useState<
+    'US' | 'TW' | 'HK' | 'CRYPTO' | undefined
+  >();
   const [fetchDialogOpen, setFetchDialogOpen] = useState(false);
   const [fetchResult, setFetchResult] = useState<{
     content: string;
@@ -108,11 +187,17 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
 
   const fetchUrl = useFetchUrl();
 
-  // AI ticker identification
+  // AI ticker suggestions — initialized from draft.stockNameInputs (pre-filled by quick-input)
   const t = useTranslations('common.ai');
-  const [tickerSuggestions, setTickerSuggestions] = useState<IdentifiedTicker[]>([]);
-  const identifyTickers = useIdentifyTickers();
-  const { data: aiUsage } = useAiUsage();
+  const [tickerSuggestions, setTickerSuggestions] = useState<IdentifiedTicker[]>(() =>
+    parseStockNameInputs(draft.stockNameInputs ?? [])
+  );
+
+  // AI arguments from draft
+  const displayArguments = useMemo(
+    () => (draft.aiArguments ? transformAiArguments(draft.aiArguments) : []),
+    [draft.aiArguments]
+  );
 
   // Auto-save state
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -170,6 +255,8 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
   // 處理新增 Stock
   const handleCreateStock = (ticker: string) => {
     setStockDialogDefaultTicker(ticker);
+    setStockDialogDefaultName('');
+    setStockDialogDefaultMarket(undefined);
     setStockDialogOpen(true);
   };
 
@@ -177,21 +264,8 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
     setSelectedStocks((prev) => [...prev, stock]);
   };
 
-  // AI 識別標的
-  const handleIdentifyTickers = async () => {
-    if (!content || content.length < 10) return;
-    try {
-      const result = await identifyTickers.mutateAsync(content);
-      setTickerSuggestions(result.tickers);
-      if (result.tickers.length === 0) {
-        toast.info(t('noTickersFound'));
-      }
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : t('noTickersFound'));
-    }
-  };
-
   const handleAcceptTicker = async (identified: IdentifiedTicker) => {
+    // 1. Try to find existing stock in DB
     try {
       const searchRes = await fetch(
         `${API_ROUTES.STOCKS}?search=${encodeURIComponent(identified.ticker)}&limit=5`
@@ -207,9 +281,41 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
         }
       }
     } catch {
-      // 搜尋失敗，fallback 到建立新 stock
+      // 搜尋失敗，continue to auto-create
     }
+
+    // 2. Auto-create stock using AI-provided name
+    if (identified.name) {
+      try {
+        const createRes = await fetch(API_ROUTES.STOCKS, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ticker: identified.ticker.toUpperCase(),
+            name: identified.name,
+            market: identified.market,
+          }),
+        });
+        if (createRes.ok) {
+          const newStock = await createRes.json();
+          const stockResult: StockSearchResult = {
+            id: newStock.id,
+            ticker: newStock.ticker,
+            name: newStock.name,
+            logoUrl: newStock.logoUrl ?? null,
+          };
+          setSelectedStocks((prev) => [...prev, stockResult]);
+          return;
+        }
+      } catch {
+        // Auto-create failed, fallback to dialog
+      }
+    }
+
+    // 3. Fallback: open dialog with pre-filled ticker + name + market
     setStockDialogDefaultTicker(identified.ticker);
+    setStockDialogDefaultName(identified.name);
+    setStockDialogDefaultMarket(identified.market);
     setStockDialogOpen(true);
   };
 
@@ -402,32 +508,9 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
 
           {/* Stock Selector */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>
-                投資標的 <span className="text-destructive">*</span>
-              </Label>
-              {content.length >= 10 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleIdentifyTickers}
-                  disabled={identifyTickers.isPending || (aiUsage?.remaining ?? 0) <= 0}
-                >
-                  {identifyTickers.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      {t('identifyingTickers')}
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      {t('identifyTickers')}
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
+            <Label>
+              投資標的 <span className="text-destructive">*</span>
+            </Label>
             <StockSelector
               value={selectedStocks}
               onChange={setSelectedStocks}
@@ -440,7 +523,6 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
               onAccept={handleAcceptTicker}
               onAcceptAll={handleAcceptAllTickers}
               onDismiss={() => setTickerSuggestions([])}
-              isLoading={identifyTickers.isPending}
             />
           </div>
 
@@ -556,15 +638,12 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
           <CardDescription>選擇這篇文章的整體看法方向</CardDescription>
         </CardHeader>
         <CardContent>
-          <SentimentSelector
-            value={sentiment}
-            onChange={setSentiment}
-            showIcon
-            aiSuggestion={1}
-            onAcceptAiSuggestion={() => setSentiment(1)}
-          />
+          <SentimentSelector value={sentiment} onChange={setSentiment} showIcon />
         </CardContent>
       </Card>
+
+      {/* AI Arguments */}
+      {displayArguments.length > 0 && <PostArguments arguments={displayArguments} />}
 
       {/* KOL Form Dialog */}
       <KOLFormDialog
@@ -579,6 +658,8 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
         open={stockDialogOpen}
         onOpenChange={setStockDialogOpen}
         defaultTicker={stockDialogDefaultTicker}
+        defaultName={stockDialogDefaultName}
+        defaultMarket={stockDialogDefaultMarket}
         onSuccess={handleStockCreated}
       />
 

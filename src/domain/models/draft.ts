@@ -2,6 +2,20 @@
 
 import type { Sentiment } from './post';
 
+export interface DraftAiArgument {
+  categoryCode: string;
+  originalText: string;
+  summary: string;
+  sentiment: Sentiment;
+  confidence: number;
+}
+
+export interface DraftAiArguments {
+  ticker: string;
+  name: string;
+  arguments: DraftAiArgument[];
+}
+
 export interface Draft {
   id: string;
   userId: string;
@@ -14,6 +28,7 @@ export interface Draft {
   postedAt: Date | null;
   stockIds: string[];
   stockNameInputs: string[];
+  aiArguments: DraftAiArguments[] | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -41,6 +56,7 @@ export interface CreateDraftInput {
   postedAt?: Date;
   stockIds?: string[];
   stockNameInputs?: string[];
+  aiArguments?: DraftAiArguments[];
 }
 
 export interface UpdateDraftInput {
@@ -53,4 +69,5 @@ export interface UpdateDraftInput {
   postedAt?: Date | null;
   stockIds?: string[];
   stockNameInputs?: string[];
+  aiArguments?: DraftAiArguments[] | null;
 }

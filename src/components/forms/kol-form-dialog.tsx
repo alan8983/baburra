@@ -13,8 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import type { CreateKOLInput, KOLSearchResult } from '@/domain/models';
+import type { KOLSearchResult } from '@/domain/models';
 import { useCreateKol } from '@/hooks';
 
 export interface KOLFormDialogProps {
@@ -35,38 +34,27 @@ export function KOLFormDialog({
   onSuccess,
 }: KOLFormDialogProps) {
   const createKol = useCreateKol();
-  const [formData, setFormData] = React.useState<CreateKOLInput>({
-    name: defaultName,
-    bio: '',
-    socialLinks: {},
-  });
+  const [name, setName] = React.useState(defaultName);
 
   // 當預填名稱變更時更新表單
   React.useEffect(() => {
     if (open && defaultName) {
-      setFormData((prev) => ({ ...prev, name: defaultName }));
+      setName(defaultName);
     }
   }, [open, defaultName]);
 
-  // 重置表單
   const resetForm = () => {
-    setFormData({
-      name: '',
-      bio: '',
-      socialLinks: {},
-    });
+    setName('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name.trim()) return;
+    if (!name.trim()) return;
 
     try {
       const newKOL = await createKol.mutateAsync({
-        name: formData.name.trim(),
-        bio: formData.bio || undefined,
-        socialLinks: formData.socialLinks,
+        name: name.trim(),
       });
 
       const kolResult: KOLSearchResult = {
@@ -105,7 +93,6 @@ export function KOLFormDialog({
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
-            {/* 名稱 */}
             <div className="grid gap-2">
               <Label htmlFor="kol-name">
                 名稱 <span className="text-destructive">*</span>
@@ -113,62 +100,10 @@ export function KOLFormDialog({
               <Input
                 id="kol-name"
                 placeholder="輸入 KOL 名稱"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 disabled={createKol.isPending}
                 autoFocus
-              />
-            </div>
-
-            {/* 簡介 (可選) */}
-            <div className="grid gap-2">
-              <Label htmlFor="kol-bio">簡介 (可選)</Label>
-              <Textarea
-                id="kol-bio"
-                placeholder="簡短介紹這位 KOL..."
-                value={formData.bio || ''}
-                onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                disabled={createKol.isPending}
-                rows={3}
-              />
-            </div>
-
-            {/* 社群連結 (可選) */}
-            <div className="grid gap-2">
-              <Label htmlFor="kol-twitter">Twitter / X (可選)</Label>
-              <Input
-                id="kol-twitter"
-                placeholder="https://twitter.com/..."
-                value={formData.socialLinks?.twitter || ''}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    socialLinks: {
-                      ...formData.socialLinks,
-                      twitter: e.target.value,
-                    },
-                  })
-                }
-                disabled={createKol.isPending}
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="kol-facebook">Facebook (可選)</Label>
-              <Input
-                id="kol-facebook"
-                placeholder="https://facebook.com/..."
-                value={formData.socialLinks?.facebook || ''}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    socialLinks: {
-                      ...formData.socialLinks,
-                      facebook: e.target.value,
-                    },
-                  })
-                }
-                disabled={createKol.isPending}
               />
             </div>
           </div>
@@ -182,7 +117,7 @@ export function KOLFormDialog({
             >
               取消
             </Button>
-            <Button type="submit" disabled={!formData.name.trim() || createKol.isPending}>
+            <Button type="submit" disabled={!name.trim() || createKol.isPending}>
               {createKol.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

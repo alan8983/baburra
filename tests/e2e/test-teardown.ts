@@ -8,10 +8,34 @@
  *   npx tsx tests/e2e/test-teardown.ts
  *
  * 或設定環境變數後執行：
- *   NEXT_PUBLIC_SUPABASE_URL=xxx NEXT_PUBLIC_SUPABASE_ANON_KEY=xxx npx tsx tests/e2e/test-teardown.ts
+ *   NEXT_PUBLIC_SUPABASE_URL=xxx SUPABASE_SERVICE_ROLE_KEY=xxx npx tsx tests/e2e/test-teardown.ts
  */
 
 import { createClient } from '@supabase/supabase-js';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
+
+// 載入 .env.local（Playwright globalTeardown 不會自動載入）
+function loadEnvFile() {
+  try {
+    const envPath = resolve(__dirname, '..', '..', '.env.local');
+    const content = readFileSync(envPath, 'utf-8');
+    for (const line of content.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eqIndex = trimmed.indexOf('=');
+      if (eqIndex === -1) continue;
+      const key = trimmed.slice(0, eqIndex);
+      const value = trimmed.slice(eqIndex + 1);
+      if (!process.env[key]) {
+        process.env[key] = value;
+      }
+    }
+  } catch {
+    // .env.local may not exist (CI uses real env vars)
+  }
+}
+loadEnvFile();
 
 // 測試資料標記（用於識別測試產生的資料）
 const TEST_MARKER = 'E2E_TEST';
@@ -19,16 +43,17 @@ const TEST_KOL_NAME = 'E2E Test KOL';
 
 async function cleanupTestData() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  // 使用 Service Role Key 繞過 RLS（kols 表沒有 DELETE RLS 政策，anon key 無法刪除）
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn('⚠️  缺少 Supabase 環境變數，跳過測試資料清理');
+  if (!supabaseUrl || !supabaseServiceKey) {
+    console.warn('⚠️  缺少 Supabase 環境變數 (NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)，跳過測試資料清理');
     return;
   }
 
   console.log('🧹 開始清理測試資料...\n');
 
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
     // 1. 刪除測試產生的 Posts（透過關聯的 KOL 或內容標記）

@@ -37,6 +37,10 @@ export interface StockFormDialogProps {
   onOpenChange: (open: boolean) => void;
   /** 預填的代碼 */
   defaultTicker?: string;
+  /** 預填的公司名稱 (e.g. from AI) */
+  defaultName?: string;
+  /** 預填的市場 */
+  defaultMarket?: Market;
   /** 建立成功回調 */
   onSuccess?: (stock: StockSearchResult) => void;
 }
@@ -45,21 +49,28 @@ export function StockFormDialog({
   open,
   onOpenChange,
   defaultTicker = '',
+  defaultName = '',
+  defaultMarket,
   onSuccess,
 }: StockFormDialogProps) {
   const createStock = useCreateStock();
   const [formData, setFormData] = React.useState<CreateStockInput>({
     ticker: defaultTicker,
-    name: '',
-    market: 'US',
+    name: defaultName,
+    market: defaultMarket ?? 'US',
   });
 
-  // 當預填代碼變更時更新表單
+  // 當預填代碼或名稱變更時更新表單
   React.useEffect(() => {
-    if (open && defaultTicker) {
-      setFormData((prev) => ({ ...prev, ticker: defaultTicker.toUpperCase() }));
+    if (open) {
+      setFormData((prev) => ({
+        ...prev,
+        ticker: defaultTicker ? defaultTicker.toUpperCase() : prev.ticker,
+        name: defaultName || prev.name,
+        market: defaultMarket ?? prev.market,
+      }));
     }
-  }, [open, defaultTicker]);
+  }, [open, defaultTicker, defaultName, defaultMarket]);
 
   // 重置表單
   const resetForm = () => {

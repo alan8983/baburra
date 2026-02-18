@@ -107,7 +107,12 @@ export async function listPosts(params: {
   if (error) throw new Error(error.message);
   if (!rows?.length) return { data: [], total: count ?? 0 };
 
-  const data: PostWithPriceChanges[] = (rows as (DbPost & { kols: { id: string; name: string; avatar_url: string | null } | null; post_stocks: DbPostStock[] })[]).map((row) => {
+  const data: PostWithPriceChanges[] = (
+    rows as (DbPost & {
+      kols: { id: string; name: string; avatar_url: string | null } | null;
+      post_stocks: DbPostStock[];
+    })[]
+  ).map((row) => {
     const post = mapDbToPost(row);
     const kol = row.kols
       ? {
@@ -140,7 +145,10 @@ export async function getPostById(id: string): Promise<PostWithPriceChanges | nu
     .single();
   if (error || !row) return null;
 
-  const r = row as DbPost & { kols: { id: string; name: string; avatar_url: string | null } | null; post_stocks: DbPostStock[] };
+  const r = row as DbPost & {
+    kols: { id: string; name: string; avatar_url: string | null } | null;
+    post_stocks: DbPostStock[];
+  };
   const post = mapDbToPost(r);
   const kol = r.kols
     ? {

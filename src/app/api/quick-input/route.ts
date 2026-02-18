@@ -12,10 +12,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { createDraft } from '@/infrastructure/repositories';
 import { checkAiQuota, consumeAiQuota } from '@/infrastructure/repositories/ai-usage.repository';
-import { analyzeDraftContent } from '@/domain/services/ai.service';
+import { analyzeDraftContent, extractArguments } from '@/domain/services/ai.service';
+import type { IdentifiedTicker } from '@/domain/services/ai.service';
 import { extractorFactory } from '@/infrastructure/extractors';
 import { isUrlLike, getSupportedPlatform } from '@/lib/utils/url';
-import type { CreateDraftInput } from '@/domain/models';
+import type { CreateDraftInput, DraftAiArguments } from '@/domain/models';
 import type { Sentiment } from '@/domain/models/post';
 
 interface QuickInputRequest {
@@ -96,6 +97,7 @@ export async function POST(request: NextRequest) {
 
     // 6. AI 分析（若失敗仍建立草稿，只是缺少 AI 欄位）
     let aiKolName: string | null = null;
+    let aiStockTickers: IdentifiedTicker[] = [];
     let aiStockNames: string[] = [];
     let aiSentiment: Sentiment | undefined;
     let aiPostedAt: Date | undefined;
@@ -104,6 +106,7 @@ export async function POST(request: NextRequest) {
     try {
       const analysis = await analyzeDraftContent(textContent);
       aiKolName = analysis.kolName;
+      aiStockTickers = analysis.stockTickers;
       aiStockNames = analysis.stockTickers.map((t) => `${t.ticker} (${t.name})`);
       aiSentiment = analysis.sentiment;
       if (analysis.postedAt) {
@@ -112,6 +115,29 @@ export async function POST(request: NextRequest) {
       aiAnalyzed = true;
     } catch (aiError) {
       console.error('AI analysis failed, creating draft without AI fields:', aiError);
+    }
+
+    // 6b. 論點提取（若 AI 分析成功且有標的）
+    let aiArguments: DraftAiArguments[] | undefined;
+    if (aiAnalyzed && aiStockTickers.length > 0) {
+      try {
+        const argumentResults: DraftAiArguments[] = [];
+        for (const ticker of aiStockTickers) {
+          const result = await extractArguments(textContent, ticker.ticker, ticker.name);
+          if (result.arguments.length > 0) {
+            argumentResults.push({
+              ticker: ticker.ticker,
+              name: ticker.name,
+              arguments: result.arguments,
+            });
+          }
+        }
+        if (argumentResults.length > 0) {
+          aiArguments = argumentResults;
+        }
+      } catch (argError) {
+        console.error('Argument extraction failed, continuing without arguments:', argError);
+      }
     }
 
     // 7. 合併資料 — URL 擷取的 metadata 優先
@@ -123,6 +149,7 @@ export async function POST(request: NextRequest) {
       stockNameInputs: aiStockNames.length > 0 ? aiStockNames : undefined,
       sentiment: aiSentiment,
       postedAt: fetchedPostedAt || aiPostedAt || undefined,
+      aiArguments,
     };
 
     // 8. 建立草稿
