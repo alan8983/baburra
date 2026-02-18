@@ -10,8 +10,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
-import { createDraft } from '@/infrastructure/repositories';
+import { createDraft, findKolByName } from '@/infrastructure/repositories';
 import { checkAiQuota, consumeAiQuota } from '@/infrastructure/repositories/ai-usage.repository';
+import { getUserTimezone } from '@/infrastructure/repositories/profile.repository';
 import { analyzeDraftContent, extractArguments } from '@/domain/services/ai.service';
 import type { IdentifiedTicker } from '@/domain/services/ai.service';
 import { extractorFactory } from '@/infrastructure/extractors';
@@ -95,6 +96,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 5b. 取得用戶時區設定（用於 AI 日期解析）
+    const timezone = await getUserTimezone(userId);
+
     // 6. AI 分析（若失敗仍建立草稿，只是缺少 AI 欄位）
     let aiKolName: string | null = null;
     let aiStockTickers: IdentifiedTicker[] = [];
@@ -104,7 +108,7 @@ export async function POST(request: NextRequest) {
     let aiAnalyzed = false;
 
     try {
-      const analysis = await analyzeDraftContent(textContent);
+      const analysis = await analyzeDraftContent(textContent, timezone);
       aiKolName = analysis.kolName;
       aiStockTickers = analysis.stockTickers;
       aiStockNames = analysis.stockTickers.map((t) => `${t.ticker} (${t.name})`);
@@ -140,27 +144,42 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 7. 合併資料 — URL 擷取的 metadata 優先
+    // 7. 嘗試匹配已存在的 KOL
+    const kolNameInput = fetchedKolName || aiKolName || undefined;
+    let matchedKolId: string | undefined;
+    if (kolNameInput) {
+      try {
+        const matched = await findKolByName(kolNameInput);
+        if (matched) {
+          matchedKolId = matched.id;
+        }
+      } catch (matchError) {
+        console.error('KOL name matching failed, continuing without kolId:', matchError);
+      }
+    }
+
+    // 8. 合併資料 — URL 擷取的 metadata 優先
     const draftInput: CreateDraftInput = {
       content: textContent,
       sourceUrl,
       images,
-      kolNameInput: fetchedKolName || aiKolName || undefined,
+      kolId: matchedKolId,
+      kolNameInput,
       stockNameInputs: aiStockNames.length > 0 ? aiStockNames : undefined,
       sentiment: aiSentiment,
       postedAt: fetchedPostedAt || aiPostedAt || undefined,
       aiArguments,
     };
 
-    // 8. 建立草稿
+    // 9. 建立草稿
     const draft = await createDraft(userId, draftInput);
 
-    // 9. 消耗 AI 配額（僅在 AI 實際執行時）
+    // 10. 消耗 AI 配額（僅在 AI 實際執行時）
     if (aiAnalyzed) {
       await consumeAiQuota(userId);
     }
 
-    // 10. 回傳結果
+    // 11. 回傳結果
     return NextResponse.json({ draft: { id: draft.id } });
   } catch (error) {
     console.error('POST /api/quick-input error:', error);

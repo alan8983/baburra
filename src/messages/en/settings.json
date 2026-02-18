@@ -30,6 +30,10 @@
     "premiumDescription": "100 AI analyses per week, priority support",
     "upgrade": "Upgrade"
   },
+  "timezone": {
+    "label": "Timezone",
+    "description": "Used by AI to interpret post timestamps"
+  },
   "dangerZone": {
     "title": "Danger Zone",
     "description": "These actions cannot be undone, please proceed with caution",

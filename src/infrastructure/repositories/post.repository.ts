@@ -1,6 +1,12 @@
 // Post Repository - 文章 CRUD
 
 import { createAdminClient } from '@/infrastructure/supabase/admin';
+import {
+  getArgumentCategoryByCode,
+  createPostArguments,
+  updateStockArgumentSummary,
+} from './argument.repository';
+import type { CreatePostArgumentInput } from './argument.repository';
 import type {
   Post,
   PostWithRelations,
@@ -191,6 +197,47 @@ export async function createPost(input: CreatePostInput, createdBy: string | nul
     await supabase
       .from('post_stocks')
       .insert(input.stockIds.map((stock_id) => ({ post_id: post.id, stock_id })));
+  }
+
+  // Transfer draft AI arguments to post_arguments table
+  if (input.draftAiArguments?.length && input.stockIds?.length) {
+    const { data: stockRows } = await supabase
+      .from('stocks')
+      .select('id, ticker')
+      .in('id', input.stockIds);
+
+    const tickerToStockId: Record<string, string> = {};
+    for (const s of stockRows ?? []) {
+      tickerToStockId[(s.ticker as string).toUpperCase()] = s.id as string;
+    }
+
+    for (const tickerGroup of input.draftAiArguments) {
+      const stockId = tickerToStockId[tickerGroup.ticker.toUpperCase()];
+      if (!stockId) continue;
+
+      const argInputs: CreatePostArgumentInput[] = [];
+      for (const arg of tickerGroup.arguments) {
+        const category = await getArgumentCategoryByCode(arg.categoryCode);
+        if (!category) continue;
+        argInputs.push({
+          postId: post.id,
+          stockId,
+          categoryId: category.id,
+          originalText: arg.originalText,
+          summary: arg.summary,
+          sentiment: arg.sentiment,
+          confidence: arg.confidence,
+        });
+      }
+
+      if (argInputs.length > 0) {
+        await createPostArguments(argInputs);
+        const categoryIds = [...new Set(argInputs.map((a) => a.categoryId))];
+        for (const catId of categoryIds) {
+          await updateStockArgumentSummary(stockId, catId);
+        }
+      }
+    }
   }
 
   return post;

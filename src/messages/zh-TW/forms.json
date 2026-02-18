@@ -53,8 +53,6 @@
     "create": "建立標的"
   },
   "sentimentSelector": {
-    "aiSuggestion": "AI 建議：",
-    "accept": "採用",
     "notSet": "未設定"
   },
   "datetimeInput": {

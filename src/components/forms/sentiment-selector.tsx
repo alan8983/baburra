@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useTranslations } from 'next-intl';
-import { TrendingDown, TrendingUp, Minus, Sparkles } from 'lucide-react';
+import { TrendingDown, TrendingUp, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { Sentiment } from '@/domain/models';
@@ -83,10 +83,6 @@ export interface SentimentSelectorProps {
   showIcon?: boolean;
   /** 是否使用簡短標籤 */
   shortLabel?: boolean;
-  /** AI 建議的情緒值 */
-  aiSuggestion?: Sentiment | null;
-  /** 採用 AI 建議的回調 */
-  onAcceptAiSuggestion?: () => void;
 }
 
 export function SentimentSelector({
@@ -96,16 +92,8 @@ export function SentimentSelector({
   className,
   showIcon = true,
   shortLabel = false,
-  aiSuggestion,
-  onAcceptAiSuggestion,
 }: SentimentSelectorProps) {
-  const t = useTranslations('forms');
   const sentimentOptions = useSentimentOptions();
-
-  const aiSuggestionOption = React.useMemo(() => {
-    if (aiSuggestion === null || aiSuggestion === undefined) return null;
-    return sentimentOptions.find((opt) => opt.value === aiSuggestion);
-  }, [aiSuggestion, sentimentOptions]);
 
   return (
     <div className={cn('space-y-3', className)}>
@@ -132,30 +120,6 @@ export function SentimentSelector({
           );
         })}
       </div>
-
-      {/* AI 建議 */}
-      {aiSuggestionOption && value !== aiSuggestion && (
-        <div className="border-primary/50 bg-primary/5 flex items-center gap-2 rounded-lg border border-dashed p-3">
-          <Sparkles className="text-primary h-4 w-4" />
-          <span className="flex-1 text-sm">
-            {t('sentimentSelector.aiSuggestion')}
-            <span className={cn('ml-1 font-medium', aiSuggestionOption.color)}>
-              {aiSuggestionOption.label}
-            </span>
-          </span>
-          {onAcceptAiSuggestion && (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={onAcceptAiSuggestion}
-              disabled={disabled}
-            >
-              {t('sentimentSelector.accept')}
-            </Button>
-          )}
-        </div>
-      )}
     </div>
   );
 }

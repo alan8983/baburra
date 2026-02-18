@@ -21,7 +21,15 @@
       "Bash(git diff:*)",
       "Bash(cd:*)",
       "Bash(cat:*)",
-      "Bash(node scripts/add-e2e-case.mjs:*)"
+      "Bash(node scripts/add-e2e-case.mjs:*)",
+      "Bash(supabase db push:*)",
+      "Bash(npx supabase db push:*)",
+      "Bash(npx supabase link:*)",
+      "Bash(env:*)",
+      "Bash(npm run format:check:*)",
+      "Bash(npx prettier:*)",
+      "Bash(supabase:*)",
+      "Bash(npx supabase:*)"
     ]
   }
 }

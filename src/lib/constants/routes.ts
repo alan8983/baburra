@@ -22,7 +22,6 @@ export const ROUTES = {
   STOCK_DETAIL: (ticker: string) => `/stocks/${ticker}`,
   POSTS: '/posts',
   POST_DETAIL: (id: string) => `/posts/${id}`,
-  POST_NEW: '/posts/new',
   BOOKMARKS: '/bookmarks',
   SETTINGS: '/settings',
 } as const;
@@ -47,6 +46,7 @@ export const API_ROUTES = {
   POSTS: '/api/posts',
   POST_DETAIL: (id: string) => `/api/posts/${id}`,
   POST_CHECK_DUPLICATE: '/api/posts/check-duplicate',
+  POST_ARGUMENTS: (id: string) => `/api/posts/${id}/arguments`,
 
   // Drafts
   DRAFTS: '/api/drafts',
@@ -77,6 +77,9 @@ export const API_ROUTES = {
 
   // Quick Input (orchestration)
   QUICK_INPUT: '/api/quick-input',
+
+  // Profile
+  PROFILE: '/api/profile',
 } as const;
 
 // 導航項目

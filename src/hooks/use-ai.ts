@@ -245,6 +245,45 @@ export interface StockArgumentSummary {
   totalArgumentCount: number;
 }
 
+// =====================
+// Post Arguments Hook
+// =====================
+
+export interface PostArgumentResponse {
+  id: string;
+  postId: string;
+  stockId: string;
+  categoryId: string;
+  originalText: string | null;
+  summary: string | null;
+  sentiment: number;
+  confidence: number | null;
+  createdAt: string;
+  category: {
+    id: string;
+    code: string;
+    name: string;
+    description: string | null;
+    sentimentDirection: string | null;
+    parentId: string | null;
+    sortOrder: number;
+    createdAt: string;
+  };
+}
+
+export function usePostArguments(postId: string) {
+  return useQuery<PostArgumentResponse[]>({
+    queryKey: ['post-arguments', postId],
+    queryFn: async () => {
+      const res = await fetch(API_ROUTES.POST_ARGUMENTS(postId));
+      if (!res.ok) throw new Error('Failed to fetch post arguments');
+      return res.json();
+    },
+    enabled: !!postId,
+    staleTime: 60 * 1000,
+  });
+}
+
 export function useStockArguments(ticker: string) {
   return useQuery<StockArgumentSummary>({
     queryKey: ['stock-arguments', ticker],

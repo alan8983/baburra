@@ -9,24 +9,54 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { LocaleSwitcher } from '@/components/layout/locale-switcher';
 import { useAuth } from '@/hooks/use-auth';
+import { useProfile, useUpdateProfile } from '@/hooks/use-profile';
 import { createClient } from '@/infrastructure/supabase/client';
+
+const TIMEZONE_OPTIONS = [
+  { value: 'Asia/Taipei', label: '台北 (UTC+8)' },
+  { value: 'Asia/Shanghai', label: '上海 (UTC+8)' },
+  { value: 'Asia/Tokyo', label: '東京 (UTC+9)' },
+  { value: 'Asia/Hong_Kong', label: '香港 (UTC+8)' },
+  { value: 'Asia/Singapore', label: '新加坡 (UTC+8)' },
+  { value: 'America/New_York', label: '紐約 (UTC-5)' },
+  { value: 'America/Los_Angeles', label: '洛杉磯 (UTC-8)' },
+  { value: 'Europe/London', label: '倫敦 (UTC+0)' },
+  { value: 'UTC', label: 'UTC' },
+] as const;
 
 export default function SettingsPage() {
   const t = useTranslations('settings');
   const { user, loading: authLoading } = useAuth();
+  const { data: profile, isLoading: profileLoading } = useProfile();
+  const updateProfile = useUpdateProfile();
   const [displayName, setDisplayName] = useState('');
+  const [timezone, setTimezone] = useState('Asia/Taipei');
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // 初始化顯示名稱
+  // 初始化顯示名稱和時區
   useEffect(() => {
     if (user) {
       setDisplayName(user.user_metadata?.display_name || '');
     }
   }, [user]);
+
+  useEffect(() => {
+    if (profile) {
+      if (profile.displayName) setDisplayName(profile.displayName);
+      setTimezone(profile.timezone);
+    }
+  }, [profile]);
 
   const handleSave = async () => {
     if (!user) return;
@@ -36,6 +66,7 @@ export default function SettingsPage() {
     setSaveSuccess(false);
 
     try {
+      // 更新 Supabase auth user_metadata
       const supabase = createClient();
       const { error } = await supabase.auth.updateUser({
         data: {
@@ -45,16 +76,19 @@ export default function SettingsPage() {
 
       if (error) throw error;
 
+      // 更新 profiles 表（displayName + timezone）
+      await updateProfile.mutateAsync({ displayName, timezone });
+
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : '儲存失敗，請稍後再試');
+      setSaveError(error instanceof Error ? error.message : t('profile.saveError'));
     } finally {
       setIsSaving(false);
     }
   };
 
-  if (authLoading) {
+  if (authLoading || profileLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin" />
@@ -85,8 +119,8 @@ export default function SettingsPage() {
       {/* Profile Section */}
       <Card>
         <CardHeader>
-          <CardTitle>個人資料</CardTitle>
-          <CardDescription>更新您的個人資訊</CardDescription>
+          <CardTitle>{t('profile.title')}</CardTitle>
+          <CardDescription>{t('profile.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
@@ -98,7 +132,7 @@ export default function SettingsPage() {
               </AvatarFallback>
             </Avatar>
             <Button variant="outline" size="sm" disabled>
-              更換頭像
+              {t('profile.changeAvatar')}
             </Button>
           </div>
 
@@ -111,15 +145,15 @@ export default function SettingsPage() {
 
           {saveSuccess && (
             <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
-              變更已儲存
+              {t('profile.saveSuccess')}
             </div>
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="displayName">顯示名稱</Label>
+            <Label htmlFor="displayName">{t('profile.displayName')}</Label>
             <Input
               id="displayName"
-              placeholder="您的顯示名稱"
+              placeholder={t('profile.displayNamePlaceholder')}
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               disabled={isSaving}
@@ -135,17 +169,34 @@ export default function SettingsPage() {
               value={user.email || ''}
               disabled
             />
-            <p className="text-muted-foreground text-xs">Email 無法更改</p>
+            <p className="text-muted-foreground text-xs">{t('profile.emailCannotChange')}</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="timezone">{t('timezone.label')}</Label>
+            <Select value={timezone} onValueChange={setTimezone} disabled={isSaving}>
+              <SelectTrigger id="timezone">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TIMEZONE_OPTIONS.map((tz) => (
+                  <SelectItem key={tz.value} value={tz.value}>
+                    {tz.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-muted-foreground text-xs">{t('timezone.description')}</p>
           </div>
 
           <Button onClick={handleSave} disabled={isSaving}>
             {isSaving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                儲存中...
+                {t('profile.saving')}
               </>
             ) : (
-              '儲存變更'
+              t('profile.save')
             )}
           </Button>
         </CardContent>
@@ -154,18 +205,18 @@ export default function SettingsPage() {
       {/* AI Quota Section */}
       <Card>
         <CardHeader>
-          <CardTitle>AI 配額</CardTitle>
-          <CardDescription>您的 AI 功能使用狀況</CardDescription>
+          <CardTitle>{t('aiQuota.title')}</CardTitle>
+          <CardDescription>{t('aiQuota.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium">本週使用量</p>
-              <p className="text-muted-foreground text-sm">每週一重置</p>
+              <p className="font-medium">{t('aiQuota.weeklyUsage')}</p>
+              <p className="text-muted-foreground text-sm">{t('aiQuota.resetWeekly')}</p>
             </div>
             <div className="text-right">
               <p className="text-2xl font-bold">12 / 15</p>
-              <p className="text-muted-foreground text-xs">次</p>
+              <p className="text-muted-foreground text-xs">{t('aiQuota.times')}</p>
             </div>
           </div>
 
@@ -173,12 +224,10 @@ export default function SettingsPage() {
             <div className="bg-primary h-full rounded-full" style={{ width: '80%' }} />
           </div>
 
-          <p className="text-muted-foreground text-sm">
-            免費用戶每週可使用 15 次 AI 分析功能。升級至 Premium 可獲得更多配額。
-          </p>
+          <p className="text-muted-foreground text-sm">{t('aiQuota.freeUserDescription')}</p>
 
           <Button variant="outline" className="w-full">
-            升級至 Premium
+            {t('aiQuota.upgradeToPremium')}
           </Button>
         </CardContent>
       </Card>
@@ -186,17 +235,17 @@ export default function SettingsPage() {
       {/* Subscription Section */}
       <Card>
         <CardHeader>
-          <CardTitle>訂閱方案</CardTitle>
-          <CardDescription>管理您的訂閱</CardDescription>
+          <CardTitle>{t('subscription.title')}</CardTitle>
+          <CardDescription>{t('subscription.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div>
               <p className="font-medium">Free Plan</p>
-              <p className="text-muted-foreground text-sm">基本功能，每週 15 次 AI 分析</p>
+              <p className="text-muted-foreground text-sm">{t('subscription.freeDescription')}</p>
             </div>
             <span className="bg-primary/10 text-primary rounded-full px-3 py-1 text-sm font-medium">
-              目前方案
+              {t('subscription.currentPlan')}
             </span>
           </div>
 
@@ -206,11 +255,13 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Premium Plan</p>
-                <p className="text-muted-foreground text-sm">每週 100 次 AI 分析、優先支援</p>
+                <p className="text-muted-foreground text-sm">
+                  {t('subscription.premiumDescription')}
+                </p>
               </div>
               <p className="font-bold">$9.99/月</p>
             </div>
-            <Button className="mt-4 w-full">升級</Button>
+            <Button className="mt-4 w-full">{t('subscription.upgrade')}</Button>
           </div>
         </CardContent>
       </Card>
@@ -218,17 +269,19 @@ export default function SettingsPage() {
       {/* Danger Zone */}
       <Card className="border-destructive/50">
         <CardHeader>
-          <CardTitle className="text-destructive">危險區域</CardTitle>
-          <CardDescription>這些操作無法復原，請謹慎操作</CardDescription>
+          <CardTitle className="text-destructive">{t('dangerZone.title')}</CardTitle>
+          <CardDescription>{t('dangerZone.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium">刪除帳戶</p>
-              <p className="text-muted-foreground text-sm">永久刪除您的帳戶和所有資料</p>
+              <p className="font-medium">{t('dangerZone.deleteAccount')}</p>
+              <p className="text-muted-foreground text-sm">
+                {t('dangerZone.deleteAccountDescription')}
+              </p>
             </div>
             <Button variant="destructive" size="sm">
-              刪除帳戶
+              {t('dangerZone.deleteAccount')}
             </Button>
           </div>
         </CardContent>

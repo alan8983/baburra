@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Check, ChevronsUpDown, Loader2, Plus, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { buttonVariants } from '@/components/ui/button';
 import {
   Command,
   CommandEmpty,
@@ -96,19 +96,18 @@ export function KOLSelector({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          disabled={disabled}
-          className={cn(
-            'w-full justify-between font-normal',
-            !value && 'text-muted-foreground',
-            className
-          )}
-          data-testid="kol-selector-trigger"
-        >
+      <PopoverTrigger
+        role="combobox"
+        aria-expanded={open}
+        disabled={disabled}
+        className={cn(
+          buttonVariants({ variant: 'outline' }),
+          'w-full justify-between font-normal',
+          !value && 'text-muted-foreground',
+          className
+        )}
+        data-testid="kol-selector-trigger"
+      >
           {value ? (
             <div className="flex items-center gap-2">
               <Avatar className="h-5 w-5">
@@ -125,19 +124,25 @@ export function KOLSelector({
           )}
           <div className="flex items-center gap-1">
             {value && (
-              <button
-                type="button"
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={handleClear}
-                className="shrink-0 opacity-50 hover:opacity-100 focus:outline-none"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleClear(e as unknown as React.MouseEvent);
+                  }
+                }}
+                className="shrink-0 cursor-pointer opacity-50 hover:opacity-100 focus:outline-none"
                 data-testid="kol-selector-clear-button"
                 aria-label="清除選擇"
               >
                 <X className="h-4 w-4" />
-              </button>
+              </div>
             )}
             <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
           </div>
-        </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[300px] p-0" align="start" data-testid="kol-selector-popover">
         <Command shouldFilter={false}>

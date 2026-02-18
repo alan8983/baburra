@@ -9,7 +9,7 @@ import { createClient } from '@supabase/supabase-js';
  * 2. 貼上測試內容
  * 3. 建立草稿並導向編輯頁
  * 4. 選擇 KOL、股票、設定情緒
- * 5. 預覽並確認建檔
+ * 5. 在草稿編輯頁直接發布（確認對話框）
  * 6. 驗證導航和資料正確性
  *
  * 環境變數需求：
@@ -218,38 +218,16 @@ test.describe('核心輸入流程 - Happy Path', () => {
     await expect(sentimentButton).toBeVisible({ timeout: 5000 });
     await sentimentButton.click();
 
-    // Step 9: 點擊「預覽並確認」按鈕
-    const previewButton = page
-      .locator('a:has-text("預覽並確認")')
-      .or(page.locator('button:has-text("預覽並確認")'))
-      .first();
-    await expect(previewButton).toBeVisible({ timeout: 10000 });
-    await previewButton.click();
+    // Step 9: 點擊「發布」按鈕
+    const publishButton = page.locator('button:has-text("發布")').first();
+    await expect(publishButton).toBeVisible({ timeout: 10000 });
+    await publishButton.click();
 
-    // Step 10: 等待導航到預覽確認頁
-    await page.waitForURL(/\/posts\/new/, { timeout: 10000 });
-    await expect(page.locator('text=文章預覽')).toBeVisible({ timeout: 10000 });
+    // Step 10: 等待發布確認對話框
+    await expect(page.locator('text=確認發布')).toBeVisible({ timeout: 5000 });
 
-    // Step 11: 確認情緒已設定為「看多」（如果尚未設定，則設定它）
-    // 檢查情緒選擇器是否已選中「看多」
-    const previewSentimentButton = page.locator('button:has-text("看多")').first();
-    await previewSentimentButton.waitFor({ state: 'visible', timeout: 5000 });
-
-    // 等待一下讓樣式渲染完成
-    await page.waitForTimeout(500);
-
-    // 檢查按鈕是否已被選中（bg-green-100 用於看多，bg-green-600 用於強烈看多）
-    const classList = await previewSentimentButton.evaluate((el) => Array.from(el.classList));
-    const isSelected = classList.some((cls) => cls.includes('bg-green'));
-
-    if (!isSelected) {
-      await previewSentimentButton.click();
-      // 等待點擊後的狀態更新
-      await page.waitForTimeout(500);
-    }
-
-    // Step 12: 點擊「確認建檔」按鈕
-    const confirmButton = page.locator('button:has-text("確認建檔")');
+    // Step 11: 點擊「確認發布」按鈕
+    const confirmButton = page.locator('button:has-text("確認發布")');
     await expect(confirmButton).toBeVisible();
     await confirmButton.click();
 

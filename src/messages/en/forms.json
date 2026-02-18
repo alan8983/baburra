@@ -53,8 +53,6 @@
     "create": "Create Stock"
   },
   "sentimentSelector": {
-    "aiSuggestion": "AI Suggestion:",
-    "accept": "Accept",
     "notSet": "Not Set"
   },
   "datetimeInput": {

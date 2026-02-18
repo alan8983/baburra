@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Check, ChevronsUpDown, Loader2, Plus, Search, TrendingUp, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   Command,
@@ -138,15 +138,17 @@ export function StockSelector({
 
       {/* 搜尋選擇器 */}
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            disabled={disabled}
-            className={cn('w-full justify-between font-normal', 'text-muted-foreground')}
-            data-testid="stock-selector-trigger"
-          >
+        <PopoverTrigger
+          role="combobox"
+          aria-expanded={open}
+          disabled={disabled}
+          className={cn(
+            buttonVariants({ variant: 'outline' }),
+            'w-full justify-between font-normal',
+            'text-muted-foreground'
+          )}
+          data-testid="stock-selector-trigger"
+        >
             <div className="flex items-center gap-2">
               <Search className="h-4 w-4" />
               <span>
@@ -156,7 +158,6 @@ export function StockSelector({
               </span>
             </div>
             <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
-          </Button>
         </PopoverTrigger>
         <PopoverContent
           className="w-[350px] p-0"

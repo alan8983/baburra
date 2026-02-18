@@ -300,6 +300,36 @@ describe('analyzeDraftContent', () => {
     expect(result.stockTickers).toHaveLength(4);
     expect(result.stockTickers.map((t) => t.market)).toEqual(['US', 'TW', 'HK', 'CRYPTO']);
   });
+
+  it('應將 timezone 傳入 prompt 中', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: null,
+      tickers: [],
+      sentiment: 0,
+      confidence: 0.5,
+      reasoning: '',
+      postedAt: '2025-01-15T10:00:00+08:00',
+    });
+
+    await analyzeDraftContent('test', 'America/New_York');
+
+    const promptArg = mockGenerateJson.mock.calls[0][0] as string;
+    expect(promptArg).toContain('America/New_York');
+  });
+
+  it('postedAt 帶時區偏移量應正確轉換為 UTC', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: null,
+      tickers: [],
+      sentiment: 0,
+      confidence: 0.5,
+      reasoning: '',
+      postedAt: '2025-01-15T22:59:00+08:00',
+    });
+
+    const result = await analyzeDraftContent('test', 'Asia/Taipei');
+    expect(result.postedAt).toBe('2025-01-15T14:59:00.000Z');
+  });
 });
 
 // =====================

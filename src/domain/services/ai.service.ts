@@ -115,7 +115,8 @@ const ARGUMENT_EXTRACTION_PROMPT = `
 只回傳 JSON，不要有其他文字。
 `;
 
-const DRAFT_ANALYSIS_PROMPT = `
+function buildDraftAnalysisPrompt(timezone: string): string {
+  return `
 你是一個投資文章分析助手。請分析以下投資相關文章，一次提取所有關鍵資訊。
 
 今天的日期是: {today}
@@ -157,10 +158,11 @@ const DRAFT_ANALYSIS_PROMPT = `
    - 0: 中立 (沒有明確方向性判斷)
    - -1: 看空 (負面評價，認為會下跌)
    - -2: 強烈看空 (明確表示非常不看好，建議賣出)
-4. 發文時間：文章中若有提及日期時間（如「2024/1/15」、「今天」、「昨天」、「3小時前」），請根據今天日期轉換為 ISO 8601 格式。若無法判斷則回傳 null
+4. 發文時間：文章中若有提及日期時間（如「2024/1/15」、「今天」、「昨天」、「3小時前」），請根據今天日期轉換為 ISO 8601 格式。所有時間請視為 ${timezone} 時區。若無法判斷則回傳 null
 
 只回傳 JSON，不要有其他文字。
 `;
+}
 
 const TICKER_IDENTIFICATION_PROMPT = `
 分析以下投資相關文章，找出所有提及的投資標的（股票、ETF、加密貨幣等）。
@@ -331,9 +333,14 @@ export async function identifyTickers(content: string): Promise<TickerIdentifica
 /**
  * 綜合分析草稿內容 — 一次提取 KOL、標的、情緒、發文時間
  */
-export async function analyzeDraftContent(content: string): Promise<DraftAnalysisResult> {
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-  const prompt = DRAFT_ANALYSIS_PROMPT.replace('{content}', content).replace('{today}', today);
+export async function analyzeDraftContent(
+  content: string,
+  timezone: string = 'Asia/Taipei'
+): Promise<DraftAnalysisResult> {
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: timezone }); // YYYY-MM-DD
+  const prompt = buildDraftAnalysisPrompt(timezone)
+    .replace('{content}', content)
+    .replace('{today}', today);
 
   interface RawDraftAnalysis {
     kolName: string | null;

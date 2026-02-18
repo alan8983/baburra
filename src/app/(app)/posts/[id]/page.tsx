@@ -15,7 +15,11 @@ import { SENTIMENT_LABELS, SENTIMENT_COLORS } from '@/domain/models/post';
 import { useStockPricesForChart } from '@/hooks/use-stock-prices';
 import { CandlestickChart, SentimentLineChart } from '@/components/charts';
 import type { LineChartMarker } from '@/components/charts';
-import { usePost, useBookmarkStatus, useToggleBookmark } from '@/hooks';
+import { usePost, useBookmarkStatus, useToggleBookmark, usePostArguments } from '@/hooks';
+import { PostArguments, type TickerArgumentGroup } from '@/components/ai/post-arguments';
+import { FRAMEWORK_CATEGORIES } from '@/domain/models/argument-categories';
+import type { PostArgumentResponse } from '@/hooks/use-ai';
+import type { Sentiment } from '@/domain/models/post';
 
 function toDateString(postedAt: Date | string): string {
   if (postedAt instanceof Date) return postedAt.toISOString().slice(0, 10);
@@ -154,9 +158,46 @@ function PostStockChart({
   );
 }
 
+/**
+ * Transform PostArgumentResponse[] to TickerArgumentGroup[] by grouping by stockId
+ */
+function transformPostArguments(
+  args: PostArgumentResponse[],
+  stocks: { id: string; ticker: string; name: string }[]
+): TickerArgumentGroup[] {
+  const stockMap = new Map(stocks.map((s) => [s.id, s]));
+  const grouped = new Map<string, PostArgumentResponse[]>();
+  for (const arg of args) {
+    const existing = grouped.get(arg.stockId) || [];
+    existing.push(arg);
+    grouped.set(arg.stockId, existing);
+  }
+  return Array.from(grouped.entries()).map(([stockId, stockArgs]) => {
+    const stock = stockMap.get(stockId);
+    return {
+      ticker: stock?.ticker ?? 'Unknown',
+      name: stock?.name ?? '',
+      arguments: stockArgs.map((arg) => {
+        const fw = FRAMEWORK_CATEGORIES[arg.category.code];
+        return {
+          id: arg.id,
+          categoryCode: arg.category.code,
+          categoryName: fw?.name ?? arg.category.name,
+          parentName: fw?.parentName ?? '其他',
+          originalText: arg.originalText,
+          summary: arg.summary,
+          sentiment: arg.sentiment as Sentiment,
+          confidence: arg.confidence,
+        };
+      }),
+    };
+  });
+}
+
 export default function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { data: post, isLoading, error } = usePost(id);
+  const { data: postArgs } = usePostArguments(id);
   const { data: bookmarkData } = useBookmarkStatus(id);
   const toggleBookmark = useToggleBookmark(id);
   const isBookmarked = bookmarkData?.isBookmarked ?? false;
@@ -361,6 +402,11 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
           />
         </div>
       </div>
+
+      {/* Arguments section */}
+      {postArgs && postArgs.length > 0 && (
+        <PostArguments tickerGroups={transformPostArguments(postArgs, post.stocks)} />
+      )}
     </div>
   );
 }

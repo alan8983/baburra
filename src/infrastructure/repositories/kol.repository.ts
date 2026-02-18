@@ -176,6 +176,22 @@ export async function updateKol(id: string, input: UpdateKOLInput): Promise<KOL 
   return row ? mapDbToKol(row as DbKol) : null;
 }
 
+export async function findKolByName(name: string): Promise<KOLSearchResult | null> {
+  const trimmed = name.trim();
+  if (!trimmed) return null;
+
+  const supabase = createAdminClient();
+  const { data: row, error } = await supabase
+    .from('kols')
+    .select('id, name, avatar_url')
+    .ilike('name', trimmed)
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !row) return null;
+  return { id: row.id, name: row.name, avatarUrl: row.avatar_url };
+}
+
 export function toKOLSearchResult(kol: KOL): KOLSearchResult {
   return { id: kol.id, name: kol.name, avatarUrl: kol.avatarUrl };
 }

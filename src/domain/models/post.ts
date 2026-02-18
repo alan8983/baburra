@@ -1,5 +1,7 @@
 // Post 領域模型
 
+import type { DraftAiArguments } from './draft';
+
 export type Sentiment = -2 | -1 | 0 | 1 | 2;
 export type SourcePlatform = 'twitter' | 'facebook' | 'threads' | 'instagram' | 'manual';
 
@@ -70,6 +72,7 @@ export interface CreatePostInput {
   sentiment: Sentiment;
   sentimentAiGenerated?: boolean;
   postedAt: Date;
+  draftAiArguments?: DraftAiArguments[];
 }
 
 export interface UpdatePostInput {

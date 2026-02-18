@@ -30,6 +30,10 @@
     "premiumDescription": "每週 100 次 AI 分析、優先支援",
     "upgrade": "升級"
   },
+  "timezone": {
+    "label": "時區",
+    "description": "用於 AI 分析時解讀文章發文時間"
+  },
   "dangerZone": {
     "title": "危險區域",
     "description": "這些操作無法復原，請謹慎操作",

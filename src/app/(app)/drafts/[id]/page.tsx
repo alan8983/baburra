@@ -3,9 +3,11 @@
 import { use, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { format } from 'date-fns';
+import { zhTW } from 'date-fns/locale';
 import {
   ArrowLeft,
-  ArrowRight,
+  Check,
   Trash2,
   Link2,
   Loader2,
@@ -13,6 +15,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,14 +40,19 @@ import {
   ImageUploader,
   AiTickerSuggestions,
 } from '@/components/forms';
-import { PostArguments } from '@/components/ai/post-arguments';
+import { PostArguments, type TickerArgumentGroup } from '@/components/ai/post-arguments';
+import { FRAMEWORK_CATEGORIES } from '@/domain/models/argument-categories';
 import type {
   KOLSearchResult,
   StockSearchResult,
   Sentiment,
+  CreatePostInput,
   DraftWithRelations,
   DraftAiArguments,
 } from '@/domain/models';
+import { useCreatePost, useCheckDuplicateUrl } from '@/hooks/use-posts';
+import { detectPlatform } from '@/lib/utils/format';
+import { SENTIMENT_LABELS } from '@/domain/models/post';
 import {
   useDraft,
   useUpdateDraft,
@@ -56,19 +64,7 @@ import {
 } from '@/hooks';
 import type { IdentifiedTicker } from '@/hooks/use-ai';
 import { API_ROUTES } from '@/lib/constants/routes';
-import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-
-// Framework categories for mapping AI argument categoryCode to display names
-const FRAMEWORK_CATEGORIES: Record<string, { name: string; parentName: string }> = {
-  FINANCIALS: { name: '財務體質', parentName: '量化分析' },
-  MOMENTUM: { name: '動能類', parentName: '量化分析' },
-  VALUATION: { name: '估值', parentName: '量化分析' },
-  MARKET_SIZE: { name: '市場規模', parentName: '質化分析' },
-  MOAT: { name: '護城河', parentName: '質化分析' },
-  OPERATIONAL_QUALITY: { name: '營運品質', parentName: '質化分析' },
-  CATALYST: { name: '催化劑', parentName: '催化劑' },
-};
 
 /**
  * Parse draft.stockNameInputs (format: "TICKER (Name)") into IdentifiedTicker[]
@@ -93,33 +89,15 @@ function parseStockNameInputs(inputs: string[]): IdentifiedTicker[] {
 }
 
 /**
- * Transform DraftAiArguments[] to the flat Argument[] format expected by PostArguments
+ * Transform DraftAiArguments[] to TickerArgumentGroup[] for PostArguments
  */
-function transformAiArguments(aiArguments: DraftAiArguments[]): {
-  id: string;
-  categoryCode: string;
-  categoryName: string;
-  parentName: string;
-  originalText: string | null;
-  summary: string | null;
-  sentiment: Sentiment;
-  confidence: number | null;
-}[] {
-  const result: {
-    id: string;
-    categoryCode: string;
-    categoryName: string;
-    parentName: string;
-    originalText: string | null;
-    summary: string | null;
-    sentiment: Sentiment;
-    confidence: number | null;
-  }[] = [];
-  for (const stockArgs of aiArguments) {
-    for (let i = 0; i < stockArgs.arguments.length; i++) {
-      const arg = stockArgs.arguments[i];
+function transformAiArguments(aiArguments: DraftAiArguments[]): TickerArgumentGroup[] {
+  return aiArguments.map((stockArgs) => ({
+    ticker: stockArgs.ticker,
+    name: stockArgs.name,
+    arguments: stockArgs.arguments.map((arg, i) => {
       const category = FRAMEWORK_CATEGORIES[arg.categoryCode];
-      result.push({
+      return {
         id: `${stockArgs.ticker}-${arg.categoryCode}-${i}`,
         categoryCode: arg.categoryCode,
         categoryName: category?.name ?? arg.categoryCode,
@@ -128,10 +106,9 @@ function transformAiArguments(aiArguments: DraftAiArguments[]): {
         summary: arg.summary,
         sentiment: arg.sentiment,
         confidence: arg.confidence,
-      });
-    }
-  }
-  return result;
+      };
+    }),
+  }));
 }
 
 // 表單組件 - 接收 draft 作為 prop，使用 key 來重置狀態
@@ -144,6 +121,7 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
   const router = useRouter();
   const updateDraft = useUpdateDraft(id);
   const deleteDraft = useDeleteDraft();
+  const createPost = useCreatePost();
 
   // 表單狀態（直接從 draft 初始化）
   const [selectedKOL, setSelectedKOL] = useState<KOLSearchResult | null>(() =>
@@ -187,8 +165,14 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
 
   const fetchUrl = useFetchUrl();
 
+  // Publish state
+  const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+
+  // Duplicate URL check
+  const { data: duplicateCheck } = useCheckDuplicateUrl(sourceUrl);
+
   // AI ticker suggestions — initialized from draft.stockNameInputs (pre-filled by quick-input)
-  const t = useTranslations('common.ai');
   const [tickerSuggestions, setTickerSuggestions] = useState<IdentifiedTicker[]>(() =>
     parseStockNameInputs(draft.stockNameInputs ?? [])
   );
@@ -448,6 +432,65 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
     }
   };
 
+  // Publish validation
+  const validationErrors = useMemo(() => {
+    const errors: string[] = [];
+    if (!selectedKOL) errors.push('KOL');
+    if (selectedStocks.length === 0) errors.push('投資標的');
+    if (!content.trim()) errors.push('主文內容');
+    if (!postedAt) errors.push('發文時間');
+    if (sentiment === null) errors.push('走勢情緒');
+    return errors;
+  }, [selectedKOL, selectedStocks, content, postedAt, sentiment]);
+
+  const canPublish = validationErrors.length === 0;
+
+  const handlePublish = async () => {
+    if (!canPublish) return;
+
+    setIsPublishing(true);
+    try {
+      // Save draft first to ensure latest state is persisted
+      await updateDraft.mutateAsync({
+        kolId: selectedKOL?.id ?? null,
+        content: content || null,
+        sourceUrl: sourceUrl || null,
+        sentiment: sentiment ?? null,
+        postedAt: postedAt ?? null,
+        stockIds: selectedStocks.map((s) => s.id),
+        images,
+      });
+
+      const input: CreatePostInput = {
+        kolId: selectedKOL!.id,
+        stockIds: selectedStocks.map((s) => s.id),
+        content,
+        sourceUrl: sourceUrl || undefined,
+        sourcePlatform: detectPlatform(sourceUrl),
+        images,
+        sentiment: sentiment!,
+        sentimentAiGenerated: false,
+        postedAt: postedAt!,
+        draftAiArguments: draft.aiArguments ?? undefined,
+      };
+
+      const post = await createPost.mutateAsync(input);
+
+      // Delete draft after successful post creation
+      await deleteDraft.mutateAsync(id);
+
+      toast.success('文章發布成功');
+      router.push(ROUTES.POST_DETAIL(post.id));
+    } catch (error) {
+      toast.error('發布失敗', {
+        description: error instanceof Error ? error.message : '請稍後再試',
+      });
+    } finally {
+      setIsPublishing(false);
+      setPublishDialogOpen(false);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       {/* Header */}
@@ -609,6 +652,26 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
                   偵測到 {getSupportedPlatform(sourceUrl)} 網址，點擊「擷取」可自動帶入文章內容
                 </p>
               )}
+            {/* 重複 URL 警告 */}
+            {sourceUrl && duplicateCheck?.isDuplicate && (
+              <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3">
+                <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-amber-800">此文章網址已存在於資料庫中</p>
+                  <p className="text-xs text-amber-700">
+                    建立於{' '}
+                    {format(new Date(duplicateCheck.existingPost!.createdAt), 'yyyy/MM/dd', {
+                      locale: zhTW,
+                    })}
+                  </p>
+                  <Button variant="link" size="sm" className="h-auto p-0 text-amber-700" asChild>
+                    <Link href={ROUTES.POST_DETAIL(duplicateCheck.existingPost!.id)}>
+                      查看現有文章 →
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
 
           <Separator />
@@ -623,11 +686,9 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
         <Button variant="outline" onClick={handleSave} disabled={updateDraft.isPending}>
           儲存草稿
         </Button>
-        <Button asChild>
-          <Link href={`${ROUTES.POST_NEW}?draftId=${id}`}>
-            預覽並確認
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
+        <Button onClick={() => setPublishDialogOpen(true)} disabled={isPublishing}>
+          <Check className="mr-2 h-4 w-4" />
+          發布
         </Button>
       </div>
 
@@ -643,7 +704,7 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
       </Card>
 
       {/* AI Arguments */}
-      {displayArguments.length > 0 && <PostArguments arguments={displayArguments} />}
+      {displayArguments.length > 0 && <PostArguments tickerGroups={displayArguments} />}
 
       {/* KOL Form Dialog */}
       <KOLFormDialog
@@ -662,6 +723,71 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
         defaultMarket={stockDialogDefaultMarket}
         onSuccess={handleStockCreated}
       />
+
+      {/* Publish Confirmation Dialog */}
+      <Dialog open={publishDialogOpen} onOpenChange={setPublishDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>確認發布</DialogTitle>
+            <DialogDescription>請確認以下資訊無誤後再發布文章</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {!canPublish && (
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+                <p className="text-sm font-medium text-amber-800">請先填寫以下必填欄位：</p>
+                <ul className="mt-1 list-inside list-disc text-sm text-amber-700">
+                  {validationErrors.map((err) => (
+                    <li key={err}>{err}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {canPublish && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground w-16 text-sm">KOL</span>
+                  <span className="text-sm font-medium">{selectedKOL?.name}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground w-16 text-sm">標的</span>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedStocks.map((s) => (
+                      <Badge key={s.id} variant="secondary">
+                        {s.ticker}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground w-16 text-sm">情緒</span>
+                  <span className="text-sm font-medium">{SENTIMENT_LABELS[sentiment!]}</span>
+                </div>
+                {duplicateCheck?.isDuplicate && (
+                  <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
+                    <p className="text-sm text-amber-700">注意：此文章網址已存在於資料庫中</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPublishDialogOpen(false)}>
+              取消
+            </Button>
+            <Button onClick={handlePublish} disabled={!canPublish || isPublishing}>
+              {isPublishing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  發布中...
+                </>
+              ) : (
+                '確認發布'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* URL Fetch Result Dialog */}
       <Dialog open={fetchDialogOpen} onOpenChange={setFetchDialogOpen}>
