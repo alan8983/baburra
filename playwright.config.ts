@@ -9,9 +9,11 @@ export default defineConfig({
   // 測試報告輸出目錄
   outputDir: './tests/e2e/test-results',
   // 測試執行超時
-  timeout: 30 * 1000,
+  // 設定為 90 秒，因為 AI 分析（Gemini API）在 CI 環境下可能需要 15-30 秒，
+  // 加上頁面導航、DB 寫入等操作，30 秒在 CI 環境下不夠用。
+  timeout: 90 * 1000,
   expect: {
-    timeout: 5000,
+    timeout: 10000,
   },
   // 並行執行
   fullyParallel: true,
