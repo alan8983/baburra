@@ -108,41 +108,41 @@ export function KOLSelector({
         )}
         data-testid="kol-selector-trigger"
       >
-          {value ? (
-            <div className="flex items-center gap-2">
-              <Avatar className="h-5 w-5">
-                <AvatarImage src={value.avatarUrl || undefined} />
-                <AvatarFallback className="text-xs">{value.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <span className="truncate">{value.name}</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Search className="h-4 w-4" />
-              <span>{placeholder}</span>
+        {value ? (
+          <div className="flex items-center gap-2">
+            <Avatar className="h-5 w-5">
+              <AvatarImage src={value.avatarUrl || undefined} />
+              <AvatarFallback className="text-xs">{value.name.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <span className="truncate">{value.name}</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4" />
+            <span>{placeholder}</span>
+          </div>
+        )}
+        <div className="flex items-center gap-1">
+          {value && (
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={handleClear}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleClear(e as unknown as React.MouseEvent);
+                }
+              }}
+              className="shrink-0 cursor-pointer opacity-50 hover:opacity-100 focus:outline-none"
+              data-testid="kol-selector-clear-button"
+              aria-label="清除選擇"
+            >
+              <X className="h-4 w-4" />
             </div>
           )}
-          <div className="flex items-center gap-1">
-            {value && (
-              <div
-                role="button"
-                tabIndex={0}
-                onClick={handleClear}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    handleClear(e as unknown as React.MouseEvent);
-                  }
-                }}
-                className="shrink-0 cursor-pointer opacity-50 hover:opacity-100 focus:outline-none"
-                data-testid="kol-selector-clear-button"
-                aria-label="清除選擇"
-              >
-                <X className="h-4 w-4" />
-              </div>
-            )}
-            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
-          </div>
+          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+        </div>
       </PopoverTrigger>
       <PopoverContent className="w-[300px] p-0" align="start" data-testid="kol-selector-popover">
         <Command shouldFilter={false}>

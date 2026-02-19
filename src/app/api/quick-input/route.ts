@@ -121,19 +121,27 @@ export async function POST(request: NextRequest) {
       console.error('AI analysis failed, creating draft without AI fields:', aiError);
     }
 
-    // 6b. 論點提取（若 AI 分析成功且有標的）
+    // 6b. 論點提取（若 AI 分析成功且有標的）— 並行呼叫以減少等待時間
     let aiArguments: DraftAiArguments[] | undefined;
     if (aiAnalyzed && aiStockTickers.length > 0) {
       try {
+        const results = await Promise.allSettled(
+          aiStockTickers.map((ticker) => extractArguments(textContent, ticker.ticker, ticker.name))
+        );
         const argumentResults: DraftAiArguments[] = [];
-        for (const ticker of aiStockTickers) {
-          const result = await extractArguments(textContent, ticker.ticker, ticker.name);
-          if (result.arguments.length > 0) {
+        for (let i = 0; i < results.length; i++) {
+          const result = results[i];
+          if (result.status === 'fulfilled' && result.value.arguments.length > 0) {
             argumentResults.push({
-              ticker: ticker.ticker,
-              name: ticker.name,
-              arguments: result.arguments,
+              ticker: aiStockTickers[i].ticker,
+              name: aiStockTickers[i].name,
+              arguments: result.value.arguments,
             });
+          } else if (result.status === 'rejected') {
+            console.error(
+              `Argument extraction failed for ${aiStockTickers[i].ticker}:`,
+              result.reason
+            );
           }
         }
         if (argumentResults.length > 0) {

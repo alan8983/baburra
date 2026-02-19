@@ -29,7 +29,11 @@
       "Bash(npm run format:check:*)",
       "Bash(npx prettier:*)",
       "Bash(supabase:*)",
-      "Bash(npx supabase:*)"
+      "Bash(npx supabase:*)",
+      "Bash(wc:*)",
+      "Bash(npx husky:*)",
+      "Bash(GIT_REDIRECT_STDERR=2)",
+      "Bash(1 git diff --ignore-cr-at-eol -- package.json)"
     ]
   }
 }

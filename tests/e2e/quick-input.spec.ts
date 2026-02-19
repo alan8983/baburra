@@ -91,9 +91,9 @@ test.describe('快速輸入 - 資料驅動煙霧測試', () => {
       await createButton.click();
 
       // 3. 等待導航到草稿編輯頁（AI 分析可能需要較長時間）
-      // timeout 設為 60 秒：Gemini API 在 CI 環境下可能需要 15-30 秒，
-      // 加上 DB 寫入與 Next.js router.push() 導航，需要足夠的緩衝。
-      await page.waitForURL(/\/drafts\/[^/]+/, { timeout: 60000 });
+      // timeout 設為 80 秒：Gemini API 在 CI 環境下可能需要 15-30 秒，
+      // 論點提取已改為並行呼叫，但仍需足夠的緩衝。
+      await page.waitForURL(/\/drafts\/[^/]+/, { timeout: 80000 });
       await page.waitForLoadState('networkidle');
       await expect(page.locator('text=編輯草稿')).toBeVisible({ timeout: 15000 });
 

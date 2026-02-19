@@ -1,8 +1,57 @@
 # Stock KOL Tracker Web - 開發計畫
 
-> **版本**: 1.0  
-> **建立日期**: 2026-02-01  
+> **版本**: 1.4
+> **建立日期**: 2026-02-01
+> **最後更新**: 2026-02-19
 > **目標**: MVP 開發計畫
+
+---
+
+## 零、開發進度總覽
+
+> **最後更新**: 2026-02-19
+
+| 階段 | 名稱 | 狀態 | 備註 |
+| --- | --- | --- | --- |
+| Phase 0 | 專案初始化 | ✅ 完成 | 2026-02-01 |
+| Phase 1 | 認證系統 | ✅ 完成 | 2026-02-02 |
+| Phase 2 | KOL 管理 | ✅ 完成 | 2026-02-01 |
+| Phase 3 | 投資標的 | ✅ 完成 | 2026-02-01 |
+| Phase 4 | 輸入與草稿 | ✅ 完成 | 2026-02-18 |
+| Phase 5 | 文章檢視 | ✅ 完成 | 2026-02-12 (含書籤) |
+| Phase 6 | K 線圖 | 🔄 60% | 基本圖表完成，互動功能待做 |
+| Phase 7 | 勝率計算 | 🔄 70% | 計算器+API 完成，UI 顯示待做 |
+| Phase 8 | AI 整合 | 🔄 80% | 情緒/論點提取完成，論點彙整 UI 待做 |
+| Phase 9 | App Layout | ✅ 完成 | 2026-02-10 |
+| Phase 10 | 測試與優化 | 🔄 50% | 單元測試+E2E 框架完成，覆蓋率待提升 |
+
+**MVP 整體完成度: ~80%**
+
+### 額外已完成功能（計畫外）
+
+| 功能 | 完成日期 | 說明 |
+| --- | --- | --- |
+| 國際化 (i18n) | 2026-02-10 | next-intl，支援 zh-TW + en |
+| Dashboard 統計 | 2026-02-10 | 儀表板 API + 頁面 |
+| URL 擷取框架 | 2026-02-05 | ExtractorFactory + Twitter/FB/Threads stubs |
+| Profile 時區 | 2026-02-19 | 用戶時區設定 |
+| 情緒折線圖 | 2026-02-18 | sentiment-line-chart 元件 |
+
+### 開發時程
+
+```
+2026-02-01  ██████████ Phase 0, 2, 3, 9 (專案骨架 + 核心模組)
+2026-02-02  ████████   Phase 1 (認證 + RLS + E2E 框架)
+2026-02-03  ███        配置調整、Auth 修正
+2026-02-05  █████      URL fetcher、Extractors、文件
+2026-02-06  ███        手動測試計畫、Supabase 配置
+2026-02-10  ██████     i18n、Dashboard API、UI 改善
+2026-02-11  ██         Extractor 測試、format 工具測試
+2026-02-12  ████       書籤功能 (full-stack + i18n)
+2026-02-14  ██████     快速輸入、AI Ticker 識別、CI 修正
+2026-02-18  ████████   情緒折線圖、E2E fixtures、草稿審核、論點支援
+2026-02-19  ████       Profile 時區、Post Arguments API、README 更新
+```
 
 ---
 
@@ -27,10 +76,10 @@ Stock KOL Tracker Web 是一個**社群共享**的投資觀點追蹤平台，讓
 
 ### 1.3 技術架構確認
 
-| 層級     | 技術選型                 |
-| -------- | ------------------------ |
-| 前端框架 | Next.js 14 (App Router)  |
-| UI 套件  | Tailwind CSS + shadcn/ui |
+| 層級     | 技術選型                    |
+| -------- | --------------------------- |
+| 前端框架 | Next.js 16 (App Router)     |
+| UI 套件  | Tailwind CSS 4 + shadcn/ui  |
 | 狀態管理 | TanStack Query + Zustand |
 | 後端     | Next.js API Routes       |
 | 資料庫   | Supabase (PostgreSQL)    |
@@ -268,22 +317,23 @@ CREATE TABLE edit_suggestions (
 
 ## 三、MVP 開發階段
 
-### Phase 0: 專案初始化
+### Phase 0: 專案初始化 ✅
 
 **目標**: 建立開發環境與基礎架構
+**狀態**: ✅ 完成 (2026-02-01)
 
 #### 任務清單
 
-| #   | 任務                          | 產出                        |
-| --- | ----------------------------- | --------------------------- |
-| 0.1 | 初始化 Next.js 14 專案        | 專案骨架                    |
-| 0.2 | 設定 Tailwind CSS + shadcn/ui | UI 基礎元件                 |
-| 0.3 | 設定 Supabase 專案            | 資料庫連線                  |
-| 0.4 | 建立資料庫 Schema (Migration) | 所有資料表                  |
-| 0.5 | **建立測試用戶**              | 開發期間使用 (RLS 暫時關閉) |
-| 0.6 | 設定環境變數                  | .env.local                  |
-| 0.7 | 建立目錄結構                  | 依 ARCHITECTURE.md          |
-| 0.8 | 設定 ESLint + Prettier        | 程式碼品質                  |
+| #   | 任務                          | 產出                        | 狀態 |
+| --- | ----------------------------- | --------------------------- | ---- |
+| 0.1 | 初始化 Next.js 16 專案        | 專案骨架                    | ✅ |
+| 0.2 | 設定 Tailwind CSS 4 + shadcn/ui | UI 基礎元件              | ✅ |
+| 0.3 | 設定 Supabase 專案            | 資料庫連線                  | ✅ |
+| 0.4 | 建立資料庫 Schema (Migration) | 所有資料表 (4 migrations)   | ✅ |
+| 0.5 | **建立測試用戶**              | DEV_USER_ID 環境變數        | ✅ |
+| 0.6 | 設定環境變數                  | .env.local                  | ✅ |
+| 0.7 | 建立目錄結構                  | 依 ARCHITECTURE.md          | ✅ |
+| 0.8 | 設定 ESLint + Prettier        | 程式碼品質                  | ✅ |
 
 > **開發期間策略**: RLS 政策會先定義但暫不啟用，使用 Service Role Key 進行開發。待 Phase 1 (認證系統) 時再啟用 RLS。
 
@@ -296,11 +346,12 @@ CREATE TABLE edit_suggestions (
 
 ---
 
-### Phase 1: 認證系統 (最後實作)
+### Phase 1: 認證系統 ✅
 
-> ⚠️ **注意**: 此階段移至最後實作。開發期間使用單一測試用戶，優先驗證核心功能。
+> 此階段已於 2026-02-02 完成。
 
 **目標**: 用戶註冊、登入、Session 管理、多用戶資料隔離
+**狀態**: ✅ 完成 (2026-02-02)
 
 #### 頁面規劃
 
@@ -312,17 +363,17 @@ CREATE TABLE edit_suggestions (
 
 #### 任務清單
 
-| #   | 任務                            | 產出                       |
-| --- | ------------------------------- | -------------------------- |
-| 1.1 | 建立 Supabase Auth Client       | `infrastructure/supabase/` |
-| 1.2 | 實作登入頁面                    | `/login`                   |
-| 1.3 | 實作註冊頁面                    | `/register`                |
-| 1.4 | 實作 Auth Callback              | `/auth/callback`           |
-| 1.5 | 建立 Auth Context/Hook          | `hooks/use-auth.ts`        |
-| 1.6 | 建立 Protected Route Middleware | `middleware.ts`            |
-| 1.7 | 建立 Profile 初始化觸發器       | Supabase Function          |
-| 1.8 | 啟用 RLS 政策                   | 多用戶資料隔離             |
-| 1.9 | 測試多用戶情境                  | 確保資料正確隔離/共享      |
+| #   | 任務                            | 產出                       | 狀態 |
+| --- | ------------------------------- | -------------------------- | ---- |
+| 1.1 | 建立 Supabase Auth Client       | `infrastructure/supabase/` | ✅ |
+| 1.2 | 實作登入頁面                    | `/login`                   | ✅ |
+| 1.3 | 實作註冊頁面                    | `/register`                | ✅ |
+| 1.4 | 實作 Auth Callback              | `/auth/callback`           | ✅ |
+| 1.5 | 建立 Auth Context/Hook          | `hooks/use-auth.ts`        | ✅ |
+| 1.6 | 建立 Protected Route Middleware | `middleware.ts`            | ✅ |
+| 1.7 | 建立 Profile 初始化觸發器       | Supabase Function          | ✅ |
+| 1.8 | 啟用 RLS 政策                   | 多用戶資料隔離             | ✅ |
+| 1.9 | 測試多用戶情境                  | 確保資料正確隔離/共享      | ✅ |
 
 #### API 端點
 
@@ -342,9 +393,10 @@ CREATE TABLE edit_suggestions (
 
 ---
 
-### Phase 2: KOL 管理模組
+### Phase 2: KOL 管理模組 ✅
 
 **目標**: KOL 搜尋、建立、檢視
+**狀態**: ✅ 完成 (2026-02-01)
 
 #### 頁面規劃
 
@@ -358,18 +410,18 @@ CREATE TABLE edit_suggestions (
 
 #### 任務清單
 
-| #    | 任務                   | 產出                                            |
-| ---- | ---------------------- | ----------------------------------------------- |
-| 2.1  | 建立 KOL Domain Model  | `domain/models/kol.ts`                          |
-| 2.2  | 建立 KOL Repository    | `infrastructure/repositories/kol.repository.ts` |
-| 2.3  | 建立 KOL Service       | `domain/services/kol.service.ts`                |
-| 2.4  | 建立 KOL API Routes    | `/api/kols/*`                                   |
-| 2.5  | 建立 KOL 列表頁        | `/kols/page.tsx`                                |
-| 2.6  | 建立 KOL 搜尋/選擇元件 | `components/forms/kol-selector.tsx`             |
-| 2.7  | 建立 KOL 新增 Dialog   | `components/forms/kol-form.tsx`                 |
-| 2.8  | 建立 KOL 詳情頁 Layout | `/kols/[id]/page.tsx`                           |
-| 2.9  | 建立 KOL Overview Tab  | 文章依標的 Grouping                             |
-| 2.10 | 建立 use-kols Hook     | `hooks/use-kols.ts`                             |
+| #    | 任務                   | 產出                                            | 狀態 |
+| ---- | ---------------------- | ----------------------------------------------- | ---- |
+| 2.1  | 建立 KOL Domain Model  | `domain/models/kol.ts`                          | ✅ |
+| 2.2  | 建立 KOL Repository    | `infrastructure/repositories/kol.repository.ts` | ✅ |
+| 2.3  | 建立 KOL Service       | `domain/services/kol.service.ts`                | ✅ (merged into repository) |
+| 2.4  | 建立 KOL API Routes    | `/api/kols/*`                                   | ✅ |
+| 2.5  | 建立 KOL 列表頁        | `/kols/page.tsx`                                | ✅ |
+| 2.6  | 建立 KOL 搜尋/選擇元件 | `components/forms/kol-selector.tsx`             | ✅ |
+| 2.7  | 建立 KOL 新增 Dialog   | `components/forms/kol-form.tsx`                 | ✅ |
+| 2.8  | 建立 KOL 詳情頁 Layout | `/kols/[id]/page.tsx`                           | ✅ |
+| 2.9  | 建立 KOL Overview Tab  | 文章依標的 Grouping                             | ✅ |
+| 2.10 | 建立 use-kols Hook     | `hooks/use-kols.ts`                             | ✅ |
 
 #### API 端點
 
@@ -436,9 +488,10 @@ CREATE TABLE edit_suggestions (
 
 ---
 
-### Phase 3: 投資標的模組
+### Phase 3: 投資標的模組 ✅
 
 **目標**: Stock 搜尋、建立、檢視
+**狀態**: ✅ 完成 (2026-02-01)
 
 #### 頁面規劃
 
@@ -452,16 +505,16 @@ CREATE TABLE edit_suggestions (
 
 #### 任務清單
 
-| #   | 任務                     | 產出                                              |
-| --- | ------------------------ | ------------------------------------------------- |
-| 3.1 | 建立 Stock Domain Model  | `domain/models/stock.ts`                          |
-| 3.2 | 建立 Stock Repository    | `infrastructure/repositories/stock.repository.ts` |
-| 3.3 | 建立 Stock Service       | `domain/services/stock.service.ts`                |
-| 3.4 | 建立 Stock API Routes    | `/api/stocks/*`                                   |
-| 3.5 | 建立 Stock 列表頁        | `/stocks/page.tsx`                                |
-| 3.6 | 建立 Stock 搜尋/選擇元件 | `components/forms/stock-selector.tsx`             |
-| 3.7 | 建立 Stock 詳情頁        | `/stocks/[ticker]/page.tsx`                       |
-| 3.8 | 建立 use-stocks Hook     | `hooks/use-stocks.ts`                             |
+| #   | 任務                     | 產出                                              | 狀態 |
+| --- | ------------------------ | ------------------------------------------------- | ---- |
+| 3.1 | 建立 Stock Domain Model  | `domain/models/stock.ts`                          | ✅ |
+| 3.2 | 建立 Stock Repository    | `infrastructure/repositories/stock.repository.ts` | ✅ |
+| 3.3 | 建立 Stock Service       | `domain/services/stock.service.ts`                | ✅ (merged into repository) |
+| 3.4 | 建立 Stock API Routes    | `/api/stocks/*`                                   | ✅ |
+| 3.5 | 建立 Stock 列表頁        | `/stocks/page.tsx`                                | ✅ |
+| 3.6 | 建立 Stock 搜尋/選擇元件 | `components/forms/stock-selector.tsx`             | ✅ |
+| 3.7 | 建立 Stock 詳情頁        | `/stocks/[ticker]/page.tsx`                       | ✅ |
+| 3.8 | 建立 use-stocks Hook     | `hooks/use-stocks.ts`                             | ✅ |
 
 #### API 端點
 
@@ -482,9 +535,10 @@ CREATE TABLE edit_suggestions (
 
 ---
 
-### Phase 4: 輸入與草稿模組 (核心)
+### Phase 4: 輸入與草稿模組 (核心) ✅
 
 **目標**: 實現完整的文章輸入流程
+**狀態**: ✅ 完成 (2026-02-18)
 
 #### 頁面規劃
 
@@ -511,23 +565,23 @@ CREATE TABLE edit_suggestions (
 
 #### 任務清單
 
-| #    | 任務                   | 產出                                              |
-| ---- | ---------------------- | ------------------------------------------------- |
-| 4.1  | 建立 Post Domain Model | `domain/models/post.ts`                           |
-| 4.2  | 建立 Post Repository   | `infrastructure/repositories/post.repository.ts`  |
-| 4.3  | 建立 Post Service      | `domain/services/post.service.ts`                 |
-| 4.4  | 建立 Draft Repository  | `infrastructure/repositories/draft.repository.ts` |
-| 4.5  | 建立快速輸入頁         | `/input/page.tsx`                                 |
-| 4.6  | 建立 QuickInput 元件   | `components/forms/quick-input.tsx`                |
-| 4.7  | 建立草稿列表頁         | `/drafts/page.tsx`                                |
-| 4.8  | 建立草稿編輯頁         | `/drafts/[id]/page.tsx`                           |
-| 4.9  | 建立 PostForm 元件     | `components/forms/post-form.tsx`                  |
-| 4.10 | 建立預覽確認頁         | `/posts/new/page.tsx`                             |
-| 4.11 | 建立情緒選擇器         | `components/forms/sentiment-selector.tsx`         |
-| 4.12 | 建立時間輸入器         | `components/forms/datetime-input.tsx`             |
-| 4.13 | 實作重複 URL 比對      | Post Service                                      |
-| 4.14 | 實作圖片上傳           | Supabase Storage                                  |
-| 4.15 | 建立 use-drafts Hook   | `hooks/use-drafts.ts`                             |
+| #    | 任務                   | 產出                                              | 狀態 |
+| ---- | ---------------------- | ------------------------------------------------- | ---- |
+| 4.1  | 建立 Post Domain Model | `domain/models/post.ts`                           | ✅ |
+| 4.2  | 建立 Post Repository   | `infrastructure/repositories/post.repository.ts`  | ✅ |
+| 4.3  | 建立 Post Service      | `domain/services/post.service.ts`                 | ✅ (merged into repository) |
+| 4.4  | 建立 Draft Repository  | `infrastructure/repositories/draft.repository.ts` | ✅ |
+| 4.5  | 建立快速輸入頁         | `/input/page.tsx`                                 | ✅ |
+| 4.6  | 建立 QuickInput 元件   | `components/forms/quick-input.tsx`                | ✅ |
+| 4.7  | 建立草稿列表頁         | `/drafts/page.tsx`                                | ✅ |
+| 4.8  | 建立草稿編輯頁         | `/drafts/[id]/page.tsx`                           | ✅ |
+| 4.9  | 建立 PostForm 元件     | `components/forms/post-form.tsx`                  | ✅ |
+| 4.10 | 建立預覽確認頁         | 草稿審核流程 (draft review)                       | ✅ |
+| 4.11 | 建立情緒選擇器         | `components/forms/sentiment-selector.tsx`         | ✅ |
+| 4.12 | 建立時間輸入器         | `components/forms/datetime-input.tsx`             | ✅ |
+| 4.13 | 實作重複 URL 比對      | `/api/posts/check-duplicate`                      | ✅ |
+| 4.14 | 實作圖片上傳           | `/api/upload` + image-uploader 元件               | ✅ |
+| 4.15 | 建立 use-drafts Hook   | `hooks/use-drafts.ts`                             | ✅ |
 
 #### API 端點
 
@@ -656,9 +710,10 @@ CREATE TABLE edit_suggestions (
 
 ---
 
-### Phase 5: 文章檢視模組
+### Phase 5: 文章檢視模組 ✅
 
 **目標**: 單篇文章詳情頁
+**狀態**: ✅ 完成 (2026-02-12)
 
 #### 頁面規劃
 
@@ -671,13 +726,13 @@ CREATE TABLE edit_suggestions (
 
 #### 任務清單
 
-| #   | 任務                | 產出                         |
-| --- | ------------------- | ---------------------------- |
-| 5.1 | 建立文章列表頁      | `/posts/page.tsx`            |
-| 5.2 | 建立文章詳情頁      | `/posts/[id]/page.tsx`       |
-| 5.3 | 建立文章 Header     | 顯示 KOL、時間、情緒、漲跌幅 |
-| 5.4 | 建立內容 Tab        | 主文 + 圖片                  |
-| 5.5 | 建立 use-posts Hook | `hooks/use-posts.ts`         |
+| #   | 任務                | 產出                         | 狀態 |
+| --- | ------------------- | ---------------------------- | ---- |
+| 5.1 | 建立文章列表頁      | `/posts/page.tsx`            | ✅ |
+| 5.2 | 建立文章詳情頁      | `/posts/[id]/page.tsx`       | ✅ |
+| 5.3 | 建立文章 Header     | 顯示 KOL、時間、情緒         | ✅ (漲跌幅顯示待做) |
+| 5.4 | 建立內容 Tab        | 主文 + 圖片 + 書籤           | ✅ |
+| 5.5 | 建立 use-posts Hook | `hooks/use-posts.ts`         | ✅ |
 
 #### API 端點
 
@@ -727,23 +782,24 @@ CREATE TABLE edit_suggestions (
 
 ---
 
-### Phase 6: 股價與 K 線圖模組
+### Phase 6: 股價與 K 線圖模組 🔄
 
 **目標**: 整合 Tiingo API、K 線圖顯示
+**狀態**: 🔄 60% — 基本圖表已完成，互動功能待實作
 
 #### 任務清單
 
-| #   | 任務                       | 產出                                                    |
-| --- | -------------------------- | ------------------------------------------------------- |
-| 6.1 | 建立 Tiingo Client         | `infrastructure/api/tiingo.client.ts`                   |
-| 6.2 | 建立 StockPrice Repository | `infrastructure/repositories/stock-price.repository.ts` |
-| 6.3 | 建立股價快取邏輯           | 7 天快取                                                |
-| 6.4 | 建立股價 API               | `/api/stocks/[ticker]/prices`                           |
-| 6.5 | 建立 K 線圖元件            | `components/charts/candlestick-chart.tsx`               |
-| 6.6 | 建立情緒標記元件           | `components/charts/sentiment-marker.tsx`                |
-| 6.7 | 整合到文章詳情頁           | Chart Tab                                               |
-| 6.8 | 整合到標的詳情頁           | Chart Tab                                               |
-| 6.9 | 實作圖表縮放/平移          | 日/週/月線切換                                          |
+| #   | 任務                       | 產出                                                    | 狀態 |
+| --- | -------------------------- | ------------------------------------------------------- | ---- |
+| 6.1 | 建立 Tiingo Client         | `infrastructure/api/tiingo.client.ts`                   | ✅ |
+| 6.2 | 建立 StockPrice Repository | `infrastructure/repositories/stock-price.repository.ts` | ✅ |
+| 6.3 | 建立股價快取邏輯           | 7 天快取                                                | ✅ |
+| 6.4 | 建立股價 API               | `/api/stocks/[ticker]/prices`                           | ✅ |
+| 6.5 | 建立 K 線圖元件            | `components/charts/candlestick-chart.tsx`               | ✅ |
+| 6.6 | 建立情緒標記元件           | `components/charts/sentiment-marker.tsx`                | ✅ (元件存在，待整合到圖表) |
+| 6.7 | 整合到文章詳情頁           | Chart Tab                                               | ⏳ |
+| 6.8 | 整合到標的詳情頁           | Chart Tab                                               | ⏳ |
+| 6.9 | 實作圖表縮放/平移          | 日/週/月線切換                                          | ⏳ |
 
 #### API 端點
 
@@ -784,20 +840,21 @@ CREATE TABLE edit_suggestions (
 
 ---
 
-### Phase 7: 勝率計算模組
+### Phase 7: 勝率計算模組 🔄
 
 **目標**: 計算 KOL / 標的勝率
+**狀態**: 🔄 70% — 計算邏輯 + API 完成，UI 顯示待實作
 
 #### 任務清單
 
-| #   | 任務                        | 產出                                            |
-| --- | --------------------------- | ----------------------------------------------- |
-| 7.1 | 建立 PriceChange Calculator | `domain/calculators/price-change.calculator.ts` |
-| 7.2 | 建立 WinRate Calculator     | `domain/calculators/win-rate.calculator.ts`     |
-| 7.3 | 建立勝率 API (KOL)          | `/api/kols/[id]/win-rate`                       |
-| 7.4 | 建立勝率 API (Stock)        | `/api/stocks/[ticker]/win-rate`                 |
-| 7.5 | 更新 KOL 詳情頁 Stats Tab   | 顯示勝率統計                                    |
-| 7.6 | 更新文章列表顯示漲跌幅      | 5/30/90/365 日                                  |
+| #   | 任務                        | 產出                                            | 狀態 |
+| --- | --------------------------- | ----------------------------------------------- | ---- |
+| 7.1 | 建立 PriceChange Calculator | `domain/calculators/price-change.calculator.ts` | ✅ (含單元測試) |
+| 7.2 | 建立 WinRate Calculator     | `domain/calculators/win-rate.calculator.ts`     | ✅ (含單元測試) |
+| 7.3 | 建立勝率 API (KOL)          | `/api/kols/[id]/win-rate`                       | ✅ |
+| 7.4 | 建立勝率 API (Stock)        | `/api/stocks/[ticker]/win-rate`                 | ✅ |
+| 7.5 | 更新 KOL 詳情頁 Stats Tab   | 顯示勝率統計                                    | ⏳ |
+| 7.6 | 更新文章列表顯示漲跌幅      | 5/30/90/365 日                                  | ⏳ |
 
 #### 勝率計算邏輯
 
@@ -839,9 +896,10 @@ function calculateWinRate(posts: Post[], period: number): WinRateResult {
 
 ---
 
-### Phase 8: AI 整合模組
+### Phase 8: AI 整合模組 🔄
 
 **目標**: Gemini API 整合、情緒分析、**論點提取與彙整**、配額管理
+**狀態**: 🔄 80% — 情緒分析/論點提取/配額完成，論點彙整 UI 待實作
 
 #### 8.1 功能概述
 
@@ -910,31 +968,31 @@ CREATE TABLE stock_argument_summary (
 
 #### 8.3 任務清單
 
-| #            | 任務                     | 產出                                                |
-| ------------ | ------------------------ | --------------------------------------------------- |
-| **基礎設施** |                          |                                                     |
-| 8.1          | 建立 Gemini Client       | `infrastructure/api/gemini.client.ts`               |
-| 8.2          | 建立 AI Service          | `domain/services/ai.service.ts`                     |
-| 8.3          | 建立配額檢查邏輯         | 每週 15 篇                                          |
-| 8.4          | 建立週次重置 Cron        | Supabase Function                                   |
-| **情緒分析** |                          |                                                     |
-| 8.5          | 建立情緒分析 API         | `/api/ai/analyze`                                   |
-| 8.6          | 整合到預覽確認頁         | AI 建議情緒                                         |
-| **論點提取** |                          |                                                     |
-| 8.7          | 建立論點類別資料表       | Migration                                           |
-| 8.8          | 匯入「特定框架」論點類別 | Seed Data (**待確認框架**)                          |
-| 8.9          | 建立論點提取 Prompt      | 依框架結構化提取                                    |
-| 8.10         | 建立論點提取 API         | `/api/ai/extract-arguments`                         |
-| 8.11         | 整合到文章建檔流程       | 自動提取論點                                        |
-| 8.12         | 建立文章論點檢視元件     | `components/post-arguments.tsx`                     |
-| **論點彙整** |                          |                                                     |
-| 8.13         | 建立論點彙整計算器       | `domain/calculators/argument-summary.calculator.ts` |
-| 8.14         | 建立論點彙整 API         | `/api/stocks/[ticker]/arguments`                    |
-| 8.15         | 建立標的論點彙整頁面     | Stock 詳情新增 Arguments Tab                        |
-| 8.16         | 建立論點時間分布圖表     | `components/charts/argument-timeline.tsx`           |
-| **配額管理** |                          |                                                     |
-| 8.17         | 建立配額查詢 API         | `/api/ai/usage`                                     |
-| 8.18         | 顯示剩餘配額             | UI 提示                                             |
+| #            | 任務                     | 產出                                                | 狀態 |
+| ------------ | ------------------------ | --------------------------------------------------- | ---- |
+| **基礎設施** |                          |                                                     |      |
+| 8.1          | 建立 Gemini Client       | `infrastructure/api/gemini.client.ts`               | ✅ |
+| 8.2          | 建立 AI Service          | `domain/services/ai.service.ts`                     | ✅ (含單元測試) |
+| 8.3          | 建立配額檢查邏輯         | ai-usage.repository.ts                              | ✅ |
+| 8.4          | 建立週次重置 Cron        | Supabase Function                                   | ⏳ |
+| **情緒分析** |                          |                                                     |      |
+| 8.5          | 建立情緒分析 API         | `/api/ai/analyze`                                   | ✅ |
+| 8.6          | 整合到預覽確認頁         | AI 建議情緒 (draft review)                          | ✅ |
+| **論點提取** |                          |                                                     |      |
+| 8.7          | 建立論點類別資料表       | Migration 003                                       | ✅ |
+| 8.8          | 匯入「特定框架」論點類別 | Seed Data (7 categories)                            | ✅ |
+| 8.9          | 建立論點提取 Prompt      | 依框架結構化提取                                    | ✅ |
+| 8.10         | 建立論點提取 API         | `/api/ai/extract-arguments`                         | ✅ |
+| 8.11         | 整合到文章建檔流程       | 自動提取論點                                        | ✅ |
+| 8.12         | 建立文章論點檢視元件     | `components/ai/post-arguments.tsx`                  | ✅ |
+| **論點彙整** |                          |                                                     |      |
+| 8.13         | 建立論點彙整計算器       | `domain/calculators/argument-summary.calculator.ts` | ✅ (含單元測試) |
+| 8.14         | 建立論點彙整 API         | `/api/stocks/[ticker]/arguments`                    | ✅ |
+| 8.15         | 建立標的論點彙整頁面     | Stock 詳情新增 Arguments Tab                        | ⏳ |
+| 8.16         | 建立論點時間分布圖表     | `components/charts/argument-timeline.tsx`           | ⏳ |
+| **配額管理** |                          |                                                     |      |
+| 8.17         | 建立配額查詢 API         | `/api/ai/usage`                                     | ✅ |
+| 8.18         | 顯示剩餘配額             | `components/ai/ai-quota-badge.tsx`                  | ✅ |
 
 #### 8.4 API 端點
 
@@ -1082,16 +1140,16 @@ const ARGUMENT_EXTRACTION_PROMPT = `
 #### 8.7 交付成果
 
 - ✅ AI 情緒分析功能
-- ✅ **論點提取功能** (依特定框架)
-- ✅ **論點彙整頁面** (以 Ticker 為維度)
-- ✅ **論點時間分布圖表**
-- ✅ 配額管理（每週 15 篇）
+- ✅ **論點提取功能** (依特定框架，7 大類別已 seed)
+- ⏳ **論點彙整頁面** (以 Ticker 為維度) — API 已完成，UI 待實作
+- ⏳ **論點時間分布圖表** — 待實作
+- ✅ 配額管理
 
 #### 8.8 待辦事項 (Pending)
 
 | #            | 待辦項目             | 狀態      | 備註                     |
 | ------------ | -------------------- | --------- | ------------------------ |
-| **TODO-001** | 提供「特定框架」定義 | ⏳ 待提供 | 需要定義論點類別階層結構 |
+| **TODO-001** | 提供「特定框架」定義 | ✅ 已完成 | 7 大類別已定義並 seed    |
 
 > **框架定義需求**:
 > 請提供論點分析框架，包含：
@@ -1119,19 +1177,21 @@ const ARGUMENT_EXTRACTION_PROMPT = `
 
 ---
 
-### Phase 9: App Layout & 導航
+### Phase 9: App Layout & 導航 ✅
 
 **目標**: 建立整體 App 框架與導航
+**狀態**: ✅ 完成 (2026-02-10)
 
 #### 任務清單
 
-| #   | 任務              | 產出                            |
-| --- | ----------------- | ------------------------------- |
-| 9.1 | 建立 App Layout   | `app/(app)/layout.tsx`          |
-| 9.2 | 建立 Sidebar      | `components/layout/sidebar.tsx` |
-| 9.3 | 建立 Header       | `components/layout/header.tsx`  |
-| 9.4 | 建立 Dashboard 頁 | `/dashboard/page.tsx`           |
-| 9.5 | 建立路由常數      | `lib/constants/routes.ts`       |
+| #   | 任務              | 產出                            | 狀態 |
+| --- | ----------------- | ------------------------------- | ---- |
+| 9.1 | 建立 App Layout   | `app/(app)/layout.tsx`          | ✅ |
+| 9.2 | 建立 Sidebar      | `components/layout/sidebar.tsx` | ✅ |
+| 9.3 | 建立 Header       | `components/layout/header.tsx`  | ✅ |
+| 9.4 | 建立 Dashboard 頁 | `/dashboard/page.tsx`           | ✅ |
+| 9.5 | 建立路由常數      | `lib/constants/routes.ts`       | ✅ |
+| 9.6 | 建立 Mobile Nav   | `components/layout/mobile-nav.tsx` | ✅ (計畫外新增) |
 
 #### 導航結構
 
@@ -1188,22 +1248,23 @@ Sidebar:
 
 ---
 
-### Phase 10: 測試與優化
+### Phase 10: 測試與優化 🔄
 
 **目標**: 品質保證、效能優化、部署準備
+**狀態**: 🔄 50% — 測試框架完成，覆蓋率與部署待加強
 
 #### 任務清單
 
-| #    | 任務                  | 產出                               |
-| ---- | --------------------- | ---------------------------------- |
-| 10.1 | 設定 Vitest           | 測試框架                           |
-| 10.2 | 撰寫核心邏輯單元測試  | Calculator 測試                    |
-| 10.3 | 設定 Playwright       | E2E 測試                           |
-| 10.4 | 撰寫關鍵流程 E2E 測試 | 輸入流程測試                       |
-| 10.5 | 效能優化              | Code Splitting, Image Optimization |
-| 10.6 | 設定 Vercel 專案      | 部署設定                           |
-| 10.7 | 設定 CI/CD            | GitHub Actions                     |
-| 10.8 | 撰寫 README           | 專案文件                           |
+| #    | 任務                  | 產出                               | 狀態 |
+| ---- | --------------------- | ---------------------------------- | ---- |
+| 10.1 | 設定 Vitest           | 測試框架 (happy-dom)               | ✅ |
+| 10.2 | 撰寫核心邏輯單元測試  | price-change, win-rate, argument-summary, ai.service, stock-price.repo | ✅ |
+| 10.3 | 設定 Playwright       | E2E 測試 + fixtures                | ✅ |
+| 10.4 | 撰寫關鍵流程 E2E 測試 | quick-input flow                   | ✅ (基本流程) |
+| 10.5 | 效能優化              | Code Splitting, Image Optimization | ⏳ |
+| 10.6 | 設定 Vercel 專案      | 部署設定                           | ⏳ |
+| 10.7 | 設定 CI/CD            | GitHub Actions                     | ✅ (lint + type-check + test) |
+| 10.8 | 撰寫 README           | 專案文件                           | ✅ |
 
 #### 交付成果
 
@@ -1252,14 +1313,14 @@ K線圖          勝率計算         AI 整合
 
 ## 五、里程碑檢查點
 
-| 里程碑 | 完成階段    | 可驗收功能                   |
-| ------ | ----------- | ---------------------------- |
-| **M1** | Phase 0, 9  | App 框架、基本導航           |
-| **M2** | Phase 2-3   | 可搜尋/新增 KOL 和標的       |
-| **M3** | Phase 4-5   | 完整輸入流程、可檢視文章     |
-| **M4** | Phase 6-7   | K 線圖顯示、勝率計算         |
-| **M5** | Phase 8     | AI 情緒分析、論點提取與彙整  |
-| **M6** | Phase 10, 1 | 測試優化、認證系統、完整 MVP |
+| 里程碑 | 完成階段    | 可驗收功能                   | 狀態 |
+| ------ | ----------- | ---------------------------- | ---- |
+| **M1** | Phase 0, 9  | App 框架、基本導航           | ✅ 2026-02-01 |
+| **M2** | Phase 2-3   | 可搜尋/新增 KOL 和標的       | ✅ 2026-02-01 |
+| **M3** | Phase 4-5   | 完整輸入流程、可檢視文章     | ✅ 2026-02-18 |
+| **M4** | Phase 6-7   | K 線圖顯示、勝率計算         | 🔄 計算完成，UI 待做 |
+| **M5** | Phase 8     | AI 情緒分析、論點提取與彙整  | 🔄 分析完成，彙整 UI 待做 |
+| **M6** | Phase 10, 1 | 測試優化、認證系統、完整 MVP | 🔄 認證完成，部署待做 |
 
 ---
 
@@ -1267,15 +1328,23 @@ K線圖          勝率計算         AI 整合
 
 ### MVP 待辦
 
-| ID           | 項目             | 狀態      | 說明                                             |
-| ------------ | ---------------- | --------- | ------------------------------------------------ |
-| **TODO-001** | 論點分析框架定義 | ⏳ 待提供 | Phase 8 需要的「特定框架」，定義論點類別階層結構 |
+| ID           | 項目                     | 狀態      | 說明                                 |
+| ------------ | ------------------------ | --------- | ------------------------------------ |
+| **TODO-001** | 論點分析框架定義         | ✅ 已完成 | 7 大類別已 seed                      |
+| **TODO-002** | 勝率 UI (KOL Stats Tab)  | ⏳ 待實作 | Phase 7.5 — KOL 詳情頁顯示勝率統計  |
+| **TODO-003** | 漲跌幅顯示 (文章列表)    | ⏳ 待實作 | Phase 7.6 — 5/30/90/365 日漲跌幅    |
+| **TODO-004** | K 線圖整合到詳情頁       | ⏳ 待實作 | Phase 6.7-6.8 — Chart Tab           |
+| **TODO-005** | K 線圖縮放/平移          | ⏳ 待實作 | Phase 6.9 — 日/週/月線切換          |
+| **TODO-006** | 論點彙整 UI              | ⏳ 待實作 | Phase 8.15 — Stock Arguments Tab    |
+| **TODO-007** | 論點時間分布圖表         | ⏳ 待實作 | Phase 8.16 — argument-timeline 元件 |
+| **TODO-008** | 效能優化                 | ⏳ 待實作 | Phase 10.5 — Code Splitting 等      |
+| **TODO-009** | Vercel 部署              | ⏳ 待實作 | Phase 10.6 — 生產環境設定           |
 
 ### Release 01
 
 - [ ] URL 自動匯入 (Twitter/X only — 使用免費 oEmbed API，無需 API Key)
 - [ ] RWD 響應式設計
-- [ ] 書籤管理功能
+- [x] 書籤管理功能 ✅ (2026-02-12, 提前至 MVP 完成)
 - [ ] AI 文章摘要
 - [ ] 編輯建議系統
 
@@ -1304,3 +1373,4 @@ K線圖          勝率計算         AI 整合
 | 1.1  | 2026-02-01 | 調整開發順序：認證系統移至最後；擴充 Phase 8 AI 模組加入論點提取與彙整功能                                                           |
 | 1.2  | 2026-02-13 | URL 自動匯入調整：Release 01 僅支援 Twitter/X (免費 oEmbed)；Facebook & Threads 移至 Release 02 (需 Meta Developer App + oEmbed API) |
 | 1.3  | 2026-02-18 | Release 02 新增 YouTube 影片逐字稿擷取功能；補充 Facebook/Threads extractor stub 說明                                                |
+| 1.4  | 2026-02-19 | 全面更新各 Phase 完成狀態；新增「零、開發進度總覽」章節；標記所有任務的 ✅/🔄/⏳ 狀態；整理 MVP 待辦清單 (TODO-002~009)             |

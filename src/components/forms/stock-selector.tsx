@@ -149,15 +149,15 @@ export function StockSelector({
           )}
           data-testid="stock-selector-trigger"
         >
-            <div className="flex items-center gap-2">
-              <Search className="h-4 w-4" />
-              <span>
-                {value.length > 0
-                  ? `已選擇 ${value.length} 個標的${maxSelection ? ` (最多 ${maxSelection})` : ''}`
-                  : placeholder}
-              </span>
-            </div>
-            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4" />
+            <span>
+              {value.length > 0
+                ? `已選擇 ${value.length} 個標的${maxSelection ? ` (最多 ${maxSelection})` : ''}`
+                : placeholder}
+            </span>
+          </div>
+          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
         </PopoverTrigger>
         <PopoverContent
           className="w-[350px] p-0"

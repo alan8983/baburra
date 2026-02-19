@@ -138,7 +138,7 @@ test.describe('核心輸入流程 - Happy Path', () => {
     await createButton.click();
 
     // Step 4: 等待導航到草稿編輯頁（AI 分析可能需要較長時間）
-    await page.waitForURL(/\/drafts\/[^/]+/, { timeout: 60000 });
+    await page.waitForURL(/\/drafts\/[^/]+/, { timeout: 80000 });
     await page.waitForLoadState('networkidle');
     const draftUrl = page.url();
     const draftIdMatch = draftUrl.match(/\/drafts\/([^/]+)/);
