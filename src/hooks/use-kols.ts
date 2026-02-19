@@ -12,7 +12,7 @@ import type {
 } from '@/domain/models';
 import { API_ROUTES } from '@/lib/constants';
 
-import type { WinRateStats } from '@/domain/calculators';
+import type { ReturnRateStats } from '@/domain/calculators';
 
 // Query Keys
 export const kolKeys = {
@@ -22,7 +22,7 @@ export const kolKeys = {
   details: () => [...kolKeys.all, 'detail'] as const,
   detail: (id: string) => [...kolKeys.details(), id] as const,
   posts: (id: string) => [...kolKeys.detail(id), 'posts'] as const,
-  winRate: (id: string) => [...kolKeys.detail(id), 'win-rate'] as const,
+  returnRate: (id: string) => [...kolKeys.detail(id), 'return-rate'] as const,
   search: (query: string) => [...kolKeys.all, 'search', query] as const,
 };
 
@@ -108,13 +108,13 @@ export function useCreateKol() {
   });
 }
 
-// 取得 KOL 勝率統計
-export function useKolWinRate(id: string) {
+// 取得 KOL 報酬率統計
+export function useKolReturnRate(id: string) {
   return useQuery({
-    queryKey: kolKeys.winRate(id),
-    queryFn: async (): Promise<WinRateStats> => {
-      const res = await fetch(API_ROUTES.KOL_WIN_RATE(id));
-      if (!res.ok) throw new Error('Failed to fetch KOL win rate');
+    queryKey: kolKeys.returnRate(id),
+    queryFn: async (): Promise<ReturnRateStats> => {
+      const res = await fetch(API_ROUTES.KOL_RETURN_RATE(id));
+      if (!res.ok) throw new Error('Failed to fetch KOL return rate');
       return res.json();
     },
     enabled: !!id,

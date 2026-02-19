@@ -38,10 +38,12 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 如果有 DEV_USER_ID 或 TEST_USER_ID，直接允許存取（用於開發/測試）
-  const hasTestUser = !!(process.env.DEV_USER_ID || process.env.TEST_USER_ID);
-  if (hasTestUser) {
-    return NextResponse.next();
+  // 如果有 DEV_USER_ID 或 TEST_USER_ID，直接允許存取（僅限非 production 環境）
+  if (process.env.NODE_ENV !== 'production') {
+    const hasTestUser = !!(process.env.DEV_USER_ID || process.env.TEST_USER_ID);
+    if (hasTestUser) {
+      return NextResponse.next();
+    }
   }
 
   // 如果 Supabase 未正確配置，跳過認證（避免錯誤）

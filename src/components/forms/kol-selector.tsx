@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useTranslations } from 'next-intl';
 import { Check, ChevronsUpDown, Loader2, Plus, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { buttonVariants } from '@/components/ui/button';
@@ -38,9 +39,10 @@ export function KOLSelector({
   onChange,
   onCreateNew,
   disabled = false,
-  placeholder = '搜尋或選擇 KOL...',
+  placeholder,
   className,
 }: KOLSelectorProps) {
+  const t = useTranslations('forms');
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
   const [debouncedSearch, setDebouncedSearch] = React.useState('');
@@ -119,7 +121,7 @@ export function KOLSelector({
         ) : (
           <div className="flex items-center gap-2">
             <Search className="h-4 w-4" />
-            <span>{placeholder}</span>
+            <span>{placeholder ?? t('kolSelector.placeholder')}</span>
           </div>
         )}
         <div className="flex items-center gap-1">
@@ -136,7 +138,7 @@ export function KOLSelector({
               }}
               className="shrink-0 cursor-pointer opacity-50 hover:opacity-100 focus:outline-none"
               data-testid="kol-selector-clear-button"
-              aria-label="清除選擇"
+              aria-label={t('kolSelector.clearSelection')}
             >
               <X className="h-4 w-4" />
             </div>
@@ -147,7 +149,7 @@ export function KOLSelector({
       <PopoverContent className="w-[300px] p-0" align="start" data-testid="kol-selector-popover">
         <Command shouldFilter={false}>
           <CommandInput
-            placeholder="搜尋 KOL 名稱..."
+            placeholder={t('kolSelector.searchPlaceholder')}
             value={search}
             onValueChange={setSearch}
             data-testid="kol-selector-input"
@@ -156,18 +158,22 @@ export function KOLSelector({
             {isLoading ? (
               <div className="flex items-center justify-center py-6">
                 <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
-                <span className="text-muted-foreground ml-2 text-sm">搜尋中...</span>
+                <span className="text-muted-foreground ml-2 text-sm">
+                  {t('kolSelector.searching')}
+                </span>
               </div>
             ) : (
               <>
                 <CommandEmpty>
                   {search ? (
-                    <div className="py-2 text-center text-sm">找不到「{search}」</div>
+                    <div className="py-2 text-center text-sm">
+                      {t('kolSelector.notFound', { query: search })}
+                    </div>
                   ) : (
-                    <div className="py-2 text-center text-sm">沒有 KOL 資料</div>
+                    <div className="py-2 text-center text-sm">{t('kolSelector.noData')}</div>
                   )}
                 </CommandEmpty>
-                <CommandGroup heading="KOL 列表">
+                <CommandGroup heading={t('kolSelector.list')}>
                   {kols.map((kol) => (
                     <CommandItem
                       key={kol.id}
@@ -198,7 +204,11 @@ export function KOLSelector({
                     data-testid="kol-selector-create-button"
                   >
                     <Plus className="h-4 w-4" />
-                    <span>{canCreateNew ? `新增 KOL「${search}」` : '輸入名稱以新增 KOL'}</span>
+                    <span>
+                      {canCreateNew
+                        ? t('kolSelector.createNew', { name: search })
+                        : t('kolSelector.createNewHint')}
+                    </span>
                   </CommandItem>
                 </CommandGroup>
               </>

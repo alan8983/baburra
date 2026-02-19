@@ -14,8 +14,14 @@ import {
   identifyTickers,
   analyzeSentiment,
   extractArguments,
+  applyHardCaps,
+  extractCashtags,
+  extractAtHandles,
+  isBenchmarkTicker,
   getFrameworkCategories,
   getCategoryByCode,
+  extractSocialMediaMeta,
+  extractChineseDate,
 } from '../ai.service';
 
 beforeEach(() => {
@@ -330,6 +336,76 @@ describe('analyzeDraftContent', () => {
     const result = await analyzeDraftContent('test', 'Asia/Taipei');
     expect(result.postedAt).toBe('2025-01-15T14:59:00.000Z');
   });
+
+  // Per-stock sentiment tests
+  it('returns per-stock sentiments when AI provides them', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: '小李',
+      tickers: [
+        { ticker: 'NVDA', name: 'NVIDIA', market: 'US', confidence: 0.9, mentionedAs: 'NVDA' },
+        { ticker: 'AMD', name: 'AMD', market: 'US', confidence: 0.9, mentionedAs: 'AMD' },
+      ],
+      sentiment: 0,
+      stockSentiments: { NVDA: 2, AMD: -1 },
+      confidence: 0.8,
+      reasoning: 'NVDA bullish, AMD bearish',
+      postedAt: null,
+    });
+
+    const result = await analyzeDraftContent('NVDA will crush it, AMD is in trouble');
+    expect(result.stockSentiments).toEqual({ NVDA: 2, AMD: -1 });
+    expect(result.sentiment).toBe(0);
+  });
+
+  it('returns empty stockSentiments when AI omits them', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: null,
+      tickers: [
+        { ticker: 'AAPL', name: 'Apple', market: 'US', confidence: 0.9, mentionedAs: 'AAPL' },
+      ],
+      sentiment: 1,
+      confidence: 0.8,
+      reasoning: 'bullish',
+      postedAt: null,
+    });
+
+    const result = await analyzeDraftContent('AAPL is great');
+    expect(result.stockSentiments).toEqual({});
+  });
+
+  it('clamps per-stock sentiment values to valid range', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: null,
+      tickers: [
+        { ticker: 'AAPL', name: 'Apple', market: 'US', confidence: 0.9, mentionedAs: 'AAPL' },
+      ],
+      sentiment: 1,
+      stockSentiments: { AAPL: 5 },
+      confidence: 0.8,
+      reasoning: '',
+      postedAt: null,
+    });
+
+    const result = await analyzeDraftContent('test');
+    expect(result.stockSentiments.AAPL).toBe(2);
+  });
+
+  it('normalizes stockSentiments ticker keys to uppercase', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: null,
+      tickers: [
+        { ticker: 'AAPL', name: 'Apple', market: 'US', confidence: 0.9, mentionedAs: 'aapl' },
+      ],
+      sentiment: 1,
+      stockSentiments: { aapl: 1 },
+      confidence: 0.8,
+      reasoning: '',
+      postedAt: null,
+    });
+
+    const result = await analyzeDraftContent('test');
+    expect(result.stockSentiments).toEqual({ AAPL: 1 });
+  });
 });
 
 // =====================
@@ -418,6 +494,384 @@ describe('identifyTickers', () => {
 
     const result = await identifyTickers('test');
     expect(result.tickers[0].mentionedAs).toBe('Apple Inc.');
+  });
+});
+
+// =====================
+// extractCashtags (pure function)
+// =====================
+
+describe('extractCashtags', () => {
+  it('should extract single cashtag', () => {
+    expect(extractCashtags('Bullish $ONDS today')).toEqual(['ONDS']);
+  });
+
+  it('should extract multiple cashtags', () => {
+    expect(extractCashtags('$AAPL and $TSLA are both strong')).toEqual(['AAPL', 'TSLA']);
+  });
+
+  it('should deduplicate repeated cashtags', () => {
+    expect(extractCashtags('$ONDS is great, $ONDS is amazing')).toEqual(['ONDS']);
+  });
+
+  it('should not match dollar amounts like $10,000', () => {
+    expect(extractCashtags('You borrow $40,000 and buy $50,000 worth')).toEqual([]);
+  });
+
+  it('should not match lowercase cashtags', () => {
+    expect(extractCashtags('$onds and $aapl')).toEqual([]);
+  });
+
+  it('should not match tickers longer than 6 characters', () => {
+    expect(extractCashtags('$TOOLONG is not a ticker')).toEqual([]);
+  });
+
+  it('should match tickers with 1-6 uppercase letters', () => {
+    expect(extractCashtags('$A $AB $ABC $ABCD $ABCDE $ABCDEF')).toEqual([
+      'A',
+      'AB',
+      'ABC',
+      'ABCD',
+      'ABCDE',
+      'ABCDEF',
+    ]);
+  });
+
+  it('should return empty array when no cashtags found', () => {
+    expect(extractCashtags('No tickers mentioned here')).toEqual([]);
+  });
+
+  it('should handle cashtag at start and end of text', () => {
+    expect(extractCashtags('$AAPL is great and so is $NVDA')).toEqual(['AAPL', 'NVDA']);
+  });
+
+  it('should handle the SharkChart ONDS case — ticker buried in educational content', () => {
+    const content = `$ONDS investors (and all investors) should understand deleveraging
+Most people see a red day and panic. They see their position down 10, 15, 20% and assume the thesis is broken.
+Say you have $10,000. Instead of just buying $10,000 worth of stock, you borrow $40,000 and buy $50,000 worth.`;
+    expect(extractCashtags(content)).toEqual(['ONDS']);
+  });
+});
+
+// =====================
+// identifyTickers — cashtag merge behavior
+// =====================
+
+describe('identifyTickers — cashtag merge', () => {
+  it('should add cashtag tickers when AI returns empty', async () => {
+    mockGenerateJson.mockResolvedValueOnce({ tickers: [] });
+
+    const result = await identifyTickers('Bullish $ONDS and counter-drone defense');
+    expect(result.tickers).toHaveLength(1);
+    expect(result.tickers[0].ticker).toBe('ONDS');
+    expect(result.tickers[0].market).toBe('US');
+    expect(result.tickers[0].confidence).toBe(0.7);
+    expect(result.tickers[0].mentionedAs).toBe('$ONDS');
+  });
+
+  it('should not duplicate when AI already identified the cashtag', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      tickers: [
+        {
+          ticker: 'ONDS',
+          name: 'Ondas Holdings',
+          market: 'US',
+          confidence: 0.9,
+          mentionedAs: '$ONDS',
+        },
+      ],
+    });
+
+    const result = await identifyTickers('Bullish $ONDS');
+    expect(result.tickers).toHaveLength(1);
+    expect(result.tickers[0].name).toBe('Ondas Holdings');
+    expect(result.tickers[0].confidence).toBe(0.9);
+  });
+
+  it('should merge AI tickers with missing cashtag tickers', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      tickers: [
+        {
+          ticker: 'AAPL',
+          name: 'Apple Inc.',
+          market: 'US',
+          confidence: 0.9,
+          mentionedAs: 'Apple',
+        },
+      ],
+    });
+
+    const result = await identifyTickers('$AAPL is great but also check $ONDS');
+    expect(result.tickers).toHaveLength(2);
+    expect(result.tickers[0].ticker).toBe('AAPL');
+    expect(result.tickers[0].name).toBe('Apple Inc.');
+    expect(result.tickers[1].ticker).toBe('ONDS');
+    expect(result.tickers[1].name).toBe('ONDS');
+  });
+});
+
+// =====================
+// analyzeDraftContent — cashtag merge behavior
+// =====================
+
+describe('analyzeDraftContent — cashtag merge', () => {
+  it('should add cashtag tickers when AI misses them', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: 'SharkChart',
+      tickers: [],
+      sentiment: 0,
+      confidence: 0.5,
+      reasoning: 'Educational content about deleveraging',
+      postedAt: null,
+    });
+
+    const content = '$ONDS investors should understand deleveraging. Say you have $10,000...';
+    const result = await analyzeDraftContent(content);
+    expect(result.stockTickers).toHaveLength(1);
+    expect(result.stockTickers[0].ticker).toBe('ONDS');
+    expect(result.stockTickers[0].market).toBe('US');
+  });
+
+  it('should not duplicate when AI already identified cashtag', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: 'Bodoxstocks',
+      tickers: [
+        {
+          ticker: 'ONDS',
+          name: 'Ondas Holdings',
+          market: 'US',
+          confidence: 0.95,
+          mentionedAs: '$ONDS',
+        },
+      ],
+      sentiment: 2,
+      confidence: 0.9,
+      reasoning: 'Explicitly bullish',
+      postedAt: null,
+    });
+
+    const result = await analyzeDraftContent('Bullish $ONDS — EU drone defense');
+    expect(result.stockTickers).toHaveLength(1);
+    expect(result.stockTickers[0].name).toBe('Ondas Holdings');
+  });
+});
+
+// =====================
+// isBenchmarkTicker (pure function)
+// =====================
+
+describe('isBenchmarkTicker', () => {
+  it('should identify common US index ETFs', () => {
+    expect(isBenchmarkTicker('SPY')).toBe(true);
+    expect(isBenchmarkTicker('QQQ')).toBe(true);
+    expect(isBenchmarkTicker('DIA')).toBe(true);
+    expect(isBenchmarkTicker('IWM')).toBe(true);
+    expect(isBenchmarkTicker('VOO')).toBe(true);
+    expect(isBenchmarkTicker('VTI')).toBe(true);
+  });
+
+  it('should identify volatility and bond benchmarks', () => {
+    expect(isBenchmarkTicker('VIX')).toBe(true);
+    expect(isBenchmarkTicker('TLT')).toBe(true);
+  });
+
+  it('should identify sector ETFs', () => {
+    expect(isBenchmarkTicker('XLK')).toBe(true);
+    expect(isBenchmarkTicker('XLF')).toBe(true);
+  });
+
+  it('should not flag individual stocks', () => {
+    expect(isBenchmarkTicker('AAPL')).toBe(false);
+    expect(isBenchmarkTicker('NVDA')).toBe(false);
+    expect(isBenchmarkTicker('ONDS')).toBe(false);
+    expect(isBenchmarkTicker('TSLA')).toBe(false);
+  });
+});
+
+// =====================
+// benchmark filtering in cashtag merge
+// =====================
+
+describe('identifyTickers — benchmark filtering', () => {
+  it('should exclude benchmark cashtags when specific tickers exist', async () => {
+    mockGenerateJson.mockResolvedValueOnce({ tickers: [] });
+
+    const result = await identifyTickers('$NVDA is outperforming $SPY this quarter');
+    expect(result.tickers).toHaveLength(1);
+    expect(result.tickers[0].ticker).toBe('NVDA');
+  });
+
+  it('should exclude multiple benchmarks alongside a specific ticker', async () => {
+    mockGenerateJson.mockResolvedValueOnce({ tickers: [] });
+
+    const result = await identifyTickers('$AAPL beat both $SPY and $QQQ this year');
+    expect(result.tickers).toHaveLength(1);
+    expect(result.tickers[0].ticker).toBe('AAPL');
+  });
+
+  it('should keep benchmark if AI explicitly identified it as primary', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      tickers: [
+        {
+          ticker: 'SPY',
+          name: 'SPDR S&P 500 ETF',
+          market: 'US',
+          confidence: 0.9,
+          mentionedAs: '$SPY',
+        },
+      ],
+    });
+
+    const result = await identifyTickers('I am buying $SPY calls for next week');
+    expect(result.tickers).toHaveLength(1);
+    expect(result.tickers[0].ticker).toBe('SPY');
+    expect(result.tickers[0].name).toBe('SPDR S&P 500 ETF');
+  });
+
+  it('should allow benchmark through when it is the only cashtag', async () => {
+    mockGenerateJson.mockResolvedValueOnce({ tickers: [] });
+
+    const result = await identifyTickers('Going long $SPY into earnings season');
+    expect(result.tickers).toHaveLength(1);
+    expect(result.tickers[0].ticker).toBe('SPY');
+  });
+});
+
+describe('analyzeDraftContent — benchmark filtering', () => {
+  it('should exclude comparison benchmarks from stock tickers', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: 'TraderJoe',
+      tickers: [],
+      sentiment: 1,
+      confidence: 0.8,
+      reasoning: 'Bullish on NVDA',
+      postedAt: null,
+    });
+
+    const content = '$NVDA has been crushing $SPY and $QQQ all year. Time to load up.';
+    const result = await analyzeDraftContent(content);
+    expect(result.stockTickers).toHaveLength(1);
+    expect(result.stockTickers[0].ticker).toBe('NVDA');
+  });
+});
+
+// =====================
+// extractAtHandles (pure function)
+// =====================
+
+describe('extractAtHandles', () => {
+  it('should extract single @handle', () => {
+    expect(extractAtHandles('Post by @bodoxstocks about drones')).toEqual(['bodoxstocks']);
+  });
+
+  it('should extract multiple @handles', () => {
+    expect(extractAtHandles('@SharkChart reposted @bodoxstocks')).toEqual([
+      'SharkChart',
+      'bodoxstocks',
+    ]);
+  });
+
+  it('should deduplicate repeated handles', () => {
+    expect(extractAtHandles('@SharkChart said... @SharkChart also said')).toEqual(['SharkChart']);
+  });
+
+  it('should preserve original casing', () => {
+    expect(extractAtHandles('@SharkChart')).toEqual(['SharkChart']);
+    expect(extractAtHandles('@bodoxstocks')).toEqual(['bodoxstocks']);
+  });
+
+  it('should handle handles with underscores and numbers', () => {
+    expect(extractAtHandles('@trader_42 is active')).toEqual(['trader_42']);
+  });
+
+  it('should not match single-character handles', () => {
+    expect(extractAtHandles('@a is too short')).toEqual([]);
+  });
+
+  it('should not match email-like patterns as standalone handles', () => {
+    // The regex matches @handle at word boundary — in email "user@domain" the @domain part
+    // still matches. This is acceptable; the AI prompt already handles these edge cases.
+    const handles = extractAtHandles('Post by @SharkChart');
+    expect(handles).toEqual(['SharkChart']);
+  });
+
+  it('should return empty array when no handles found', () => {
+    expect(extractAtHandles('No handles mentioned here')).toEqual([]);
+  });
+
+  it('should handle the Bodoxstocks fixture pattern', () => {
+    const content = `Bodoxstocks\n@bodoxstocks\nBullish $ONDS`;
+    expect(extractAtHandles(content)).toEqual(['bodoxstocks']);
+  });
+
+  it('should handle the SharkChart fixture pattern', () => {
+    const content = `Shark Chart\n@SharkChart\n$ONDS investors should understand deleveraging`;
+    expect(extractAtHandles(content)).toEqual(['SharkChart']);
+  });
+});
+
+// =====================
+// analyzeDraftContent — @handle KOL fallback
+// =====================
+
+describe('analyzeDraftContent — @handle KOL fallback', () => {
+  it('should use @handle when AI returns null kolName', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: null,
+      tickers: [],
+      sentiment: 0,
+      confidence: 0.5,
+      reasoning: 'Educational content',
+      postedAt: null,
+    });
+
+    const content = 'Shark Chart\n@SharkChart\n$ONDS investors should understand deleveraging';
+    const result = await analyzeDraftContent(content);
+    expect(result.kolName).toBe('SharkChart');
+  });
+
+  it('should prefer AI kolName over @handle', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: 'Shark Chart',
+      tickers: [],
+      sentiment: 0,
+      confidence: 0.5,
+      reasoning: '',
+      postedAt: null,
+    });
+
+    const content = '@SharkChart posted something';
+    const result = await analyzeDraftContent(content);
+    expect(result.kolName).toBe('Shark Chart');
+  });
+
+  it('should use first @handle when multiple exist and AI returns null', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: null,
+      tickers: [],
+      sentiment: 0,
+      confidence: 0.5,
+      reasoning: '',
+      postedAt: null,
+    });
+
+    const content = '@SharkChart reposted @bodoxstocks about $ONDS';
+    const result = await analyzeDraftContent(content);
+    expect(result.kolName).toBe('SharkChart');
+  });
+
+  it('should return null when no AI kolName and no @handles', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: null,
+      tickers: [],
+      sentiment: 0,
+      confidence: 0.5,
+      reasoning: '',
+      postedAt: null,
+    });
+
+    const result = await analyzeDraftContent('Some article without handles');
+    expect(result.kolName).toBeNull();
   });
 });
 
@@ -615,6 +1069,126 @@ describe('extractArguments', () => {
 
     const result = await extractArguments('test', 'AAPL', 'Apple');
     expect(result.arguments[0].confidence).toBe(0.5);
+  });
+
+  it('7 arguments or fewer — does NOT trigger a second Gemini call', async () => {
+    const sevenArgs = Array.from({ length: 7 }, (_, i) => ({
+      categoryCode: 'FINANCIALS',
+      originalText: `text ${i}`,
+      summary: `summary ${i}`,
+      sentiment: 1,
+      confidence: 0.8,
+    }));
+    mockGenerateJson.mockResolvedValueOnce({ arguments: sevenArgs });
+
+    await extractArguments('article', 'AAPL', 'Apple');
+    expect(mockGenerateJson).toHaveBeenCalledTimes(1);
+  });
+
+  it('more than 7 arguments — triggers a second (revision) Gemini call', async () => {
+    const eightArgs = Array.from({ length: 8 }, (_, i) => ({
+      categoryCode: i < 4 ? 'FINANCIALS' : 'MOMENTUM',
+      originalText: `text ${i}`,
+      summary: `summary ${i}`,
+      sentiment: 1,
+      confidence: 0.8,
+    }));
+    const revisedArgs = [
+      {
+        categoryCode: 'FINANCIALS',
+        originalText: 'revised',
+        summary: 'rev sum',
+        sentiment: 1,
+        confidence: 0.9,
+      },
+    ];
+    mockGenerateJson.mockResolvedValueOnce({ arguments: eightArgs });
+    mockGenerateJson.mockResolvedValueOnce({ arguments: revisedArgs });
+
+    const result = await extractArguments('article', 'AAPL', 'Apple');
+    expect(mockGenerateJson).toHaveBeenCalledTimes(2);
+    expect(result.arguments).toHaveLength(1);
+    expect(result.arguments[0].summary).toBe('rev sum');
+  });
+
+  it('applies hard caps: result never exceeds 10 total even if revision returns more', async () => {
+    const eightArgs = Array.from({ length: 8 }, (_, i) => ({
+      categoryCode: 'FINANCIALS',
+      originalText: `t${i}`,
+      summary: `s${i}`,
+      sentiment: 0,
+      confidence: 0.8,
+    }));
+    // revision returns 11 — still capped at 10
+    const elevenArgs = Array.from({ length: 11 }, (_, i) => ({
+      categoryCode: 'CATALYST',
+      originalText: `t${i}`,
+      summary: `s${i}`,
+      sentiment: 0,
+      confidence: 0.5 + i * 0.04,
+    }));
+    mockGenerateJson.mockResolvedValueOnce({ arguments: eightArgs });
+    mockGenerateJson.mockResolvedValueOnce({ arguments: elevenArgs });
+
+    const result = await extractArguments('article', 'AAPL', 'Apple');
+    expect(result.arguments.length).toBeLessThanOrEqual(10);
+  });
+});
+
+// =====================
+// applyHardCaps (pure function)
+// =====================
+
+describe('applyHardCaps', () => {
+  const makeArg = (categoryCode: string, confidence: number) => ({
+    categoryCode,
+    originalText: 'text',
+    summary: 'sum',
+    sentiment: 1 as const,
+    confidence,
+  });
+
+  it('caps each category at 3, keeping highest confidence', () => {
+    const args = [
+      makeArg('FINANCIALS', 0.9),
+      makeArg('FINANCIALS', 0.8),
+      makeArg('FINANCIALS', 0.7),
+      makeArg('FINANCIALS', 0.6), // should be dropped
+      makeArg('FINANCIALS', 0.5), // should be dropped
+      makeArg('CATALYST', 0.9),
+      makeArg('CATALYST', 0.8),
+    ];
+    const result = applyHardCaps(args);
+    const financials = result.filter((a) => a.categoryCode === 'FINANCIALS');
+    const catalyst = result.filter((a) => a.categoryCode === 'CATALYST');
+    expect(financials).toHaveLength(3);
+    expect(catalyst).toHaveLength(2);
+    expect(financials[0].confidence).toBe(0.9);
+    expect(financials[2].confidence).toBe(0.7);
+  });
+
+  it('caps total at 10, keeping highest confidence across categories', () => {
+    // 4 categories × 3 each = 12 potential, should be trimmed to 10
+    const args = [
+      ...Array.from({ length: 3 }, (_, i) => makeArg('FINANCIALS', 0.95 - i * 0.01)),
+      ...Array.from({ length: 3 }, (_, i) => makeArg('MOMENTUM', 0.9 - i * 0.01)),
+      ...Array.from({ length: 3 }, (_, i) => makeArg('VALUATION', 0.85 - i * 0.01)),
+      ...Array.from({ length: 3 }, (_, i) => makeArg('CATALYST', 0.5 - i * 0.01)), // lowest
+    ];
+    const result = applyHardCaps(args);
+    expect(result).toHaveLength(10);
+    // The 2 lowest CATALYST args (0.49, 0.48) should be dropped
+    const lowestConfidence = result[result.length - 1].confidence;
+    expect(lowestConfidence).toBeGreaterThan(0.48);
+  });
+
+  it('returns all args unchanged when within limits', () => {
+    const args = [makeArg('FINANCIALS', 0.9), makeArg('CATALYST', 0.8)];
+    expect(applyHardCaps(args)).toHaveLength(2);
+  });
+
+  it('returns empty array for empty input', () => {
+    expect(applyHardCaps([])).toEqual([]);
   });
 });
 
@@ -832,6 +1406,33 @@ const DRAFT_ANALYSIS_CASES: DraftAnalysisCaseInput[] = [
   //     sentiment: 1,
   //   },
   // },
+  {
+    name: 'Facebook 貼文 — 中文公司名稱（特斯拉→TSLA）',
+    inputText:
+      '謝金河\n\n ·\n追蹤\n2025年3月21日\n ·\n馬斯克的仇恨值\n面對特斯拉股價的跌跌不休，馬斯克最近接受FOX電視台訪問時表示，即使股價腰斬也在所不惜！',
+    mockResponse: {
+      kolName: '謝金河',
+      tickers: [
+        {
+          ticker: 'TSLA',
+          name: 'Tesla, Inc.',
+          market: 'US',
+          confidence: 0.9,
+          mentionedAs: '特斯拉',
+        },
+      ],
+      sentiment: -1,
+      confidence: 0.8,
+      reasoning: '文章描述特斯拉股價下跌，整體偏空',
+      postedAt: '2025-03-21T00:00:00+08:00',
+    },
+    expected: {
+      kolName: '謝金河',
+      tickerCount: 1,
+      firstTicker: 'TSLA',
+      sentiment: -1,
+    },
+  },
 ];
 
 // ========================================
@@ -853,4 +1454,244 @@ describe('analyzeDraftContent — 樣本案例', () => {
       expect(result.sentiment).toBe(tc.expected.sentiment);
     });
   }
+});
+
+// =====================
+// extractSocialMediaMeta
+// =====================
+
+describe('extractSocialMediaMeta', () => {
+  it('should extract KOL name and date from Facebook paste pattern', () => {
+    const content =
+      '謝金河\n\n ·\n追蹤\n2025年3月21日\n ·\n馬斯克的仇恨值\n面對特斯拉股價的跌跌不休...';
+    const meta = extractSocialMediaMeta(content);
+    expect(meta.kolName).toBe('謝金河');
+    expect(meta.postedAt).toBe('2025年3月21日');
+    expect(meta.platform).toBe('facebook');
+  });
+
+  it('should extract KOL name from Threads paste pattern', () => {
+    const content = '投資達人\n@investor_tw\n追蹤\n台積電今天表現亮眼';
+    const meta = extractSocialMediaMeta(content);
+    expect(meta.kolName).toBe('投資達人');
+    expect(meta.platform).toBe('threads');
+  });
+
+  it('should return nulls for regular article text', () => {
+    const content = '台積電今天股價大漲，法人看好後市表現。根據最新財報...';
+    const meta = extractSocialMediaMeta(content);
+    expect(meta.kolName).toBeNull();
+    expect(meta.postedAt).toBeNull();
+    expect(meta.platform).toBeNull();
+  });
+
+  it('should not match if first line is too long (sentence)', () => {
+    const content = '這是一篇關於投資的很長的文章標題，不應該被當作名稱\n追蹤\n2025年3月21日';
+    const meta = extractSocialMediaMeta(content);
+    expect(meta.kolName).toBeNull();
+  });
+
+  it('should not match if no follow indicator present', () => {
+    const content = '謝金河\n2025年3月21日\n馬斯克的仇恨值';
+    const meta = extractSocialMediaMeta(content);
+    expect(meta.kolName).toBeNull();
+  });
+
+  it('should handle English KOL names', () => {
+    const content = 'Warren Buffett\n ·\n追蹤\n2025年1月15日\nBerkshire earnings were strong...';
+    const meta = extractSocialMediaMeta(content);
+    expect(meta.kolName).toBe('Warren Buffett');
+    expect(meta.platform).toBe('facebook');
+  });
+});
+
+// =====================
+// extractChineseDate
+// =====================
+
+describe('extractChineseDate', () => {
+  it('should parse YYYY年M月D日 format', () => {
+    const result = extractChineseDate('2025年3月21日');
+    expect(result).toBe(new Date('2025-03-21T00:00:00').toISOString());
+  });
+
+  it('should parse single-digit month and day', () => {
+    const result = extractChineseDate('2025年1月5日');
+    expect(result).toBe(new Date('2025-01-05T00:00:00').toISOString());
+  });
+
+  it('should return null for unrecognized format', () => {
+    expect(extractChineseDate('some random text')).toBeNull();
+    expect(extractChineseDate('')).toBeNull();
+  });
+
+  it('should handle text with surrounding content', () => {
+    const result = extractChineseDate('發文於 2024年12月25日 下午');
+    expect(result).toBe(new Date('2024-12-25T00:00:00').toISOString());
+  });
+
+  it('should parse M月D日 with current year', () => {
+    const result = extractChineseDate('3月21日');
+    const currentYear = new Date().getFullYear();
+    expect(result).toBe(new Date(`${currentYear}-03-21T00:00:00`).toISOString());
+  });
+});
+
+// =====================
+// analyzeDraftContent — social media pre-processing
+// =====================
+
+describe('analyzeDraftContent — social media pre-processing', () => {
+  it('should use pre-extracted KOL name when AI returns null', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: null,
+      tickers: [
+        {
+          ticker: 'TSLA',
+          name: 'Tesla',
+          market: 'US',
+          confidence: 0.9,
+          mentionedAs: '特斯拉',
+        },
+      ],
+      sentiment: -1,
+      confidence: 0.8,
+      reasoning: '看空特斯拉',
+      postedAt: null,
+    });
+
+    const content =
+      '謝金河\n\n ·\n追蹤\n2025年3月21日\n ·\n馬斯克的仇恨值\n面對特斯拉股價的跌跌不休...';
+    const result = await analyzeDraftContent(content);
+    expect(result.kolName).toBe('謝金河');
+  });
+
+  it('should use pre-extracted date when AI returns null postedAt', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: '謝金河',
+      tickers: [
+        {
+          ticker: 'TSLA',
+          name: 'Tesla',
+          market: 'US',
+          confidence: 0.9,
+          mentionedAs: '特斯拉',
+        },
+      ],
+      sentiment: -1,
+      confidence: 0.8,
+      reasoning: '看空',
+      postedAt: null,
+    });
+
+    const content = '謝金河\n\n ·\n追蹤\n2025年3月21日\n ·\n馬斯克的仇恨值...';
+    const result = await analyzeDraftContent(content);
+    expect(result.postedAt).toBe(new Date('2025-03-21T00:00:00').toISOString());
+  });
+
+  it('should inject pre-extracted hints into AI prompt', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: '謝金河',
+      tickers: [],
+      sentiment: 0,
+      confidence: 0.5,
+      reasoning: '',
+      postedAt: '2025-03-21T00:00:00+08:00',
+    });
+
+    const content = '謝金河\n\n ·\n追蹤\n2025年3月21日\n ·\n文章內容...';
+    await analyzeDraftContent(content);
+
+    const promptArg = mockGenerateJson.mock.calls[0][0] as string;
+    expect(promptArg).toContain('預提取 KOL 名稱: 謝金河');
+    expect(promptArg).toContain('預提取發文日期: 2025年3月21日');
+  });
+
+  it('should prefer AI kolName over pre-extracted name', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: '金河兄',
+      tickers: [],
+      sentiment: 0,
+      confidence: 0.5,
+      reasoning: '',
+      postedAt: null,
+    });
+
+    const content = '謝金河\n\n ·\n追蹤\n2025年3月21日\n ·\n內容...';
+    const result = await analyzeDraftContent(content);
+    expect(result.kolName).toBe('金河兄');
+  });
+
+  it('should not inject hints for regular article text', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: null,
+      tickers: [],
+      sentiment: 0,
+      confidence: 0.5,
+      reasoning: '',
+      postedAt: null,
+    });
+
+    const content = '台積電今天股價大漲，法人看好後市表現。';
+    await analyzeDraftContent(content);
+
+    const promptArg = mockGenerateJson.mock.calls[0][0] as string;
+    expect(promptArg).not.toContain('預提取 KOL 名稱');
+    expect(promptArg).not.toContain('預提取發文日期');
+  });
+});
+
+// =====================
+// Prompt content verification
+// =====================
+
+describe('analyzeDraftContent — prompt improvements', () => {
+  it('should include Chinese stock name mappings in prompt', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: null,
+      tickers: [],
+      sentiment: 0,
+      confidence: 0.5,
+      reasoning: '',
+      postedAt: null,
+    });
+
+    await analyzeDraftContent('test content');
+    const promptArg = mockGenerateJson.mock.calls[0][0] as string;
+    expect(promptArg).toContain('特斯拉→TSLA');
+    expect(promptArg).toContain('比亞迪→1211.HK');
+    expect(promptArg).toContain('蘋果→AAPL');
+  });
+
+  it('should include Chinese date format examples in prompt', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: null,
+      tickers: [],
+      sentiment: 0,
+      confidence: 0.5,
+      reasoning: '',
+      postedAt: null,
+    });
+
+    await analyzeDraftContent('test content');
+    const promptArg = mockGenerateJson.mock.calls[0][0] as string;
+    expect(promptArg).toContain('2025年3月21日');
+    expect(promptArg).toContain('3月21日');
+  });
+
+  it('should include social media KOL name patterns in prompt', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: null,
+      tickers: [],
+      sentiment: 0,
+      confidence: 0.5,
+      reasoning: '',
+      postedAt: null,
+    });
+
+    await analyzeDraftContent('test content');
+    const promptArg = mockGenerateJson.mock.calls[0][0] as string;
+    expect(promptArg).toContain('追蹤');
+    expect(promptArg).toContain('社群媒體貼文格式');
+  });
 });

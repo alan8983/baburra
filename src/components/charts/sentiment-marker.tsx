@@ -1,7 +1,8 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import type { SentimentMarkerItem } from './candlestick-chart';
-import { SENTIMENT_LABELS } from '@/domain/models/post';
+import { sentimentKey } from '@/lib/utils/sentiment';
 
 export type { SentimentMarkerItem };
 
@@ -18,7 +19,7 @@ export function postToSentimentMarker(
     time: date,
     sentiment,
     price: options?.price,
-    text: options?.text ?? SENTIMENT_LABELS[sentiment as keyof typeof SENTIMENT_LABELS],
+    text: options?.text,
   };
 }
 
@@ -26,27 +27,29 @@ export function postToSentimentMarker(
  * 圖表下方情緒圖例（可選）
  */
 export function SentimentMarkerLegend({ markers }: { markers: SentimentMarkerItem[] }) {
+  const t = useTranslations('common');
   if (markers.length === 0) return null;
   return (
     <div className="text-muted-foreground mt-2 flex flex-wrap gap-3 text-xs">
-      {markers.map((m, i) => (
-        <span key={i}>
-          <span
-            className={
-              m.sentiment > 0
-                ? 'text-green-600'
-                : m.sentiment < 0
-                  ? 'text-red-600'
-                  : 'text-muted-foreground'
-            }
-          >
-            {m.time}: {SENTIMENT_LABELS[m.sentiment as keyof typeof SENTIMENT_LABELS]}
-            {m.text && m.text !== SENTIMENT_LABELS[m.sentiment as keyof typeof SENTIMENT_LABELS]
-              ? ` (${m.text})`
-              : ''}
+      {markers.map((m, i) => {
+        const label = t(`sentiment.${sentimentKey(m.sentiment)}`);
+        return (
+          <span key={i}>
+            <span
+              className={
+                m.sentiment > 0
+                  ? 'text-green-600'
+                  : m.sentiment < 0
+                    ? 'text-red-600'
+                    : 'text-muted-foreground'
+              }
+            >
+              {m.time}: {label}
+              {m.text && m.text !== label ? ` (${m.text})` : ''}
+            </span>
           </span>
-        </span>
-      ))}
+        );
+      })}
     </div>
   );
 }

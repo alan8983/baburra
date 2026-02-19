@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
+
 import { useUIStore } from '@/stores';
 import { ROUTES } from '@/lib/constants';
 import { APP_CONFIG } from '@/lib/constants/config';
@@ -97,9 +97,9 @@ function NavItem({ label, href, icon, badgeCount, isCollapsed }: NavItemProps) {
           <>
             <span className="flex-1 text-left">{label}</span>
             {badgeCount != null && badgeCount > 0 && (
-              <Badge variant="secondary" className="ml-auto">
+              <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-medium text-white">
                 {badgeCount}
-              </Badge>
+              </span>
             )}
           </>
         )}

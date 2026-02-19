@@ -3,3 +3,6 @@ export type { SentimentMarkerItem } from './candlestick-chart';
 export { postToSentimentMarker, SentimentMarkerLegend } from './sentiment-marker';
 export { SentimentLineChart } from './sentiment-line-chart';
 export type { LineChartMarker } from './sentiment-line-chart';
+export { ChartToolbar } from './chart-toolbar';
+export { aggregateCandles, aggregateVolumes, getStartDateForRange } from './candle-aggregator';
+export type { CandleInterval, TimeRange } from './candle-aggregator';

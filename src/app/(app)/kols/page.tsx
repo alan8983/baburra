@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { Plus, Search, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,7 @@ import { useKols } from '@/hooks';
 
 export default function KolsPage() {
   const router = useRouter();
+  const t = useTranslations('kols');
   const [searchQuery, setSearchQuery] = useState('');
   const { data, isLoading, error } = useKols({ search: searchQuery || undefined });
 
@@ -24,10 +26,10 @@ export default function KolsPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold tracking-tight">KOL 列表</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
         <Card className="py-12">
           <CardContent className="flex flex-col items-center justify-center text-center">
-            <p className="text-destructive">無法載入 KOL 列表，請稍後再試。</p>
+            <p className="text-destructive">{t('errors.loadFailed')}</p>
           </CardContent>
         </Card>
       </div>
@@ -39,12 +41,12 @@ export default function KolsPage() {
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">KOL 列表</h1>
-          <p className="text-muted-foreground">瀏覽和管理所有追蹤中的 KOL</p>
+          <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+          <p className="text-muted-foreground">{t('description')}</p>
         </div>
         <Button>
           <Plus className="mr-2 h-4 w-4" />
-          新增 KOL
+          {t('newKol')}
         </Button>
       </div>
 
@@ -52,7 +54,7 @@ export default function KolsPage() {
       <div className="relative max-w-md">
         <Search className="text-muted-foreground absolute top-3 left-3 h-4 w-4" />
         <Input
-          placeholder="搜尋 KOL..."
+          placeholder={t('search')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-9"
@@ -62,7 +64,9 @@ export default function KolsPage() {
       {/* Loading */}
       {isLoading && (
         <Card className="py-12">
-          <CardContent className="text-muted-foreground flex justify-center">載入中...</CardContent>
+          <CardContent className="text-muted-foreground flex justify-center">
+            {t('loading')}
+          </CardContent>
         </Card>
       )}
 
@@ -86,7 +90,7 @@ export default function KolsPage() {
                   <div className="min-w-0 flex-1">
                     <CardTitle className="truncate text-base">{kol.name}</CardTitle>
                     <CardDescription className="text-xs">
-                      最近發文: {kol.lastPostAt ? formatDate(kol.lastPostAt) : '—'}
+                      {t('stats.recentPost')} {kol.lastPostAt ? formatDate(kol.lastPostAt) : '—'}
                     </CardDescription>
                   </div>
                 </div>
@@ -94,14 +98,20 @@ export default function KolsPage() {
               <CardContent>
                 <div className="flex items-center justify-between text-sm">
                   <div>
-                    <span className="text-muted-foreground">文章數: </span>
+                    <span className="text-muted-foreground">{t('stats.postCount')} </span>
                     <span className="font-medium">{kol.postCount}</span>
                   </div>
                   <Badge
-                    variant={kol.winRate != null && kol.winRate >= 0.6 ? 'default' : 'secondary'}
-                    className={kol.winRate != null && kol.winRate >= 0.6 ? 'bg-green-600' : ''}
+                    variant={
+                      kol.returnRate != null && kol.returnRate >= 0 ? 'default' : 'secondary'
+                    }
+                    className={kol.returnRate != null && kol.returnRate >= 0 ? 'bg-green-600' : ''}
                   >
-                    勝率 {kol.winRate != null ? `${(kol.winRate * 100).toFixed(0)}%` : '—'}
+                    {kol.returnRate != null
+                      ? t('stats.returnRate', {
+                          percent: `${kol.returnRate >= 0 ? '+' : ''}${kol.returnRate.toFixed(1)}`,
+                        })
+                      : '—'}
                   </Badge>
                 </div>
               </CardContent>
@@ -115,16 +125,14 @@ export default function KolsPage() {
         <Card className="py-12">
           <CardContent className="flex flex-col items-center justify-center text-center">
             <User className="text-muted-foreground h-12 w-12" />
-            <h3 className="mt-4 text-lg font-semibold">找不到 KOL</h3>
+            <h3 className="mt-4 text-lg font-semibold">{t('empty.noKols')}</h3>
             <p className="text-muted-foreground mt-2 text-sm">
-              {searchQuery
-                ? `沒有符合「${searchQuery}」的 KOL`
-                : '還沒有任何 KOL，點擊上方按鈕新增'}
+              {searchQuery ? t('empty.noResults', { query: searchQuery }) : t('empty.description')}
             </p>
             {!searchQuery && (
               <Button className="mt-4">
                 <Plus className="mr-2 h-4 w-4" />
-                新增 KOL
+                {t('newKol')}
               </Button>
             )}
           </CardContent>

@@ -2,36 +2,304 @@
 
 import { use, useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ExternalLink, Loader2, User } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { ArrowLeft, ExternalLink, HelpCircle, Loader2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { ROUTES } from '@/lib/constants';
 import { formatDate } from '@/lib/utils/date';
-import { SENTIMENT_LABELS, SENTIMENT_COLORS } from '@/domain/models/post';
-import { useKol, useKolPosts, useKolWinRate } from '@/hooks';
-import { formatWinRate, getWinRateColorClass } from '@/domain/calculators';
+import { SENTIMENT_COLORS, type Sentiment } from '@/domain/models/post';
+import { sentimentKey } from '@/lib/utils/sentiment';
+import { useStockPricesForChart } from '@/hooks/use-stock-prices';
+import { SentimentLineChart } from '@/components/charts';
+import type { LineChartMarker } from '@/components/charts';
+import { useKol, useKolPosts } from '@/hooks';
+import { formatReturnRate, getReturnRateColorClass } from '@/domain/calculators';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type StockPost = {
+  id: string;
+  content: string;
+  sentiment: Sentiment;
+  postedAt: Date | string;
+  priceChanges: {
+    day5: number | null;
+    day30: number | null;
+    day90: number | null;
+    day365: number | null;
+  };
+};
+
+type StockGroup = {
+  stockId: string;
+  ticker: string;
+  name: string;
+  posts: StockPost[];
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function toDateStr(postedAt: Date | string): string {
+  if (postedAt instanceof Date) return postedAt.toISOString().slice(0, 10);
+  const s = String(postedAt);
+  return s.includes('T') ? s.slice(0, 10) : s.slice(0, 10);
+}
+
+function calcPeriodStats(posts: StockPost[], period: keyof StockPost['priceChanges']) {
+  const relevant = posts.filter((p) => p.sentiment !== 0 && p.priceChanges[period] != null);
+  if (!relevant.length) return { avgReturn: null, positiveCount: 0, negativeCount: 0 };
+  const returns = relevant.map((p) => {
+    const change = p.priceChanges[period]!;
+    return p.sentiment > 0 ? change : -change;
+  });
+  return {
+    avgReturn: returns.reduce((a, b) => a + b, 0) / returns.length,
+    positiveCount: returns.filter((r) => r > 0).length,
+    negativeCount: returns.filter((r) => r < 0).length,
+  };
+}
+
+// ─── Per-stock row sub-component ──────────────────────────────────────────────
+
+function KolStockSection({ stock }: { stock: StockGroup }) {
+  const t = useTranslations('kols');
+  const tCommon = useTranslations('common');
+  const router = useRouter();
+
+  const { data: chartData, isLoading: chartLoading } = useStockPricesForChart(stock.ticker);
+
+  const markers: LineChartMarker[] = stock.posts.map((post) => ({
+    time: toDateStr(post.postedAt),
+    sentiment: post.sentiment,
+    postId: post.id,
+  }));
+
+  const periodStats = useMemo(
+    () => ({
+      day5: calcPeriodStats(stock.posts, 'day5'),
+      day30: calcPeriodStats(stock.posts, 'day30'),
+      day90: calcPeriodStats(stock.posts, 'day90'),
+      day365: calcPeriodStats(stock.posts, 'day365'),
+    }),
+    [stock.posts]
+  );
+
+  // Win rate: % of non-neutral posts with positive return (using 30d as primary window)
+  const nonNeutral = stock.posts.filter((p) => p.sentiment !== 0 && p.priceChanges.day30 != null);
+  const winCount = nonNeutral.filter((p) => {
+    const change = p.priceChanges.day30!;
+    return p.sentiment > 0 ? change > 0 : change < 0;
+  }).length;
+  const winRate = nonNeutral.length > 0 ? (winCount / nonNeutral.length) * 100 : null;
+
+  return (
+    <div className="space-y-4">
+      {/* Stock row header */}
+      <div className="flex items-center gap-2">
+        <Link
+          href={ROUTES.STOCK_DETAIL(stock.ticker)}
+          className="text-lg font-bold hover:underline"
+        >
+          {stock.ticker}
+        </Link>
+        <span className="text-muted-foreground">—</span>
+        <span className="text-sm font-medium">{stock.name}</span>
+        <Badge variant="secondary" className="ml-auto text-xs">
+          {t('detail.postsByStock.total', { count: stock.posts.length })}
+        </Badge>
+      </div>
+
+      {/* 2-column layout */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Left: Sentiment chart + Return rate + Win rate */}
+        <div className="flex flex-col gap-4">
+          {/* Sentiment Line Chart */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">{t('detail.sentimentChart.title')}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {chartLoading ? (
+                <div className="flex h-[200px] items-center justify-center">
+                  <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
+                </div>
+              ) : chartData && chartData.candles.length > 0 ? (
+                <SentimentLineChart
+                  candles={chartData.candles}
+                  sentimentMarkers={markers}
+                  onMarkerClick={(postId) => router.push(ROUTES.POST_DETAIL(postId))}
+                  height={200}
+                  className="rounded-lg border"
+                />
+              ) : (
+                <div className="flex h-[200px] items-center justify-center">
+                  <p className="text-muted-foreground text-sm">{t('detail.errors.noPriceData')}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Return Rate + Win Rate */}
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-sm">{t('detail.returnRate.title')}</CardTitle>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="text-muted-foreground hover:text-foreground transition-colors">
+                      <HelpCircle className="h-4 w-4" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72" align="start">
+                    <h4 className="text-sm font-medium">
+                      {t('detail.returnRate.explanation.title')}
+                    </h4>
+                    <ul className="text-muted-foreground mt-2 space-y-1 text-xs">
+                      <li>• {t('detail.returnRate.explanation.bullish')}</li>
+                      <li>• {t('detail.returnRate.explanation.bearish')}</li>
+                      <li>• {t('detail.returnRate.explanation.neutral')}</li>
+                      <li>• {t('detail.returnRate.explanation.perStock')}</li>
+                    </ul>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {/* 4-period row */}
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  {
+                    key: 'day5',
+                    label: t('detail.returnRate.periods.5d'),
+                    data: periodStats.day5,
+                  },
+                  {
+                    key: 'day30',
+                    label: t('detail.returnRate.periods.30d'),
+                    data: periodStats.day30,
+                  },
+                  {
+                    key: 'day90',
+                    label: t('detail.returnRate.periods.90d'),
+                    data: periodStats.day90,
+                  },
+                  {
+                    key: 'day365',
+                    label: t('detail.returnRate.periods.365d'),
+                    data: periodStats.day365,
+                  },
+                ].map((item) => (
+                  <div key={item.key} className="rounded-lg border p-2 text-center">
+                    <p className="text-muted-foreground text-xs font-medium">{item.label}</p>
+                    <p
+                      className={`mt-1 text-lg font-bold ${getReturnRateColorClass(item.data.avgReturn)}`}
+                    >
+                      {formatReturnRate(item.data.avgReturn)}
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      {item.data.positiveCount}+ / {item.data.negativeCount}-
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Win rate */}
+              {winRate != null && (
+                <div className="flex items-center justify-between rounded-lg border p-2">
+                  <span className="text-muted-foreground text-xs">{t('detail.winRate')}</span>
+                  <span
+                    className={`text-sm font-bold ${winRate >= 50 ? 'text-green-600' : 'text-red-600'}`}
+                  >
+                    {winRate.toFixed(1)}%
+                    <span className="text-muted-foreground ml-1 text-xs font-normal">
+                      ({winCount}/{nonNeutral.length})
+                    </span>
+                  </span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right: Posts list */}
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">{t('detail.postsByStock.title')}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2">
+            {stock.posts.map((post) => (
+              <div
+                key={post.id}
+                className="hover:bg-muted/50 cursor-pointer rounded-lg border p-3 transition-colors"
+                onClick={() => router.push(ROUTES.POST_DETAIL(post.id))}
+              >
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className={`text-xs ${SENTIMENT_COLORS[post.sentiment]}`}
+                  >
+                    {tCommon(`sentiment.${sentimentKey(post.sentiment)}`)}
+                  </Badge>
+                  <span className="text-muted-foreground text-xs">{formatDate(post.postedAt)}</span>
+                </div>
+                <p className="text-muted-foreground mt-1.5 line-clamp-2 text-xs">{post.content}</p>
+                <div className="mt-1.5 flex flex-wrap gap-3 text-xs">
+                  <span
+                    className={
+                      post.priceChanges.day5 != null
+                        ? post.priceChanges.day5 >= 0
+                          ? 'text-green-600'
+                          : 'text-red-600'
+                        : 'text-muted-foreground'
+                    }
+                  >
+                    5d:{' '}
+                    {post.priceChanges.day5 != null
+                      ? `${post.priceChanges.day5 >= 0 ? '+' : ''}${post.priceChanges.day5.toFixed(1)}%`
+                      : '—'}
+                  </span>
+                  <span
+                    className={
+                      post.priceChanges.day30 != null
+                        ? post.priceChanges.day30 >= 0
+                          ? 'text-green-600'
+                          : 'text-red-600'
+                        : 'text-muted-foreground'
+                    }
+                  >
+                    30d:{' '}
+                    {post.priceChanges.day30 != null
+                      ? `${post.priceChanges.day30 >= 0 ? '+' : ''}${post.priceChanges.day30.toFixed(1)}%`
+                      : '—'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function KolDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = useTranslations('kols');
   const { id } = use(params);
   const { data: kol, isLoading: kolLoading, error: kolError } = useKol(id);
   const { data: postsData, isLoading: postsLoading } = useKolPosts(id);
-  const { data: winRateStats, isLoading: winRateLoading } = useKolWinRate(id);
 
-  const postsByStock = useMemo(() => {
+  // Group posts by stock, capturing all price-change periods
+  const postsByStock = useMemo<StockGroup[]>(() => {
     const list = postsData?.data ?? [];
-    const map = new Map<
-      string,
-      {
-        stockId: string;
-        ticker: string;
-        name: string;
-        posts: Array<{ id: string; sentiment: number; postedAt: Date; priceChange: number | null }>;
-      }
-    >();
+    const map = new Map<string, StockGroup>();
     for (const post of list) {
       const priceChanges = post.priceChanges ?? {};
       for (const stock of post.stocks) {
@@ -43,13 +311,18 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
             posts: [],
           });
         }
-        const entry = map.get(stock.id)!;
-        const change = priceChanges[stock.id]?.day5 ?? null;
-        entry.posts.push({
+        const pc = priceChanges[stock.id];
+        map.get(stock.id)!.posts.push({
           id: post.id,
-          sentiment: post.sentiment,
+          content: post.content,
+          sentiment: (stock.sentiment ?? post.sentiment) as Sentiment,
           postedAt: post.postedAt,
-          priceChange: change,
+          priceChanges: {
+            day5: pc?.day5 ?? null,
+            day30: pc?.day30 ?? null,
+            day90: pc?.day90 ?? null,
+            day365: pc?.day365 ?? null,
+          },
         });
       }
     }
@@ -60,11 +333,11 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
     return (
       <div className="space-y-6">
         <Button variant="ghost" size="sm" asChild>
-          <Link href={ROUTES.KOLS}>返回 KOL 列表</Link>
+          <Link href={ROUTES.KOLS}>{t('detail.backToList')}</Link>
         </Button>
         <Card className="py-12">
           <CardContent className="flex flex-col items-center justify-center text-center">
-            <p className="text-destructive">無法載入 KOL 或找不到該 KOL</p>
+            <p className="text-destructive">{t('detail.errors.loadFailed')}</p>
           </CardContent>
         </Card>
       </div>
@@ -75,9 +348,9 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
     return (
       <div className="space-y-6">
         <Button variant="ghost" size="sm" asChild>
-          <Link href={ROUTES.KOLS}>返回 KOL 列表</Link>
+          <Link href={ROUTES.KOLS}>{t('detail.backToList')}</Link>
         </Button>
-        <p className="text-muted-foreground">載入中...</p>
+        <p className="text-muted-foreground">{t('detail.loading')}</p>
       </div>
     );
   }
@@ -88,7 +361,7 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
       <Button variant="ghost" size="sm" asChild>
         <Link href={ROUTES.KOLS}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          返回 KOL 列表
+          {t('detail.backToList')}
         </Link>
       </Button>
 
@@ -104,17 +377,22 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
             </Avatar>
             <div className="flex-1 text-center sm:text-left">
               <h1 className="text-2xl font-bold">{kol.name}</h1>
-              {kol.bio && <p className="text-muted-foreground mt-1">{kol.bio}</p>}
+              {kol.bio && <p className="text-muted-foreground mt-1 text-sm">{kol.bio}</p>}
               <div className="mt-3 flex flex-wrap items-center justify-center gap-4 sm:justify-start">
-                <Badge variant="outline">文章數: {kol.postCount}</Badge>
+                <Badge variant="outline">
+                  {t('detail.stats.postCount')} {kol.postCount}
+                </Badge>
                 <Badge
                   variant="default"
-                  className={kol.winRate != null && kol.winRate >= 0.6 ? 'bg-green-600' : ''}
+                  className={kol.returnRate != null && kol.returnRate >= 0 ? 'bg-green-600' : ''}
                 >
-                  總體勝率: {kol.winRate != null ? `${(kol.winRate * 100).toFixed(0)}%` : '—'}
+                  {kol.returnRate != null
+                    ? t('detail.stats.overallReturnRate', {
+                        percent: `${kol.returnRate >= 0 ? '+' : ''}${kol.returnRate.toFixed(1)}`,
+                      })
+                    : '—'}
                 </Badge>
               </div>
-              {/* Social Links */}
               {Object.entries(kol.socialLinks).length > 0 && (
                 <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                   {Object.entries(kol.socialLinks).map(([platform, url]) => (
@@ -136,189 +414,21 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
         </CardContent>
       </Card>
 
-      {/* Tabs */}
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="stats">Stats</TabsTrigger>
-          <TabsTrigger value="about">About</TabsTrigger>
-        </TabsList>
-
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-4">
-          <h2 className="text-lg font-semibold">依標的分組的文章</h2>
-          {postsLoading && <p className="text-muted-foreground">載入文章...</p>}
-          {!postsLoading && postsByStock.length === 0 && (
-            <p className="text-muted-foreground">尚無文章</p>
-          )}
-          {!postsLoading &&
-            postsByStock.map((stock) => (
-              <Card key={stock.stockId}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-base">
-                        {stock.ticker} - {stock.name}
-                      </CardTitle>
-                      <CardDescription>共 {stock.posts.length} 篇文章</CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  {stock.posts.slice(0, 5).map((post) => (
-                    <Link
-                      key={post.id}
-                      href={ROUTES.POST_DETAIL(post.id)}
-                      className="hover:bg-muted/50 flex items-center justify-between rounded-lg border p-3"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Badge
-                          variant="outline"
-                          className={
-                            SENTIMENT_COLORS[post.sentiment as keyof typeof SENTIMENT_COLORS]
-                          }
-                        >
-                          {SENTIMENT_LABELS[post.sentiment as keyof typeof SENTIMENT_LABELS]}
-                        </Badge>
-                        <span className="text-muted-foreground text-sm">
-                          {formatDate(post.postedAt)}
-                        </span>
-                      </div>
-                      <span
-                        className={`text-sm font-medium ${
-                          post.priceChange == null
-                            ? 'text-muted-foreground'
-                            : post.priceChange >= 0
-                              ? 'text-green-600'
-                              : 'text-red-600'
-                        }`}
-                      >
-                        {post.priceChange != null
-                          ? `${post.priceChange >= 0 ? '+' : ''}${post.priceChange.toFixed(1)}% (5日)`
-                          : '—'}
-                      </span>
-                    </Link>
-                  ))}
-                  {stock.posts.length > 5 && (
-                    <Button variant="ghost" size="sm" className="w-full" asChild>
-                      <Link href={ROUTES.STOCK_DETAIL(stock.ticker)}>
-                        查看全部 {stock.posts.length} 篇
-                      </Link>
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-        </TabsContent>
-
-        {/* Stats Tab */}
-        <TabsContent value="stats" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>勝率統計</CardTitle>
-              <CardDescription>依不同時間週期計算的預測勝率</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {winRateLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
-                  <span className="text-muted-foreground ml-2">計算勝率中...</span>
-                </div>
-              ) : winRateStats ? (
-                <div className="space-y-6">
-                  {/* 整體統計 */}
-                  <div className="bg-muted/30 rounded-lg border p-4 text-center">
-                    <p className="text-muted-foreground text-sm">整體平均勝率</p>
-                    <p
-                      className={`mt-1 text-4xl font-bold ${getWinRateColorClass(winRateStats.overall.avgWinRate)}`}
-                    >
-                      {formatWinRate(winRateStats.overall.avgWinRate)}
-                    </p>
-                    <p className="text-muted-foreground text-xs">
-                      共 {winRateStats.overall.total} 篇有方向性文章
-                    </p>
-                  </div>
-
-                  {/* 各期間統計 */}
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    {[
-                      { key: 'day5', label: '5日', data: winRateStats.day5 },
-                      { key: 'day30', label: '30日', data: winRateStats.day30 },
-                      { key: 'day90', label: '90日', data: winRateStats.day90 },
-                      { key: 'day365', label: '365日', data: winRateStats.day365 },
-                    ].map((item) => (
-                      <div key={item.key} className="rounded-lg border p-4 text-center">
-                        <p className="text-muted-foreground text-sm">{item.label}勝率</p>
-                        <p
-                          className={`mt-1 text-3xl font-bold ${getWinRateColorClass(item.data.rate)}`}
-                        >
-                          {formatWinRate(item.data.rate)}
-                        </p>
-                        <p className="text-muted-foreground text-xs">
-                          {item.data.wins}勝 / {item.data.losses}敗
-                        </p>
-                        <p className="text-muted-foreground text-xs">
-                          ({item.data.total} 筆有效樣本)
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* 說明 */}
-                  <div className="rounded-lg border border-dashed p-4">
-                    <h4 className="text-sm font-medium">勝率計算說明</h4>
-                    <ul className="text-muted-foreground mt-2 space-y-1 text-xs">
-                      <li>• 看多文章：發文後股價上漲即為勝利</li>
-                      <li>• 看空文章：發文後股價下跌即為勝利</li>
-                      <li>• 中立文章不納入勝率計算</li>
-                      <li>• 每篇文章對應的每個標的分別計算</li>
-                    </ul>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-center">無法載入勝率資料</p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* About Tab */}
-        <TabsContent value="about" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>關於 {kol.name}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <h3 className="font-medium">簡介</h3>
-                <p className="text-muted-foreground mt-1">{kol.bio || '尚無簡介'}</p>
-              </div>
-              <Separator />
-              <div>
-                <h3 className="font-medium">社群連結</h3>
-                {Object.entries(kol.socialLinks).length > 0 ? (
-                  <div className="mt-2 space-y-2">
-                    {Object.entries(kol.socialLinks).map(([platform, url]) => (
-                      <a
-                        key={platform}
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary flex items-center gap-2 text-sm hover:underline"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                        {platform}: {url}
-                      </a>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground mt-1">尚無社群連結</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      {/* Per-stock sections */}
+      {postsLoading ? (
+        <p className="text-muted-foreground">{t('detail.postsByStock.loading')}</p>
+      ) : postsByStock.length === 0 ? (
+        <p className="text-muted-foreground">{t('detail.postsByStock.noPosts')}</p>
+      ) : (
+        <div className="space-y-2">
+          {postsByStock.map((stock, i) => (
+            <div key={stock.stockId}>
+              {i > 0 && <Separator className="my-8" />}
+              <KolStockSection stock={stock} />
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

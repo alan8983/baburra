@@ -54,7 +54,7 @@ export async function generateContent(
 ): Promise<string> {
   const apiKey = getApiKey();
 
-  const url = `${GEMINI_BASE}/models/${model}:generateContent?key=${apiKey}`;
+  const url = `${GEMINI_BASE}/models/${model}:generateContent`;
 
   const requestBody = {
     contents: [
@@ -79,6 +79,7 @@ export async function generateContent(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
       },
       body: JSON.stringify(requestBody),
       signal: controller.signal,

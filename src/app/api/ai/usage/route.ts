@@ -4,14 +4,18 @@
  */
 
 import { NextResponse } from 'next/server';
+import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { getAiUsage } from '@/infrastructure/repositories/ai-usage.repository';
-
-// 開發期間使用的測試用戶 ID
-const DEV_USER_ID = process.env.DEV_USER_ID || '00000000-0000-0000-0000-000000000001';
+import { internalError } from '@/lib/api/error';
 
 export async function GET() {
   try {
-    const usage = await getAiUsage(DEV_USER_ID);
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const usage = await getAiUsage(userId);
 
     return NextResponse.json({
       usageCount: usage.usageCount,
@@ -21,10 +25,6 @@ export async function GET() {
       subscriptionTier: usage.subscriptionTier,
     });
   } catch (error) {
-    console.error('AI usage error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Internal server error' },
-      { status: 500 }
-    );
+    return internalError(error, 'Failed to fetch AI usage');
   }
 }

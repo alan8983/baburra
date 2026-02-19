@@ -3,6 +3,7 @@
 // 圖片上傳元件
 
 import { useRef, useState, useCallback } from 'react';
+import { useTranslations } from 'next-intl';
 import Image from 'next/image';
 import { Plus, X, Loader2, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -24,6 +25,7 @@ export function ImageUploader({
   className,
   disabled = false,
 }: ImageUploaderProps) {
+  const t = useTranslations('forms');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
@@ -42,7 +44,7 @@ export function ImageUploader({
       // 檢查數量限制
       const remainingSlots = maxImages - value.length;
       if (files.length > remainingSlots) {
-        setUploadError(`最多只能上傳 ${maxImages} 張圖片`);
+        setUploadError(t('imageUploader.maxError', { max: maxImages }));
         setTimeout(() => setUploadError(null), 3000);
         return;
       }
@@ -60,7 +62,7 @@ export function ImageUploader({
         fileInputRef.current.value = '';
       }
     },
-    [maxImages, onChange, uploadMultiple, value]
+    [maxImages, onChange, uploadMultiple, value, t]
   );
 
   const handleRemove = useCallback(
@@ -81,7 +83,7 @@ export function ImageUploader({
 
   return (
     <div className={cn('space-y-2', className)}>
-      <Label>圖片</Label>
+      <Label>{t('imageUploader.label')}</Label>
 
       <div className="flex flex-wrap gap-2">
         {/* 已上傳的圖片 */}
@@ -102,7 +104,7 @@ export function ImageUploader({
                 type="button"
                 onClick={() => handleRemove(index)}
                 className="bg-destructive text-destructive-foreground absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full opacity-0 transition-opacity group-hover:opacity-100"
-                aria-label="移除圖片"
+                aria-label={t('imageUploader.removeImage')}
               >
                 <X className="h-3 w-3" />
               </button>
@@ -158,7 +160,7 @@ export function ImageUploader({
 
       {/* 提示文字 */}
       <p className="text-muted-foreground text-xs">
-        點擊上傳圖片，最多 {maxImages} 張（支援 JPG、PNG、GIF、WebP，每張最大 5MB）
+        {t('imageUploader.helpText', { max: maxImages })}
       </p>
     </div>
   );

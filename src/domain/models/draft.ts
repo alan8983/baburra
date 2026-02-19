@@ -25,6 +25,7 @@ export interface Draft {
   sourceUrl: string | null;
   images: string[];
   sentiment: Sentiment | null;
+  stockSentiments: Record<string, Sentiment> | null; // ticker -> per-stock sentiment
   postedAt: Date | null;
   stockIds: string[];
   stockNameInputs: string[];
@@ -53,6 +54,7 @@ export interface CreateDraftInput {
   sourceUrl?: string;
   images?: string[];
   sentiment?: Sentiment;
+  stockSentiments?: Record<string, Sentiment>;
   postedAt?: Date;
   stockIds?: string[];
   stockNameInputs?: string[];
@@ -66,6 +68,7 @@ export interface UpdateDraftInput {
   sourceUrl?: string | null;
   images?: string[];
   sentiment?: Sentiment | null;
+  stockSentiments?: Record<string, Sentiment> | null;
   postedAt?: Date | null;
   stockIds?: string[];
   stockNameInputs?: string[];

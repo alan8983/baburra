@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { isBookmarked, removeBookmark } from '@/infrastructure/repositories';
+import { internalError } from '@/lib/api/error';
 
 export async function GET(
   _request: NextRequest,
@@ -16,11 +17,7 @@ export async function GET(
     const bookmarked = await isBookmarked(userId, postId);
     return NextResponse.json({ isBookmarked: bookmarked });
   } catch (err) {
-    console.error('GET /api/bookmarks/[postId]', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to check bookmark' },
-      { status: 500 }
-    );
+    return internalError(err, 'Failed to check bookmark');
   }
 }
 
@@ -35,10 +32,6 @@ export async function DELETE(
     await removeBookmark(userId, postId);
     return new NextResponse(null, { status: 204 });
   } catch (err) {
-    console.error('DELETE /api/bookmarks/[postId]', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to remove bookmark' },
-      { status: 500 }
-    );
+    return internalError(err, 'Failed to remove bookmark');
   }
 }

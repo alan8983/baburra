@@ -12,11 +12,12 @@ export function formatPriceChange(change: number | null | undefined): string {
 }
 
 /**
- * 格式化勝率
+ * 格式化報酬率
  */
-export function formatWinRate(rate: number | null | undefined): string {
+export function formatReturnRate(rate: number | null | undefined): string {
   if (rate === null || rate === undefined) return '-';
-  return `${(rate * 100).toFixed(1)}%`;
+  const sign = rate >= 0 ? '+' : '';
+  return `${sign}${rate.toFixed(1)}%`;
 }
 
 /**

@@ -1,6 +1,7 @@
 // KOL Repository - 使用 Supabase Admin Client（繞過 RLS）
 
 import { createAdminClient } from '@/infrastructure/supabase/admin';
+import { escapePostgrestSearch } from '@/lib/api/search';
 import type {
   KOL,
   KOLWithStats,
@@ -54,7 +55,8 @@ export async function listKols(params: {
   let query = supabase.from('kols').select('*', { count: 'exact', head: false });
 
   if (search.trim()) {
-    query = query.or(`name.ilike.%${search.trim()}%,slug.ilike.%${search.trim()}%`);
+    const s = escapePostgrestSearch(search.trim());
+    query = query.or(`name.ilike.%${s}%,slug.ilike.%${s}%`);
   }
 
   const from = (page - 1) * limit;
@@ -91,7 +93,7 @@ export async function listKols(params: {
     return {
       ...kol,
       postCount: countByKol[kol.id] ?? 0,
-      winRate: null,
+      returnRate: null,
       lastPostAt: lastPostByKol[kol.id] ? new Date(lastPostByKol[kol.id]) : null,
     };
   });
@@ -120,7 +122,7 @@ export async function getKolById(id: string): Promise<KOLWithStats | null> {
   return {
     ...kol,
     postCount: count ?? 0,
-    winRate: null,
+    returnRate: null,
     lastPostAt: lastPost?.posted_at ? new Date(lastPost.posted_at as string) : null,
   };
 }

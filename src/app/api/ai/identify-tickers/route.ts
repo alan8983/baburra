@@ -4,10 +4,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { identifyTickers } from '@/domain/services/ai.service';
-import { checkAiQuota, consumeAiQuota } from '@/infrastructure/repositories/ai-usage.repository';
-
-const DEV_USER_ID = process.env.DEV_USER_ID || '00000000-0000-0000-0000-000000000001';
+import { consumeAiQuota } from '@/infrastructure/repositories/ai-usage.repository';
+import { internalError } from '@/lib/api/error';
 
 interface IdentifyTickersRequest {
   content: string;
@@ -15,6 +15,10 @@ interface IdentifyTickersRequest {
 
 export async function POST(request: NextRequest) {
   try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const body = (await request.json()) as IdentifyTickersRequest;
 
     // 驗證輸入
@@ -39,20 +43,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 檢查配額
-    const hasQuota = await checkAiQuota(DEV_USER_ID);
-    if (!hasQuota) {
-      return NextResponse.json(
-        { error: 'AI quota exceeded. Please wait until next week.' },
-        { status: 429 }
-      );
+    // 原子性消耗配額（先扣再用，避免 race condition）
+    let usage;
+    try {
+      usage = await consumeAiQuota(userId);
+    } catch (quotaErr) {
+      if (
+        quotaErr &&
+        typeof quotaErr === 'object' &&
+        'code' in quotaErr &&
+        (quotaErr as { code: string }).code === 'AI_QUOTA_EXCEEDED'
+      ) {
+        return NextResponse.json(
+          { error: 'AI quota exceeded. Please wait until next week.' },
+          { status: 429 }
+        );
+      }
+      throw quotaErr;
     }
 
     // 執行標的識別
     const result = await identifyTickers(body.content);
-
-    // 消耗配額
-    const usage = await consumeAiQuota(DEV_USER_ID);
 
     return NextResponse.json({
       ...result,
@@ -63,10 +74,6 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('AI identify-tickers error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Internal server error' },
-      { status: 500 }
-    );
+    return internalError(error, 'Ticker identification failed');
   }
 }

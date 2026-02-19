@@ -5,10 +5,12 @@
  * 以標的分組、卡片網格呈現 AI 提取的投資論點
  */
 
+import { useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { SENTIMENT_LABELS, SENTIMENT_COLORS, type Sentiment } from '@/domain/models/post';
+import { SENTIMENT_COLORS, type Sentiment } from '@/domain/models/post';
+import { sentimentKey } from '@/lib/utils/sentiment';
 import { CATEGORY_ICONS } from '@/domain/models/argument-categories';
 import { cn } from '@/lib/utils';
 
@@ -55,11 +57,13 @@ const SENTIMENT_BORDER: Record<Sentiment, string> = {
 // =====================
 
 export function PostArguments({ tickerGroups, className }: PostArgumentsProps) {
+  const t = useTranslations('common');
+
   if (!tickerGroups || tickerGroups.length === 0) {
     return (
       <div className={cn('rounded-lg border p-6', className)}>
-        <h3 className="text-base font-semibold">論點分析</h3>
-        <p className="text-muted-foreground mt-2 text-sm">尚未提取論點</p>
+        <h3 className="text-base font-semibold">{t('ai.argumentAnalysis')}</h3>
+        <p className="text-muted-foreground mt-2 text-sm">{t('ai.noArguments')}</p>
       </div>
     );
   }
@@ -72,9 +76,9 @@ export function PostArguments({ tickerGroups, className }: PostArgumentsProps) {
       <div className="flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-base font-semibold">
           <span>🧠</span>
-          <span>論點分析</span>
+          <span>{t('ai.argumentAnalysis')}</span>
         </h3>
-        <Badge variant="secondary">{totalCount} 個論點</Badge>
+        <Badge variant="secondary">{t('ai.argumentCount', { count: totalCount })}</Badge>
       </div>
 
       {/* Per-ticker sections */}
@@ -135,9 +139,10 @@ function TickerSection({ group }: { group: TickerArgumentGroup }) {
 // =====================
 
 function ArgumentCard({ argument }: { argument: ArgumentItem }) {
+  const t = useTranslations('common');
   const icon = CATEGORY_ICONS[argument.categoryCode] || '📌';
   const borderColor = SENTIMENT_BORDER[argument.sentiment];
-  const sentimentLabel = SENTIMENT_LABELS[argument.sentiment];
+  const sentimentLabel = t(`sentiment.${sentimentKey(argument.sentiment)}`);
   const sentimentTextColor = SENTIMENT_COLORS[argument.sentiment]?.split(' ')[0] || '';
 
   const hasDetails = argument.originalText || argument.confidence !== null;
@@ -178,7 +183,9 @@ function ArgumentCard({ argument }: { argument: ArgumentItem }) {
           </p>
         )}
         {argument.confidence !== null && (
-          <p className="text-xs font-medium">信心度: {Math.round(argument.confidence * 100)}%</p>
+          <p className="text-xs font-medium">
+            {t('ai.confidencePercent', { percent: Math.round(argument.confidence * 100) })}
+          </p>
         )}
       </TooltipContent>
     </Tooltip>

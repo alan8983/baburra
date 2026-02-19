@@ -14,7 +14,7 @@ export interface Stock {
 
 export interface StockWithStats extends Stock {
   postCount: number;
-  winRate: number | null;
+  returnRate: number | null;
   lastPostAt: Date | null;
 }
 

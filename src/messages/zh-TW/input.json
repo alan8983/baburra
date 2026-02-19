@@ -2,37 +2,32 @@
   "title": "快速輸入",
   "description": "貼上 KOL 的投資觀點文章，AI 自動識別 KOL、標的與情緒",
   "inputCard": {
-    "title": "輸入文章內容",
-    "description": "貼上文章內容或網址，系統會自動識別 KOL 和投資標的",
-    "placeholder": "貼上 KOL 的發文內容或文章網址...\n\n例如：\n- 貼上 Twitter / X 貼文網址（支援自動擷取）\n- 直接貼上文章內容\n- 手動輸入觀點摘要"
+    "placeholder": "貼上文章內容或 Twitter / X 網址..."
   },
   "actions": {
     "createDraft": "建立草稿",
     "analyzing": "AI 分析中..."
   },
-  "recentDrafts": {
-    "title": "最近草稿",
-    "clickToContinue": "點擊繼續編輯",
-    "viewAll": "查看全部",
-    "loading": "載入中...",
-    "empty": "（尚無內容）",
-    "noDrafts": "還沒有草稿"
-  },
   "tips": {
-    "title": "使用提示",
-    "tip1": "支援貼上 Twitter / X 的貼文網址，系統會自動擷取內容並分析",
-    "tip2": "直接貼上文章內容，AI 會自動識別 KOL、股票代碼與看法情緒",
-    "tip3": "AI 識別的結果可在草稿編輯頁面中調整"
+    "hint": "支援貼上文字或 Twitter / X 網址，AI 會自動識別 KOL、標的與情緒"
   },
-  "limitations": {
-    "title": "Twitter / X 網址擷取限制",
-    "textOnly": "僅能擷取貼文文字與作者名稱，無法取得圖片、發文時間或頭像",
-    "singleTweet": "每次只能擷取單則貼文，不支援整個討論串（Thread）",
-    "noArticles": "不支援 Twitter 長文（Articles），僅支援一般貼文網址（/status/ 格式）",
-    "comingSoon": "Facebook 與 Threads 的網址擷取功能預計於後續版本推出"
+  "loadingOverlay": {
+    "title": "AI 正在分析您的內容",
+    "steps": {
+      "analyzingContent": "正在分析文章內容...",
+      "identifyingKol": "識別 KOL 中...",
+      "identifyingStocks": "辨識投資標的...",
+      "analyzingSentiment": "分析投資情緒...",
+      "extractingArguments": "提取投資論點...",
+      "creatingDraft": "建立草稿中..."
+    }
   },
   "errors": {
     "createDraftFailed": "建立草稿失敗",
-    "tryAgain": "請稍後再試"
+    "tryAgain": "請稍後再試",
+    "unsupportedUrl": "此網址平台尚不支援，請改為貼上文章內容",
+    "aiQuotaExceeded": "AI 分析額度已用完，請下週再試",
+    "fetchFailed": "無法擷取網址內容，請確認網址是否正確",
+    "emptyContent": "請輸入內容"
   }
 }

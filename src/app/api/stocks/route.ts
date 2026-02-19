@@ -2,43 +2,42 @@
 // POST /api/stocks - 新增標的
 
 import { NextRequest, NextResponse } from 'next/server';
+import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { listStocks, createStock } from '@/infrastructure/repositories';
-import type { CreateStockInput } from '@/domain/models';
+import { parsePaginationParams } from '@/lib/api/pagination';
+import { internalError } from '@/lib/api/error';
+import { createStockSchema, parseBody } from '@/lib/api/validation';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') ?? undefined;
-    const page = searchParams.get('page');
-    const limit = searchParams.get('limit');
+    const pagination = parsePaginationParams(searchParams);
+    if (pagination.error) {
+      return NextResponse.json({ error: pagination.error }, { status: 400 });
+    }
     const result = await listStocks({
       search: search || undefined,
-      page: page ? parseInt(page, 10) : undefined,
-      limit: limit ? parseInt(limit, 10) : undefined,
+      page: pagination.data?.page,
+      limit: pagination.data?.limit,
     });
     return NextResponse.json(result);
   } catch (err) {
-    console.error('GET /api/stocks', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to fetch stocks' },
-      { status: 500 }
-    );
+    return internalError(err, 'Failed to fetch stocks');
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = (await request.json()) as CreateStockInput;
-    if (!body?.ticker?.trim() || !body?.name?.trim()) {
-      return NextResponse.json({ error: 'ticker and name are required' }, { status: 400 });
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const stock = await createStock(body);
+    const parsed = await parseBody(request, createStockSchema);
+    if ('error' in parsed) return parsed.error;
+    const stock = await createStock(parsed.data);
     return NextResponse.json(stock);
   } catch (err) {
-    console.error('POST /api/stocks', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to create stock' },
-      { status: 500 }
-    );
+    return internalError(err, 'Failed to create stock');
   }
 }

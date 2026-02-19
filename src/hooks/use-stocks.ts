@@ -13,7 +13,7 @@ import type {
 } from '@/domain/models';
 import { API_ROUTES } from '@/lib/constants';
 
-import type { WinRateStats } from '@/domain/calculators';
+import type { ReturnRateStats } from '@/domain/calculators';
 
 // Query Keys
 export const stockKeys = {
@@ -24,7 +24,7 @@ export const stockKeys = {
   detail: (ticker: string) => [...stockKeys.details(), ticker] as const,
   posts: (ticker: string, params?: Record<string, unknown>) =>
     [...stockKeys.detail(ticker), 'posts', params] as const,
-  winRate: (ticker: string) => [...stockKeys.detail(ticker), 'win-rate'] as const,
+  returnRate: (ticker: string) => [...stockKeys.detail(ticker), 'return-rate'] as const,
   search: (query: string) => [...stockKeys.all, 'search', query] as const,
   prices: (ticker: string, params?: Record<string, unknown>) =>
     [...stockKeys.all, 'prices', ticker, params] as const,
@@ -130,13 +130,13 @@ export function useCreateStock() {
   });
 }
 
-// 取得標的勝率統計
-export function useStockWinRate(ticker: string) {
+// 取得標的報酬率統計
+export function useStockReturnRate(ticker: string) {
   return useQuery({
-    queryKey: stockKeys.winRate(ticker),
-    queryFn: async (): Promise<WinRateStats> => {
-      const res = await fetch(API_ROUTES.STOCK_WIN_RATE(ticker));
-      if (!res.ok) throw new Error('Failed to fetch stock win rate');
+    queryKey: stockKeys.returnRate(ticker),
+    queryFn: async (): Promise<ReturnRateStats> => {
+      const res = await fetch(API_ROUTES.STOCK_RETURN_RATE(ticker));
+      if (!res.ok) throw new Error('Failed to fetch stock return rate');
       return res.json();
     },
     enabled: !!ticker,

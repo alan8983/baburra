@@ -24,5 +24,90 @@
     "noResults": "No drafts matching \"{query}\"",
     "description": "Start entering article content to create a draft"
   },
-  "deleteConfirm": "Are you sure you want to delete this draft?"
+  "deleteConfirm": "Are you sure you want to delete this draft?",
+  "detail": {
+    "backToDrafts": "Back to Drafts",
+    "title": "Edit Draft",
+    "description": "Complete the article information before publishing",
+    "deleteDraft": "Delete Draft",
+    "saveDraft": "Save Draft",
+    "publish": "Publish",
+    "saving": "Saving...",
+    "saved": "Saved",
+    "labels": {
+      "kol": "KOL",
+      "stocks": "Stocks",
+      "postedAt": "Post Time",
+      "content": "Main Content",
+      "contentPlaceholder": "Original KOL post content...",
+      "sourceUrl": "Source URL",
+      "sourceUrlPlaceholder": "https://...",
+      "sentiment": "Sentiment",
+      "sentimentDescription": "Select the overall opinion direction of this post",
+      "perStockSentiment": "Per-Stock Sentiment",
+      "perStockSentimentDescription": "Optional. Set individual sentiment for each stock; leave empty to use overall sentiment.",
+      "clearSentiment": "Clear"
+    },
+    "fetch": {
+      "fetching": "Fetching...",
+      "fetchButton": "Fetch",
+      "invalidUrl": "Please enter a valid URL",
+      "unsupportedUrl": "This URL platform does not support auto-fetching ({platforms}). The URL will be saved as a source link, but please fill in the article content manually.",
+      "detectedPlatform": "Detected {platform} URL, click \"Fetch\" to auto-fill article content",
+      "success": "Content fetched successfully",
+      "failed": "Fetch failed",
+      "failedDescription": "Please try again later",
+      "dialogTitle": "Confirm fields to apply",
+      "dialogDescription": "Select the fields from the fetched content to apply to the draft. Selected fields will be overwritten.",
+      "fieldContent": "Main Content",
+      "fieldImages": "Images ({count})",
+      "fieldPostedAt": "Post Time",
+      "fieldKolName": "KOL Name Suggestion",
+      "fieldKolNameNote": "(will be filled into the KOL name input field)",
+      "fetchedImage": "Fetched image {index}",
+      "applying": "Applying...",
+      "applySelected": "Apply selected fields",
+      "applySuccess": "Fetched content applied",
+      "applyFailed": "Apply failed",
+      "applyFailedDescription": "Please try again later"
+    },
+    "publishDialog": {
+      "title": "Confirm Publish",
+      "description": "Please confirm the information below before publishing",
+      "validationTitle": "Please fill in the following required fields:",
+      "labelKol": "KOL",
+      "labelStocks": "Stocks",
+      "labelSentiment": "Sentiment",
+      "duplicateWarning": "Note: This article URL already exists in the database",
+      "cancel": "Cancel",
+      "publishing": "Publishing...",
+      "confirmPublish": "Confirm Publish",
+      "publishSuccess": "Post published successfully",
+      "publishFailed": "Publish failed",
+      "publishFailedDescription": "Please try again later"
+    },
+    "duplicateWarning": {
+      "title": "This article URL already exists in the database",
+      "createdAt": "Created on {date}",
+      "viewExisting": "View existing post →"
+    },
+    "ai": {
+      "analyzing": "AI analyzing...",
+      "analyzeArguments": "AI Argument Analysis",
+      "argumentCount": "{count} arguments found",
+      "analyzeSuccess": "AI argument analysis complete",
+      "noArguments": "No analyzable arguments found in this article",
+      "analyzeFailed": "AI argument analysis failed",
+      "analyzeFailedDescription": "Please try again later"
+    },
+    "validation": {
+      "kol": "KOL",
+      "stocks": "Stocks",
+      "content": "Main Content",
+      "postedAt": "Post Time",
+      "sentiment": "Sentiment"
+    },
+    "loading": "Loading...",
+    "loadFailed": "Failed to load draft"
+  }
 }

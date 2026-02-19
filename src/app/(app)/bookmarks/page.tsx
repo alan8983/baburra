@@ -2,17 +2,21 @@
 
 import Link from 'next/link';
 import { Bookmark, User, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/constants';
-import { SENTIMENT_LABELS, SENTIMENT_COLORS } from '@/domain/models/post';
+import { SENTIMENT_COLORS } from '@/domain/models/post';
+import { sentimentKey } from '@/lib/utils/sentiment';
 import { formatDateTime } from '@/lib/utils/date';
 import { useBookmarks, useRemoveBookmark } from '@/hooks';
 import { toast } from 'sonner';
 
 export default function BookmarksPage() {
+  const t = useTranslations('bookmarks');
+  const tCommon = useTranslations('common');
   const { data, isLoading, error } = useBookmarks();
   const removeBookmark = useRemoveBookmark();
 
@@ -21,10 +25,10 @@ export default function BookmarksPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold tracking-tight">我的書籤</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
         <Card className="py-12">
           <CardContent className="flex flex-col items-center justify-center text-center">
-            <p className="text-destructive">無法載入書籤列表，請稍後再試。</p>
+            <p className="text-destructive">{t('errors.loadFailed')}</p>
           </CardContent>
         </Card>
       </div>
@@ -35,14 +39,16 @@ export default function BookmarksPage() {
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">我的書籤</h1>
-        <p className="text-muted-foreground">您收藏的文章</p>
+        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+        <p className="text-muted-foreground">{t('description')}</p>
       </div>
 
       {/* Loading */}
       {isLoading && (
         <Card className="py-12">
-          <CardContent className="text-muted-foreground flex justify-center">載入中...</CardContent>
+          <CardContent className="text-muted-foreground flex justify-center">
+            {t('loading')}
+          </CardContent>
         </Card>
       )}
 
@@ -74,7 +80,7 @@ export default function BookmarksPage() {
                               SENTIMENT_COLORS[post.sentiment as keyof typeof SENTIMENT_COLORS]
                             }
                           >
-                            {SENTIMENT_LABELS[post.sentiment as keyof typeof SENTIMENT_LABELS]}
+                            {tCommon(`sentiment.${sentimentKey(post.sentiment)}`)}
                           </Badge>
                           <span className="text-muted-foreground text-sm">
                             {formatDateTime(post.postedAt)}
@@ -103,7 +109,7 @@ export default function BookmarksPage() {
                       className="text-muted-foreground hover:text-destructive shrink-0"
                       onClick={() =>
                         removeBookmark.mutate(post.id, {
-                          onSuccess: () => toast.success('已移除書籤'),
+                          onSuccess: () => toast.success(t('removeSuccess')),
                         })
                       }
                       disabled={removeBookmark.isPending}
@@ -123,8 +129,8 @@ export default function BookmarksPage() {
         <Card className="py-12">
           <CardContent className="flex flex-col items-center justify-center text-center">
             <Bookmark className="text-muted-foreground h-12 w-12" />
-            <h3 className="mt-4 text-lg font-semibold">尚無書籤</h3>
-            <p className="text-muted-foreground mt-2 text-sm">在文章詳情頁點擊書籤按鈕來收藏文章</p>
+            <h3 className="mt-4 text-lg font-semibold">{t('empty.noBookmarks')}</h3>
+            <p className="text-muted-foreground mt-2 text-sm">{t('empty.description')}</p>
           </CardContent>
         </Card>
       )}

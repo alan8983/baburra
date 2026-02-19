@@ -74,12 +74,19 @@ async function readCachedPrices(
 
 /**
  * Check if cached data is valid:
+ * - Empty cache is always invalid
+ * - If earliest cached row is >7 days after requested start, range not covered
  * - If endDate >= today, today's row must exist and fetched_at < 1hr ago
  * - If endDate < today (pure historical), any cached data is valid
- * - Empty cache is always invalid
  */
-function isCacheValid(cached: DbStockPriceRow[], endDate: string): boolean {
+function isCacheValid(cached: DbStockPriceRow[], startDate: string, endDate: string): boolean {
   if (cached.length === 0) return false;
+
+  // Check range coverage: earliest cached row should be near the requested start
+  const earliestCached = new Date(cached[0].date).getTime();
+  const requestedStart = new Date(startDate).getTime();
+  const gapMs = earliestCached - requestedStart;
+  if (gapMs > 7 * 24 * 60 * 60 * 1000) return false; // >7 day gap = missing data
 
   const today = todayStr();
 
@@ -220,7 +227,7 @@ export async function getStockPrices(
   let staleCached: DbStockPriceRow[] = [];
   if (stockId) {
     const cached = await readCachedPrices(stockId, startStr, endStr);
-    if (isCacheValid(cached, endStr)) {
+    if (isCacheValid(cached, startStr, endStr)) {
       return dbRowsToChartData(cached);
     }
     staleCached = cached;

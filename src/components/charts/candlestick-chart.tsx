@@ -8,6 +8,7 @@ import {
   HistogramSeries,
   createSeriesMarkers,
 } from 'lightweight-charts';
+import type { AutoscaleInfo } from 'lightweight-charts';
 import type { CandlestickData, VolumeData } from '@/domain/models/stock';
 import { resolveThemeColors } from './chart-utils';
 
@@ -102,7 +103,20 @@ export function CandlestickChart({
 
     if (volumes.length > 0) {
       chart.addPane();
-      const volumeSeries = chart.addSeries(HistogramSeries, {}, 1);
+      const volumeSeries = chart.addSeries(
+        HistogramSeries,
+        {
+          autoscaleInfoProvider: (original: () => AutoscaleInfo | null) => {
+            const res = original();
+            if (res !== null && res.priceRange) {
+              res.priceRange.minValue = 0;
+              res.priceRange.maxValue *= 1.2; // 120% of max visible volume
+            }
+            return res;
+          },
+        },
+        1
+      );
       volumeSeries.setData(
         volumes.map((v) => ({
           time: v.time,
@@ -111,7 +125,7 @@ export function CandlestickChart({
         }))
       );
       volumeSeries.priceScale().applyOptions({
-        scaleMargins: { top: 0.85, bottom: 0 },
+        scaleMargins: { top: 0.2, bottom: 0 },
         borderVisible: false,
       });
     }

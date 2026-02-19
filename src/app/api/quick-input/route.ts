@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { createDraft, findKolByName } from '@/infrastructure/repositories';
-import { checkAiQuota, consumeAiQuota } from '@/infrastructure/repositories/ai-usage.repository';
+import { consumeAiQuota } from '@/infrastructure/repositories/ai-usage.repository';
 import { getUserTimezone } from '@/infrastructure/repositories/profile.repository';
 import { analyzeDraftContent, extractArguments } from '@/domain/services/ai.service';
 import type { IdentifiedTicker } from '@/domain/services/ai.service';
@@ -46,13 +46,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. 檢查 AI 配額
-    const hasQuota = await checkAiQuota(userId);
-    if (!hasQuota) {
-      return NextResponse.json(
-        { error: { code: 'AI_QUOTA_EXCEEDED', message: 'AI quota exceeded' } },
-        { status: 429 }
-      );
+    // 3. 原子性消耗 AI 配額（先扣再用，避免 race condition）
+    try {
+      await consumeAiQuota(userId);
+    } catch (quotaErr) {
+      if (
+        quotaErr &&
+        typeof quotaErr === 'object' &&
+        'code' in quotaErr &&
+        (quotaErr as { code: string }).code === 'AI_QUOTA_EXCEEDED'
+      ) {
+        return NextResponse.json(
+          { error: { code: 'AI_QUOTA_EXCEEDED', message: 'AI quota exceeded' } },
+          { status: 429 }
+        );
+      }
+      throw quotaErr;
     }
 
     // 4. 偵測輸入類型
@@ -104,6 +113,7 @@ export async function POST(request: NextRequest) {
     let aiStockTickers: IdentifiedTicker[] = [];
     let aiStockNames: string[] = [];
     let aiSentiment: Sentiment | undefined;
+    let aiStockSentiments: Record<string, Sentiment> | undefined;
     let aiPostedAt: Date | undefined;
     let aiAnalyzed = false;
 
@@ -113,6 +123,9 @@ export async function POST(request: NextRequest) {
       aiStockTickers = analysis.stockTickers;
       aiStockNames = analysis.stockTickers.map((t) => `${t.ticker} (${t.name})`);
       aiSentiment = analysis.sentiment;
+      if (Object.keys(analysis.stockSentiments).length > 0) {
+        aiStockSentiments = analysis.stockSentiments;
+      }
       if (analysis.postedAt) {
         aiPostedAt = new Date(analysis.postedAt);
       }
@@ -175,6 +188,7 @@ export async function POST(request: NextRequest) {
       kolNameInput,
       stockNameInputs: aiStockNames.length > 0 ? aiStockNames : undefined,
       sentiment: aiSentiment,
+      stockSentiments: aiStockSentiments,
       postedAt: fetchedPostedAt || aiPostedAt || undefined,
       aiArguments,
     };
@@ -182,12 +196,7 @@ export async function POST(request: NextRequest) {
     // 9. 建立草稿
     const draft = await createDraft(userId, draftInput);
 
-    // 10. 消耗 AI 配額（僅在 AI 實際執行時）
-    if (aiAnalyzed) {
-      await consumeAiQuota(userId);
-    }
-
-    // 11. 回傳結果
+    // 10. 回傳結果
     return NextResponse.json({ draft: { id: draft.id } });
   } catch (error) {
     console.error('POST /api/quick-input error:', error);

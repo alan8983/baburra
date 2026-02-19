@@ -2,37 +2,32 @@
   "title": "Quick Input",
   "description": "Paste KOL investment opinion articles, AI auto-identifies KOL, tickers and sentiment",
   "inputCard": {
-    "title": "Enter Article Content",
-    "description": "Paste article content or URL, the system will automatically identify KOLs and investment targets",
-    "placeholder": "Paste KOL post content or article URL...\n\nFor example:\n- Paste Twitter / X post URL (supports auto-extraction)\n- Directly paste article content\n- Manually enter opinion summary"
+    "placeholder": "Paste article content or a Twitter / X URL..."
   },
   "actions": {
     "createDraft": "Create Draft",
     "analyzing": "Analyzing..."
   },
-  "recentDrafts": {
-    "title": "Recent Drafts",
-    "clickToContinue": "Click to continue editing",
-    "viewAll": "View All",
-    "loading": "Loading...",
-    "empty": "(No content)",
-    "noDrafts": "No drafts yet"
-  },
   "tips": {
-    "title": "Usage Tips",
-    "tip1": "Supports pasting Twitter / X post URLs for auto-extraction and analysis",
-    "tip2": "Paste article content directly, AI will auto-identify KOL, stock tickers and sentiment",
-    "tip3": "AI results can be adjusted on the draft editing page"
+    "hint": "Supports text or Twitter / X URLs — AI will auto-identify KOL, tickers and sentiment"
   },
-  "limitations": {
-    "title": "Twitter / X URL Extraction Limitations",
-    "textOnly": "Only tweet text and author name can be extracted — images, posted time, and avatar are not available",
-    "singleTweet": "Only a single tweet is extracted per URL — full threads are not supported",
-    "noArticles": "Twitter long-form Articles are not supported — only regular post URLs (/status/ format)",
-    "comingSoon": "URL extraction for Facebook and Threads is planned for a future release"
+  "loadingOverlay": {
+    "title": "AI is analyzing your content",
+    "steps": {
+      "analyzingContent": "Analyzing article content...",
+      "identifyingKol": "Identifying KOL...",
+      "identifyingStocks": "Identifying investment targets...",
+      "analyzingSentiment": "Analyzing investment sentiment...",
+      "extractingArguments": "Extracting investment arguments...",
+      "creatingDraft": "Creating draft..."
+    }
   },
   "errors": {
     "createDraftFailed": "Failed to create draft",
-    "tryAgain": "Please try again later"
+    "tryAgain": "Please try again later",
+    "unsupportedUrl": "This URL platform is not supported, please paste article content instead",
+    "aiQuotaExceeded": "AI analysis quota exhausted, please try again next week",
+    "fetchFailed": "Failed to fetch URL content, please check the URL",
+    "emptyContent": "Please enter content"
   }
 }

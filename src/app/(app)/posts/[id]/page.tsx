@@ -1,21 +1,38 @@
 'use client';
 
-import { use } from 'react';
+import { use, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Bookmark, BookmarkCheck, ExternalLink, User } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
+import { ArrowLeft, Bookmark, BookmarkCheck, ExternalLink, Trash2, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ROUTES } from '@/lib/constants';
 import { formatDateTime } from '@/lib/utils/date';
-import { SENTIMENT_LABELS, SENTIMENT_COLORS } from '@/domain/models/post';
+import { SENTIMENT_COLORS } from '@/domain/models/post';
+import { sentimentKey } from '@/lib/utils/sentiment';
 import { useStockPricesForChart } from '@/hooks/use-stock-prices';
-import { CandlestickChart, SentimentLineChart } from '@/components/charts';
-import type { LineChartMarker } from '@/components/charts';
-import { usePost, useBookmarkStatus, useToggleBookmark, usePostArguments } from '@/hooks';
+import {
+  CandlestickChart,
+  SentimentLineChart,
+  ChartToolbar,
+  aggregateCandles,
+  aggregateVolumes,
+  getStartDateForRange,
+} from '@/components/charts';
+import type { LineChartMarker, CandleInterval, TimeRange } from '@/components/charts';
+import {
+  usePost,
+  useBookmarkStatus,
+  useToggleBookmark,
+  usePostArguments,
+  useDeletePost,
+} from '@/hooks';
 import { PostArguments, type TickerArgumentGroup } from '@/components/ai/post-arguments';
 import { FRAMEWORK_CATEGORIES } from '@/domain/models/argument-categories';
 import type { PostArgumentResponse } from '@/hooks/use-ai';
@@ -38,39 +55,42 @@ function PostChartTab({
   kolName,
   postId,
 }: {
-  stocks: { id: string; ticker: string; name: string }[];
+  stocks: { id: string; ticker: string; name: string; sentiment: Sentiment | null }[];
   postedAt: Date | string;
   sentiment: number;
   kolName: string;
   postId: string;
 }) {
+  const t = useTranslations('posts');
   const dateStr = toDateString(postedAt);
-  const marker: LineChartMarker = {
-    time: dateStr,
-    sentiment,
-    text: kolName,
-    postId,
-  };
 
   if (stocks.length === 0) {
     return (
       <Card>
         <CardContent className="flex h-[300px] items-center justify-center">
-          <p className="text-muted-foreground">此文章無關聯標的</p>
+          <p className="text-muted-foreground">{t('detail.noStocks')}</p>
         </CardContent>
       </Card>
     );
   }
   return (
     <div className="space-y-6">
-      {stocks.map((stock) => (
-        <PostStockChart
-          key={stock.id}
-          ticker={stock.ticker}
-          name={stock.name}
-          sentimentMarker={marker}
-        />
-      ))}
+      {stocks.map((stock) => {
+        const marker: LineChartMarker = {
+          time: dateStr,
+          sentiment: stock.sentiment ?? sentiment,
+          text: kolName,
+          postId,
+        };
+        return (
+          <PostStockChart
+            key={stock.id}
+            ticker={stock.ticker}
+            name={stock.name}
+            sentimentMarker={marker}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -84,7 +104,22 @@ function PostStockChart({
   name: string;
   sentimentMarker: LineChartMarker;
 }) {
-  const { data, isLoading, error } = useStockPricesForChart(ticker);
+  const t = useTranslations('posts');
+  const [interval, setInterval] = useState<CandleInterval>('day');
+  const [timeRange, setTimeRange] = useState<TimeRange>('1Y');
+
+  const startDate = useMemo(() => getStartDateForRange(timeRange), [timeRange]);
+  const { data, isLoading, error } = useStockPricesForChart(ticker, { startDate });
+
+  const aggCandles = useMemo(
+    () => (data ? aggregateCandles(data.candles, interval) : []),
+    [data, interval]
+  );
+  const aggVolumes = useMemo(
+    () => (data ? aggregateVolumes(data.volumes, data.candles, interval) : []),
+    [data, interval]
+  );
+
   if (isLoading) {
     return (
       <Card>
@@ -93,7 +128,7 @@ function PostStockChart({
           <CardDescription>{name}</CardDescription>
         </CardHeader>
         <CardContent className="flex h-[360px] items-center justify-center">
-          <p className="text-muted-foreground">載入股價中...</p>
+          <p className="text-muted-foreground">{t('detail.loadingPrice')}</p>
         </CardContent>
       </Card>
     );
@@ -106,7 +141,7 @@ function PostStockChart({
           <CardDescription>{name}</CardDescription>
         </CardHeader>
         <CardContent className="flex h-[360px] items-center justify-center">
-          <p className="text-muted-foreground">{error?.message ?? '無法載入股價'}</p>
+          <p className="text-muted-foreground">{error?.message ?? t('detail.priceError')}</p>
         </CardContent>
       </Card>
     );
@@ -119,7 +154,7 @@ function PostStockChart({
           <CardDescription>{name}</CardDescription>
         </CardHeader>
         <CardContent className="flex h-[360px] items-center justify-center">
-          <p className="text-muted-foreground">此標的暫無股價資料</p>
+          <p className="text-muted-foreground">{t('detail.noPriceData')}</p>
         </CardContent>
       </Card>
     );
@@ -129,12 +164,20 @@ function PostStockChart({
       <Card>
         <CardHeader>
           <CardTitle>{ticker}</CardTitle>
-          <CardDescription>{name} · K 線圖</CardDescription>
+          <CardDescription>
+            {name} · {t('detail.chartDescription')}
+          </CardDescription>
         </CardHeader>
         <CardContent>
+          <ChartToolbar
+            interval={interval}
+            onIntervalChange={setInterval}
+            timeRange={timeRange}
+            onTimeRangeChange={setTimeRange}
+          />
           <CandlestickChart
-            candles={data.candles}
-            volumes={data.volumes}
+            candles={aggCandles}
+            volumes={aggVolumes}
             height={360}
             className="rounded-lg border"
           />
@@ -142,8 +185,10 @@ function PostStockChart({
       </Card>
       <Card>
         <CardHeader>
-          <CardTitle>KOL 觀點分析</CardTitle>
-          <CardDescription>{name} · 收盤價走勢與本篇發文標記</CardDescription>
+          <CardTitle>{t('detail.sentimentChart.title')}</CardTitle>
+          <CardDescription>
+            {name} · {t('detail.chartDescription')}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <SentimentLineChart
@@ -163,7 +208,8 @@ function PostStockChart({
  */
 function transformPostArguments(
   args: PostArgumentResponse[],
-  stocks: { id: string; ticker: string; name: string }[]
+  stocks: { id: string; ticker: string; name: string }[],
+  fallbackParentName: string
 ): TickerArgumentGroup[] {
   const stockMap = new Map(stocks.map((s) => [s.id, s]));
   const grouped = new Map<string, PostArgumentResponse[]>();
@@ -183,7 +229,7 @@ function transformPostArguments(
           id: arg.id,
           categoryCode: arg.category.code,
           categoryName: fw?.name ?? arg.category.name,
-          parentName: fw?.parentName ?? '其他',
+          parentName: fw?.parentName ?? fallbackParentName,
           originalText: arg.originalText,
           summary: arg.summary,
           sentiment: arg.sentiment as Sentiment,
@@ -195,22 +241,27 @@ function transformPostArguments(
 }
 
 export default function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = useTranslations('posts');
+  const tCommon = useTranslations('common');
+  const router = useRouter();
   const { id } = use(params);
   const { data: post, isLoading, error } = usePost(id);
   const { data: postArgs } = usePostArguments(id);
   const { data: bookmarkData } = useBookmarkStatus(id);
   const toggleBookmark = useToggleBookmark(id);
+  const deletePost = useDeletePost();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const isBookmarked = bookmarkData?.isBookmarked ?? false;
 
   if (error || (!isLoading && !post)) {
     return (
       <div className="mx-auto max-w-7xl space-y-6">
         <Button variant="ghost" size="sm" asChild>
-          <Link href={ROUTES.POSTS}>返回文章列表</Link>
+          <Link href={ROUTES.POSTS}>{t('detail.backToList')}</Link>
         </Button>
         <Card className="py-12">
           <CardContent className="flex flex-col items-center justify-center text-center">
-            <p className="text-destructive">無法載入文章或找不到該文章</p>
+            <p className="text-destructive">{t('detail.priceError')}</p>
           </CardContent>
         </Card>
       </div>
@@ -220,9 +271,9 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
     return (
       <div className="mx-auto max-w-7xl space-y-6">
         <Button variant="ghost" size="sm" asChild>
-          <Link href={ROUTES.POSTS}>返回文章列表</Link>
+          <Link href={ROUTES.POSTS}>{t('detail.backToList')}</Link>
         </Button>
-        <p className="text-muted-foreground">載入中...</p>
+        <p className="text-muted-foreground">{t('loading')}</p>
       </div>
     );
   }
@@ -234,33 +285,72 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
         <Button variant="ghost" size="sm" asChild>
           <Link href={ROUTES.POSTS}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            返回文章列表
+            {t('detail.backToList')}
           </Link>
         </Button>
-        <Button
-          variant={isBookmarked ? 'default' : 'outline'}
-          size="sm"
-          onClick={() =>
-            toggleBookmark.mutate(isBookmarked, {
-              onSuccess: () => {
-                toast.success(isBookmarked ? '已移除書籤' : '已加入書籤');
-              },
-            })
-          }
-          disabled={toggleBookmark.isPending}
-        >
-          {isBookmarked ? (
-            <>
-              <BookmarkCheck className="mr-2 h-4 w-4" />
-              已加入書籤
-            </>
-          ) : (
-            <>
-              <Bookmark className="mr-2 h-4 w-4" />
-              加入書籤
-            </>
-          )}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Popover open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-3">
+              <p className="text-sm font-medium">{t('detail.deleteConfirm')}</p>
+              <div className="mt-2 flex gap-2">
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={deletePost.isPending}
+                  onClick={() =>
+                    deletePost.mutate(id, {
+                      onSuccess: () => {
+                        toast.success(t('detail.deleteSuccess'));
+                        router.push(ROUTES.POSTS);
+                      },
+                      onError: () => toast.error(t('detail.deleteFailed')),
+                    })
+                  }
+                >
+                  {t('detail.deleteConfirmYes')}
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setShowDeleteConfirm(false)}>
+                  {t('detail.deleteConfirmNo')}
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Button
+            variant={isBookmarked ? 'default' : 'outline'}
+            size="sm"
+            onClick={() =>
+              toggleBookmark.mutate(isBookmarked, {
+                onSuccess: () => {
+                  toast.success(
+                    isBookmarked ? t('detail.bookmarkRemoved') : t('detail.bookmarkAdded')
+                  );
+                },
+              })
+            }
+            disabled={toggleBookmark.isPending}
+          >
+            {isBookmarked ? (
+              <>
+                <BookmarkCheck className="mr-2 h-4 w-4" />
+                {t('detail.bookmarked')}
+              </>
+            ) : (
+              <>
+                <Bookmark className="mr-2 h-4 w-4" />
+                {t('detail.bookmark')}
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Shared Heading */}
@@ -278,10 +368,10 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                 {post.kol.name}
               </Link>
               <Badge variant="outline" className={SENTIMENT_COLORS[post.sentiment]}>
-                {SENTIMENT_LABELS[post.sentiment]}
+                {tCommon(`sentiment.${sentimentKey(post.sentiment)}`)}
               </Badge>
               {post.sentimentAiGenerated && (
-                <span className="text-muted-foreground text-xs">(AI 分析)</span>
+                <span className="text-muted-foreground text-xs">{t('detail.aiGenerated')}</span>
               )}
             </div>
             <p className="text-muted-foreground text-sm">{formatDateTime(post.postedAt)}</p>
@@ -294,7 +384,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
               className="text-primary hidden items-center gap-1 text-sm hover:underline sm:inline-flex"
             >
               <ExternalLink className="h-3 w-3" />
-              查看原文 ({post.sourcePlatform})
+              {t('detail.sourceLink', { platform: post.sourcePlatform })}
             </a>
           )}
         </div>
@@ -316,6 +406,14 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                     {stock.ticker}
                   </Link>
                   <span className="text-muted-foreground">{stock.name}</span>
+                  {stock.sentiment !== null && stock.sentiment !== post.sentiment && (
+                    <Badge
+                      variant="outline"
+                      className={SENTIMENT_COLORS[stock.sentiment as Sentiment]}
+                    >
+                      {tCommon(`sentiment.${sentimentKey(stock.sentiment)}`)}
+                    </Badge>
+                  )}
                   <span
                     className={
                       changes?.day5 != null
@@ -325,7 +423,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                         : 'text-muted-foreground'
                     }
                   >
-                    5日:{' '}
+                    {t('detail.priceChange5d')}{' '}
                     {changes?.day5 != null
                       ? `${changes.day5 >= 0 ? '+' : ''}${changes.day5.toFixed(1)}%`
                       : '—'}
@@ -339,7 +437,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                         : 'text-muted-foreground'
                     }
                   >
-                    30日:{' '}
+                    {t('detail.priceChange30d')}{' '}
                     {changes?.day30 != null
                       ? `${changes.day30 >= 0 ? '+' : ''}${changes.day30.toFixed(1)}%`
                       : '—'}
@@ -359,7 +457,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
             className="text-primary inline-flex items-center gap-1 text-sm hover:underline sm:hidden"
           >
             <ExternalLink className="h-3 w-3" />
-            查看原文 ({post.sourcePlatform})
+            {t('detail.sourceLink', { platform: post.sourcePlatform })}
           </a>
         )}
       </div>
@@ -382,7 +480,12 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                 <div className="mt-4 grid grid-cols-2 gap-2">
                   {post.images.map((img, i) => (
                     <div key={i} className="relative aspect-video overflow-hidden rounded-lg">
-                      <Image src={img} alt={`圖片 ${i + 1}`} fill className="object-cover" />
+                      <Image
+                        src={img}
+                        alt={t('detail.image', { index: i + 1 })}
+                        fill
+                        className="object-cover"
+                      />
                     </div>
                   ))}
                 </div>
@@ -405,7 +508,9 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
 
       {/* Arguments section */}
       {postArgs && postArgs.length > 0 && (
-        <PostArguments tickerGroups={transformPostArguments(postArgs, post.stocks)} />
+        <PostArguments
+          tickerGroups={transformPostArguments(postArgs, post.stocks, tCommon('ai.otherCategory'))}
+        />
       )}
     </div>
   );

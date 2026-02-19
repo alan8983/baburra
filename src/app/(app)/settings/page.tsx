@@ -21,20 +21,25 @@ import { useAuth } from '@/hooks/use-auth';
 import { useProfile, useUpdateProfile } from '@/hooks/use-profile';
 import { createClient } from '@/infrastructure/supabase/client';
 
-const TIMEZONE_OPTIONS = [
-  { value: 'Asia/Taipei', label: '台北 (UTC+8)' },
-  { value: 'Asia/Shanghai', label: '上海 (UTC+8)' },
-  { value: 'Asia/Tokyo', label: '東京 (UTC+9)' },
-  { value: 'Asia/Hong_Kong', label: '香港 (UTC+8)' },
-  { value: 'Asia/Singapore', label: '新加坡 (UTC+8)' },
-  { value: 'America/New_York', label: '紐約 (UTC-5)' },
-  { value: 'America/Los_Angeles', label: '洛杉磯 (UTC-8)' },
-  { value: 'Europe/London', label: '倫敦 (UTC+0)' },
-  { value: 'UTC', label: 'UTC' },
+const TIMEZONE_OPTION_KEYS = [
+  { value: 'Asia/Taipei', key: 'taipei' },
+  { value: 'Asia/Shanghai', key: 'shanghai' },
+  { value: 'Asia/Tokyo', key: 'tokyo' },
+  { value: 'Asia/Hong_Kong', key: 'hongkong' },
+  { value: 'Asia/Singapore', key: 'singapore' },
+  { value: 'America/New_York', key: 'newYork' },
+  { value: 'America/Los_Angeles', key: 'losAngeles' },
+  { value: 'Europe/London', key: 'london' },
+  { value: 'UTC', key: 'utc' },
 ] as const;
 
 export default function SettingsPage() {
   const t = useTranslations('settings');
+
+  const TIMEZONE_OPTIONS = TIMEZONE_OPTION_KEYS.map((tz) => ({
+    value: tz.value,
+    label: t(`timezone.options.${tz.key}`),
+  }));
   const { user, loading: authLoading } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const updateProfile = useUpdateProfile();
@@ -161,7 +166,7 @@ export default function SettingsPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t('profile.email')}</Label>
             <Input
               id="email"
               type="email"
@@ -241,7 +246,7 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div>
-              <p className="font-medium">Free Plan</p>
+              <p className="font-medium">{t('subscription.freePlanName')}</p>
               <p className="text-muted-foreground text-sm">{t('subscription.freeDescription')}</p>
             </div>
             <span className="bg-primary/10 text-primary rounded-full px-3 py-1 text-sm font-medium">
@@ -254,12 +259,12 @@ export default function SettingsPage() {
           <div className="rounded-lg border p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-medium">Premium Plan</p>
+                <p className="font-medium">{t('subscription.premiumPlanName')}</p>
                 <p className="text-muted-foreground text-sm">
                   {t('subscription.premiumDescription')}
                 </p>
               </div>
-              <p className="font-bold">$9.99/月</p>
+              <p className="font-bold">{t('subscription.premiumPrice')}</p>
             </div>
             <Button className="mt-4 w-full">{t('subscription.upgrade')}</Button>
           </div>

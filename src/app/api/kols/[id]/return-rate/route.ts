@@ -1,15 +1,15 @@
-// KOL 勝率 API
-// GET /api/kols/[id]/win-rate - 取得 KOL 的勝率統計
+// KOL 報酬率 API
+// GET /api/kols/[id]/return-rate - 取得 KOL 的報酬率統計
 
 import { NextResponse } from 'next/server';
 import { listPosts } from '@/infrastructure/repositories/post.repository';
 import { getStockPrices } from '@/infrastructure/repositories/stock-price.repository';
 import {
   calculatePriceChanges,
-  calculateWinRateStats,
-  type PostForWinRate,
+  calculateReturnRateStats,
+  type PostForReturnRate,
 } from '@/domain/calculators';
-import type { PriceChangeByPeriod } from '@/domain/models';
+import type { PriceChangeByPeriod, Sentiment } from '@/domain/models';
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -22,16 +22,44 @@ export async function GET(request: Request, context: RouteContext) {
     // 1. 取得 KOL 的所有文章
     const { data: posts } = await listPosts({
       kolId: id,
-      limit: 1000, // 取得所有文章以計算完整勝率
+      limit: 1000, // 取得所有文章以計算完整報酬率
     });
 
     if (posts.length === 0) {
       return NextResponse.json({
-        day5: { period: 5, total: 0, wins: 0, losses: 0, rate: null },
-        day30: { period: 30, total: 0, wins: 0, losses: 0, rate: null },
-        day90: { period: 90, total: 0, wins: 0, losses: 0, rate: null },
-        day365: { period: 365, total: 0, wins: 0, losses: 0, rate: null },
-        overall: { total: 0, avgWinRate: null },
+        day5: {
+          period: 5,
+          total: 0,
+          positiveCount: 0,
+          negativeCount: 0,
+          naCount: 0,
+          avgReturn: null,
+        },
+        day30: {
+          period: 30,
+          total: 0,
+          positiveCount: 0,
+          negativeCount: 0,
+          naCount: 0,
+          avgReturn: null,
+        },
+        day90: {
+          period: 90,
+          total: 0,
+          positiveCount: 0,
+          negativeCount: 0,
+          naCount: 0,
+          avgReturn: null,
+        },
+        day365: {
+          period: 365,
+          total: 0,
+          positiveCount: 0,
+          negativeCount: 0,
+          naCount: 0,
+          avgReturn: null,
+        },
+        overall: { total: 0, avgReturn: null },
       });
     }
 
@@ -46,7 +74,7 @@ export async function GET(request: Request, context: RouteContext) {
       }
     }
 
-    // 3. 取得所有標的的股價資料（使用 365 天範圍）
+    // 3. 取得所有標的的股價資料
     const candlesByStock: Record<string, Awaited<ReturnType<typeof getStockPrices>>['candles']> =
       {};
 
@@ -76,7 +104,7 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     // 4. 計算每篇文章的漲跌幅
-    const postsForWinRate: PostForWinRate[] = posts.map((post) => {
+    const postsForReturnRate: PostForReturnRate[] = posts.map((post) => {
       const priceChanges: Record<string, PriceChangeByPeriod> = {};
 
       for (const stock of post.stocks) {
@@ -93,19 +121,28 @@ export async function GET(request: Request, context: RouteContext) {
         }
       }
 
+      // Build per-stock sentiments from post.stocks
+      const stockSentiments: Record<string, Sentiment> = {};
+      for (const s of post.stocks) {
+        if (s.sentiment !== null) {
+          stockSentiments[s.id] = s.sentiment;
+        }
+      }
+
       return {
         id: post.id,
         sentiment: post.sentiment,
+        ...(Object.keys(stockSentiments).length > 0 && { stockSentiments }),
         priceChanges,
       };
     });
 
-    // 5. 計算勝率
-    const stats = calculateWinRateStats(postsForWinRate);
+    // 5. 計算報酬率
+    const stats = calculateReturnRateStats(postsForReturnRate);
 
     return NextResponse.json(stats);
   } catch (error) {
-    console.error('Failed to calculate KOL win rate:', error);
-    return NextResponse.json({ error: 'Failed to calculate win rate' }, { status: 500 });
+    console.error('Failed to calculate KOL return rate:', error);
+    return NextResponse.json({ error: 'Failed to calculate return rate' }, { status: 500 });
   }
 }

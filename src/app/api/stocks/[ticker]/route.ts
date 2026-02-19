@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getStockByTicker } from '@/infrastructure/repositories';
+import { internalError } from '@/lib/api/error';
 
 export async function GET(
   _request: NextRequest,
@@ -13,10 +14,6 @@ export async function GET(
     if (!stock) return NextResponse.json({ error: 'Stock not found' }, { status: 404 });
     return NextResponse.json(stock);
   } catch (err) {
-    console.error('GET /api/stocks/[ticker]', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to fetch stock' },
-      { status: 500 }
-    );
+    return internalError(err, 'Failed to fetch stock');
   }
 }

@@ -86,13 +86,23 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'No path provided' }, { status: 400 });
     }
 
-    // 確認是用戶自己的檔案
-    if (!path.startsWith(`${userId}/`)) {
+    const normalizedPath = path
+      .split('/')
+      .map((segment) => segment.trim())
+      .filter(Boolean)
+      .join('/');
+
+    // 確認是用戶自己的檔案，且禁止路徑跳脫
+    if (
+      normalizedPath.includes('..') ||
+      normalizedPath.includes('\\') ||
+      !normalizedPath.startsWith(`${userId}/`)
+    ) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const supabase = await createServerSupabaseClient();
-    const { error } = await supabase.storage.from(BUCKET_NAME).remove([path]);
+    const { error } = await supabase.storage.from(BUCKET_NAME).remove([normalizedPath]);
 
     if (error) {
       console.error('Delete error:', error);

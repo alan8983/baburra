@@ -9,6 +9,7 @@ import input from './input.json';
 import settings from './settings.json';
 import auth from './auth.json';
 import forms from './forms.json';
+import bookmarks from './bookmarks.json';
 
 const zhTWMessages = {
   common,
@@ -21,6 +22,7 @@ const zhTWMessages = {
   settings,
   auth,
   forms,
+  bookmarks,
 };
 
 export default zhTWMessages;

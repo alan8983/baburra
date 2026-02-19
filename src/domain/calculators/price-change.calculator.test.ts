@@ -55,7 +55,7 @@ describe('price-change.calculator', () => {
       expect(result.day30).toBe(15);
       // 基準價 100，90天後 90 = -10%
       expect(result.day90).toBe(-10);
-      // 365 天超出資料範圍
+      // 365 天尚未到達（期間未到），回傳 null
       expect(result.day365).toBeNull();
     });
 

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useTranslations } from 'next-intl';
 import { TrendingUp, Loader2, Mail, Lock, User, AlertCircle } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,7 @@ import { ROUTES } from '@/lib/constants';
 import { useAuth } from '@/hooks/use-auth';
 
 export default function RegisterPage() {
+  const t = useTranslations('auth');
   const { signUp, loading, error } = useAuth();
 
   const [displayName, setDisplayName] = useState('');
@@ -25,19 +27,18 @@ export default function RegisterPage() {
     e.preventDefault();
     setFormError(null);
 
-    // 驗證
     if (!email || !password || !confirmPassword) {
-      setFormError('請填寫所有必填欄位');
+      setFormError(t('register.errors.fillRequiredFields'));
       return;
     }
 
     if (password.length < 6) {
-      setFormError('密碼至少需要 6 個字元');
+      setFormError(t('register.errors.passwordMinLength'));
       return;
     }
 
     if (password !== confirmPassword) {
-      setFormError('兩次輸入的密碼不一致');
+      setFormError(t('register.errors.passwordMismatch'));
       return;
     }
 
@@ -45,7 +46,7 @@ export default function RegisterPage() {
     try {
       await signUp(email, password, displayName || undefined);
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : '註冊失敗，請稍後再試');
+      setFormError(err instanceof Error ? err.message : t('register.errors.registerFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -61,11 +62,10 @@ export default function RegisterPage() {
           <div className="bg-primary mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg">
             <TrendingUp className="text-primary-foreground h-6 w-6" />
           </div>
-          <CardTitle className="text-2xl font-bold">建立帳號</CardTitle>
-          <CardDescription>開始追蹤 KOL 的投資觀點</CardDescription>
+          <CardTitle className="text-2xl font-bold">{t('register.title')}</CardTitle>
+          <CardDescription>{t('register.description')}</CardDescription>
         </CardHeader>
         <CardContent>
-          {/* 錯誤訊息 */}
           {displayError && (
             <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
               <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
@@ -75,13 +75,13 @@ export default function RegisterPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="displayName">顯示名稱</Label>
+              <Label htmlFor="displayName">{t('register.displayName')}</Label>
               <div className="relative">
                 <User className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                 <Input
                   id="displayName"
                   type="text"
-                  placeholder="您的暱稱（選填）"
+                  placeholder={t('register.displayNamePlaceholder')}
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   className="pl-10"
@@ -92,14 +92,14 @@ export default function RegisterPage() {
 
             <div className="space-y-2">
               <Label htmlFor="email">
-                電子郵件 <span className="text-destructive">*</span>
+                {t('register.email')} <span className="text-destructive">*</span>
               </Label>
               <div className="relative">
                 <Mail className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder={t('register.emailPlaceholder')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="pl-10"
@@ -111,14 +111,14 @@ export default function RegisterPage() {
 
             <div className="space-y-2">
               <Label htmlFor="password">
-                密碼 <span className="text-destructive">*</span>
+                {t('register.password')} <span className="text-destructive">*</span>
               </Label>
               <div className="relative">
                 <Lock className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                 <Input
                   id="password"
                   type="password"
-                  placeholder="至少 6 個字元"
+                  placeholder={t('register.passwordPlaceholder')}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="pl-10"
@@ -130,14 +130,14 @@ export default function RegisterPage() {
 
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">
-                確認密碼 <span className="text-destructive">*</span>
+                {t('register.confirmPassword')} <span className="text-destructive">*</span>
               </Label>
               <div className="relative">
                 <Lock className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
                 <Input
                   id="confirmPassword"
                   type="password"
-                  placeholder="再次輸入密碼"
+                  placeholder={t('register.confirmPasswordPlaceholder')}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="pl-10"
@@ -151,29 +151,29 @@ export default function RegisterPage() {
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  註冊中...
+                  {t('register.submitting')}
                 </>
               ) : (
-                '建立帳號'
+                t('register.submit')
               )}
             </Button>
           </form>
 
           <div className="text-muted-foreground mt-6 text-center text-sm">
-            已經有帳號？{' '}
+            {t('register.hasAccount')}{' '}
             <Link href={ROUTES.LOGIN} className="text-primary font-medium hover:underline">
-              立即登入
+              {t('register.loginNow')}
             </Link>
           </div>
 
           <p className="text-muted-foreground mt-4 text-center text-xs">
-            註冊即表示您同意我們的
+            {t('register.terms')}
             <Link href="/terms" className="underline">
-              服務條款
+              {t('register.termsLink')}
             </Link>
-            和
+            {' & '}
             <Link href="/privacy" className="underline">
-              隱私政策
+              {t('register.privacyLink')}
             </Link>
           </p>
         </CardContent>

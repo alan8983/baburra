@@ -24,5 +24,90 @@
     "noResults": "沒有符合「{query}」的草稿",
     "description": "開始輸入文章內容來建立草稿"
   },
-  "deleteConfirm": "確定要刪除此草稿？"
+  "deleteConfirm": "確定要刪除此草稿？",
+  "detail": {
+    "backToDrafts": "返回草稿列表",
+    "title": "編輯草稿",
+    "description": "完善文章資訊後即可發布",
+    "deleteDraft": "刪除草稿",
+    "saveDraft": "儲存草稿",
+    "publish": "發布",
+    "saving": "儲存中...",
+    "saved": "已儲存",
+    "labels": {
+      "kol": "KOL",
+      "stocks": "投資標的",
+      "postedAt": "發文時間",
+      "content": "主文內容",
+      "contentPlaceholder": "KOL 的原始發文內容...",
+      "sourceUrl": "原始網址",
+      "sourceUrlPlaceholder": "https://...",
+      "sentiment": "走勢情緒",
+      "sentimentDescription": "選擇這篇文章的整體看法方向",
+      "perStockSentiment": "個股情緒",
+      "perStockSentimentDescription": "選填。為不同標的設定個別情緒，留空則使用整體情緒。",
+      "clearSentiment": "清除"
+    },
+    "fetch": {
+      "fetching": "擷取中...",
+      "fetchButton": "擷取",
+      "invalidUrl": "請輸入有效的 URL",
+      "unsupportedUrl": "此網址平台尚不支援自動擷取內容（支援：{platforms}）。網址仍會作為來源連結保存，但請手動填寫文章內容。",
+      "detectedPlatform": "偵測到 {platform} 網址，點擊「擷取」可自動帶入文章內容",
+      "success": "內容擷取成功",
+      "failed": "擷取失敗",
+      "failedDescription": "請稍後再試",
+      "dialogTitle": "確認要套用的欄位",
+      "dialogDescription": "請選擇要從擷取的內容中套用到草稿的欄位。已選取的欄位將會被覆蓋。",
+      "fieldContent": "主文內容",
+      "fieldImages": "圖片 ({count} 張)",
+      "fieldPostedAt": "發文時間",
+      "fieldKolName": "KOL 名稱建議",
+      "fieldKolNameNote": "（將填入到 KOL 名稱輸入欄位）",
+      "fetchedImage": "擷取圖片 {index}",
+      "applying": "套用中...",
+      "applySelected": "套用選取的欄位",
+      "applySuccess": "已套用擷取的內容",
+      "applyFailed": "套用失敗",
+      "applyFailedDescription": "請稍後再試"
+    },
+    "publishDialog": {
+      "title": "確認發布",
+      "description": "請確認以下資訊無誤後再發布文章",
+      "validationTitle": "請先填寫以下必填欄位：",
+      "labelKol": "KOL",
+      "labelStocks": "標的",
+      "labelSentiment": "情緒",
+      "duplicateWarning": "注意：此文章網址已存在於資料庫中",
+      "cancel": "取消",
+      "publishing": "發布中...",
+      "confirmPublish": "確認發布",
+      "publishSuccess": "文章發布成功",
+      "publishFailed": "發布失敗",
+      "publishFailedDescription": "請稍後再試"
+    },
+    "duplicateWarning": {
+      "title": "此文章網址已存在於資料庫中",
+      "createdAt": "建立於 {date}",
+      "viewExisting": "查看現有文章 →"
+    },
+    "ai": {
+      "analyzing": "AI 分析中...",
+      "analyzeArguments": "AI 論點分析",
+      "argumentCount": "已有 {count} 筆論點",
+      "analyzeSuccess": "AI 論點分析完成",
+      "noArguments": "未在文章中找到可分析的論點",
+      "analyzeFailed": "AI 論點分析失敗",
+      "analyzeFailedDescription": "請稍後再試"
+    },
+    "validation": {
+      "kol": "KOL",
+      "stocks": "投資標的",
+      "content": "主文內容",
+      "postedAt": "發文時間",
+      "sentiment": "走勢情緒"
+    },
+    "loading": "載入中...",
+    "loadFailed": "無法載入草稿"
+  }
 }

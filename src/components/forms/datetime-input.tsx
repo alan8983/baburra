@@ -1,6 +1,8 @@
 'use client';
 
 import * as React from 'react';
+import { useTranslations } from 'next-intl';
+import { useLocale } from 'next-intl';
 import { Calendar, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -12,53 +14,6 @@ interface QuickTimeOption {
   label: string;
   getTime: () => Date;
 }
-
-const QUICK_TIME_OPTIONS: QuickTimeOption[] = [
-  {
-    label: '現在',
-    getTime: () => new Date(),
-  },
-  {
-    label: '1小時前',
-    getTime: () => {
-      const date = new Date();
-      date.setHours(date.getHours() - 1);
-      return date;
-    },
-  },
-  {
-    label: '3小時前',
-    getTime: () => {
-      const date = new Date();
-      date.setHours(date.getHours() - 3);
-      return date;
-    },
-  },
-  {
-    label: '1天前',
-    getTime: () => {
-      const date = new Date();
-      date.setDate(date.getDate() - 1);
-      return date;
-    },
-  },
-  {
-    label: '3天前',
-    getTime: () => {
-      const date = new Date();
-      date.setDate(date.getDate() - 3);
-      return date;
-    },
-  },
-  {
-    label: '1週前',
-    getTime: () => {
-      const date = new Date();
-      date.setDate(date.getDate() - 7);
-      return date;
-    },
-  },
-];
 
 // 將 Date 轉換為 datetime-local 格式
 function formatDateTimeLocal(date: Date): string {
@@ -109,6 +64,56 @@ export function DatetimeInput({
   min,
   max,
 }: DatetimeInputProps) {
+  const t = useTranslations('forms');
+  const locale = useLocale();
+
+  const QUICK_TIME_OPTIONS: QuickTimeOption[] = [
+    {
+      label: t('datetimeInput.quickOptions.now'),
+      getTime: () => new Date(),
+    },
+    {
+      label: t('datetimeInput.quickOptions.1hAgo'),
+      getTime: () => {
+        const date = new Date();
+        date.setHours(date.getHours() - 1);
+        return date;
+      },
+    },
+    {
+      label: t('datetimeInput.quickOptions.3hAgo'),
+      getTime: () => {
+        const date = new Date();
+        date.setHours(date.getHours() - 3);
+        return date;
+      },
+    },
+    {
+      label: t('datetimeInput.quickOptions.1dAgo'),
+      getTime: () => {
+        const date = new Date();
+        date.setDate(date.getDate() - 1);
+        return date;
+      },
+    },
+    {
+      label: t('datetimeInput.quickOptions.3dAgo'),
+      getTime: () => {
+        const date = new Date();
+        date.setDate(date.getDate() - 3);
+        return date;
+      },
+    },
+    {
+      label: t('datetimeInput.quickOptions.1wAgo'),
+      getTime: () => {
+        const date = new Date();
+        date.setDate(date.getDate() - 7);
+        return date;
+      },
+    },
+  ];
+
   // 將 Date 轉換為 input value
   const inputValue = React.useMemo(() => {
     return value ? formatDateTimeLocal(value) : '';
@@ -177,8 +182,8 @@ export function DatetimeInput({
       {/* 顯示已選時間 */}
       {value && (
         <p className="text-muted-foreground text-xs">
-          已選擇：
-          {value.toLocaleString('zh-TW', {
+          {t('datetimeInput.selected')}
+          {value.toLocaleString(locale, {
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
@@ -193,7 +198,10 @@ export function DatetimeInput({
 }
 
 // 格式化相對時間的輔助函數
-export function formatRelativeTime(date: Date): string {
+export function formatRelativeTime(
+  date: Date,
+  t: (key: string, values?: Record<string, unknown>) => string
+): string {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffSecs = Math.floor(diffMs / 1000);
@@ -202,21 +210,21 @@ export function formatRelativeTime(date: Date): string {
   const diffDays = Math.floor(diffHours / 24);
 
   if (diffSecs < 60) {
-    return '剛剛';
+    return t('datetimeInput.justNow');
   } else if (diffMins < 60) {
-    return `${diffMins} 分鐘前`;
+    return t('datetimeInput.minutesAgo', { count: diffMins });
   } else if (diffHours < 24) {
-    return `${diffHours} 小時前`;
+    return t('datetimeInput.hoursAgo', { count: diffHours });
   } else if (diffDays < 7) {
-    return `${diffDays} 天前`;
+    return t('datetimeInput.daysAgo', { count: diffDays });
   } else if (diffDays < 30) {
     const weeks = Math.floor(diffDays / 7);
-    return `${weeks} 週前`;
+    return t('datetimeInput.weeksAgo', { count: weeks });
   } else if (diffDays < 365) {
     const months = Math.floor(diffDays / 30);
-    return `${months} 個月前`;
+    return t('datetimeInput.monthsAgo', { count: months });
   } else {
     const years = Math.floor(diffDays / 365);
-    return `${years} 年前`;
+    return t('datetimeInput.yearsAgo', { count: years });
   }
 }

@@ -5,6 +5,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { API_ROUTES } from '@/lib/constants/routes';
 import type { Sentiment } from '@/domain/models/post';
+import type { DraftAiArguments } from '@/domain/models/draft';
 
 // =====================
 // Types
@@ -198,6 +199,48 @@ export function useArgumentCategories() {
       return res.json();
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+}
+
+// =====================
+// Extract Draft Arguments Hook
+// =====================
+
+export interface ExtractDraftArgumentsInput {
+  content: string;
+  stocks: { ticker: string; name: string }[];
+}
+
+export interface ExtractDraftArgumentsResult {
+  arguments: DraftAiArguments[];
+  usage: {
+    remaining: number;
+    weeklyLimit: number;
+    resetAt: string;
+  };
+}
+
+export function useExtractDraftArguments() {
+  const queryClient = useQueryClient();
+
+  return useMutation<ExtractDraftArgumentsResult, Error, ExtractDraftArgumentsInput>({
+    mutationFn: async (input: ExtractDraftArgumentsInput) => {
+      const res = await fetch(API_ROUTES.AI_EXTRACT_DRAFT_ARGUMENTS, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Failed to extract arguments');
+      }
+
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ai-usage'] });
+    },
   });
 }
 

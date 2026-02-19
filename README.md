@@ -166,6 +166,7 @@ src/
 - `002_enable_rls.sql` - 啟用 RLS 政策
 - `003_add_draft_arguments.sql` - 草稿論點支援
 - `004_add_profile_timezone.sql` - 使用者時區設定
+- `005_create_argument_tables.sql` - 論點類別、文章論點、論點彙整資料表 + RLS + Seed
 
 ### Seed Data
 

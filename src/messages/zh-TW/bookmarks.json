@@ -1,0 +1,13 @@
+{
+  "title": "我的書籤",
+  "description": "您收藏的文章",
+  "loading": "載入中...",
+  "errors": {
+    "loadFailed": "無法載入書籤列表，請稍後再試。"
+  },
+  "empty": {
+    "noBookmarks": "尚無書籤",
+    "description": "在文章詳情頁點擊書籤按鈕來收藏文章"
+  },
+  "removeSuccess": "已移除書籤"
+}

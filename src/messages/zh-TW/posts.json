@@ -31,7 +31,16 @@
     "priceError": "無法載入股價",
     "noStocks": "此文章無關聯標的",
     "noPriceData": "此標的暫無股價資料",
-    "chartDescription": "股價走勢與本篇發文標記"
+    "chartDescription": "股價走勢與本篇發文標記",
+    "sentimentChart": {
+      "title": "KOL 觀點分析"
+    },
+    "delete": "刪除文章",
+    "deleteConfirm": "確定要刪除此文章嗎？",
+    "deleteConfirmYes": "刪除",
+    "deleteConfirmNo": "取消",
+    "deleteSuccess": "文章已刪除",
+    "deleteFailed": "刪除失敗"
   },
   "new": {
     "backToEdit": "返回編輯",

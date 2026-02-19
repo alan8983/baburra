@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { getDraftById, updateDraft, deleteDraft } from '@/infrastructure/repositories';
 import type { UpdateDraftInput } from '@/domain/models';
+import { internalError } from '@/lib/api/error';
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -16,11 +17,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     if (!draft) return NextResponse.json({ error: 'Draft not found' }, { status: 404 });
     return NextResponse.json(draft);
   } catch (err) {
-    console.error('GET /api/drafts/[id]', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to fetch draft' },
-      { status: 500 }
-    );
+    return internalError(err, 'Failed to fetch draft');
   }
 }
 
@@ -34,11 +31,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (!draft) return NextResponse.json({ error: 'Draft not found' }, { status: 404 });
     return NextResponse.json(draft);
   } catch (err) {
-    console.error('PATCH /api/drafts/[id]', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to update draft' },
-      { status: 500 }
-    );
+    return internalError(err, 'Failed to update draft');
   }
 }
 
@@ -53,10 +46,6 @@ export async function DELETE(
     await deleteDraft(id, userId);
     return new NextResponse(null, { status: 204 });
   } catch (err) {
-    console.error('DELETE /api/drafts/[id]', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to delete draft' },
-      { status: 500 }
-    );
+    return internalError(err, 'Failed to delete draft');
   }
 }

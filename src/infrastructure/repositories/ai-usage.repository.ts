@@ -81,7 +81,8 @@ export async function checkAiQuota(userId: string): Promise<boolean> {
 }
 
 /**
- * 消耗一次 AI 配額
+ * 原子性地檢查並消耗一次 AI 配額（使用 DB-level row lock 防止 race condition）。
+ * 若 RPC 不存在則 fallback 至應用層邏輯。
  */
 export async function consumeAiQuota(userId: string): Promise<AiUsageInfo> {
   const supabase = createAdminClient();
@@ -89,7 +90,31 @@ export async function consumeAiQuota(userId: string): Promise<AiUsageInfo> {
     throw new Error('Missing Supabase admin credentials');
   }
 
-  // 先取得目前的使用狀況
+  // Try atomic RPC first
+  const { data: rpcRows, error: rpcError } = await supabase.rpc('consume_ai_quota', {
+    p_user_id: userId,
+  });
+
+  if (!rpcError && rpcRows && (Array.isArray(rpcRows) ? rpcRows.length > 0 : rpcRows)) {
+    const row = Array.isArray(rpcRows) ? rpcRows[0] : rpcRows;
+    const tier = (row.subscription_tier || 'free') as 'free' | 'premium';
+    const limit = tier === 'premium' ? PREMIUM_TIER_WEEKLY_LIMIT : FREE_TIER_WEEKLY_LIMIT;
+    return {
+      usageCount: row.ai_usage_count,
+      weeklyLimit: limit,
+      remaining: Math.max(0, limit - row.ai_usage_count),
+      resetAt: row.ai_usage_reset_at ? new Date(row.ai_usage_reset_at) : null,
+      subscriptionTier: tier,
+    };
+  }
+
+  // If RPC raised AI_QUOTA_EXCEEDED, surface it
+  if (rpcError?.message?.includes('AI_QUOTA_EXCEEDED')) {
+    const usage = await getAiUsage(userId);
+    throw Object.assign(new Error('AI quota exceeded'), { code: 'AI_QUOTA_EXCEEDED', usage });
+  }
+
+  // Fallback: RPC doesn't exist yet — use application-layer logic
   const { data: profile, error: fetchError } = await supabase
     .from('profiles')
     .select('ai_usage_count, ai_usage_reset_at, subscription_tier')
@@ -103,30 +128,24 @@ export async function consumeAiQuota(userId: string): Promise<AiUsageInfo> {
   const now = new Date();
   const resetAt = profile.ai_usage_reset_at ? new Date(profile.ai_usage_reset_at) : null;
 
-  // 計算新的使用次數和重置時間
   let newUsageCount: number;
   let newResetAt: Date;
 
   if (resetAt && now >= resetAt) {
-    // 已過重置時間，重新計算
     newUsageCount = 1;
-    // 設定下一週的重置時間（7天後）
     newResetAt = new Date(now);
     newResetAt.setDate(newResetAt.getDate() + 7);
     newResetAt.setHours(0, 0, 0, 0);
   } else if (!resetAt) {
-    // 首次使用，設定重置時間
     newUsageCount = 1;
     newResetAt = new Date(now);
     newResetAt.setDate(newResetAt.getDate() + 7);
     newResetAt.setHours(0, 0, 0, 0);
   } else {
-    // 正常累加
     newUsageCount = (profile.ai_usage_count || 0) + 1;
     newResetAt = resetAt;
   }
 
-  // 更新資料庫
   const { error: updateError } = await supabase
     .from('profiles')
     .update({

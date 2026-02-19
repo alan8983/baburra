@@ -2,17 +2,20 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { listPosts } from '@/infrastructure/repositories';
+import { parsePaginationParams } from '@/lib/api/pagination';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const { searchParams } = new URL(request.url);
-    const page = searchParams.get('page');
-    const limit = searchParams.get('limit');
+    const pagination = parsePaginationParams(searchParams);
+    if (pagination.error) {
+      return NextResponse.json({ error: pagination.error }, { status: 400 });
+    }
     const result = await listPosts({
       kolId: id,
-      page: page ? parseInt(page, 10) : undefined,
-      limit: limit ? parseInt(limit, 10) : undefined,
+      page: pagination.data?.page,
+      limit: pagination.data?.limit,
     });
     return NextResponse.json(result);
   } catch (err) {

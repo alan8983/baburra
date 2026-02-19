@@ -6,12 +6,14 @@
  */
 
 import { useState } from 'react';
+import { useTranslations, useLocale } from 'next-intl';
 import { useStockArguments, type StockArgumentSummary } from '@/hooks/use-ai';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { SENTIMENT_LABELS, SENTIMENT_COLORS, type Sentiment } from '@/domain/models/post';
+import { SENTIMENT_COLORS, type Sentiment } from '@/domain/models/post';
+import { sentimentKey } from '@/lib/utils/sentiment';
 import { ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { ROUTES } from '@/lib/constants/routes';
@@ -36,6 +38,9 @@ interface StockArgumentsTabProps {
 
 export function StockArgumentsTab({ ticker }: StockArgumentsTabProps) {
   const { data, isLoading, error } = useStockArguments(ticker);
+  const t = useTranslations('stocks.detail.arguments');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
 
   if (isLoading) {
     return (
@@ -53,7 +58,7 @@ export function StockArgumentsTab({ ticker }: StockArgumentsTabProps) {
     return (
       <Card>
         <CardContent className="py-8">
-          <p className="text-muted-foreground text-center">載入論點資料失敗</p>
+          <p className="text-muted-foreground text-center">{t('loadFailed')}</p>
         </CardContent>
       </Card>
     );
@@ -63,10 +68,8 @@ export function StockArgumentsTab({ ticker }: StockArgumentsTabProps) {
     return (
       <Card>
         <CardContent className="py-8">
-          <p className="text-muted-foreground text-center">尚無論點資料</p>
-          <p className="text-muted-foreground mt-2 text-center text-sm">
-            當文章被 AI 分析時，論點會自動提取並顯示在此處
-          </p>
+          <p className="text-muted-foreground text-center">{t('noArguments')}</p>
+          <p className="text-muted-foreground mt-2 text-center text-sm">{t('noArgumentsHint')}</p>
         </CardContent>
       </Card>
     );
@@ -78,8 +81,10 @@ export function StockArgumentsTab({ ticker }: StockArgumentsTabProps) {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center justify-between text-base">
-            <span>📊 論點分布統計</span>
-            <Badge variant="secondary">{data.totalArgumentCount} 個論點</Badge>
+            <span>📊 {t('title')}</span>
+            <Badge variant="secondary">
+              {t('totalArguments', { count: data.totalArgumentCount })}
+            </Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -89,7 +94,7 @@ export function StockArgumentsTab({ ticker }: StockArgumentsTabProps) {
                 <div className="mb-1 text-2xl">{CATEGORY_ICONS[group.parent.code] || '📌'}</div>
                 <div className="font-medium">{group.parent.name}</div>
                 <div className="text-primary text-2xl font-bold">{group.totalMentions}</div>
-                <div className="text-muted-foreground text-xs">次提及</div>
+                <div className="text-muted-foreground text-xs">{t('mentions')}</div>
               </div>
             ))}
           </div>
@@ -108,7 +113,7 @@ export function StockArgumentsTab({ ticker }: StockArgumentsTabProps) {
 
             <div className="space-y-3">
               {group.children.map((child) => (
-                <CategoryCard key={child.category.id} data={child} />
+                <CategoryCard key={child.category.id} data={child} t={t} locale={locale} />
               ))}
             </div>
           </div>
@@ -120,9 +125,11 @@ export function StockArgumentsTab({ ticker }: StockArgumentsTabProps) {
 
 interface CategoryCardProps {
   data: StockArgumentSummary['summary'][0]['children'][0];
+  t: ReturnType<typeof useTranslations>;
+  locale: string;
 }
 
-function CategoryCard({ data }: CategoryCardProps) {
+function CategoryCard({ data, t, locale }: CategoryCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const icon = CATEGORY_ICONS[data.category.code] || '📌';
 
@@ -130,6 +137,10 @@ function CategoryCard({ data }: CategoryCardProps) {
   const totalSentimentCount = data.bullishCount + data.bearishCount;
   const bullishPercentage =
     totalSentimentCount > 0 ? (data.bullishCount / totalSentimentCount) * 100 : 50;
+
+  const bullishArgs = data.arguments.filter((a) => a.sentiment > 0);
+  const neutralArgs = data.arguments.filter((a) => a.sentiment === 0);
+  const bearishArgs = data.arguments.filter((a) => a.sentiment < 0);
 
   return (
     <Card>
@@ -140,7 +151,7 @@ function CategoryCard({ data }: CategoryCardProps) {
             <CardTitle className="text-sm font-medium">{data.category.name}</CardTitle>
           </div>
           <div className="flex items-center gap-2">
-            <Badge variant="secondary">{data.mentionCount} 次提及</Badge>
+            <Badge variant="secondary">{t('mentionCount', { count: data.mentionCount })}</Badge>
             <Button
               variant="ghost"
               size="sm"
@@ -157,8 +168,12 @@ function CategoryCard({ data }: CategoryCardProps) {
         {/* 看多/看空比例條 */}
         <div className="space-y-1">
           <div className="flex justify-between text-xs">
-            <span className="text-green-600">看多 {data.bullishCount}</span>
-            <span className="text-red-600">看空 {data.bearishCount}</span>
+            <span className="text-green-600">
+              {t('bullish')} {data.bullishCount}
+            </span>
+            <span className="text-red-600">
+              {t('bearish')} {data.bearishCount}
+            </span>
           </div>
           <div className="bg-muted flex h-2 overflow-hidden rounded-full">
             <div
@@ -175,8 +190,8 @@ function CategoryCard({ data }: CategoryCardProps) {
         {/* 時間範圍 */}
         {data.firstMentionedAt && data.lastMentionedAt && (
           <div className="text-muted-foreground flex gap-4 text-xs">
-            <span>首次提及: {formatDate(data.firstMentionedAt)}</span>
-            <span>最近提及: {formatDate(data.lastMentionedAt)}</span>
+            <span>{t('firstMentioned', { date: formatDate(data.firstMentionedAt, locale) })}</span>
+            <span>{t('lastMentioned', { date: formatDate(data.lastMentionedAt, locale) })}</span>
           </div>
         )}
 
@@ -186,52 +201,43 @@ function CategoryCard({ data }: CategoryCardProps) {
             <Separator />
             <div className="max-h-96 space-y-3 overflow-y-auto">
               {/* 看多論點 */}
-              {data.arguments.filter((a) => a.sentiment > 0).length > 0 && (
+              {bullishArgs.length > 0 && (
                 <div>
                   <h5 className="mb-2 text-sm font-medium text-green-600">
-                    ▲ 看多論點 ({data.arguments.filter((a) => a.sentiment > 0).length})
+                    {t('bullishArguments', { count: bullishArgs.length })}
                   </h5>
                   <div className="space-y-2">
-                    {data.arguments
-                      .filter((a) => a.sentiment > 0)
-                      .slice(0, 5)
-                      .map((arg) => (
-                        <ArgumentItem key={arg.id} argument={arg} />
-                      ))}
+                    {bullishArgs.slice(0, 5).map((arg) => (
+                      <ArgumentItem key={arg.id} argument={arg} locale={locale} />
+                    ))}
                   </div>
                 </div>
               )}
 
               {/* 中立論點 */}
-              {data.arguments.filter((a) => a.sentiment === 0).length > 0 && (
+              {neutralArgs.length > 0 && (
                 <div>
                   <h5 className="mb-2 text-sm font-medium text-gray-600">
-                    ● 中立論點 ({data.arguments.filter((a) => a.sentiment === 0).length})
+                    {t('neutralArguments', { count: neutralArgs.length })}
                   </h5>
                   <div className="space-y-2">
-                    {data.arguments
-                      .filter((a) => a.sentiment === 0)
-                      .slice(0, 5)
-                      .map((arg) => (
-                        <ArgumentItem key={arg.id} argument={arg} />
-                      ))}
+                    {neutralArgs.slice(0, 5).map((arg) => (
+                      <ArgumentItem key={arg.id} argument={arg} locale={locale} />
+                    ))}
                   </div>
                 </div>
               )}
 
               {/* 看空論點 */}
-              {data.arguments.filter((a) => a.sentiment < 0).length > 0 && (
+              {bearishArgs.length > 0 && (
                 <div>
                   <h5 className="mb-2 text-sm font-medium text-red-600">
-                    ▼ 看空論點 ({data.arguments.filter((a) => a.sentiment < 0).length})
+                    {t('bearishArguments', { count: bearishArgs.length })}
                   </h5>
                   <div className="space-y-2">
-                    {data.arguments
-                      .filter((a) => a.sentiment < 0)
-                      .slice(0, 5)
-                      .map((arg) => (
-                        <ArgumentItem key={arg.id} argument={arg} />
-                      ))}
+                    {bearishArgs.slice(0, 5).map((arg) => (
+                      <ArgumentItem key={arg.id} argument={arg} locale={locale} />
+                    ))}
                   </div>
                 </div>
               )}
@@ -245,10 +251,12 @@ function CategoryCard({ data }: CategoryCardProps) {
 
 interface ArgumentItemProps {
   argument: StockArgumentSummary['summary'][0]['children'][0]['arguments'][0];
+  locale: string;
 }
 
-function ArgumentItem({ argument }: ArgumentItemProps) {
-  const sentimentLabel = SENTIMENT_LABELS[argument.sentiment as Sentiment];
+function ArgumentItem({ argument, locale }: ArgumentItemProps) {
+  const tCommon = useTranslations('common');
+  const sentimentLabel = tCommon(`sentiment.${sentimentKey(argument.sentiment)}`);
   const sentimentColors = SENTIMENT_COLORS[argument.sentiment as Sentiment];
 
   return (
@@ -273,14 +281,16 @@ function ArgumentItem({ argument }: ArgumentItemProps) {
           </Link>
         </div>
       </div>
-      <div className="text-muted-foreground mt-1 text-xs">{formatDate(argument.createdAt)}</div>
+      <div className="text-muted-foreground mt-1 text-xs">
+        {formatDate(argument.createdAt, locale)}
+      </div>
     </div>
   );
 }
 
-function formatDate(dateString: string): string {
+function formatDate(dateString: string, locale: string): string {
   const date = new Date(dateString);
-  return date.toLocaleDateString('zh-TW', {
+  return date.toLocaleDateString(locale, {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',

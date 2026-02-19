@@ -31,7 +31,16 @@
     "priceError": "Failed to load price",
     "noStocks": "This post has no associated stocks",
     "noPriceData": "No price data available for this stock",
-    "chartDescription": "Stock price trend and post marker"
+    "chartDescription": "Stock price trend and post marker",
+    "sentimentChart": {
+      "title": "KOL Opinion Analysis"
+    },
+    "delete": "Delete Post",
+    "deleteConfirm": "Delete this post?",
+    "deleteConfirmYes": "Delete",
+    "deleteConfirmNo": "Cancel",
+    "deleteSuccess": "Post deleted",
+    "deleteFailed": "Delete failed"
   },
   "new": {
     "backToEdit": "Back to Edit",

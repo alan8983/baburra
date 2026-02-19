@@ -3,8 +3,9 @@
 import { use, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTranslations, useLocale } from 'next-intl';
 import { format } from 'date-fns';
-import { zhTW } from 'date-fns/locale';
+import { zhTW, enUS } from 'date-fns/locale';
 import {
   ArrowLeft,
   Check,
@@ -13,6 +14,7 @@ import {
   Loader2,
   AlertTriangle,
   CheckCircle2,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -52,7 +54,7 @@ import type {
 } from '@/domain/models';
 import { useCreatePost, useCheckDuplicateUrl } from '@/hooks/use-posts';
 import { detectPlatform } from '@/lib/utils/format';
-import { SENTIMENT_LABELS } from '@/domain/models/post';
+import { sentimentKey } from '@/lib/utils/sentiment';
 import {
   useDraft,
   useUpdateDraft,
@@ -62,9 +64,12 @@ import {
   getSupportedPlatform,
   getSupportedPlatformNames,
 } from '@/hooks';
+import { useExtractDraftArguments } from '@/hooks/use-ai';
 import type { IdentifiedTicker } from '@/hooks/use-ai';
 import { API_ROUTES } from '@/lib/constants/routes';
 import { toast } from 'sonner';
+
+const DATE_FNS_LOCALES: Record<string, typeof zhTW> = { 'zh-TW': zhTW, en: enUS };
 
 /**
  * Parse draft.stockNameInputs (format: "TICKER (Name)") into IdentifiedTicker[]
@@ -91,7 +96,10 @@ function parseStockNameInputs(inputs: string[]): IdentifiedTicker[] {
 /**
  * Transform DraftAiArguments[] to TickerArgumentGroup[] for PostArguments
  */
-function transformAiArguments(aiArguments: DraftAiArguments[]): TickerArgumentGroup[] {
+function transformAiArguments(
+  aiArguments: DraftAiArguments[],
+  fallbackParentName: string
+): TickerArgumentGroup[] {
   return aiArguments.map((stockArgs) => ({
     ticker: stockArgs.ticker,
     name: stockArgs.name,
@@ -101,7 +109,7 @@ function transformAiArguments(aiArguments: DraftAiArguments[]): TickerArgumentGr
         id: `${stockArgs.ticker}-${arg.categoryCode}-${i}`,
         categoryCode: arg.categoryCode,
         categoryName: category?.name ?? arg.categoryCode,
-        parentName: category?.parentName ?? '其他',
+        parentName: category?.parentName ?? fallbackParentName,
         originalText: arg.originalText,
         summary: arg.summary,
         sentiment: arg.sentiment,
@@ -119,6 +127,9 @@ interface DraftEditFormProps {
 
 function DraftEditForm({ draft, id }: DraftEditFormProps) {
   const router = useRouter();
+  const t = useTranslations('drafts');
+  const tCommon = useTranslations('common');
+  const locale = useLocale();
   const updateDraft = useUpdateDraft(id);
   const deleteDraft = useDeleteDraft();
   const createPost = useCreatePost();
@@ -139,6 +150,9 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
     draft.postedAt ? new Date(draft.postedAt) : null
   );
   const [images, setImages] = useState<string[]>(() => draft.images ?? []);
+  const [stockSentiments, setStockSentiments] = useState<Record<string, Sentiment>>(
+    () => draft.stockSentiments ?? {}
+  );
 
   // Dialog 狀態
   const [kolDialogOpen, setKolDialogOpen] = useState(false);
@@ -179,9 +193,34 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
 
   // AI arguments from draft
   const displayArguments = useMemo(
-    () => (draft.aiArguments ? transformAiArguments(draft.aiArguments) : []),
-    [draft.aiArguments]
+    () =>
+      draft.aiArguments ? transformAiArguments(draft.aiArguments, tCommon('ai.otherCategory')) : [],
+    [draft.aiArguments, tCommon]
   );
+
+  // AI argument extraction
+  const extractDraftArgs = useExtractDraftArguments();
+
+  const handleExtractArguments = async () => {
+    if (!content.trim() || selectedStocks.length === 0) return;
+    try {
+      const result = await extractDraftArgs.mutateAsync({
+        content: content.trim(),
+        stocks: selectedStocks.map((s) => ({ ticker: s.ticker, name: s.name })),
+      });
+      if (result.arguments.length > 0) {
+        await updateDraft.mutateAsync({ aiArguments: result.arguments });
+        toast.success(t('detail.ai.analyzeSuccess'));
+      } else {
+        toast.info(t('detail.ai.noArguments'));
+      }
+    } catch (error) {
+      toast.error(t('detail.ai.analyzeFailed'), {
+        description:
+          error instanceof Error ? error.message : t('detail.ai.analyzeFailedDescription'),
+      });
+    }
+  };
 
   // Auto-save state
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -196,6 +235,7 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
         content: content || null,
         sourceUrl: sourceUrl || null,
         sentiment: sentiment ?? null,
+        stockSentiments: Object.keys(stockSentiments).length > 0 ? stockSentiments : null,
         postedAt: postedAt ?? null,
         stockIds: selectedStocks.map((s) => s.id),
         images,
@@ -205,7 +245,17 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
     } catch {
       setAutoSaveStatus('idle');
     }
-  }, [updateDraft, selectedKOL, content, sourceUrl, sentiment, postedAt, selectedStocks, images]);
+  }, [
+    updateDraft,
+    selectedKOL,
+    content,
+    sourceUrl,
+    sentiment,
+    stockSentiments,
+    postedAt,
+    selectedStocks,
+    images,
+  ]);
 
   // Debounced auto-save: trigger 3 seconds after last change
   useEffect(() => {
@@ -224,7 +274,16 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
         clearTimeout(autoSaveTimerRef.current);
       }
     };
-  }, [content, sourceUrl, sentiment, selectedKOL, selectedStocks, postedAt, images]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [
+    content,
+    sourceUrl,
+    sentiment,
+    stockSentiments,
+    selectedKOL,
+    selectedStocks,
+    postedAt,
+    images,
+  ]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 處理新增 KOL
   const handleCreateKOL = (name: string) => {
@@ -314,7 +373,7 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
   // 處理 URL 擷取
   const handleFetchUrl = async () => {
     if (!sourceUrl || !isUrlLike(sourceUrl)) {
-      toast.error('請輸入有效的 URL');
+      toast.error(t('detail.fetch.invalidUrl'));
       return;
     }
     try {
@@ -333,10 +392,11 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
         kolName: !selectedKOL && !!result.kolName, // 只有當沒有選 KOL 時才預設勾選
       });
       setFetchDialogOpen(true);
-      toast.success('內容擷取成功');
+      toast.success(t('detail.fetch.success'));
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '擷取失敗，請稍後再試';
-      toast.error('擷取失敗', {
+      const errorMessage =
+        error instanceof Error ? error.message : t('detail.fetch.failedDescription');
+      toast.error(t('detail.fetch.failed'), {
         description: errorMessage,
       });
     }
@@ -398,10 +458,11 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
       });
       setFetchDialogOpen(false);
       setFetchResult(null);
-      toast.success('已套用擷取的內容');
+      toast.success(t('detail.fetch.applySuccess'));
     } catch (error) {
-      toast.error('套用失敗', {
-        description: error instanceof Error ? error.message : '請稍後再試',
+      toast.error(t('detail.fetch.applyFailed'), {
+        description:
+          error instanceof Error ? error.message : t('detail.fetch.applyFailedDescription'),
       });
     }
   };
@@ -423,7 +484,7 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
   };
 
   const handleDelete = async () => {
-    if (!confirm('確定要刪除此草稿？')) return;
+    if (!confirm(t('deleteConfirm'))) return;
     try {
       await deleteDraft.mutateAsync(id);
       router.push(ROUTES.DRAFTS);
@@ -435,13 +496,13 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
   // Publish validation
   const validationErrors = useMemo(() => {
     const errors: string[] = [];
-    if (!selectedKOL) errors.push('KOL');
-    if (selectedStocks.length === 0) errors.push('投資標的');
-    if (!content.trim()) errors.push('主文內容');
-    if (!postedAt) errors.push('發文時間');
-    if (sentiment === null) errors.push('走勢情緒');
+    if (!selectedKOL) errors.push(t('detail.validation.kol'));
+    if (selectedStocks.length === 0) errors.push(t('detail.validation.stocks'));
+    if (!content.trim()) errors.push(t('detail.validation.content'));
+    if (!postedAt) errors.push(t('detail.validation.postedAt'));
+    if (sentiment === null) errors.push(t('detail.validation.sentiment'));
     return errors;
-  }, [selectedKOL, selectedStocks, content, postedAt, sentiment]);
+  }, [selectedKOL, selectedStocks, content, postedAt, sentiment, t]);
 
   const canPublish = validationErrors.length === 0;
 
@@ -456,10 +517,20 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
         content: content || null,
         sourceUrl: sourceUrl || null,
         sentiment: sentiment ?? null,
+        stockSentiments: Object.keys(stockSentiments).length > 0 ? stockSentiments : null,
         postedAt: postedAt ?? null,
         stockIds: selectedStocks.map((s) => s.id),
         images,
       });
+
+      // Map per-stock sentiments from ticker -> stockId
+      const postStockSentiments: Record<string, Sentiment> = {};
+      for (const stock of selectedStocks) {
+        const tickerSentiment = stockSentiments[stock.ticker];
+        if (tickerSentiment !== undefined) {
+          postStockSentiments[stock.id] = tickerSentiment;
+        }
+      }
 
       const input: CreatePostInput = {
         kolId: selectedKOL!.id,
@@ -469,6 +540,8 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
         sourcePlatform: detectPlatform(sourceUrl),
         images,
         sentiment: sentiment!,
+        stockSentiments:
+          Object.keys(postStockSentiments).length > 0 ? postStockSentiments : undefined,
         sentimentAiGenerated: false,
         postedAt: postedAt!,
         draftAiArguments: draft.aiArguments ?? undefined,
@@ -479,11 +552,14 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
       // Delete draft after successful post creation
       await deleteDraft.mutateAsync(id);
 
-      toast.success('文章發布成功');
+      toast.success(t('detail.publishDialog.publishSuccess'));
       router.push(ROUTES.POST_DETAIL(post.id));
     } catch (error) {
-      toast.error('發布失敗', {
-        description: error instanceof Error ? error.message : '請稍後再試',
+      toast.error(t('detail.publishDialog.publishFailed'), {
+        description:
+          error instanceof Error
+            ? error.message
+            : t('detail.publishDialog.publishFailedDescription'),
       });
     } finally {
       setIsPublishing(false);
@@ -498,20 +574,20 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
         <Button variant="ghost" size="sm" asChild>
           <Link href={ROUTES.DRAFTS}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            返回草稿列表
+            {t('detail.backToDrafts')}
           </Link>
         </Button>
         <div className="flex items-center gap-3">
           {autoSaveStatus === 'saving' && (
             <span className="text-muted-foreground flex items-center gap-1 text-xs">
               <Loader2 className="h-3 w-3 animate-spin" />
-              儲存中...
+              {t('detail.saving')}
             </span>
           )}
           {autoSaveStatus === 'saved' && (
             <span className="flex items-center gap-1 text-xs text-green-600">
               <CheckCircle2 className="h-3 w-3" />
-              已儲存
+              {t('detail.saved')}
             </span>
           )}
           <Button
@@ -522,7 +598,7 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
             disabled={deleteDraft.isPending}
           >
             <Trash2 className="mr-2 h-4 w-4" />
-            刪除草稿
+            {t('detail.deleteDraft')}
           </Button>
         </div>
       </div>
@@ -530,20 +606,19 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
       {/* Form */}
       <Card>
         <CardHeader>
-          <CardTitle>編輯草稿</CardTitle>
-          <CardDescription>完善文章資訊後即可發布</CardDescription>
+          <CardTitle>{t('detail.title')}</CardTitle>
+          <CardDescription>{t('detail.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* KOL Selector */}
           <div className="space-y-2">
             <Label>
-              KOL <span className="text-destructive">*</span>
+              {t('detail.labels.kol')} <span className="text-destructive">*</span>
             </Label>
             <KOLSelector
               value={selectedKOL}
               onChange={setSelectedKOL}
               onCreateNew={handleCreateKOL}
-              placeholder="搜尋或選擇 KOL..."
             />
           </div>
 
@@ -552,13 +627,12 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
           {/* Stock Selector */}
           <div className="space-y-2">
             <Label>
-              投資標的 <span className="text-destructive">*</span>
+              {t('detail.labels.stocks')} <span className="text-destructive">*</span>
             </Label>
             <StockSelector
               value={selectedStocks}
               onChange={setSelectedStocks}
               onCreateNew={handleCreateStock}
-              placeholder="搜尋或選擇標的 (可多選)..."
             />
             <AiTickerSuggestions
               suggestions={tickerSuggestions}
@@ -573,7 +647,7 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
 
           {/* Posted At */}
           <DatetimeInput
-            label="發文時間"
+            label={t('detail.labels.postedAt')}
             required
             value={postedAt}
             onChange={setPostedAt}
@@ -586,10 +660,10 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
           {/* Content */}
           <div className="space-y-2">
             <Label>
-              主文內容 <span className="text-destructive">*</span>
+              {t('detail.labels.content')} <span className="text-destructive">*</span>
             </Label>
             <Textarea
-              placeholder="KOL 的原始發文內容..."
+              placeholder={t('detail.labels.contentPlaceholder')}
               value={content}
               onChange={(e) => setContent(e.target.value)}
               className="min-h-[200px]"
@@ -600,11 +674,11 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
 
           {/* Source URL */}
           <div className="space-y-2">
-            <Label>原始網址</Label>
+            <Label>{t('detail.labels.sourceUrl')}</Label>
             <div className="flex gap-2">
               <Input
                 type="url"
-                placeholder="https://..."
+                placeholder={t('detail.labels.sourceUrlPlaceholder')}
                 value={sourceUrl}
                 onChange={(e) => setSourceUrl(e.target.value)}
                 className="flex-1"
@@ -623,12 +697,12 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
                 {fetchUrl.isPending ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    擷取中...
+                    {t('detail.fetch.fetching')}
                   </>
                 ) : (
                   <>
                     <Link2 className="mr-2 h-4 w-4" />
-                    擷取
+                    {t('detail.fetch.fetchButton')}
                   </>
                 )}
               </Button>
@@ -638,8 +712,9 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
               <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3">
                 <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
                 <p className="text-sm text-amber-700">
-                  此網址平台尚不支援自動擷取內容（支援：{getSupportedPlatformNames().join('、')}）。
-                  網址仍會作為來源連結保存，但請手動填寫文章內容。
+                  {t('detail.fetch.unsupportedUrl', {
+                    platforms: getSupportedPlatformNames().join('、'),
+                  })}
                 </p>
               </div>
             )}
@@ -649,7 +724,9 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
               getSupportedPlatform(sourceUrl) &&
               !fetchUrl.isPending && (
                 <p className="text-muted-foreground text-xs">
-                  偵測到 {getSupportedPlatform(sourceUrl)} 網址，點擊「擷取」可自動帶入文章內容
+                  {t('detail.fetch.detectedPlatform', {
+                    platform: getSupportedPlatform(sourceUrl)!,
+                  })}
                 </p>
               )}
             {/* 重複 URL 警告 */}
@@ -657,16 +734,19 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
               <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3">
                 <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
                 <div className="space-y-1">
-                  <p className="text-sm font-medium text-amber-800">此文章網址已存在於資料庫中</p>
+                  <p className="text-sm font-medium text-amber-800">
+                    {t('detail.duplicateWarning.title')}
+                  </p>
                   <p className="text-xs text-amber-700">
-                    建立於{' '}
-                    {format(new Date(duplicateCheck.existingPost!.createdAt), 'yyyy/MM/dd', {
-                      locale: zhTW,
+                    {t('detail.duplicateWarning.createdAt', {
+                      date: format(new Date(duplicateCheck.existingPost!.createdAt), 'yyyy/MM/dd', {
+                        locale: DATE_FNS_LOCALES[locale] ?? zhTW,
+                      }),
                     })}
                   </p>
                   <Button variant="link" size="sm" className="h-auto p-0 text-amber-700" asChild>
                     <Link href={ROUTES.POST_DETAIL(duplicateCheck.existingPost!.id)}>
-                      查看現有文章 →
+                      {t('detail.duplicateWarning.viewExisting')}
                     </Link>
                   </Button>
                 </div>
@@ -684,26 +764,93 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
       {/* Action Buttons */}
       <div className="flex justify-end gap-3">
         <Button variant="outline" onClick={handleSave} disabled={updateDraft.isPending}>
-          儲存草稿
+          {t('detail.saveDraft')}
         </Button>
         <Button onClick={() => setPublishDialogOpen(true)} disabled={isPublishing}>
           <Check className="mr-2 h-4 w-4" />
-          發布
+          {t('detail.publish')}
         </Button>
       </div>
 
       {/* Sentiment Selection */}
       <Card>
         <CardHeader>
-          <CardTitle>走勢情緒</CardTitle>
-          <CardDescription>選擇這篇文章的整體看法方向</CardDescription>
+          <CardTitle>{t('detail.labels.sentiment')}</CardTitle>
+          <CardDescription>{t('detail.labels.sentimentDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
           <SentimentSelector value={sentiment} onChange={setSentiment} showIcon />
         </CardContent>
       </Card>
 
-      {/* AI Arguments */}
+      {/* Per-Stock Sentiment (only shown when multiple stocks) */}
+      {selectedStocks.length > 1 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('detail.labels.perStockSentiment')}</CardTitle>
+            <CardDescription>{t('detail.labels.perStockSentimentDescription')}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {selectedStocks.map((stock) => (
+              <div key={stock.id} className="flex items-center gap-3">
+                <span className="w-24 shrink-0 text-sm font-medium">{stock.ticker}</span>
+                <SentimentSelector
+                  value={stockSentiments[stock.ticker] ?? null}
+                  onChange={(val) =>
+                    setStockSentiments((prev) => ({ ...prev, [stock.ticker]: val }))
+                  }
+                  shortLabel
+                  showIcon={false}
+                />
+                {stockSentiments[stock.ticker] !== undefined && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground h-7 px-2 text-xs"
+                    onClick={() =>
+                      setStockSentiments((prev) => {
+                        const next = { ...prev };
+                        delete next[stock.ticker];
+                        return next;
+                      })
+                    }
+                  >
+                    {t('detail.labels.clearSentiment')}
+                  </Button>
+                )}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* AI Argument Analysis */}
+      {selectedStocks.length > 0 && content.trim() && (
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={handleExtractArguments}
+            disabled={extractDraftArgs.isPending}
+          >
+            {extractDraftArgs.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="mr-2 h-4 w-4" />
+            )}
+            {extractDraftArgs.isPending
+              ? t('detail.ai.analyzing')
+              : t('detail.ai.analyzeArguments')}
+          </Button>
+          {displayArguments.length > 0 && (
+            <span className="text-muted-foreground text-sm">
+              {t('detail.ai.argumentCount', {
+                count: displayArguments.reduce((sum, g) => sum + g.arguments.length, 0),
+              })}
+            </span>
+          )}
+        </div>
+      )}
       {displayArguments.length > 0 && <PostArguments tickerGroups={displayArguments} />}
 
       {/* KOL Form Dialog */}
@@ -728,13 +875,15 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
       <Dialog open={publishDialogOpen} onOpenChange={setPublishDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>確認發布</DialogTitle>
-            <DialogDescription>請確認以下資訊無誤後再發布文章</DialogDescription>
+            <DialogTitle>{t('detail.publishDialog.title')}</DialogTitle>
+            <DialogDescription>{t('detail.publishDialog.description')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             {!canPublish && (
               <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
-                <p className="text-sm font-medium text-amber-800">請先填寫以下必填欄位：</p>
+                <p className="text-sm font-medium text-amber-800">
+                  {t('detail.publishDialog.validationTitle')}
+                </p>
                 <ul className="mt-1 list-inside list-disc text-sm text-amber-700">
                   {validationErrors.map((err) => (
                     <li key={err}>{err}</li>
@@ -745,27 +894,45 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
             {canPublish && (
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground w-16 text-sm">KOL</span>
+                  <span className="text-muted-foreground w-16 text-sm">
+                    {t('detail.publishDialog.labelKol')}
+                  </span>
                   <span className="text-sm font-medium">{selectedKOL?.name}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground w-16 text-sm">標的</span>
+                  <span className="text-muted-foreground w-16 text-sm">
+                    {t('detail.publishDialog.labelStocks')}
+                  </span>
                   <div className="flex flex-wrap gap-1">
-                    {selectedStocks.map((s) => (
-                      <Badge key={s.id} variant="secondary">
-                        {s.ticker}
-                      </Badge>
-                    ))}
+                    {selectedStocks.map((s) => {
+                      const perStock = stockSentiments[s.ticker];
+                      return (
+                        <Badge key={s.id} variant="secondary">
+                          {s.ticker}
+                          {perStock !== undefined && perStock !== sentiment && (
+                            <span className="ml-1 opacity-70">
+                              ({tCommon(`sentiment.${sentimentKey(perStock)}`)})
+                            </span>
+                          )}
+                        </Badge>
+                      );
+                    })}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground w-16 text-sm">情緒</span>
-                  <span className="text-sm font-medium">{SENTIMENT_LABELS[sentiment!]}</span>
+                  <span className="text-muted-foreground w-16 text-sm">
+                    {t('detail.publishDialog.labelSentiment')}
+                  </span>
+                  <span className="text-sm font-medium">
+                    {tCommon(`sentiment.${sentimentKey(sentiment!)}`)}
+                  </span>
                 </div>
                 {duplicateCheck?.isDuplicate && (
                   <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3">
                     <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0 text-amber-600" />
-                    <p className="text-sm text-amber-700">注意：此文章網址已存在於資料庫中</p>
+                    <p className="text-sm text-amber-700">
+                      {t('detail.publishDialog.duplicateWarning')}
+                    </p>
                   </div>
                 )}
               </div>
@@ -773,16 +940,16 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPublishDialogOpen(false)}>
-              取消
+              {t('detail.publishDialog.cancel')}
             </Button>
             <Button onClick={handlePublish} disabled={!canPublish || isPublishing}>
               {isPublishing ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  發布中...
+                  {t('detail.publishDialog.publishing')}
                 </>
               ) : (
-                '確認發布'
+                t('detail.publishDialog.confirmPublish')
               )}
             </Button>
           </DialogFooter>
@@ -793,10 +960,8 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
       <Dialog open={fetchDialogOpen} onOpenChange={setFetchDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>確認要套用的欄位</DialogTitle>
-            <DialogDescription>
-              請選擇要從擷取的內容中套用到草稿的欄位。已選取的欄位將會被覆蓋。
-            </DialogDescription>
+            <DialogTitle>{t('detail.fetch.dialogTitle')}</DialogTitle>
+            <DialogDescription>{t('detail.fetch.dialogDescription')}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             {/* 主文內容 */}
@@ -808,7 +973,7 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
                 className="mt-1 h-4 w-4"
               />
               <div className="flex-1">
-                <Label className="font-medium">主文內容</Label>
+                <Label className="font-medium">{t('detail.fetch.fieldContent')}</Label>
                 <p className="text-muted-foreground mt-1 text-sm">
                   {fetchResult?.content.slice(0, 150)}
                   {fetchResult && fetchResult.content.length > 150 ? '...' : ''}
@@ -828,14 +993,16 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
                   className="mt-1 h-4 w-4"
                 />
                 <div className="flex-1">
-                  <Label className="font-medium">圖片 ({fetchResult.images.length} 張)</Label>
+                  <Label className="font-medium">
+                    {t('detail.fetch.fieldImages', { count: fetchResult.images.length })}
+                  </Label>
                   <div className="mt-2 grid grid-cols-4 gap-2">
                     {fetchResult.images.slice(0, 4).map((url, i) => (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         key={i}
                         src={url}
-                        alt={`擷取圖片 ${i + 1}`}
+                        alt={t('detail.fetch.fetchedImage', { index: i + 1 })}
                         className="aspect-square rounded-lg object-cover"
                       />
                     ))}
@@ -856,9 +1023,9 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
                   className="mt-1 h-4 w-4"
                 />
                 <div className="flex-1">
-                  <Label className="font-medium">發文時間</Label>
+                  <Label className="font-medium">{t('detail.fetch.fieldPostedAt')}</Label>
                   <p className="text-muted-foreground mt-1 text-sm">
-                    {new Date(fetchResult.postedAt).toLocaleString('zh-TW')}
+                    {new Date(fetchResult.postedAt).toLocaleString(locale)}
                   </p>
                 </div>
               </div>
@@ -876,9 +1043,10 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
                   className="mt-1 h-4 w-4"
                 />
                 <div className="flex-1">
-                  <Label className="font-medium">KOL 名稱建議</Label>
+                  <Label className="font-medium">{t('detail.fetch.fieldKolName')}</Label>
                   <p className="text-muted-foreground mt-1 text-sm">
-                    {fetchResult.kolName}（將填入到 KOL 名稱輸入欄位）
+                    {fetchResult.kolName}
+                    {t('detail.fetch.fieldKolNameNote')}
                   </p>
                 </div>
               </div>
@@ -886,16 +1054,16 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFetchDialogOpen(false)}>
-              取消
+              {tCommon('actions.cancel')}
             </Button>
             <Button onClick={handleApplyFetchResult} disabled={updateDraft.isPending}>
               {updateDraft.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  套用中...
+                  {t('detail.fetch.applying')}
                 </>
               ) : (
-                '套用選取的欄位'
+                t('detail.fetch.applySelected')
               )}
             </Button>
           </DialogFooter>
@@ -908,12 +1076,13 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
 // 主頁面組件 - 處理 loading/error 狀態並使用 key 重置表單
 export default function DraftEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const t = useTranslations('drafts');
   const { data: draft, isLoading, error } = useDraft(id);
 
   if (isLoading || (!draft && !error)) {
     return (
       <div className="mx-auto max-w-3xl space-y-6">
-        <p className="text-muted-foreground">載入中...</p>
+        <p className="text-muted-foreground">{t('detail.loading')}</p>
       </div>
     );
   }
@@ -921,9 +1090,9 @@ export default function DraftEditPage({ params }: { params: Promise<{ id: string
   if (error || !draft) {
     return (
       <div className="mx-auto max-w-3xl space-y-6">
-        <p className="text-destructive">無法載入草稿</p>
+        <p className="text-destructive">{t('detail.loadFailed')}</p>
         <Button variant="outline" asChild>
-          <Link href={ROUTES.DRAFTS}>返回草稿列表</Link>
+          <Link href={ROUTES.DRAFTS}>{t('detail.backToDrafts')}</Link>
         </Button>
       </div>
     );

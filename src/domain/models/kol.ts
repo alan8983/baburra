@@ -22,7 +22,7 @@ export interface SocialLinks {
 
 export interface KOLWithStats extends KOL {
   postCount: number;
-  winRate: number | null;
+  returnRate: number | null;
   lastPostAt: Date | null;
 }
 

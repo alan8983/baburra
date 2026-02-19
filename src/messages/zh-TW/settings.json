@@ -7,6 +7,7 @@
     "changeAvatar": "更換頭像",
     "displayName": "顯示名稱",
     "displayNamePlaceholder": "您的顯示名稱",
+    "email": "Email",
     "emailCannotChange": "Email 無法更改",
     "saving": "儲存中...",
     "save": "儲存變更",
@@ -28,11 +29,25 @@
     "freeDescription": "基本功能，每週 15 次 AI 分析",
     "currentPlan": "目前方案",
     "premiumDescription": "每週 100 次 AI 分析、優先支援",
-    "upgrade": "升級"
+    "upgrade": "升級",
+    "freePlanName": "Free Plan",
+    "premiumPlanName": "Premium Plan",
+    "premiumPrice": "$9.99/月"
   },
   "timezone": {
     "label": "時區",
-    "description": "用於 AI 分析時解讀文章發文時間"
+    "description": "用於 AI 分析時解讀文章發文時間",
+    "options": {
+      "taipei": "台北 (UTC+8)",
+      "shanghai": "上海 (UTC+8)",
+      "tokyo": "東京 (UTC+9)",
+      "hongkong": "香港 (UTC+8)",
+      "singapore": "新加坡 (UTC+8)",
+      "newYork": "紐約 (UTC-5)",
+      "losAngeles": "洛杉磯 (UTC-8)",
+      "london": "倫敦 (UTC+0)",
+      "utc": "UTC"
+    }
   },
   "dangerZone": {
     "title": "危險區域",

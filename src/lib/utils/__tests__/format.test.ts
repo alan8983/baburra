@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   formatPriceChange,
-  formatWinRate,
+  formatReturnRate,
   formatNumber,
   formatPrice,
   formatVolume,
@@ -44,24 +44,28 @@ describe('format utils', () => {
     });
   });
 
-  describe('formatWinRate', () => {
-    it('should format win rate as percentage', () => {
-      expect(formatWinRate(0.75)).toBe('75.0%');
-      expect(formatWinRate(1.0)).toBe('100.0%');
-      expect(formatWinRate(0)).toBe('0.0%');
+  describe('formatReturnRate', () => {
+    it('should format positive return with + sign', () => {
+      expect(formatReturnRate(8.3)).toBe('+8.3%');
+      expect(formatReturnRate(0)).toBe('+0.0%');
+    });
+
+    it('should format negative return with - sign', () => {
+      expect(formatReturnRate(-2.1)).toBe('-2.1%');
     });
 
     it('should format with 1 decimal place', () => {
-      expect(formatWinRate(0.6667)).toBe('66.7%');
-      expect(formatWinRate(0.3333)).toBe('33.3%');
+      expect(formatReturnRate(8.36)).toBe('+8.4%');
+      expect(formatReturnRate(-2.14)).toBe('-2.1%');
+      expect(formatReturnRate(8.35)).toBe('+8.3%'); // IEEE 754: 8.35 stored as 8.349...
     });
 
     it('should return "-" for null', () => {
-      expect(formatWinRate(null)).toBe('-');
+      expect(formatReturnRate(null)).toBe('-');
     });
 
     it('should return "-" for undefined', () => {
-      expect(formatWinRate(undefined)).toBe('-');
+      expect(formatReturnRate(undefined)).toBe('-');
     });
   });
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useCallback, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import {
   createChart,
   ColorType,
@@ -10,7 +11,8 @@ import {
   type Time,
 } from 'lightweight-charts';
 import type { CandlestickData } from '@/domain/models/stock';
-import { SENTIMENT_LABELS, type Sentiment } from '@/domain/models/post';
+import type { Sentiment } from '@/domain/models/post';
+import { sentimentKey } from '@/lib/utils/sentiment';
 import { resolveThemeColors } from './chart-utils';
 
 export interface LineChartMarker {
@@ -47,6 +49,7 @@ export function SentimentLineChart({
   height = 250,
   className = '',
 }: SentimentLineChartProps) {
+  const t = useTranslations('common');
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ReturnType<typeof createChart> | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -156,7 +159,7 @@ export function SentimentLineChart({
 
       // Build tooltip content
       const lines = matched.map((m) => {
-        const label = SENTIMENT_LABELS[m.sentiment as Sentiment] ?? '';
+        const label = t(`sentiment.${sentimentKey(m.sentiment)}`);
         const color = sentimentToMarkerColor(m.sentiment);
         const name = m.text ?? '';
         return `<div class="flex items-center gap-1.5"><span style="background:${color}" class="inline-block h-2.5 w-2.5 rounded-full"></span><span class="font-medium">${name}</span><span class="text-muted-foreground">${label}</span></div>`;
@@ -204,6 +207,7 @@ export function SentimentLineChart({
 }
 
 function SentimentLineLegend() {
+  const t = useTranslations('common');
   const levels: { sentiment: Sentiment; color: string }[] = [
     { sentiment: 2, color: SENTIMENT_MARKER_COLORS[2] },
     { sentiment: 1, color: SENTIMENT_MARKER_COLORS[1] },
@@ -220,7 +224,9 @@ function SentimentLineLegend() {
             className="inline-block h-2.5 w-2.5 rounded-full"
             style={{ backgroundColor: l.color }}
           />
-          <span className="text-muted-foreground">{SENTIMENT_LABELS[l.sentiment]}</span>
+          <span className="text-muted-foreground">
+            {t(`sentiment.${sentimentKey(l.sentiment)}`)}
+          </span>
         </span>
       ))}
     </div>

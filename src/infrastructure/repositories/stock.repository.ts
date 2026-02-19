@@ -1,6 +1,7 @@
 // Stock Repository - 僅標的 CRUD，不含股價
 
 import { createAdminClient } from '@/infrastructure/supabase/admin';
+import { escapePostgrestSearch } from '@/lib/api/search';
 import type { Stock, StockWithStats, CreateStockInput, StockSearchResult } from '@/domain/models';
 
 type DbStock = {
@@ -36,7 +37,8 @@ export async function listStocks(params: {
   let query = supabase.from('stocks').select('*', { count: 'exact', head: false });
 
   if (search.trim()) {
-    query = query.or(`ticker.ilike.%${search.trim()}%,name.ilike.%${search.trim()}%`);
+    const s = escapePostgrestSearch(search.trim());
+    query = query.or(`ticker.ilike.%${s}%,name.ilike.%${s}%`);
   }
 
   const from = (page - 1) * limit;
@@ -90,7 +92,7 @@ export async function listStocks(params: {
     return {
       ...stock,
       postCount: countByStock[stock.id] ?? 0,
-      winRate: null,
+      returnRate: null,
       lastPostAt: lastPostByStock[stock.id] ? new Date(lastPostByStock[stock.id]) : null,
     };
   });
@@ -133,7 +135,7 @@ export async function getStockByTicker(ticker: string): Promise<StockWithStats |
   return {
     ...stock,
     postCount: count ?? 0,
-    winRate: null,
+    returnRate: null,
     lastPostAt,
   };
 }

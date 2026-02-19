@@ -1,12 +1,12 @@
 {
   "title": "KOL List",
-  "description": "Browse and manage all tracked KOLs",
+  "description": "An overview of KOL insights across tracked stocks",
   "newKol": "New KOL",
   "search": "Search KOLs...",
   "stats": {
     "recentPost": "Recent post:",
     "postCount": "Posts:",
-    "winRate": "Win rate {percent}%"
+    "returnRate": "Return {percent}%"
   },
   "loading": "Loading...",
   "errors": {
@@ -19,9 +19,14 @@
   },
   "detail": {
     "backToList": "Back to KOL List",
+    "tabs": {
+      "overview": "Overview",
+      "stats": "Stats",
+      "about": "About"
+    },
     "stats": {
       "postCount": "Posts:",
-      "overallWinRate": "Overall Win Rate: {percent}%"
+      "overallReturnRate": "Overall Return Rate: {percent}%"
     },
     "postsByStock": {
       "title": "Posts Grouped by Stock",
@@ -31,11 +36,11 @@
       "viewAll": "View all {count} posts"
     },
     "priceChange": "{percent}% (5d)",
-    "winRate": {
-      "title": "Win Rate Statistics",
-      "description": "Prediction win rate calculated by different time periods",
-      "analyzing": "Calculating win rate...",
-      "overallAverage": "Overall Average Win Rate",
+    "returnRate": {
+      "title": "Return Rate Statistics",
+      "description": "Average return rate by time period (short-term reflects momentum, long-term reflects value investing)",
+      "analyzing": "Calculating return rate...",
+      "overallAverage": "Overall Average Return Rate",
       "totalPosts": "Total {count} directional posts",
       "periods": {
         "5d": "5d",
@@ -43,17 +48,16 @@
         "90d": "90d",
         "365d": "365d"
       },
-      "periodWinRate": "{days}d Win Rate",
-      "winLoss": "{wins}W / {losses}L",
-      "validSamples": "({count} valid samples)",
+      "periodReturnRate": "{days}d Return Rate",
+      "posNeg": "{positive}W / {negative}L / {na}N/A",
       "explanation": {
-        "title": "Win Rate Calculation Explanation",
-        "bullish": "Bullish posts: Victory if stock price rises after posting",
-        "bearish": "Bearish posts: Victory if stock price falls after posting",
-        "neutral": "Neutral posts are not included in win rate calculation",
-        "perStock": "Each post's win rate is calculated separately for each stock"
+        "title": "Return Rate Calculation",
+        "bullish": "Bullish posts: Return = stock price change (following the buy signal)",
+        "bearish": "Bearish posts: Return = inverse of stock price change (contrarian position)",
+        "neutral": "Neutral posts are not included in return rate calculation",
+        "perStock": "Each post's return is calculated separately for each stock"
       },
-      "loadFailed": "Failed to load win rate data"
+      "loadFailed": "Failed to load return rate data"
     },
     "about": {
       "title": "About {name}",
@@ -62,9 +66,14 @@
       "socialLinks": "Social Links",
       "noSocialLinks": "No social links"
     },
+    "sentimentChart": {
+      "title": "Opinion Timeline"
+    },
+    "winRate": "Win Rate (30d)",
     "loading": "Loading...",
     "errors": {
-      "loadFailed": "Failed to load KOL or KOL not found"
+      "loadFailed": "Failed to load KOL or KOL not found",
+      "noPriceData": "No price data available"
     }
   }
 }

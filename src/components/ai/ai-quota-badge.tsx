@@ -5,6 +5,7 @@
  * 顯示剩餘 AI 使用次數
  */
 
+import { useTranslations } from 'next-intl';
 import { useAiUsage } from '@/hooks/use-ai';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -16,6 +17,7 @@ interface AiQuotaBadgeProps {
 }
 
 export function AiQuotaBadge({ variant = 'default', className }: AiQuotaBadgeProps) {
+  const t = useTranslations('common');
   const { data: usage, isLoading, error } = useAiUsage();
 
   if (isLoading) {
@@ -44,13 +46,13 @@ export function AiQuotaBadge({ variant = 'default', className }: AiQuotaBadgePro
 
   // 格式化重置時間
   const formatResetTime = () => {
-    if (!resetAt) return '下週';
+    if (!resetAt) return t('ai.nextWeek');
     const reset = new Date(resetAt);
     const now = new Date();
     const diffDays = Math.ceil((reset.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays <= 0) return '今天重置';
-    if (diffDays === 1) return '明天重置';
-    return `${diffDays} 天後重置`;
+    if (diffDays <= 0) return t('time.resetToday');
+    if (diffDays === 1) return t('time.resetTomorrow');
+    return t('time.resetInDays', { days: diffDays });
   };
 
   if (variant === 'compact') {
@@ -64,9 +66,7 @@ export function AiQuotaBadge({ variant = 'default', className }: AiQuotaBadgePro
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
-            <p>
-              AI 配額: {remaining}/{weeklyLimit}
-            </p>
+            <p>{t('ai.quotaDisplay', { remaining, limit: weeklyLimit })}</p>
             <p className="text-muted-foreground text-xs">{formatResetTime()}</p>
           </TooltipContent>
         </Tooltip>
@@ -80,13 +80,11 @@ export function AiQuotaBadge({ variant = 'default', className }: AiQuotaBadgePro
         <TooltipTrigger asChild>
           <Badge variant="outline" className={`${colorClass} ${className}`}>
             <Sparkles className="mr-1 h-3 w-3" />
-            <span>
-              AI: {remaining}/{weeklyLimit}
-            </span>
+            <span>{t('ai.quotaDisplay', { remaining, limit: weeklyLimit })}</span>
           </Badge>
         </TooltipTrigger>
         <TooltipContent>
-          <p>本週剩餘 AI 分析次數</p>
+          <p>{t('ai.weeklyRemaining')}</p>
           <p className="text-muted-foreground text-xs">{formatResetTime()}</p>
         </TooltipContent>
       </Tooltip>

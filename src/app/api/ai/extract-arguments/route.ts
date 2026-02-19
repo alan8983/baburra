@@ -4,16 +4,15 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { extractArguments } from '@/domain/services/ai.service';
-import { checkAiQuota, consumeAiQuota } from '@/infrastructure/repositories/ai-usage.repository';
+import { consumeAiQuota } from '@/infrastructure/repositories/ai-usage.repository';
+import { internalError } from '@/lib/api/error';
 import {
   getArgumentCategoryByCode,
   createPostArguments,
   updateStockArgumentSummary,
 } from '@/infrastructure/repositories/argument.repository';
-
-// 開發期間使用的測試用戶 ID
-const DEV_USER_ID = process.env.DEV_USER_ID || '00000000-0000-0000-0000-000000000001';
 
 interface ExtractArgumentsRequest {
   content: string;
@@ -27,6 +26,10 @@ interface ExtractArgumentsRequest {
 
 export async function POST(request: NextRequest) {
   try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const body = (await request.json()) as ExtractArgumentsRequest;
 
     // 驗證輸入
@@ -45,13 +48,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'stocks must be a non-empty array' }, { status: 400 });
     }
 
-    // 檢查配額
-    const hasQuota = await checkAiQuota(DEV_USER_ID);
-    if (!hasQuota) {
-      return NextResponse.json(
-        { error: 'AI quota exceeded. Please wait until next week.' },
-        { status: 429 }
-      );
+    // 原子性消耗配額（先扣再用，避免 race condition）
+    let usage;
+    try {
+      usage = await consumeAiQuota(userId);
+    } catch (quotaErr) {
+      if (
+        quotaErr &&
+        typeof quotaErr === 'object' &&
+        'code' in quotaErr &&
+        (quotaErr as { code: string }).code === 'AI_QUOTA_EXCEEDED'
+      ) {
+        return NextResponse.json(
+          { error: 'AI quota exceeded. Please wait until next week.' },
+          { status: 429 }
+        );
+      }
+      throw quotaErr;
     }
 
     // 對每個標的執行論點提取
@@ -114,9 +127,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 消耗配額
-    const usage = await consumeAiQuota(DEV_USER_ID);
-
     return NextResponse.json({
       arguments: savedArguments,
       usage: {
@@ -126,10 +136,6 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('AI extract-arguments error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Internal server error' },
-      { status: 500 }
-    );
+    return internalError(error, 'Argument extraction failed');
   }
 }

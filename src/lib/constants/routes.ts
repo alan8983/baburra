@@ -32,14 +32,14 @@ export const API_ROUTES = {
   KOLS: '/api/kols',
   KOL_DETAIL: (id: string) => `/api/kols/${id}`,
   KOL_POSTS: (id: string) => `/api/kols/${id}/posts`,
-  KOL_WIN_RATE: (id: string) => `/api/kols/${id}/win-rate`,
+  KOL_RETURN_RATE: (id: string) => `/api/kols/${id}/return-rate`,
 
   // Stocks
   STOCKS: '/api/stocks',
   STOCK_DETAIL: (ticker: string) => `/api/stocks/${ticker}`,
   STOCK_POSTS: (ticker: string) => `/api/stocks/${ticker}/posts`,
   STOCK_PRICES: (ticker: string) => `/api/stocks/${ticker}/prices`,
-  STOCK_WIN_RATE: (ticker: string) => `/api/stocks/${ticker}/win-rate`,
+  STOCK_RETURN_RATE: (ticker: string) => `/api/stocks/${ticker}/return-rate`,
   STOCK_ARGUMENTS: (ticker: string) => `/api/stocks/${ticker}/arguments`,
 
   // Posts
@@ -64,6 +64,7 @@ export const API_ROUTES = {
   AI_ANALYZE: '/api/ai/analyze',
   AI_IDENTIFY_TICKERS: '/api/ai/identify-tickers',
   AI_EXTRACT_ARGUMENTS: '/api/ai/extract-arguments',
+  AI_EXTRACT_DRAFT_ARGUMENTS: '/api/ai/extract-draft-arguments',
   AI_USAGE: '/api/ai/usage',
 
   // Argument Categories

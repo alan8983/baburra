@@ -7,7 +7,8 @@
     "noData": "沒有 KOL 資料",
     "list": "KOL 列表",
     "createNew": "新增 KOL「{name}」",
-    "createNewHint": "輸入名稱以新增 KOL"
+    "createNewHint": "輸入名稱以新增 KOL",
+    "clearSelection": "清除選擇"
   },
   "stockSelector": {
     "placeholder": "搜尋或選擇標的...",
@@ -17,7 +18,8 @@
     "noData": "沒有投資標的資料",
     "selected": "已選擇 {count} 個標的 (最多 {max})",
     "createNew": "新增標的「{ticker}」",
-    "createNewHint": "輸入代碼以新增標的"
+    "createNewHint": "輸入代碼以新增標的",
+    "stockList": "投資標的"
   },
   "kolForm": {
     "title": "新增 KOL",

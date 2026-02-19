@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
-import { getLocale, getMessages } from 'next-intl/server';
+import { getLocale, getMessages, getTranslations } from 'next-intl/server';
 import { Providers } from '@/components/providers';
 import './globals.css';
 
@@ -15,10 +15,13 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
-export const metadata: Metadata = {
-  title: 'Stock KOL Tracker - 追蹤 KOL 投資觀點',
-  description: '追蹤 KOL 投資觀點，計算預測勝率，透過 K 線圖對照觀點與實際走勢',
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations('common');
+  return {
+    title: t('metadata.title'),
+    description: t('metadata.description'),
+  };
+}
 
 export default async function RootLayout({
   children,

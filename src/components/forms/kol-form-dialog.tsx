@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useTranslations } from 'next-intl';
 import { Loader2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,6 +34,7 @@ export function KOLFormDialog({
   defaultName = '',
   onSuccess,
 }: KOLFormDialogProps) {
+  const t = useTranslations('forms');
   const createKol = useCreateKol();
   const [name, setName] = React.useState(defaultName);
 
@@ -85,21 +87,19 @@ export function KOLFormDialog({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <User className="h-5 w-5" />
-              新增 KOL
+              {t('kolForm.title')}
             </DialogTitle>
-            <DialogDescription>
-              建立新的 KOL 資料，之後可以在 KOL 管理頁面編輯詳細資訊
-            </DialogDescription>
+            <DialogDescription>{t('kolForm.description')}</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="kol-name">
-                名稱 <span className="text-destructive">*</span>
+                {t('kolForm.name')} <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="kol-name"
-                placeholder="輸入 KOL 名稱"
+                placeholder={t('kolForm.namePlaceholder')}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 disabled={createKol.isPending}
@@ -115,16 +115,16 @@ export function KOLFormDialog({
               onClick={handleClose}
               disabled={createKol.isPending}
             >
-              取消
+              {t('kolForm.cancel')}
             </Button>
             <Button type="submit" disabled={!name.trim() || createKol.isPending}>
               {createKol.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  建立中...
+                  {t('kolForm.creating')}
                 </>
               ) : (
-                '建立 KOL'
+                t('kolForm.create')
               )}
             </Button>
           </DialogFooter>

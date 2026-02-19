@@ -4,7 +4,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { listPosts, createPost } from '@/infrastructure/repositories';
-import type { CreatePostInput } from '@/domain/models';
+import { enrichPostsWithPriceChanges } from '@/lib/api/enrich-price-changes';
+import { parsePaginationParams } from '@/lib/api/pagination';
+import { internalError } from '@/lib/api/error';
+import { createPostSchema, parseBody } from '@/lib/api/validation';
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,42 +15,35 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search') ?? undefined;
     const kolId = searchParams.get('kolId') ?? undefined;
     const stockTicker = searchParams.get('stockTicker') ?? undefined;
-    const page = searchParams.get('page');
-    const limit = searchParams.get('limit');
+    const pagination = parsePaginationParams(searchParams);
+    if (pagination.error) {
+      return NextResponse.json({ error: pagination.error }, { status: 400 });
+    }
     const result = await listPosts({
       search: search || undefined,
       kolId,
       stockTicker,
-      page: page ? parseInt(page, 10) : undefined,
-      limit: limit ? parseInt(limit, 10) : undefined,
+      page: pagination.data?.page,
+      limit: pagination.data?.limit,
     });
+    await enrichPostsWithPriceChanges(result.data);
     return NextResponse.json(result);
   } catch (err) {
-    console.error('GET /api/posts', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to fetch posts' },
-      { status: 500 }
-    );
+    return internalError(err, 'Failed to fetch posts');
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const userId = await getCurrentUserId();
-    const body = (await request.json()) as CreatePostInput;
-    if (!body?.kolId || !body?.content || body.sentiment === undefined || !body.postedAt) {
-      return NextResponse.json(
-        { error: 'kolId, content, sentiment, postedAt are required' },
-        { status: 400 }
-      );
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const post = await createPost(body, userId);
+    const parsed = await parseBody(request, createPostSchema);
+    if ('error' in parsed) return parsed.error;
+    const post = await createPost(parsed.data, userId);
     return NextResponse.json(post);
   } catch (err) {
-    console.error('POST /api/posts', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to create post' },
-      { status: 500 }
-    );
+    return internalError(err, 'Failed to create post');
   }
 }

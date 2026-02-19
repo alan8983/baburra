@@ -7,7 +7,8 @@
     "noData": "No KOL data",
     "list": "KOL List",
     "createNew": "Create KOL \"{name}\"",
-    "createNewHint": "Enter name to create KOL"
+    "createNewHint": "Enter name to create KOL",
+    "clearSelection": "Clear selection"
   },
   "stockSelector": {
     "placeholder": "Search or select stock...",
@@ -17,7 +18,8 @@
     "noData": "No stock data",
     "selected": "Selected {count} stocks (max {max})",
     "createNew": "Create stock \"{ticker}\"",
-    "createNewHint": "Enter ticker to create stock"
+    "createNewHint": "Enter ticker to create stock",
+    "stockList": "Stocks"
   },
   "kolForm": {
     "title": "New KOL",

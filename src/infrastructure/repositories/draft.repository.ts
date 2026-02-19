@@ -8,6 +8,7 @@ import type {
   CreateDraftInput,
   UpdateDraftInput,
 } from '@/domain/models';
+import type { Sentiment } from '@/domain/models/post';
 
 type DbDraft = {
   id: string;
@@ -18,6 +19,7 @@ type DbDraft = {
   source_url: string | null;
   images: string[];
   sentiment: number | null;
+  stock_sentiments: Record<string, number> | null;
   posted_at: string | null;
   stock_ids: string[];
   stock_name_inputs: string[];
@@ -36,6 +38,7 @@ function mapDbToDraft(row: DbDraft): Draft {
     sourceUrl: row.source_url ?? null,
     images: Array.isArray(row.images) ? row.images : [],
     sentiment: row.sentiment as Draft['sentiment'],
+    stockSentiments: (row.stock_sentiments as Record<string, Sentiment> | null) ?? null,
     postedAt: row.posted_at ? new Date(row.posted_at) : null,
     stockIds: Array.isArray(row.stock_ids) ? row.stock_ids : [],
     stockNameInputs: Array.isArray(row.stock_name_inputs) ? row.stock_name_inputs : [],
@@ -160,6 +163,7 @@ export async function createDraft(userId: string, input: CreateDraftInput): Prom
       source_url: input.sourceUrl ?? null,
       images: input.images ?? [],
       sentiment: input.sentiment ?? null,
+      stock_sentiments: input.stockSentiments ?? null,
       posted_at: input.postedAt
         ? input.postedAt instanceof Date
           ? input.postedAt.toISOString()
@@ -189,6 +193,7 @@ export async function updateDraft(
   if (input.sourceUrl !== undefined) payload.source_url = input.sourceUrl;
   if (input.images !== undefined) payload.images = input.images;
   if (input.sentiment !== undefined) payload.sentiment = input.sentiment;
+  if (input.stockSentiments !== undefined) payload.stock_sentiments = input.stockSentiments;
   if (input.postedAt !== undefined)
     payload.posted_at = input.postedAt
       ? input.postedAt instanceof Date

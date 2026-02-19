@@ -1,11 +1,11 @@
 {
   "title": "投資標的",
-  "description": "瀏覽所有被追蹤的投資標的",
+  "description": "來自 KOL 的投資標的觀點與洞察",
   "newStock": "新增標的",
   "search": "搜尋股票代碼或名稱...",
   "stats": {
     "postCount": "文章數",
-    "winRate30d": "30日勝率",
+    "returnRate30d": "30日報酬率",
     "recentPost": "最近發文"
   },
   "loading": "載入中...",
@@ -19,13 +19,23 @@
   },
   "detail": {
     "backToList": "返回標的列表",
+    "tabs": {
+      "posts": "文章",
+      "stats": "統計",
+      "chart": "K線圖",
+      "arguments": "論點"
+    },
     "chart": {
       "title": "K 線圖",
       "description": "股價走勢圖與 KOL 觀點標記"
     },
+    "sentimentChart": {
+      "title": "KOL 觀點分析",
+      "description": "收盤價走勢與 KOL 觀點標記"
+    },
     "stats": {
       "postCount": "文章數:",
-      "winRate30d": "30日勝率: {percent}%"
+      "returnRate30d": "30日報酬率: {percent}%"
     },
     "posts": {
       "title": "相關文章",
@@ -36,11 +46,11 @@
       "5d": "5日:",
       "30d": "30日:"
     },
-    "winRate": {
-      "title": "勝率統計",
-      "description": "KOL 對此標的的預測勝率（依不同時間週期計算）",
-      "analyzing": "計算勝率中...",
-      "overallAverage": "整體平均勝率",
+    "returnRate": {
+      "title": "報酬率統計",
+      "description": "KOL 對此標的的平均報酬率（短期反映動能型操作，長期反映價值型操作）",
+      "analyzing": "計算報酬率中...",
+      "overallAverage": "整體平均報酬率",
       "totalPosts": "共 {count} 篇有方向性文章",
       "periods": {
         "5d": "5日",
@@ -48,17 +58,33 @@
         "90d": "90日",
         "365d": "365日"
       },
-      "periodWinRate": "{days}日勝率",
-      "winLoss": "{wins}勝 / {losses}敗",
-      "validSamples": "({count} 筆有效樣本)",
+      "periodReturnRate": "{days}日報酬率",
+      "posNeg": "{positive}正 / {negative}負 / {na}待定",
       "explanation": {
-        "title": "勝率計算說明",
-        "bullish": "看多文章：發文後股價上漲即為勝利",
-        "bearish": "看空文章：發文後股價下跌即為勝利",
-        "neutral": "中立文章不納入勝率計算",
+        "title": "報酬率計算說明",
+        "bullish": "看多文章：跟著買入，報酬率 = 股價漲跌幅",
+        "bearish": "看空文章：反向操作，報酬率 = 股價漲跌幅的反向",
+        "neutral": "中立文章不納入報酬率計算",
         "allKols": "計算基於所有 KOL 對此標的的文章"
       },
-      "loadFailed": "無法載入勝率資料"
+      "loadFailed": "無法載入報酬率資料"
+    },
+    "arguments": {
+      "title": "論點分布統計",
+      "totalArguments": "{count} 個論點",
+      "mentions": "次提及",
+      "loadFailed": "載入論點資料失敗",
+      "noArguments": "尚無論點資料",
+      "noArgumentsHint": "當文章被 AI 分析時，論點會自動提取並顯示在此處",
+      "bullish": "看多",
+      "bearish": "看空",
+      "neutral": "中立",
+      "mentionCount": "{count} 次提及",
+      "firstMentioned": "首次提及: {date}",
+      "lastMentioned": "最近提及: {date}",
+      "bullishArguments": "▲ 看多論點 ({count})",
+      "neutralArguments": "● 中立論點 ({count})",
+      "bearishArguments": "▼ 看空論點 ({count})"
     },
     "loading": "載入中...",
     "priceLoading": "載入股價中...",

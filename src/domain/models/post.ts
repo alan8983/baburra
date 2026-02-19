@@ -37,17 +37,20 @@ export interface Post {
   createdBy: string | null;
 }
 
+export interface PostStockLink {
+  id: string;
+  ticker: string;
+  name: string;
+  sentiment: Sentiment | null; // null = use post-level sentiment
+}
+
 export interface PostWithRelations extends Post {
   kol: {
     id: string;
     name: string;
     avatarUrl: string | null;
   };
-  stocks: {
-    id: string;
-    ticker: string;
-    name: string;
-  }[];
+  stocks: PostStockLink[];
 }
 
 export interface PostWithPriceChanges extends PostWithRelations {
@@ -70,6 +73,7 @@ export interface CreatePostInput {
   sourcePlatform: SourcePlatform;
   images?: string[];
   sentiment: Sentiment;
+  stockSentiments?: Record<string, Sentiment>; // stockId -> per-stock sentiment
   sentimentAiGenerated?: boolean;
   postedAt: Date;
   draftAiArguments?: DraftAiArguments[];
@@ -79,5 +83,6 @@ export interface UpdatePostInput {
   title?: string;
   content?: string;
   sentiment?: Sentiment;
+  stockSentiments?: Record<string, Sentiment | null>; // stockId -> sentiment or null to clear
   images?: string[];
 }

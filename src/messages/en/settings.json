@@ -7,6 +7,7 @@
     "changeAvatar": "Change Avatar",
     "displayName": "Display Name",
     "displayNamePlaceholder": "Your display name",
+    "email": "Email",
     "emailCannotChange": "Email cannot be changed",
     "saving": "Saving...",
     "save": "Save Changes",
@@ -28,11 +29,25 @@
     "freeDescription": "Basic features, 15 AI analyses per week",
     "currentPlan": "Current Plan",
     "premiumDescription": "100 AI analyses per week, priority support",
-    "upgrade": "Upgrade"
+    "upgrade": "Upgrade",
+    "freePlanName": "Free Plan",
+    "premiumPlanName": "Premium Plan",
+    "premiumPrice": "$9.99/mo"
   },
   "timezone": {
     "label": "Timezone",
-    "description": "Used by AI to interpret post timestamps"
+    "description": "Used by AI to interpret post timestamps",
+    "options": {
+      "taipei": "Taipei (UTC+8)",
+      "shanghai": "Shanghai (UTC+8)",
+      "tokyo": "Tokyo (UTC+9)",
+      "hongkong": "Hong Kong (UTC+8)",
+      "singapore": "Singapore (UTC+8)",
+      "newYork": "New York (UTC-5)",
+      "losAngeles": "Los Angeles (UTC-8)",
+      "london": "London (UTC+0)",
+      "utc": "UTC"
+    }
   },
   "dangerZone": {
     "title": "Danger Zone",

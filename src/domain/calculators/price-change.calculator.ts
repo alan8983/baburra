@@ -82,11 +82,13 @@ export function calculatePriceChanges(
     const targetDate = new Date(postedAt);
     targetDate.setDate(targetDate.getDate() + period);
 
-    // 如果目標日期超過今天，則使用今天的價格
-    const effectiveDate = targetDate > today ? today : targetDate;
-    const targetDateStr = effectiveDate.toISOString().slice(0, 10);
+    let targetPrice: number | null = null;
 
-    const targetPrice = findClosePrice(candles, targetDateStr);
+    if (targetDate <= today) {
+      const targetDateStr = targetDate.toISOString().slice(0, 10);
+      targetPrice = findClosePrice(candles, targetDateStr);
+    }
+    // If targetDate > today, the period hasn't elapsed yet — leave targetPrice as null
 
     if (targetPrice !== null) {
       const change = calculatePriceChangePercent(basePrice, targetPrice);

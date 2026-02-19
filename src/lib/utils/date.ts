@@ -1,15 +1,21 @@
 // 日期處理工具函數
 
-import { format, formatDistanceToNow, parseISO, isValid } from 'date-fns';
+import { format, formatDistanceToNow, parseISO, isValid, type Locale } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
+import { enUS } from 'date-fns/locale';
+
+const DATE_FNS_LOCALES: Record<string, Locale> = { 'zh-TW': zhTW, en: enUS };
+function getDateFnsLocale(locale?: string): Locale {
+  return DATE_FNS_LOCALES[locale ?? 'zh-TW'] ?? zhTW;
+}
 
 /**
  * 格式化日期為標準格式
  */
-export function formatDate(date: Date | string, formatStr = 'yyyy/MM/dd'): string {
+export function formatDate(date: Date | string, formatStr = 'yyyy/MM/dd', locale?: string): string {
   const d = typeof date === 'string' ? parseISO(date) : date;
   if (!isValid(d)) return '-';
-  return format(d, formatStr, { locale: zhTW });
+  return format(d, formatStr, { locale: getDateFnsLocale(locale) });
 }
 
 /**
@@ -22,10 +28,10 @@ export function formatDateTime(date: Date | string): string {
 /**
  * 格式化為相對時間 (例如: "2小時前")
  */
-export function formatRelativeTime(date: Date | string): string {
+export function formatRelativeTime(date: Date | string, locale?: string): string {
   const d = typeof date === 'string' ? parseISO(date) : date;
   if (!isValid(d)) return '-';
-  return formatDistanceToNow(d, { addSuffix: true, locale: zhTW });
+  return formatDistanceToNow(d, { addSuffix: true, locale: getDateFnsLocale(locale) });
 }
 
 /**

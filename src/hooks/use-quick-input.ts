@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslations } from 'next-intl';
 import { API_ROUTES } from '@/lib/constants';
 import { draftKeys } from './use-drafts';
 
@@ -13,6 +14,7 @@ interface QuickInputResult {
  */
 export function useQuickInput() {
   const queryClient = useQueryClient();
+  const t = useTranslations('input');
 
   return useMutation<QuickInputResult, Error, string>({
     mutationFn: async (content: string) => {
@@ -28,14 +30,14 @@ export function useQuickInput() {
         const serverMessage = errorData?.error?.message as string | undefined;
 
         const friendlyMessages: Record<string, string> = {
-          UNSUPPORTED_URL: '此網址平台尚不支援，請改為貼上文章內容',
-          AI_QUOTA_EXCEEDED: 'AI 分析額度已用完，請下週再試',
-          FETCH_FAILED: '無法擷取網址內容，請確認網址是否正確',
-          EMPTY_CONTENT: '請輸入內容',
+          UNSUPPORTED_URL: t('errors.unsupportedUrl'),
+          AI_QUOTA_EXCEEDED: t('errors.aiQuotaExceeded'),
+          FETCH_FAILED: t('errors.fetchFailed'),
+          EMPTY_CONTENT: t('errors.emptyContent'),
         };
 
         const message =
-          (code && friendlyMessages[code]) || serverMessage || '建立草稿失敗，請稍後再試';
+          (code && friendlyMessages[code]) || serverMessage || t('errors.createDraftFailed');
         throw new Error(message);
       }
 

@@ -3,7 +3,7 @@
 export const APP_CONFIG = {
   // 應用程式名稱
   APP_NAME: 'Stock KOL Tracker',
-  APP_DESCRIPTION: '追蹤 KOL 投資觀點，計算預測勝率',
+  APP_DESCRIPTION: '追蹤 KOL 投資觀點，計算平均報酬率',
 
   // 分頁設定
   DEFAULT_PAGE_SIZE: 20,
@@ -16,8 +16,8 @@ export const APP_CONFIG = {
   AI_FREE_WEEKLY_LIMIT: 15,
   AI_PREMIUM_WEEKLY_LIMIT: 100,
 
-  // 勝率計算週期 (天數)
-  WIN_RATE_PERIODS: [5, 30, 90, 365] as const,
+  // 報酬率計算週期 (天數)
+  RETURN_RATE_PERIODS: [5, 30, 90, 365] as const,
 
   // 圖片上傳
   MAX_IMAGE_SIZE_MB: 5,

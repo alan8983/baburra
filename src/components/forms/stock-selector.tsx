@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { useTranslations } from 'next-intl';
 import { Check, ChevronsUpDown, Loader2, Plus, Search, TrendingUp, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button, buttonVariants } from '@/components/ui/button';
@@ -40,10 +41,11 @@ export function StockSelector({
   onChange,
   onCreateNew,
   disabled = false,
-  placeholder = '搜尋或選擇標的...',
+  placeholder,
   className,
   maxSelection,
 }: StockSelectorProps) {
+  const t = useTranslations('forms');
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState('');
   const [debouncedSearch, setDebouncedSearch] = React.useState('');
@@ -153,8 +155,10 @@ export function StockSelector({
             <Search className="h-4 w-4" />
             <span>
               {value.length > 0
-                ? `已選擇 ${value.length} 個標的${maxSelection ? ` (最多 ${maxSelection})` : ''}`
-                : placeholder}
+                ? maxSelection
+                  ? t('stockSelector.selected', { count: value.length, max: maxSelection })
+                  : t('stockSelector.selected', { count: value.length, max: '∞' })
+                : (placeholder ?? t('stockSelector.placeholder'))}
             </span>
           </div>
           <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
@@ -166,7 +170,7 @@ export function StockSelector({
         >
           <Command shouldFilter={false}>
             <CommandInput
-              placeholder="搜尋代碼或名稱..."
+              placeholder={t('stockSelector.searchPlaceholder')}
               value={search}
               onValueChange={setSearch}
               data-testid="stock-selector-input"
@@ -175,18 +179,22 @@ export function StockSelector({
               {isLoading ? (
                 <div className="flex items-center justify-center py-6">
                   <Loader2 className="text-muted-foreground h-4 w-4 animate-spin" />
-                  <span className="text-muted-foreground ml-2 text-sm">搜尋中...</span>
+                  <span className="text-muted-foreground ml-2 text-sm">
+                    {t('stockSelector.searching')}
+                  </span>
                 </div>
               ) : (
                 <>
                   <CommandEmpty>
                     {search ? (
-                      <div className="py-2 text-center text-sm">找不到「{search}」</div>
+                      <div className="py-2 text-center text-sm">
+                        {t('stockSelector.notFound', { query: search })}
+                      </div>
                     ) : (
-                      <div className="py-2 text-center text-sm">沒有投資標的資料</div>
+                      <div className="py-2 text-center text-sm">{t('stockSelector.noData')}</div>
                     )}
                   </CommandEmpty>
-                  <CommandGroup heading="投資標的">
+                  <CommandGroup heading={t('stockSelector.stockList')}>
                     {stocks.map((stock) => {
                       const selected = isSelected(stock);
                       const canSelect = selected || !isMaxReached;
@@ -229,8 +237,8 @@ export function StockSelector({
                       <Plus className="h-4 w-4" />
                       <span>
                         {canCreateNew
-                          ? `新增標的「${search.toUpperCase()}」`
-                          : '輸入代碼以新增標的'}
+                          ? t('stockSelector.createNew', { ticker: search.toUpperCase() })
+                          : t('stockSelector.createNewHint')}
                       </span>
                     </CommandItem>
                   </CommandGroup>

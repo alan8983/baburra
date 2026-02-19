@@ -1,6 +1,7 @@
 // Post Repository - 文章 CRUD
 
 import { createAdminClient } from '@/infrastructure/supabase/admin';
+import { escapePostgrestSearch } from '@/lib/api/search';
 import {
   getArgumentCategoryByCode,
   createPostArguments,
@@ -40,6 +41,7 @@ type DbStock = {
 
 type DbPostStock = {
   stock_id: string;
+  sentiment: number | null;
   stocks: DbStock | null;
 };
 
@@ -92,14 +94,16 @@ export async function listPosts(params: {
   // 使用 FK embedding 一次查詢取得文章 + KOL + 股票
   let query = supabase
     .from('posts')
-    .select(`*, kols(id, name, avatar_url), post_stocks(stock_id, stocks(id, ticker, name))`, {
-      count: 'exact',
-    });
+    .select(
+      `*, kols(id, name, avatar_url), post_stocks(stock_id, sentiment, stocks(id, ticker, name))`,
+      { count: 'exact' }
+    );
 
   if (kolId) query = query.eq('kol_id', kolId);
   if (stockFilterPostIds) query = query.in('id', stockFilterPostIds);
   if (search.trim()) {
-    query = query.or(`content.ilike.%${search.trim()}%,title.ilike.%${search.trim()}%`);
+    const s = escapePostgrestSearch(search.trim());
+    query = query.or(`content.ilike.%${s}%,title.ilike.%${s}%`);
   }
 
   const from = (page - 1) * limit;
@@ -128,9 +132,13 @@ export async function listPosts(params: {
         }
       : { id: post.kolId, name: '', avatarUrl: null };
     const stocks = (row.post_stocks ?? [])
-      .map((ps) => ps.stocks)
-      .filter((s): s is DbStock => s !== null)
-      .map((s) => ({ id: s.id, ticker: s.ticker, name: s.name }));
+      .filter((ps) => ps.stocks !== null)
+      .map((ps) => ({
+        id: ps.stocks!.id,
+        ticker: ps.stocks!.ticker,
+        name: ps.stocks!.name,
+        sentiment: (ps.sentiment as Post['sentiment'] | null) ?? null,
+      }));
     return {
       ...post,
       kol,
@@ -146,7 +154,9 @@ export async function getPostById(id: string): Promise<PostWithPriceChanges | nu
   const supabase = createAdminClient();
   const { data: row, error } = await supabase
     .from('posts')
-    .select(`*, kols(id, name, avatar_url), post_stocks(stock_id, stocks(id, ticker, name))`)
+    .select(
+      `*, kols(id, name, avatar_url), post_stocks(stock_id, sentiment, stocks(id, ticker, name))`
+    )
     .eq('id', id)
     .single();
   if (error || !row) return null;
@@ -164,9 +174,13 @@ export async function getPostById(id: string): Promise<PostWithPriceChanges | nu
       }
     : { id: post.kolId, name: '', avatarUrl: null };
   const stocks = (r.post_stocks ?? [])
-    .map((ps) => ps.stocks)
-    .filter((s): s is DbStock => s !== null)
-    .map((s) => ({ id: s.id, ticker: s.ticker, name: s.name }));
+    .filter((ps) => ps.stocks !== null)
+    .map((ps) => ({
+      id: ps.stocks!.id,
+      ticker: ps.stocks!.ticker,
+      name: ps.stocks!.name,
+      sentiment: (ps.sentiment as Post['sentiment'] | null) ?? null,
+    }));
 
   return { ...post, kol, stocks, priceChanges: {} };
 }
@@ -193,80 +207,119 @@ export async function createPost(input: CreatePostInput, createdBy: string | nul
   if (error) throw new Error(error.message);
   const post = mapDbToPost(row as DbPost);
 
-  if (input.stockIds?.length) {
-    await supabase
-      .from('post_stocks')
-      .insert(input.stockIds.map((stock_id) => ({ post_id: post.id, stock_id })));
-  }
-
-  // Transfer draft AI arguments to post_arguments table
-  if (input.draftAiArguments?.length && input.stockIds?.length) {
-    const { data: stockRows } = await supabase
-      .from('stocks')
-      .select('id, ticker')
-      .in('id', input.stockIds);
-
-    const tickerToStockId: Record<string, string> = {};
-    for (const s of stockRows ?? []) {
-      tickerToStockId[(s.ticker as string).toUpperCase()] = s.id as string;
+  try {
+    if (input.stockIds?.length) {
+      const { error: psError } = await supabase.from('post_stocks').insert(
+        input.stockIds.map((stock_id) => ({
+          post_id: post.id,
+          stock_id,
+          sentiment: input.stockSentiments?.[stock_id] ?? null,
+        }))
+      );
+      if (psError) throw new Error(psError.message);
     }
 
-    for (const tickerGroup of input.draftAiArguments) {
-      const stockId = tickerToStockId[tickerGroup.ticker.toUpperCase()];
-      if (!stockId) continue;
+    // Transfer draft AI arguments to post_arguments table
+    if (input.draftAiArguments?.length && input.stockIds?.length) {
+      const { data: stockRows } = await supabase
+        .from('stocks')
+        .select('id, ticker')
+        .in('id', input.stockIds);
 
-      const argInputs: CreatePostArgumentInput[] = [];
-      for (const arg of tickerGroup.arguments) {
-        const category = await getArgumentCategoryByCode(arg.categoryCode);
-        if (!category) continue;
-        argInputs.push({
-          postId: post.id,
-          stockId,
-          categoryId: category.id,
-          originalText: arg.originalText,
-          summary: arg.summary,
-          sentiment: arg.sentiment,
-          confidence: arg.confidence,
-        });
+      const tickerToStockId: Record<string, string> = {};
+      for (const s of stockRows ?? []) {
+        tickerToStockId[(s.ticker as string).toUpperCase()] = s.id as string;
       }
 
-      if (argInputs.length > 0) {
-        await createPostArguments(argInputs);
-        const categoryIds = [...new Set(argInputs.map((a) => a.categoryId))];
-        for (const catId of categoryIds) {
-          await updateStockArgumentSummary(stockId, catId);
+      for (const tickerGroup of input.draftAiArguments) {
+        const stockId = tickerToStockId[tickerGroup.ticker.toUpperCase()];
+        if (!stockId) continue;
+
+        const argInputs: CreatePostArgumentInput[] = [];
+        for (const arg of tickerGroup.arguments) {
+          const category = await getArgumentCategoryByCode(arg.categoryCode);
+          if (!category) continue;
+          argInputs.push({
+            postId: post.id,
+            stockId,
+            categoryId: category.id,
+            originalText: arg.originalText,
+            summary: arg.summary,
+            sentiment: arg.sentiment,
+            confidence: arg.confidence,
+          });
+        }
+
+        if (argInputs.length > 0) {
+          await createPostArguments(argInputs);
+          const categoryIds = [...new Set(argInputs.map((a) => a.categoryId))];
+          for (const catId of categoryIds) {
+            await updateStockArgumentSummary(stockId, catId);
+          }
         }
       }
     }
+  } catch (followUpError) {
+    // Compensating cleanup: remove post + post_stocks on follow-up failure
+    console.error('Post creation follow-up failed, rolling back:', followUpError);
+    await supabase.from('post_arguments').delete().eq('post_id', post.id);
+    await supabase.from('post_stocks').delete().eq('post_id', post.id);
+    await supabase.from('posts').delete().eq('id', post.id);
+    throw followUpError;
   }
 
   return post;
 }
 
-export async function updatePost(id: string, input: UpdatePostInput): Promise<Post | null> {
+export async function updatePost(
+  id: string,
+  userId: string,
+  input: UpdatePostInput
+): Promise<Post | null> {
   const supabase = createAdminClient();
   const payload: Record<string, unknown> = {};
   if (input.title !== undefined) payload.title = input.title;
   if (input.content !== undefined) payload.content = input.content;
   if (input.sentiment !== undefined) payload.sentiment = input.sentiment;
   if (input.images !== undefined) payload.images = input.images;
-  if (Object.keys(payload).length === 0) {
-    const p = await getPostById(id);
-    return p ? { ...p } : null;
+
+  if (Object.keys(payload).length > 0) {
+    const { data: row, error } = await supabase
+      .from('posts')
+      .update(payload)
+      .eq('id', id)
+      .eq('created_by', userId)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    if (!row) return null;
   }
 
-  const { data: row, error } = await supabase
-    .from('posts')
-    .update(payload)
-    .eq('id', id)
-    .select()
-    .single();
-  if (error) throw new Error(error.message);
-  return row ? mapDbToPost(row as DbPost) : null;
+  // Update per-stock sentiments on the junction table
+  if (input.stockSentiments) {
+    for (const [stockId, sentiment] of Object.entries(input.stockSentiments)) {
+      await supabase
+        .from('post_stocks')
+        .update({ sentiment })
+        .eq('post_id', id)
+        .eq('stock_id', stockId);
+    }
+  }
+
+  const p = await getPostById(id);
+  return p ? { ...p } : null;
 }
 
-export async function deletePost(id: string): Promise<boolean> {
+export async function deletePost(id: string, userId: string): Promise<boolean> {
   const supabase = createAdminClient();
+  // Verify ownership before deleting
+  const { data: post } = await supabase
+    .from('posts')
+    .select('id')
+    .eq('id', id)
+    .eq('created_by', userId)
+    .maybeSingle();
+  if (!post) return false;
   await supabase.from('post_stocks').delete().eq('post_id', id);
   const { error } = await supabase.from('posts').delete().eq('id', id);
   if (error) throw new Error(error.message);
@@ -291,19 +344,22 @@ export async function findPostBySourceUrl(sourceUrl: string): Promise<PostWithRe
     .single();
   const { data: psRows } = await supabase
     .from('post_stocks')
-    .select('stock_id')
+    .select('stock_id, sentiment')
     .eq('post_id', post.id);
-  const stockIds = (psRows ?? []).map((p) => p.stock_id as string);
+  const psEntries = (psRows ?? []) as { stock_id: string; sentiment: number | null }[];
+  const stockIds = psEntries.map((p) => p.stock_id);
   let stocks: PostWithRelations['stocks'] = [];
   if (stockIds.length > 0) {
     const { data: sRows } = await supabase
       .from('stocks')
       .select('id, ticker, name')
       .in('id', stockIds);
+    const sentimentMap = new Map(psEntries.map((p) => [p.stock_id, p.sentiment]));
     stocks = (sRows ?? []).map((s) => ({
       id: s.id as string,
       ticker: s.ticker as string,
       name: s.name as string,
+      sentiment: (sentimentMap.get(s.id as string) as Post['sentiment'] | null) ?? null,
     }));
   }
 

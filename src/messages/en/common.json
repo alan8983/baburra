@@ -1,4 +1,8 @@
 {
+  "metadata": {
+    "title": "Stock KOL Tracker - Track KOL Investment Ideas",
+    "description": "Track KOL investment opinions, calculate average return rates, compare opinions with actual price trends via candlestick charts"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "quickInput": "Quick Input",
@@ -93,7 +97,31 @@
     "addTicker": "Add",
     "addAllTickers": "Add All",
     "alreadyAdded": "Already added",
-    "mentionedAs": "mentioned as"
+    "mentionedAs": "mentioned as",
+    "argumentAnalysis": "Argument Analysis",
+    "noArguments": "No arguments extracted",
+    "argumentCount": "{count} arguments",
+    "confidencePercent": "Confidence: {percent}%",
+    "quotaDisplay": "AI Quota: {remaining}/{limit}",
+    "weeklyRemaining": "Weekly remaining AI analyses",
+    "nextWeek": "Next week",
+    "otherCategory": "Other"
+  },
+  "chart": {
+    "intervals": {
+      "day": "D",
+      "week": "W",
+      "month": "M",
+      "quarter": "Q",
+      "year": "Y"
+    },
+    "timeRanges": {
+      "1M": "1M",
+      "1Q": "1Q",
+      "YTD": "YTD",
+      "1Y": "1Y",
+      "5Y": "5Y"
+    }
   },
   "errors": {
     "generic": "An error occurred, please try again later",

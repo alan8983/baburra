@@ -3,11 +3,15 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, User, Filter } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { Search, User, Filter, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -16,14 +20,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ROUTES } from '@/lib/constants';
-import { SENTIMENT_LABELS, SENTIMENT_COLORS } from '@/domain/models/post';
+import { SENTIMENT_COLORS } from '@/domain/models/post';
+import { sentimentKey } from '@/lib/utils/sentiment';
 import { formatDateTime } from '@/lib/utils/date';
-import { usePosts } from '@/hooks';
+import { usePosts, useDeletePost } from '@/hooks';
 
 export default function PostsPage() {
   const router = useRouter();
+  const t = useTranslations('posts');
+  const tCommon = useTranslations('common');
   const [searchQuery, setSearchQuery] = useState('');
   const [sentimentFilter, setSentimentFilter] = useState<string>('all');
+  const [openDeleteId, setOpenDeleteId] = useState<string | null>(null);
+  const deletePost = useDeletePost();
   const { data, isLoading, error } = usePosts({
     search: searchQuery || undefined,
   });
@@ -48,10 +57,10 @@ export default function PostsPage() {
   if (error) {
     return (
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold tracking-tight">所有文章</h1>
+        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
         <Card className="py-12">
           <CardContent className="flex flex-col items-center justify-center text-center">
-            <p className="text-destructive">無法載入文章列表，請稍後再試。</p>
+            <p className="text-destructive">{tCommon('errors.generic')}</p>
           </CardContent>
         </Card>
       </div>
@@ -62,8 +71,8 @@ export default function PostsPage() {
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">所有文章</h1>
-        <p className="text-muted-foreground">瀏覽所有收錄的 KOL 投資觀點文章</p>
+        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+        <p className="text-muted-foreground">{t('description')}</p>
       </div>
 
       {/* Filters */}
@@ -71,7 +80,7 @@ export default function PostsPage() {
         <div className="relative max-w-md flex-1">
           <Search className="text-muted-foreground absolute top-3 left-3 h-4 w-4" />
           <Input
-            placeholder="搜尋文章、KOL、標的..."
+            placeholder={t('search')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
@@ -80,15 +89,15 @@ export default function PostsPage() {
         <Select value={sentimentFilter} onValueChange={setSentimentFilter}>
           <SelectTrigger className="w-[180px]">
             <Filter className="mr-2 h-4 w-4" />
-            <SelectValue placeholder="情緒篩選" />
+            <SelectValue placeholder={t('sentimentFilter.title')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">全部情緒</SelectItem>
-            <SelectItem value="2">強烈看多</SelectItem>
-            <SelectItem value="1">看多</SelectItem>
-            <SelectItem value="0">中立</SelectItem>
-            <SelectItem value="-1">看空</SelectItem>
-            <SelectItem value="-2">強烈看空</SelectItem>
+            <SelectItem value="all">{t('sentimentFilter.all')}</SelectItem>
+            <SelectItem value="2">{t('sentimentFilter.stronglyBullish')}</SelectItem>
+            <SelectItem value="1">{t('sentimentFilter.bullish')}</SelectItem>
+            <SelectItem value="0">{t('sentimentFilter.neutral')}</SelectItem>
+            <SelectItem value="-1">{t('sentimentFilter.bearish')}</SelectItem>
+            <SelectItem value="-2">{t('sentimentFilter.stronglyBearish')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -96,7 +105,9 @@ export default function PostsPage() {
       {/* Loading */}
       {isLoading && (
         <Card className="py-12">
-          <CardContent className="text-muted-foreground flex justify-center">載入中...</CardContent>
+          <CardContent className="text-muted-foreground flex justify-center">
+            {t('loading')}
+          </CardContent>
         </Card>
       )}
 
@@ -123,7 +134,7 @@ export default function PostsPage() {
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-medium">{post.kol.name}</span>
                         <Badge variant="outline" className={SENTIMENT_COLORS[post.sentiment]}>
-                          {SENTIMENT_LABELS[post.sentiment]}
+                          {tCommon(`sentiment.${sentimentKey(post.sentiment)}`)}
                         </Badge>
                         <span className="text-muted-foreground text-sm">
                           {formatDateTime(post.postedAt)}
@@ -133,23 +144,35 @@ export default function PostsPage() {
                       {/* Stocks */}
                       <div className="mt-2 flex flex-wrap gap-2">
                         {post.stocks.map((stock) => {
-                          const change = priceByStockId[stock.id]?.day30 ?? null;
+                          const c = priceByStockId[stock.id];
+                          const best =
+                            c?.day5 != null
+                              ? { label: '5d', value: c.day5 }
+                              : c?.day30 != null
+                                ? { label: '30d', value: c.day30 }
+                                : c?.day90 != null
+                                  ? { label: '90d', value: c.day90 }
+                                  : c?.day365 != null
+                                    ? { label: '1y', value: c.day365 }
+                                    : null;
                           return (
-                            <div key={stock.ticker} className="flex items-center gap-2 text-sm">
+                            <div key={stock.ticker} className="flex items-center gap-1 text-sm">
                               <Badge variant="outline">{stock.ticker}</Badge>
-                              <span
-                                className={
-                                  change == null
-                                    ? 'text-muted-foreground'
-                                    : change >= 0
-                                      ? 'text-green-600'
-                                      : 'text-red-600'
-                                }
-                              >
-                                {change != null
-                                  ? `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`
-                                  : '—'}
-                              </span>
+                              {best ? (
+                                <>
+                                  <span className="text-muted-foreground text-xs">
+                                    {best.label}
+                                  </span>
+                                  <span
+                                    className={best.value >= 0 ? 'text-green-600' : 'text-red-600'}
+                                  >
+                                    {best.value >= 0 ? '+' : ''}
+                                    {best.value.toFixed(1)}%
+                                  </span>
+                                </>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
                             </div>
                           );
                         })}
@@ -159,6 +182,56 @@ export default function PostsPage() {
                         {post.content}
                       </p>
                     </div>
+                    <Popover
+                      open={openDeleteId === post.id}
+                      onOpenChange={(open) => !open && setOpenDeleteId(null)}
+                    >
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-muted-foreground hover:text-destructive shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenDeleteId(post.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-3" onClick={(e) => e.stopPropagation()}>
+                        <p className="text-sm font-medium">{t('detail.deleteConfirm')}</p>
+                        <div className="mt-2 flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            disabled={deletePost.isPending}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deletePost.mutate(post.id, {
+                                onSuccess: () => {
+                                  setOpenDeleteId(null);
+                                  toast.success(t('detail.deleteSuccess'));
+                                },
+                                onError: () => toast.error(t('detail.deleteFailed')),
+                              });
+                            }}
+                          >
+                            {t('detail.deleteConfirmYes')}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenDeleteId(null);
+                            }}
+                          >
+                            {t('detail.deleteConfirmNo')}
+                          </Button>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 </CardContent>
               </Card>
@@ -172,8 +245,8 @@ export default function PostsPage() {
         <Card className="py-12">
           <CardContent className="flex flex-col items-center justify-center text-center">
             <Search className="text-muted-foreground h-12 w-12" />
-            <h3 className="mt-4 text-lg font-semibold">找不到文章</h3>
-            <p className="text-muted-foreground mt-2 text-sm">沒有符合搜尋條件的文章</p>
+            <h3 className="mt-4 text-lg font-semibold">{t('empty.noPosts')}</h3>
+            <p className="text-muted-foreground mt-2 text-sm">{t('empty.description')}</p>
           </CardContent>
         </Card>
       )}

@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { createAdminClient } from '@/infrastructure/supabase/admin';
 import { listPosts } from '@/infrastructure/repositories/post.repository';
+import { internalError } from '@/lib/api/error';
 
 // 計算本月開始時間（UTC）
 function getMonthStart(): Date {
@@ -24,6 +25,9 @@ function getWeekStart(): Date {
 export async function GET() {
   try {
     const userId = await getCurrentUserId();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const supabase = createAdminClient();
 
     const monthStart = getMonthStart();
@@ -63,14 +67,12 @@ export async function GET() {
         .select('id', { count: 'exact', head: true })
         .gte('created_at', weekStart.toISOString()),
       // 草稿統計（需要 user_id）
-      userId
-        ? supabase
-            .from('drafts')
-            .select('updated_at', { count: 'exact', head: false })
-            .eq('user_id', userId)
-            .order('updated_at', { ascending: false })
-            .limit(1)
-        : Promise.resolve({ data: [], count: 0, error: null }),
+      supabase
+        .from('drafts')
+        .select('updated_at', { count: 'exact', head: false })
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+        .limit(1),
       // 最近 5 篇文章
       listPosts({ limit: 5 }),
       // 取得所有文章的 kol_id（輕量查詢，只取一欄）
@@ -147,10 +149,6 @@ export async function GET() {
       topKols,
     });
   } catch (err) {
-    console.error('GET /api/dashboard', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to fetch dashboard data' },
-      { status: 500 }
-    );
+    return internalError(err, 'Failed to fetch dashboard data');
   }
 }

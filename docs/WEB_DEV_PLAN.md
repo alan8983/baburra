@@ -19,13 +19,13 @@
 | Phase 3 | 投資標的 | ✅ 完成 | 2026-02-01 |
 | Phase 4 | 輸入與草稿 | ✅ 完成 | 2026-02-18 |
 | Phase 5 | 文章檢視 | ✅ 完成 | 2026-02-12 (含書籤) |
-| Phase 6 | K 線圖 | 🔄 60% | 基本圖表完成，互動功能待做 |
-| Phase 7 | 勝率計算 | 🔄 70% | 計算器+API 完成，UI 顯示待做 |
-| Phase 8 | AI 整合 | 🔄 80% | 情緒/論點提取完成，論點彙整 UI 待做 |
+| Phase 6 | K 線圖 | ✅ 完成 | K 線圖+情緒標記+工具列已整合到詳情頁 |
+| Phase 7 | 勝率計算 | ✅ 完成 | 計算器+API+UI 顯示全部完成 |
+| Phase 8 | AI 整合 | 🔄 85% | 情緒/論點提取/論點彙整 UI 完成，時間分布圖待做 |
 | Phase 9 | App Layout | ✅ 完成 | 2026-02-10 |
 | Phase 10 | 測試與優化 | 🔄 50% | 單元測試+E2E 框架完成，覆蓋率待提升 |
 
-**MVP 整體完成度: ~80%**
+**MVP 整體完成度: ~92%**
 
 ### 額外已完成功能（計畫外）
 
@@ -329,7 +329,7 @@ CREATE TABLE edit_suggestions (
 | 0.1 | 初始化 Next.js 16 專案        | 專案骨架                    | ✅ |
 | 0.2 | 設定 Tailwind CSS 4 + shadcn/ui | UI 基礎元件              | ✅ |
 | 0.3 | 設定 Supabase 專案            | 資料庫連線                  | ✅ |
-| 0.4 | 建立資料庫 Schema (Migration) | 所有資料表 (4 migrations)   | ✅ |
+| 0.4 | 建立資料庫 Schema (Migration) | 所有資料表 (5 migrations)   | ✅ |
 | 0.5 | **建立測試用戶**              | DEV_USER_ID 環境變數        | ✅ |
 | 0.6 | 設定環境變數                  | .env.local                  | ✅ |
 | 0.7 | 建立目錄結構                  | 依 ARCHITECTURE.md          | ✅ |
@@ -730,7 +730,7 @@ CREATE TABLE edit_suggestions (
 | --- | ------------------- | ---------------------------- | ---- |
 | 5.1 | 建立文章列表頁      | `/posts/page.tsx`            | ✅ |
 | 5.2 | 建立文章詳情頁      | `/posts/[id]/page.tsx`       | ✅ |
-| 5.3 | 建立文章 Header     | 顯示 KOL、時間、情緒         | ✅ (漲跌幅顯示待做) |
+| 5.3 | 建立文章 Header     | 顯示 KOL、時間、情緒、漲跌幅 | ✅ |
 | 5.4 | 建立內容 Tab        | 主文 + 圖片 + 書籤           | ✅ |
 | 5.5 | 建立 use-posts Hook | `hooks/use-posts.ts`         | ✅ |
 
@@ -782,10 +782,10 @@ CREATE TABLE edit_suggestions (
 
 ---
 
-### Phase 6: 股價與 K 線圖模組 🔄
+### Phase 6: 股價與 K 線圖模組 ✅
 
 **目標**: 整合 Tiingo API、K 線圖顯示
-**狀態**: 🔄 60% — 基本圖表已完成，互動功能待實作
+**狀態**: ✅ 完成 — K 線圖+情緒標記+工具列已整合到兩個詳情頁
 
 #### 任務清單
 
@@ -796,10 +796,10 @@ CREATE TABLE edit_suggestions (
 | 6.3 | 建立股價快取邏輯           | 7 天快取                                                | ✅ |
 | 6.4 | 建立股價 API               | `/api/stocks/[ticker]/prices`                           | ✅ |
 | 6.5 | 建立 K 線圖元件            | `components/charts/candlestick-chart.tsx`               | ✅ |
-| 6.6 | 建立情緒標記元件           | `components/charts/sentiment-marker.tsx`                | ✅ (元件存在，待整合到圖表) |
-| 6.7 | 整合到文章詳情頁           | Chart Tab                                               | ⏳ |
-| 6.8 | 整合到標的詳情頁           | Chart Tab                                               | ⏳ |
-| 6.9 | 實作圖表縮放/平移          | 日/週/月線切換                                          | ⏳ |
+| 6.6 | 建立情緒標記元件           | `components/charts/sentiment-marker.tsx`                | ✅ |
+| 6.7 | 整合到文章詳情頁           | `/posts/[id]` 右側面板雙圖表 (K線+情緒折線)             | ✅ |
+| 6.8 | 整合到標的詳情頁           | `/stocks/[ticker]` Chart Tab 雙圖表                     | ✅ |
+| 6.9 | 實作圖表縮放/平移          | chart-toolbar (日/週/月/季/年 + 1M/1Q/YTD/1Y/5Y)       | ✅ |
 
 #### API 端點
 
@@ -840,10 +840,10 @@ CREATE TABLE edit_suggestions (
 
 ---
 
-### Phase 7: 勝率計算模組 🔄
+### Phase 7: 勝率計算模組 ✅
 
 **目標**: 計算 KOL / 標的勝率
-**狀態**: 🔄 70% — 計算邏輯 + API 完成，UI 顯示待實作
+**狀態**: ✅ 完成 — 計算邏輯 + API + UI 顯示全部完成
 
 #### 任務清單
 
@@ -853,8 +853,8 @@ CREATE TABLE edit_suggestions (
 | 7.2 | 建立 WinRate Calculator     | `domain/calculators/win-rate.calculator.ts`     | ✅ (含單元測試) |
 | 7.3 | 建立勝率 API (KOL)          | `/api/kols/[id]/win-rate`                       | ✅ |
 | 7.4 | 建立勝率 API (Stock)        | `/api/stocks/[ticker]/win-rate`                 | ✅ |
-| 7.5 | 更新 KOL 詳情頁 Stats Tab   | 顯示勝率統計                                    | ⏳ |
-| 7.6 | 更新文章列表顯示漲跌幅      | 5/30/90/365 日                                  | ⏳ |
+| 7.5 | 更新 KOL 詳情頁 Stats Tab   | `/stocks/[ticker]` Stats Tab 顯示勝率統計       | ✅ |
+| 7.6 | 更新文章列表顯示漲跌幅      | 5/30 日顯示於 posts, stocks, kols, post detail  | ✅ |
 
 #### 勝率計算邏輯
 
@@ -899,7 +899,7 @@ function calculateWinRate(posts: Post[], period: number): WinRateResult {
 ### Phase 8: AI 整合模組 🔄
 
 **目標**: Gemini API 整合、情緒分析、**論點提取與彙整**、配額管理
-**狀態**: 🔄 80% — 情緒分析/論點提取/配額完成，論點彙整 UI 待實作
+**狀態**: 🔄 85% — 情緒分析/論點提取/論點彙整 UI/配額完成，時間分布圖待實作
 
 #### 8.1 功能概述
 
@@ -988,7 +988,7 @@ CREATE TABLE stock_argument_summary (
 | **論點彙整** |                          |                                                     |      |
 | 8.13         | 建立論點彙整計算器       | `domain/calculators/argument-summary.calculator.ts` | ✅ (含單元測試) |
 | 8.14         | 建立論點彙整 API         | `/api/stocks/[ticker]/arguments`                    | ✅ |
-| 8.15         | 建立標的論點彙整頁面     | Stock 詳情新增 Arguments Tab                        | ⏳ |
+| 8.15         | 建立標的論點彙整頁面     | Stock 詳情新增 Arguments Tab                        | ✅ |
 | 8.16         | 建立論點時間分布圖表     | `components/charts/argument-timeline.tsx`           | ⏳ |
 | **配額管理** |                          |                                                     |      |
 | 8.17         | 建立配額查詢 API         | `/api/ai/usage`                                     | ✅ |
@@ -1141,7 +1141,7 @@ const ARGUMENT_EXTRACTION_PROMPT = `
 
 - ✅ AI 情緒分析功能
 - ✅ **論點提取功能** (依特定框架，7 大類別已 seed)
-- ⏳ **論點彙整頁面** (以 Ticker 為維度) — API 已完成，UI 待實作
+- ✅ **論點彙整頁面** (以 Ticker 為維度) — API + UI + i18n 完成
 - ⏳ **論點時間分布圖表** — 待實作
 - ✅ 配額管理
 
@@ -1318,8 +1318,8 @@ K線圖          勝率計算         AI 整合
 | **M1** | Phase 0, 9  | App 框架、基本導航           | ✅ 2026-02-01 |
 | **M2** | Phase 2-3   | 可搜尋/新增 KOL 和標的       | ✅ 2026-02-01 |
 | **M3** | Phase 4-5   | 完整輸入流程、可檢視文章     | ✅ 2026-02-18 |
-| **M4** | Phase 6-7   | K 線圖顯示、勝率計算         | 🔄 計算完成，UI 待做 |
-| **M5** | Phase 8     | AI 情緒分析、論點提取與彙整  | 🔄 分析完成，彙整 UI 待做 |
+| **M4** | Phase 6-7   | K 線圖顯示、勝率計算         | ✅ 2026-02-18 |
+| **M5** | Phase 8     | AI 情緒分析、論點提取與彙整  | 🔄 分析+彙整 UI 完成，時間分布圖待做 |
 | **M6** | Phase 10, 1 | 測試優化、認證系統、完整 MVP | 🔄 認證完成，部署待做 |
 
 ---
@@ -1331,11 +1331,11 @@ K線圖          勝率計算         AI 整合
 | ID           | 項目                     | 狀態      | 說明                                 |
 | ------------ | ------------------------ | --------- | ------------------------------------ |
 | **TODO-001** | 論點分析框架定義         | ✅ 已完成 | 7 大類別已 seed                      |
-| **TODO-002** | 勝率 UI (KOL Stats Tab)  | ⏳ 待實作 | Phase 7.5 — KOL 詳情頁顯示勝率統計  |
-| **TODO-003** | 漲跌幅顯示 (文章列表)    | ⏳ 待實作 | Phase 7.6 — 5/30/90/365 日漲跌幅    |
-| **TODO-004** | K 線圖整合到詳情頁       | ⏳ 待實作 | Phase 6.7-6.8 — Chart Tab           |
-| **TODO-005** | K 線圖縮放/平移          | ⏳ 待實作 | Phase 6.9 — 日/週/月線切換          |
-| **TODO-006** | 論點彙整 UI              | ⏳ 待實作 | Phase 8.15 — Stock Arguments Tab    |
+| **TODO-002** | 勝率 UI (Stats Tab)      | ✅ 已完成 | Phase 7.5 — stocks 詳情頁 Stats Tab  |
+| **TODO-003** | 漲跌幅顯示 (文章列表)    | ✅ 已完成 | Phase 7.6 — 5/30 日顯示於四個頁面   |
+| **TODO-004** | K 線圖整合到詳情頁       | ✅ 已完成 | Phase 6.7-6.8 — 雙圖表 (K線+情緒)   |
+| **TODO-005** | K 線圖縮放/平移          | ✅ 已完成 | Phase 6.9 — 日/週/月/季/年+時間範圍 |
+| **TODO-006** | 論點彙整 UI              | ✅ 已完成 | Phase 8.15 — Stock Arguments Tab + i18n |
 | **TODO-007** | 論點時間分布圖表         | ⏳ 待實作 | Phase 8.16 — argument-timeline 元件 |
 | **TODO-008** | 效能優化                 | ⏳ 待實作 | Phase 10.5 — Code Splitting 等      |
 | **TODO-009** | Vercel 部署              | ⏳ 待實作 | Phase 10.6 — 生產環境設定           |

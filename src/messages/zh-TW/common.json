@@ -1,4 +1,8 @@
 {
+  "metadata": {
+    "title": "Stock KOL Tracker - 追蹤 KOL 投資觀點",
+    "description": "追蹤 KOL 投資觀點，計算平均報酬率，透過 K 線圖對照觀點與實際走勢"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "quickInput": "快速輸入",
@@ -93,7 +97,31 @@
     "addTicker": "加入",
     "addAllTickers": "全部加入",
     "alreadyAdded": "已加入",
-    "mentionedAs": "文中提及"
+    "mentionedAs": "文中提及",
+    "argumentAnalysis": "論點分析",
+    "noArguments": "尚未提取論點",
+    "argumentCount": "{count} 個論點",
+    "confidencePercent": "信心度: {percent}%",
+    "quotaDisplay": "AI 配額: {remaining}/{limit}",
+    "weeklyRemaining": "本週剩餘 AI 分析次數",
+    "nextWeek": "下週",
+    "otherCategory": "其他"
+  },
+  "chart": {
+    "intervals": {
+      "day": "日",
+      "week": "週",
+      "month": "月",
+      "quarter": "季",
+      "year": "年"
+    },
+    "timeRanges": {
+      "1M": "1個月",
+      "1Q": "1季",
+      "YTD": "今年至今",
+      "1Y": "1年",
+      "5Y": "5年"
+    }
   },
   "errors": {
     "generic": "發生錯誤，請稍後再試",

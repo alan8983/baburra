@@ -148,19 +148,10 @@ export async function isBookmarked(userId: string, postId: string): Promise<bool
 export async function addBookmark(userId: string, postId: string): Promise<Bookmark> {
   const supabase = createAdminClient();
 
-  // Check if already bookmarked (handle unique constraint gracefully)
-  const { data: existing } = await supabase
-    .from('bookmarks')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('post_id', postId)
-    .maybeSingle();
-
-  if (existing) return mapDbToBookmark(existing as DbBookmark);
-
+  // Atomic upsert — avoids check-then-insert race condition
   const { data: row, error } = await supabase
     .from('bookmarks')
-    .insert({ user_id: userId, post_id: postId })
+    .upsert({ user_id: userId, post_id: postId }, { onConflict: 'user_id,post_id' })
     .select()
     .single();
 
