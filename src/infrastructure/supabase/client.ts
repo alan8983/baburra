@@ -1,5 +1,11 @@
 // Supabase Browser Client
 // 用於客戶端元件
+//
+// [Production] Email Verification (Phase 11.5):
+// Enable "Confirm email" in Supabase Dashboard → Authentication → Settings → Email Auth.
+// When enabled, signUp returns a user without a session until the email is confirmed.
+// The confirmation email links to /auth/callback, which exchanges the code for a session.
+// The existing auth callback handler already supports this flow — no code changes needed.
 
 import { createBrowserClient } from '@supabase/ssr';
 

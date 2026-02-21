@@ -8,12 +8,14 @@
 
 import { SocialMediaExtractor, UrlFetchResult, ExtractorConfig, ExtractorError } from './types';
 import { twitterExtractor } from './twitter.extractor';
+import { youtubeExtractor } from './youtube.extractor';
 
 export class ExtractorFactory {
   private extractors: Map<string, SocialMediaExtractor> = new Map();
 
   constructor() {
     this.register(twitterExtractor);
+    this.register(youtubeExtractor);
   }
 
   register(extractor: SocialMediaExtractor): void {
@@ -52,3 +54,4 @@ export class ExtractorFactory {
 export const extractorFactory = new ExtractorFactory();
 
 export { twitterExtractor } from './twitter.extractor';
+export { youtubeExtractor } from './youtube.extractor';

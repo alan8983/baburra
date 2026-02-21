@@ -45,6 +45,12 @@
     "allPosts": "All Posts",
     "allPostsDesc": "Browse all posts"
   },
+  "empty": {
+    "title": "No data yet",
+    "description": "Start tracking KOL investment opinions!",
+    "importKol": "Import KOL Posts",
+    "addPost": "Add Post Manually"
+  },
   "errors": {
     "loadError": "Error loading data: {error}",
     "unknownError": "Unknown error"

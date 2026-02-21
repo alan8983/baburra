@@ -13,9 +13,11 @@
     "loadFailed": "無法載入 KOL 列表，請稍後再試。"
   },
   "empty": {
-    "noKols": "找不到 KOL",
+    "noKols": "尚無追蹤的 KOL",
     "noResults": "沒有符合「{query}」的 KOL",
-    "description": "還沒有任何 KOL，點擊上方按鈕新增"
+    "description": "還沒有任何 KOL，開始匯入或手動新增吧！",
+    "importKol": "匯入你的第一位 KOL",
+    "addKol": "手動新增 KOL"
   },
   "detail": {
     "backToList": "返回 KOL 列表",

@@ -12,13 +12,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ROUTES } from '@/lib/constants';
 import { useAuth } from '@/hooks/use-auth';
+import { GoogleIcon } from '@/components/icons/google-icon';
 
 function LoginForm() {
   const searchParams = useSearchParams();
   const message = searchParams.get('message');
   const t = useTranslations('auth');
 
-  const { signIn, loading, error } = useAuth();
+  const { signIn, signInWithGoogle, loading, error } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -41,6 +42,15 @@ function LoginForm() {
       setFormError(err instanceof Error ? err.message : t('login.errors.loginFailed'));
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setFormError(null);
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : t('oauth.googleError'));
     }
   };
 
@@ -71,6 +81,26 @@ function LoginForm() {
             </div>
           )}
 
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={handleGoogleSignIn}
+            disabled={isLoading}
+          >
+            <GoogleIcon className="mr-2 h-4 w-4" />
+            {t('oauth.continueWithGoogle')}
+          </Button>
+
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card text-muted-foreground px-2">{t('oauth.orDivider')}</span>
+            </div>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">{t('login.email')}</Label>
@@ -93,7 +123,7 @@ function LoginForm() {
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">{t('login.password')}</Label>
                 <Link
-                  href="/forgot-password"
+                  href={ROUTES.RESET_PASSWORD}
                   className="text-muted-foreground hover:text-primary text-xs"
                 >
                   {t('login.forgotPassword')}

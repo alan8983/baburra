@@ -2,6 +2,7 @@
 
 import { use, useMemo, useState } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { ArrowLeft, HelpCircle, Loader2, User } from 'lucide-react';
@@ -16,8 +17,6 @@ import { SENTIMENT_COLORS } from '@/domain/models/post';
 import { sentimentKey } from '@/lib/utils/sentiment';
 import { useStockPricesForChart } from '@/hooks/use-stock-prices';
 import {
-  CandlestickChart,
-  SentimentLineChart,
   ChartToolbar,
   aggregateCandles,
   aggregateVolumes,
@@ -26,6 +25,22 @@ import {
 import type { LineChartMarker, CandleInterval, TimeRange } from '@/components/charts';
 import { useStock, useStockPosts, useStockReturnRate } from '@/hooks';
 import { formatReturnRate, getReturnRateColorClass } from '@/domain/calculators';
+
+const CandlestickChart = dynamic(
+  () =>
+    import('@/components/charts/candlestick-chart').then((mod) => ({
+      default: mod.CandlestickChart,
+    })),
+  { ssr: false }
+);
+
+const SentimentLineChart = dynamic(
+  () =>
+    import('@/components/charts/sentiment-line-chart').then((mod) => ({
+      default: mod.SentimentLineChart,
+    })),
+  { ssr: false }
+);
 
 function toDateStr(postedAt: Date | string): string {
   if (postedAt instanceof Date) return postedAt.toISOString().slice(0, 10);

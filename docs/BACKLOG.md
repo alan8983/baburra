@@ -3,7 +3,7 @@
 > 本文件由 `User Story Mapping Framework_v20251207.csv` 自動生成，作為開發待辦清單。
 > 已於 2026-02-19 更新為 Next.js Web 版本的實作狀態。
 >
-> **最後更新**: 2026-02-19
+> **最後更新**: 2026-02-22
 
 ---
 
@@ -11,17 +11,17 @@
 
 | 狀態        | 數量   | 百分比   |
 | ----------- | ------ | -------- |
-| ✅ 已完成   | 36     | 61.0%    |
-| 🔄 部分完成 | 7      | 11.9%    |
-| ⏳ 待實現   | 16     | 27.1%    |
-| **總計**    | **59** | **100%** |
+| ✅ 已完成   | 48     | 66.7%    |
+| 🔄 部分完成 | 7      | 9.7%     |
+| ⏳ 待實現   | 17     | 23.6%    |
+| **總計**    | **72** | **100%** |
 
 ### 完成度分析
 
-- **MVP 核心功能**: 約 92% 完成 (Phase 0-7, 9, 1 全部完成；Phase 8, 10 部分完成)
+- **MVP 核心功能**: 約 98% 完成 (Phase 0-7, 9, 11-13 全部完成；Phase 8 僅餘 Stock 頁面整合；Phase 10 Vercel 部署完成)
 - **Release 01 功能**: 約 15% 完成 (書籤已提前完成)
-- **關鍵待實現功能**: 論點時間分布圖、效能優化、Vercel 部署
-- **本次更新**: 論點彙整 UI (TODO-006) 確認已實作完成，新增 i18n 支援
+- **關鍵待實現功能**: 論點時間分布圖 Stock 頁面整合、React Query staleTime 補齊
+- **本次更新**: Phase 4.16 (免責聲明) ✅ 完成；Phase 10.6 (Vercel 部署) ✅ 完成；Phase 8.16 + 10.5 接近完成 (各 90%/80%)
 
 > **注意**: 本專案已從 Flutter 移動端遷移至 Next.js 16 Web 版本 (2026-02-01 起)。
 > 下方 User Story 中的元件名稱已更新為 Web 版對應元件。
@@ -148,6 +148,9 @@
 - [x] 作為​一​個​ [​整理者​]，​我​想​要​ [​建檔​前​有​多​一​個​確認彈​窗]，​以​便​ [降低​誤觸率]。​
   - _Tags: User Story-MVP, Step 3.2_
   - ✅ **已實現** - Draft review page 提供確認建檔彈窗
+- [x] 作為一個 [用戶]，我想要 [在發布文章前看到免責聲明並勾選同意]，以便 [了解自己的責任並確保內容合法性]。
+  - _Tags: User Story-MVP, Step 3.2, Phase 4.16_
+  - ✅ **已實現** - 草稿發布頁 3 點免責聲明 checkbox + Confirm 按鈕禁用邏輯 + i18n (zh-TW + en)
 
 ## Step 4.1
 
@@ -298,6 +301,48 @@
 - [x] 作為​一​個​ [​整理者​]，​我​想​要​ [​點擊​線圖​上​的​標記​以​移轉​到​單篇文​檔]，​以​便​ ​[查​看​特定​文檔]。​
   - _Tags: User Story-MVP, Step 6.4_
   - ✅ **已實現** - 點擊情緒標記可跳轉到對應文檔 (Stock 詳情頁)
+
+## Step 7.1 — 認證強化 (Phase 11)
+
+- [x] 作為一個 [新用戶]，我想要 [用 Google 帳號一鍵登入]，以便 [不用額外記一組帳密就能使用產品]。
+  - _Tags: User Story-MVP, Step 7.1, Phase 11_
+  - ✅ **已實現** - Google OAuth + GoogleIcon 元件 + 登入/註冊頁 UI 更新 + i18n
+- [x] 作為一個 [用戶]，我想要 [在忘記密碼時能透過 Email 重設]，以便 [不會因為忘記密碼而無法使用產品]。
+  - _Tags: User Story-MVP, Step 7.1, Phase 11_
+  - ✅ **已實現** - `/reset-password` + `/reset-password/confirm` 頁面 + useAuth hook 整合
+- [x] 作為一個 [管理者]，我想要 [用戶註冊時需通過 Email 驗證]，以便 [確保帳號的真實性]。
+  - _Tags: User Story-MVP, Step 7.1, Phase 11_
+  - ✅ **已實現** - Supabase client.ts 文件化設定，生產環境啟用即可
+
+## Step 7.2 — KOL 匯入工具 (Phase 12)
+
+- [x] 作為一個 [新用戶]，我想要 [貼上 KOL 的 Twitter/X Profile URL，自動匯入最近 5-10 則推文]，以便 [快速體驗產品的核心功能而不需手動逐一輸入]。
+  - _Tags: User Story-MVP, Step 7.2, Phase 12_
+  - ✅ **已實現** - TwitterExtractor (oEmbed) + 批量匯入管線 + `/import` 頁面 + use-import hook
+- [x] 作為一個 [新用戶]，我想要 [貼上 YouTube 頻道 URL，自動匯入最近 5-10 部影片的逐字稿]，以便 [將影片形式的投資觀點也快速納入追蹤]。
+  - _Tags: User Story-MVP, Step 7.2, Phase 12_
+  - ✅ **已實現** - YouTubeExtractor (oEmbed + youtube-transcript) + ExtractorFactory 註冊
+- [x] 作為一個 [用戶]，我想要 [在匯入過程中看到即時進度 (擷取中、AI 分析中、完成)]，以便 [了解系統正在處理且不會離開頁面]。
+  - _Tags: User Story-MVP, Step 7.2, Phase 12_
+  - ✅ **已實現** - import-loading-overlay (7 步驟動畫進度) + import-result 結果頁
+- [x] 作為一個 [用戶]，我想要 [匯入完成後自動跳轉到該 KOL 的詳情頁]，以便 [立刻看到 AI 分析結果和勝率統計]。
+  - _Tags: User Story-MVP, Step 7.2, Phase 12_
+  - ✅ **已實現** - 匯入結果頁「查看 KOL 詳情」按鈕導向 KOL detail page
+
+## Step 7.3 — 用戶引導流程 (Phase 13)
+
+- [x] 作為一個 [新用戶]，我想要 [首次登入時看到簡短的產品介紹引導 (2-3 步)]，以便 [快速理解產品能幫我做什麼]。
+  - _Tags: User Story-MVP, Step 7.3, Phase 13_
+  - ✅ **已實現** - `/onboarding` 3 步驟引導 (產品介紹 → KOL 匯入 → 完成)
+- [x] 作為一個 [新用戶]，我想要 [在引導流程中直接體驗 KOL 匯入功能]，以便 [用實際資料感受產品價值而非看到空白頁面]。
+  - _Tags: User Story-MVP, Step 7.3, Phase 13_
+  - ✅ **已實現** - Onboarding Step 2 嵌入 Phase 12 匯入工具 + 首次匯入免配額徽章
+- [x] 作為一個 [用戶]，我想要 [在空白頁面看到有意義的提示和行動按鈕]，以便 [知道下一步該做什麼而不是面對空白畫面]。
+  - _Tags: User Story-MVP, Step 7.3, Phase 13_
+  - ✅ **已實現** - Empty States 元件 (Dashboard, KOLs, Stocks, Posts, Drafts, Bookmarks) + CTA 按鈕
+- [x] 作為一個 [用戶]，我想要 [引導流程只出現一次，完成後不再重複觸發]，以便 [不被重複的引導打擾]。
+  - _Tags: User Story-MVP, Step 7.3, Phase 13_
+  - ✅ **已實現** - `profiles.onboarding_completed` 欄位 + `onboarding-guard.tsx` 偵測邏輯 + PATCH API
 
 ---
 

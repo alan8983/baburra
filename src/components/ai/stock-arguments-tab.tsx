@@ -17,6 +17,7 @@ import { sentimentKey } from '@/lib/utils/sentiment';
 import { ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { ROUTES } from '@/lib/constants/routes';
+import { ArgumentTimeline } from '@/components/charts/argument-timeline';
 
 // 論點類別對應的圖示
 const CATEGORY_ICONS: Record<string, string> = {
@@ -98,6 +99,16 @@ export function StockArgumentsTab({ ticker }: StockArgumentsTabProps) {
               </div>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* 論點時間分布圖 */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">📈 {t('timeline.title')}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ArgumentTimeline data={data} />
         </CardContent>
       </Card>
 

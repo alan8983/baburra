@@ -7,7 +7,8 @@
   },
   "empty": {
     "noBookmarks": "尚無書籤",
-    "description": "在文章詳情頁點擊書籤按鈕來收藏文章"
+    "description": "將文章加入書籤即可快速找到它們。",
+    "browsePosts": "瀏覽文章"
   },
   "removeSuccess": "已移除書籤"
 }

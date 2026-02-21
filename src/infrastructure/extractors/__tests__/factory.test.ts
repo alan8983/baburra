@@ -6,13 +6,21 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ExtractorFactory, extractorFactory } from '../factory';
 import type { ExtractorError } from '../types';
 
+// Mock youtube-transcript to avoid real network calls from factory initialization
+vi.mock('youtube-transcript', () => ({
+  YoutubeTranscript: {
+    fetchTranscript: vi.fn(),
+  },
+}));
+
 describe('ExtractorFactory', () => {
   describe('getSupportedPlatforms', () => {
-    it('should return only twitter platform', () => {
+    it('should return twitter and youtube platforms', () => {
       const platforms = extractorFactory.getSupportedPlatforms();
 
       expect(platforms).toContain('twitter');
-      expect(platforms).toHaveLength(1);
+      expect(platforms).toContain('youtube');
+      expect(platforms).toHaveLength(2);
     });
   });
 
@@ -21,6 +29,12 @@ describe('ExtractorFactory', () => {
       const twitter = extractorFactory.getExtractor('twitter');
       expect(twitter).toBeDefined();
       expect(twitter!.platform).toBe('twitter');
+    });
+
+    it('should return the correct extractor for youtube', () => {
+      const youtube = extractorFactory.getExtractor('youtube');
+      expect(youtube).toBeDefined();
+      expect(youtube!.platform).toBe('youtube');
     });
 
     it('should return undefined for unregistered platforms', () => {
@@ -36,12 +50,17 @@ describe('ExtractorFactory', () => {
       expect(extractorFactory.isSupported('https://twitter.com/user/status/123')).toBe(true);
     });
 
+    it('should return true for supported YouTube URLs', () => {
+      expect(extractorFactory.isSupported('https://www.youtube.com/watch?v=abc123')).toBe(true);
+      expect(extractorFactory.isSupported('https://youtu.be/abc123')).toBe(true);
+      expect(extractorFactory.isSupported('https://m.youtube.com/watch?v=abc123')).toBe(true);
+    });
+
     it('should return false for unsupported URLs including Facebook and Threads', () => {
       expect(extractorFactory.isSupported('https://www.facebook.com/share/p/abc/')).toBe(false);
       expect(extractorFactory.isSupported('https://www.facebook.com/user/posts/123')).toBe(false);
       expect(extractorFactory.isSupported('https://threads.net/@user/post/abc')).toBe(false);
       expect(extractorFactory.isSupported('https://reddit.com/r/stocks/comments/abc')).toBe(false);
-      expect(extractorFactory.isSupported('https://youtube.com/watch?v=abc')).toBe(false);
       expect(extractorFactory.isSupported('not-a-url')).toBe(false);
     });
   });
@@ -104,10 +123,11 @@ describe('ExtractorFactory', () => {
   });
 
   describe('register', () => {
-    it('should start with twitter extractor registered', () => {
+    it('should start with twitter and youtube extractors registered', () => {
       const factory = new ExtractorFactory();
-      expect(factory.getSupportedPlatforms()).toHaveLength(1);
+      expect(factory.getSupportedPlatforms()).toHaveLength(2);
       expect(factory.getSupportedPlatforms()).toContain('twitter');
+      expect(factory.getSupportedPlatforms()).toContain('youtube');
     });
   });
 });

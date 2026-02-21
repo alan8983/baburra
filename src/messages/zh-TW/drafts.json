@@ -20,9 +20,10 @@
     "loadFailed": "無法載入草稿，請稍後再試。"
   },
   "empty": {
-    "noDrafts": "沒有草稿",
+    "noDrafts": "尚無草稿",
     "noResults": "沒有符合「{query}」的草稿",
-    "description": "開始輸入文章內容來建立草稿"
+    "description": "開始輸入文章內容來建立草稿吧！",
+    "quickInput": "快速輸入"
   },
   "deleteConfirm": "確定要刪除此草稿？",
   "detail": {
@@ -82,6 +83,12 @@
       "cancel": "取消",
       "publishing": "發布中...",
       "confirmPublish": "確認發布",
+      "disclaimer": "我確認以下事項：",
+      "disclaimerItems": {
+        "notPaywalled": "本內容非來自付費牆或受版權保護的來源",
+        "noLiability": "本平台不對任何投資決策或潛在損失負責",
+        "userResponsibility": "我對上傳內容的合法性承擔完全責任"
+      },
       "publishSuccess": "文章發布成功",
       "publishFailed": "發布失敗",
       "publishFailedDescription": "請稍後再試"

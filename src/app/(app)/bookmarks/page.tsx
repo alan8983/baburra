@@ -12,6 +12,7 @@ import { SENTIMENT_COLORS } from '@/domain/models/post';
 import { sentimentKey } from '@/lib/utils/sentiment';
 import { formatDateTime } from '@/lib/utils/date';
 import { useBookmarks, useRemoveBookmark } from '@/hooks';
+import { EmptyState } from '@/components/shared/empty-state';
 import { toast } from 'sonner';
 
 export default function BookmarksPage() {
@@ -126,13 +127,12 @@ export default function BookmarksPage() {
 
       {/* Empty State */}
       {!isLoading && bookmarks.length === 0 && (
-        <Card className="py-12">
-          <CardContent className="flex flex-col items-center justify-center text-center">
-            <Bookmark className="text-muted-foreground h-12 w-12" />
-            <h3 className="mt-4 text-lg font-semibold">{t('empty.noBookmarks')}</h3>
-            <p className="text-muted-foreground mt-2 text-sm">{t('empty.description')}</p>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={<Bookmark className="h-12 w-12" />}
+          title={t('empty.noBookmarks')}
+          description={t('empty.description')}
+          primaryAction={{ label: t('empty.browsePosts'), href: ROUTES.POSTS }}
+        />
       )}
     </div>
   );

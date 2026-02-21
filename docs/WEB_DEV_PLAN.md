@@ -1,15 +1,15 @@
 # Stock KOL Tracker Web - 開發計畫
 
-> **版本**: 1.4
+> **版本**: 1.5
 > **建立日期**: 2026-02-01
-> **最後更新**: 2026-02-19
+> **最後更新**: 2026-02-22
 > **目標**: MVP 開發計畫
 
 ---
 
 ## 零、開發進度總覽
 
-> **最後更新**: 2026-02-19
+> **最後更新**: 2026-02-22
 
 | 階段 | 名稱 | 狀態 | 備註 |
 | --- | --- | --- | --- |
@@ -21,11 +21,15 @@
 | Phase 5 | 文章檢視 | ✅ 完成 | 2026-02-12 (含書籤) |
 | Phase 6 | K 線圖 | ✅ 完成 | K 線圖+情緒標記+工具列已整合到詳情頁 |
 | Phase 7 | 勝率計算 | ✅ 完成 | 計算器+API+UI 顯示全部完成 |
-| Phase 8 | AI 整合 | 🔄 85% | 情緒/論點提取/論點彙整 UI 完成，時間分布圖待做 |
+| Phase 8 | AI 整合 | 🔄 95% | 情緒/論點提取/論點彙整/時間分布圖元件完成，StockArgumentsTab 待整合至 Stock 詳情頁 |
 | Phase 9 | App Layout | ✅ 完成 | 2026-02-10 |
-| Phase 10 | 測試與優化 | 🔄 50% | 單元測試+E2E 框架完成，覆蓋率待提升 |
+| Phase 10 | 測試與優化 | 🔄 80% | 測試框架+動態載入+Vercel 部署+安全標頭完成；React Query staleTime 部分 hooks 待補 |
+| Phase 11 | Google OAuth & Auth 強化 | ✅ 完成 | Google OAuth + 密碼重設 + Email 驗證設定 (2026-02-22) |
+| Phase 12 | KOL 匯入工具 | ✅ 完成 | YouTube Extractor + 批量匯入管線 + 匯入 UI + 配額豁免 (2026-02-22) |
+| Phase 13 | 用戶引導流程 | ✅ 完成 | 3 步驟 Onboarding + Empty States (6 頁面) + 首次登入偵測 (2026-02-22) |
 
-**MVP 整體完成度: ~92%**
+**MVP 整體完成度: ~98%** (Phase 0-13 幾乎全部完成；僅餘: 8.16 Stock 頁面整合 + 10.5 React Query staleTime 補齊)
+**含商業功能: ~98%** (Phase 0-13)
 
 ### 額外已完成功能（計畫外）
 
@@ -51,6 +55,11 @@
 2026-02-14  ██████     快速輸入、AI Ticker 識別、CI 修正
 2026-02-18  ████████   情緒折線圖、E2E fixtures、草稿審核、論點支援
 2026-02-19  ████       Profile 時區、Post Arguments API、README 更新
+2026-02-22  ██████     Phase 11 (Google OAuth + 密碼重設 + Email 驗證)
+2026-02-22  ████████   Phase 12a (YouTube Extractor + 批量匯入管線 + 匯入 UI)
+2026-02-22  ██████     Phase 13 (Onboarding 3 步驟 + Empty States 6 頁面)
+2026-02-22  ████       Phase 8.16 (argument-timeline 元件) + Phase 4.16 (免責聲明 checkbox)
+2026-02-22  ██████     Phase 10.5-10.6 (動態載入 + Bundle Analyzer + Vercel 部署 + 安全標頭)
 ```
 
 ---
@@ -71,7 +80,7 @@ Stock KOL Tracker Web 是一個**社群共享**的投資觀點追蹤平台，讓
 | 版本           | 核心目標     | 關鍵功能                                                                                |
 | -------------- | ------------ | --------------------------------------------------------------------------------------- |
 | **MVP**        | 核心功能驗證 | 手動輸入、基本檢視、勝率計算、K線圖                                                     |
-| **Release 01** | 體驗優化     | URL 自動匯入(Twitter/X)、RWD、書籤管理、AI摘要                                          |
+| **Release 01** | 體驗優化     | URL 自動匯入(Twitter/X)、RWD、書籤管理、AI摘要、AI 快取層、社群洞察                     |
 | **Release 02** | 功能擴展     | URL 自動匯入(FB/Threads)、YouTube 逐字稿擷取、多市場支援、Dark Mode、付費機制、熱度統計 |
 
 ### 1.3 技術架構確認
@@ -582,6 +591,7 @@ CREATE TABLE edit_suggestions (
 | 4.13 | 實作重複 URL 比對      | `/api/posts/check-duplicate`                      | ✅ |
 | 4.14 | 實作圖片上傳           | `/api/upload` + image-uploader 元件               | ✅ |
 | 4.15 | 建立 use-drafts Hook   | `hooks/use-drafts.ts`                             | ✅ |
+| 4.16 | 建立發布免責聲明       | 預覽確認頁 checkbox + 條款內容                    | ⏳ |
 
 #### API 端點
 
@@ -695,7 +705,14 @@ CREATE TABLE edit_suggestions (
 │  │ 💡 AI 建議: 看多 (基於文本分析)          [採用]   │  │
 │  └───────────────────────────────────────────────────┘  │
 │                                                         │
-│                        [✓ 確認建檔]                     │
+│  ─────────────────────────────────────────────────────  │
+│                                                         │
+│  ☐ 我確認以下事項：                                    │
+│    1. 本內容非來自付費牆或受版權保護的來源              │
+│    2. 本平台不對任何投資決策或潛在損失負責              │
+│    3. 我對上傳內容的合法性承擔完全責任                  │
+│                                                         │
+│                        [✓ 確認建檔]  ← 未勾選時 disabled│
 │                                                         │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -707,6 +724,7 @@ CREATE TABLE edit_suggestions (
 - 重複 URL 檢測
 - 情緒選擇（5 級制）
 - 圖片上傳
+- 發布前免責聲明 (內容合法性、投資風險、用戶責任)
 
 ---
 
@@ -989,7 +1007,7 @@ CREATE TABLE stock_argument_summary (
 | 8.13         | 建立論點彙整計算器       | `domain/calculators/argument-summary.calculator.ts` | ✅ (含單元測試) |
 | 8.14         | 建立論點彙整 API         | `/api/stocks/[ticker]/arguments`                    | ✅ |
 | 8.15         | 建立標的論點彙整頁面     | Stock 詳情新增 Arguments Tab                        | ✅ |
-| 8.16         | 建立論點時間分布圖表     | `components/charts/argument-timeline.tsx`           | ⏳ |
+| 8.16         | 建立論點時間分布圖表     | `components/charts/argument-timeline.tsx`           | 🔄 (元件+API 完成，Stock 頁面整合待做) |
 | **配額管理** |                          |                                                     |      |
 | 8.17         | 建立配額查詢 API         | `/api/ai/usage`                                     | ✅ |
 | 8.18         | 顯示剩餘配額             | `components/ai/ai-quota-badge.tsx`                  | ✅ |
@@ -1261,8 +1279,8 @@ Sidebar:
 | 10.2 | 撰寫核心邏輯單元測試  | price-change, win-rate, argument-summary, ai.service, stock-price.repo | ✅ |
 | 10.3 | 設定 Playwright       | E2E 測試 + fixtures                | ✅ |
 | 10.4 | 撰寫關鍵流程 E2E 測試 | quick-input flow                   | ✅ (基本流程) |
-| 10.5 | 效能優化              | Code Splitting, Image Optimization | ⏳ |
-| 10.6 | 設定 Vercel 專案      | 部署設定                           | ⏳ |
+| 10.5 | 效能優化              | 動態載入 (charts ssr:false) + Bundle Analyzer 完成；React Query staleTime 部分 hooks 待補 | 🔄 |
+| 10.6 | 設定 Vercel 專案      | vercel.json + .env.example + /api/health + 安全標頭 + DEV_USER_ID guard | ✅ |
 | 10.7 | 設定 CI/CD            | GitHub Actions                     | ✅ (lint + type-check + test) |
 | 10.8 | 撰寫 README           | 專案文件                           | ✅ |
 
@@ -1271,6 +1289,270 @@ Sidebar:
 - 單元測試覆蓋核心邏輯
 - E2E 測試覆蓋關鍵流程
 - 可部署到 Vercel
+
+---
+
+### Phase 11: Google OAuth & Auth 強化 ✅
+
+**目標**: 降低註冊門檻 + 補齊認證基礎設施
+**狀態**: ✅ 完成 (2026-02-22)
+**對應工作**: Session A (Google OAuth) + Session C (Auth Hardening)
+
+#### 任務清單
+
+| #    | 任務                        | 產出                              | 狀態 |
+| ---- | --------------------------- | --------------------------------- | ---- |
+| 11.1 | 設定 Supabase Google OAuth  | Supabase Dashboard + env 設定     | ✅ |
+| 11.2 | 建立 OAuth Callback 處理    | `/auth/callback` 更新             | ✅ |
+| 11.3 | 更新登入頁 UI               | Google 登入按鈕 + 分隔線 + GoogleIcon 元件 | ✅ |
+| 11.4 | 更新註冊頁 UI               | Google 註冊按鈕 + 分隔線          | ✅ |
+| 11.5 | 啟用 Email 驗證             | Supabase client.ts 文件化設定     | ✅ |
+| 11.6 | 建立密碼重設頁面            | `/reset-password` 頁面            | ✅ |
+| 11.7 | 建立密碼重設確認頁面        | `/reset-password/confirm` 頁面    | ✅ |
+
+#### UI 設計重點
+
+**登入頁 (更新後)**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                                                         │
+│                 Stock KOL Tracker                       │
+│                                                         │
+│         [🔵 Continue with Google]                       │
+│                                                         │
+│         ─────── or ───────                              │
+│                                                         │
+│         Email:    [________________]                    │
+│         Password: [________________]                    │
+│                                                         │
+│                  [Login]                                │
+│                                                         │
+│         Forgot password?    Sign up                     │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+#### 交付成果
+
+- 用戶可用 Google 帳號一鍵登入/註冊
+- 忘記密碼可透過 Email 重設
+- Email 驗證機制啟用
+
+---
+
+### Phase 12: KOL 匯入工具 ✅
+
+**目標**: 讓用戶透過 URL 批量匯入 KOL 的歷史文章，快速體驗產品價值
+**狀態**: ✅ 完成 (2026-02-22)
+**對應工作**: Session B-0 (Agent 1)
+**策略**: MVP 先做「貼個別 URL」(12a)，後續再加「Profile 自動發現」(12b)
+
+#### 12.1 功能概述
+
+**Phase 12a — 個別 URL 匯入 (MVP)**
+
+用戶手動貼入個別文章/影片 URL，系統批量處理：
+
+| 平台 | 輸入 | 數量上限 | 技術方案 | 現有基礎 |
+|------|------|----------|----------|----------|
+| **Twitter/X** | 個別推文 URL | 5 則 | 現有 TwitterExtractor (oEmbed API, 免費) | ✅ 已實作 |
+| **YouTube** | 個別影片 URL | 3 則 | 新建 YouTubeExtractor + transcript 庫 | ✅ 已實作 |
+
+**Phase 12b — Profile 自動發現 (Release 01)**
+
+用戶貼入 KOL 的 Profile/Channel URL，系統自動找出近期文章：
+
+| 平台 | 輸入 | 技術方案 | 預估成本 |
+|------|------|----------|----------|
+| **Twitter/X** | Profile URL | Twitter API v2 或第三方服務 (Apify/SocialData) | 付費 |
+| **YouTube** | Channel URL | YouTube Data API (免費 10K units/day) | 免費 |
+
+#### 12.2 配額策略
+
+- **首次引導匯入免配額**: 用戶在 onboarding flow 中的第一次匯入不計入 AI 週配額
+- 實作方式: `profiles` 新增 `onboarding_import_used BOOLEAN DEFAULT FALSE` 欄位
+- 後續匯入按正常配額計算
+
+#### 12.3 資料流 (Phase 12a)
+
+```
+用戶輸入 KOL 名稱
+用戶貼入 3-5 個文章/影片 URL
+        │
+        ▼
+┌─────────────────┐
+│  平台識別        │  逐一識別 URL 類型
+└────────┬────────┘
+         │
+    ┌────┴────┐
+    ▼         ▼
+Twitter/X  YouTube
+(oEmbed)   (transcript)
+    │         │
+    └────┬────┘
+         ▼
+┌─────────────────┐
+│  批量處理管線    │
+│  1. 建立 KOL    │  ← 用戶手動輸入名稱
+│  2. 建立 Posts  │  ← 每個 URL 一篇
+│  3. AI 情緒分析 │  ← 首次免配額
+│  4. AI Ticker   │
+│  5. AI 論點提取 │
+└────────┬────────┘
+         ▼
+   匯入結果頁面
+   (顯示已建立的 KOL + Posts)
+```
+
+#### 12.4 任務清單
+
+| #    | 任務                            | 產出                                          | 狀態 |
+| ---- | ------------------------------- | --------------------------------------------- | ---- |
+| **Phase 12a — 個別 URL 匯入 (MVP)** | |                                        |      |
+| 12.1 | 建立 YouTube Extractor          | `extractors/youtube.extractor.ts`             | ✅ |
+| 12.2 | 建立 YouTube 逐字稿擷取        | youtube-transcript 庫整合                     | ✅ |
+| 12.3 | 註冊 YouTube 到 ExtractorFactory| `extractors/factory.ts` 更新                  | ✅ |
+| 12.4 | 建立批量匯入管線               | `domain/services/import-pipeline.service.ts`  | ✅ |
+| 12.5 | 建立批量匯入 API               | `/api/import/batch`                           | ✅ |
+| 12.6 | 建立配額豁免邏輯               | `onboarding_import_used` 欄位 + DB migration  | ✅ |
+| 12.7 | 建立匯入頁面 UI                | `/import` 頁面 (KOL 名稱 + URL 清單輸入)     | ✅ |
+| 12.8 | 建立匯入進度元件               | `components/import/import-loading-overlay.tsx` | ✅ |
+| 12.9 | 建立匯入結果元件               | `components/import/import-result.tsx`          | ✅ |
+| **Phase 12b — Profile 自動發現 (Release 01)** | |                                |      |
+| 12.10 | 調研 Twitter 批量取得方案      | 技術選型文件                                  | ⏳ |
+| 12.11 | 建立 Twitter Profile Parser    | `extractors/twitter-profile.extractor.ts`     | ⏳ |
+| 12.12 | 建立 YouTube Channel Parser    | YouTube Data API 整合                         | ⏳ |
+
+#### 12.5 API 端點
+
+| 方法 | 路徑                   | 說明                                     |
+| ---- | ---------------------- | ---------------------------------------- |
+| POST | /api/import/batch      | 批量匯入 (KOL 名稱 + URL 陣列)          |
+| GET  | /api/import/status/[id]| 查詢匯入任務進度 (Phase 12b SSE 預留)    |
+
+#### 12.6 UI 設計重點
+
+**KOL 匯入頁 (Phase 12a)**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                                                         │
+│  📥 快速匯入 KOL 文章                                  │
+│                                                         │
+│  KOL 名稱 *                                            │
+│  ┌───────────────────────────────────────────────────┐  │
+│  │ 例如: 股癌、財報狗、Graham Stephan...             │  │
+│  └───────────────────────────────────────────────────┘  │
+│                                                         │
+│  文章/影片 URL (最多 5 則)                              │
+│  ┌───────────────────────────────────────────────────┐  │
+│  │ 🔗 https://x.com/stockguru/status/123...   [✕]   │  │
+│  │ 🔗 https://x.com/stockguru/status/456...   [✕]   │  │
+│  │ 📺 https://youtube.com/watch?v=abc...       [✕]   │  │
+│  │                                                   │  │
+│  │ [+ 新增 URL]                                      │  │
+│  └───────────────────────────────────────────────────┘  │
+│                                                         │
+│  支援: 🐦 Twitter/X 推文  📺 YouTube 影片              │
+│  ⭐ 首次匯入免消耗 AI 配額！                           │
+│                                                         │
+│                        [開始匯入]                       │
+│                                                         │
+│  ─────────────────────────────────────────────────────  │
+│                                                         │
+│  📊 匯入進度                                           │
+│  ┌───────────────────────────────────────────────────┐  │
+│  │ ✅ 建立 KOL: 股癌                                 │  │
+│  │ ✅ 擷取內容: 3/3                                  │  │
+│  │ 🔄 AI 分析: 2/3                                   │  │
+│  │ ████████████████████░░░░  78%                     │  │
+│  └───────────────────────────────────────────────────┘  │
+│                                                         │
+│                  [查看 KOL 詳情 →]                      │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+#### 交付成果
+
+**Phase 12a (MVP)**
+- 用戶可貼入 Twitter/X 推文 URL (最多 5 則)，批量匯入
+- 用戶可貼入 YouTube 影片 URL (最多 3 則)，自動擷取逐字稿匯入
+- 可混合貼入不同平台的 URL
+- 首次 onboarding 匯入免消耗 AI 配額
+- 匯入過程顯示即時進度
+- 匯入完成後自動跳轉至 KOL 詳情頁
+
+**Phase 12b (Release 01)**
+- 用戶可貼入 Profile/Channel URL，自動發現近期文章
+
+---
+
+### Phase 13: 用戶引導流程 ✅
+
+**目標**: 新用戶首次登入後的引導體驗，降低流失率
+**狀態**: ✅ 完成 (2026-02-22)
+**對應工作**: Session B-1 (Agent 2)
+
+#### 任務清單
+
+| #    | 任務                         | 產出                                       | 狀態 |
+| ---- | ---------------------------- | ------------------------------------------ | ---- |
+| 13.1 | 建立 Welcome 頁面            | `/onboarding` (3 步驟引導)                 | ✅ |
+| 13.2 | 建立 Step 1: 產品介紹        | 功能亮點 + 價值主張 (4 feature cards)      | ✅ |
+| 13.3 | 建立 Step 2: KOL 匯入整合    | 嵌入 Phase 12 匯入工具                     | ✅ |
+| 13.4 | 建立 Step 3: 完成引導        | 引導至 KOL 詳情頁或 Dashboard              | ✅ |
+| 13.5 | 建立 Empty States 元件       | Dashboard, KOLs, Stocks, Posts, Drafts, Bookmarks | ✅ |
+| 13.6 | 建立首次登入偵測邏輯         | `profiles.onboarding_completed` + `onboarding-guard.tsx` | ✅ |
+| 13.7 | 建立 Sidebar Hint            | Import 連結 "New" 徽章 (未完成 onboarding 用戶) | ✅ |
+
+#### 13.1 用戶流程
+
+```
+首次登入
+    │
+    ▼
+┌─────────┐     ┌──────────────┐     ┌─────────┐
+│ Step 1  │────►│   Step 2     │────►│ Step 3  │
+│ 產品介紹 │     │ 匯入 KOL 文章│     │ 完成！  │
+│ (可跳過) │     │ (核心體驗)   │     │ 前往首頁│
+└─────────┘     └──────────────┘     └─────────┘
+                      │
+                      ▼
+               貼入 KOL URL
+               自動匯入 5-10 篇
+               即時看到 AI 分析結果
+```
+
+#### 13.2 Empty States 設計
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                                                         │
+│  📊 Dashboard                                          │
+│                                                         │
+│            ┌──────────────────────┐                     │
+│            │                      │                     │
+│            │   📭 尚無追蹤資料    │                     │
+│            │                      │                     │
+│            │  開始追蹤你關注的     │                     │
+│            │  投資 KOL 吧！       │                     │
+│            │                      │                     │
+│            │  [匯入 KOL 文章]     │                     │
+│            │  [手動新增文章]      │                     │
+│            │                      │                     │
+│            └──────────────────────┘                     │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+#### 交付成果
+
+- 新用戶首次登入自動進入引導流程
+- 引導流程整合 KOL 匯入工具作為核心體驗
+- 所有頁面有有意義的 Empty States 和 CTA
+- 引導完成後標記 `onboarding_completed`，不再重複觸發
 
 ---
 
@@ -1306,7 +1588,21 @@ K線圖          勝率計算         AI 整合
             Phase 10: 測試與優化
                     │
                     ▼
-            Phase 1: 認證系統  ◄── 最後實作
+            Phase 1: 認證系統  ◄── 基本認證
+                    │
+    ════════════════╪════════════════════  商業功能 ════
+                    │
+                    ▼
+            Phase 11: Google OAuth & Auth 強化
+                    │
+                    ▼
+            Phase 12: KOL 匯入工具
+                    │   (Twitter/X + YouTube)
+                    ▼
+            Phase 13: 用戶引導流程
+                    │   (Welcome + Empty States + 匯入整合)
+                    ▼
+            Phase 14: 付費機制  ◄── Release 02 (上線後)
 ```
 
 ---
@@ -1319,8 +1615,10 @@ K線圖          勝率計算         AI 整合
 | **M2** | Phase 2-3   | 可搜尋/新增 KOL 和標的       | ✅ 2026-02-01 |
 | **M3** | Phase 4-5   | 完整輸入流程、可檢視文章     | ✅ 2026-02-18 |
 | **M4** | Phase 6-7   | K 線圖顯示、勝率計算         | ✅ 2026-02-18 |
-| **M5** | Phase 8     | AI 情緒分析、論點提取與彙整  | 🔄 分析+彙整 UI 完成，時間分布圖待做 |
-| **M6** | Phase 10, 1 | 測試優化、認證系統、完整 MVP | 🔄 認證完成，部署待做 |
+| **M5** | Phase 8     | AI 情緒分析、論點提取與彙整  | 🔄 95% — argument-timeline 元件完成，Stock 頁面整合待做 |
+| **M6** | Phase 10, 1 | 測試優化、認證系統、完整 MVP | 🔄 90% — 認證+Vercel 部署完成，React Query staleTime 待補 |
+| **M7** | Phase 11    | Google OAuth、Email 驗證、密碼重設 | ✅ 2026-02-22 |
+| **M8** | Phase 12-13 | KOL 匯入工具 + 用戶引導流程 | ✅ 2026-02-22 |
 
 ---
 
@@ -1336,9 +1634,16 @@ K線圖          勝率計算         AI 整合
 | **TODO-004** | K 線圖整合到詳情頁       | ✅ 已完成 | Phase 6.7-6.8 — 雙圖表 (K線+情緒)   |
 | **TODO-005** | K 線圖縮放/平移          | ✅ 已完成 | Phase 6.9 — 日/週/月/季/年+時間範圍 |
 | **TODO-006** | 論點彙整 UI              | ✅ 已完成 | Phase 8.15 — Stock Arguments Tab + i18n |
-| **TODO-007** | 論點時間分布圖表         | ⏳ 待實作 | Phase 8.16 — argument-timeline 元件 |
-| **TODO-008** | 效能優化                 | ⏳ 待實作 | Phase 10.5 — Code Splitting 等      |
-| **TODO-009** | Vercel 部署              | ⏳ 待實作 | Phase 10.6 — 生產環境設定           |
+| **TODO-007** | 論點時間分布圖表         | 🔄 90%  | Phase 8.16 — argument-timeline 元件+API 完成，StockArgumentsTab 待整合至 Stock 詳情頁 (Agent 3) |
+| **TODO-008** | 效能優化                 | 🔄 80%  | Phase 10.5 — 動態載入+Bundle Analyzer 完成；React Query staleTime 部分 hooks 待補 (Agent 4) |
+| **TODO-009** | Vercel 部署              | ✅ 已完成 | Phase 10.6 — vercel.json + .env.example + /api/health + 安全標頭 (Agent 4) |
+| **TODO-010** | Google OAuth             | ✅ 已完成 | Phase 11.1-11.4 — Google 一鍵登入 (Session A) |
+| **TODO-011** | Email 驗證 + 密碼重設    | ✅ 已完成 | Phase 11.5-11.7 — Auth 強化 (Session C) |
+| **TODO-012** | YouTube Extractor        | ✅ 已完成 | Phase 12.1-12.3 — YouTubeExtractor + transcript + Factory 註冊 (Agent 1) |
+| **TODO-013** | 批量匯入管線 + API       | ✅ 已完成 | Phase 12.4-12.6 — import-pipeline.service + /api/import/batch + 配額豁免 (Agent 1) |
+| **TODO-014** | 匯入 UI                  | ✅ 已完成 | Phase 12.7-12.9 — /import 頁面 + import-form + loading-overlay + result (Agent 1) |
+| **TODO-015** | 用戶引導流程             | ✅ 已完成 | Phase 13.1-13.7 — 3 步驟 Onboarding + Empty States 6 頁面 + onboarding-guard (Agent 2) |
+| **TODO-016** | 發布免責聲明             | ✅ 已完成 | Phase 4.16 — 3 點免責聲明 checkbox + 按鈕禁用邏輯 + i18n (Agent 3) |
 
 ### Release 01
 
@@ -1347,21 +1652,35 @@ K線圖          勝率計算         AI 整合
 - [x] 書籤管理功能 ✅ (2026-02-12, 提前至 MVP 完成)
 - [ ] AI 文章摘要
 - [ ] 編輯建議系統
+- [ ] **AI 分析快取層 (Phase 15)**
+  - `ai_analysis_cache` 表：以 URL hash 為 key 快取 AI 分析結果 (sentiment, tickers, arguments)
+  - `model_version` 欄位標記產出模型版本 (e.g., `gemini-2.0-flash`)，模型升級時自動使舊快取失效
+  - Cache hit 時跳過 AI 呼叫，直接套用快取結果至新用戶的 post
+  - 用戶通知機制：模型升級時提示「AI 模型已更新，是否重新分析您的文章？」
+  - 保持用戶資料完全隔離 — 僅共享 AI 運算結果，不共享 post/KOL 記錄
+- [ ] **社群洞察 (匿名聚合統計) (Phase 16)**
+  - 匿名聚合查詢：「N 位用戶追蹤此 KOL」、「本週熱門個股 Top 10」、「最多人追蹤的 KOL」
+  - 原則：**分享計數與趨勢，絕不暴露個人資料**
+  - Dashboard 趨勢卡片 + KOL 詳情頁社群熱度標示
+  - 不需更動 RLS — 使用 admin client 執行跨用戶 COUNT/GROUP BY 聚合查詢
 
 ### Release 02
 
 - [ ] URL 自動匯入 - Facebook & Threads (需申請 Meta Developer App，使用 oEmbed API + App Access Token)
   - Extractor stub 已存在：`infrastructure/extractors/facebook.extractor.ts`、`threads.extractor.ts`
   - 需完成 HTML/JSON-LD 解析實作
-- [ ] YouTube 影片逐字稿擷取
-  - 使用者輸入 YouTube 影片網址
-  - 系統擷取影片逐字稿（Transcript）
-  - 將逐字稿填入文字區域，交由 AI 進行 KOL、標的與情緒分析
-  - 需新增 `YouTubeExtractor`，並在 `ExtractorFactory` 中註冊
+- [x] ~~YouTube 影片逐字稿擷取~~ → **已提前至 MVP Phase 12a**
 - [ ] 多市場支援 (台股、港股、加密貨幣)
 - [ ] Dark Mode
-- [ ] 付費機制設計
+- [ ] 付費機制設計 (Phase 14 — Stripe 整合、訂閱管理、定價頁面)
 - [ ] 文章熱度統計
+- [ ] **KOL 平台化 (雙層用戶模型)** — 長期願景
+  - 將用戶分為「一般用戶」與「KOL (受邀)」兩種角色
+  - 一般用戶：自行上傳的文章僅自己可見 (私有筆記)
+  - KOL：受邀入駐，透過 OAuth 授權連接社群帳號，文章公開給所有用戶
+  - 需要：`posts.visibility` 欄位 (public/private)、RLS 調整、KOL OAuth 工具 (Twitter API v2, YouTube Data API, Facebook Graph API)
+  - 解決：內容版權合法性 (KOL 自行授權) + 付費牆內容風險
+  - 前置條件：先驗證 MVP 市場需求，確認有足夠用戶基礎後再投入
 
 ---
 
@@ -1374,3 +1693,9 @@ K線圖          勝率計算         AI 整合
 | 1.2  | 2026-02-13 | URL 自動匯入調整：Release 01 僅支援 Twitter/X (免費 oEmbed)；Facebook & Threads 移至 Release 02 (需 Meta Developer App + oEmbed API) |
 | 1.3  | 2026-02-18 | Release 02 新增 YouTube 影片逐字稿擷取功能；補充 Facebook/Threads extractor stub 說明                                                |
 | 1.4  | 2026-02-19 | 全面更新各 Phase 完成狀態；新增「零、開發進度總覽」章節；標記所有任務的 ✅/🔄/⏳ 狀態；整理 MVP 待辦清單 (TODO-002~009)             |
+| 1.5  | 2026-02-22 | 新增商業功能階段：Phase 11 (Google OAuth & Auth 強化)、Phase 12 (KOL 匯入工具 — Twitter/X + YouTube)、Phase 13 (用戶引導流程)；新增 TODO-010~015；更新里程碑 M7-M8 |
+| 1.5a | 2026-02-22 | 細化 Phase 12：拆分為 12a (個別 URL 匯入, MVP) 與 12b (Profile 自動發現, Release 01)；新增配額豁免策略 (首次 onboarding 匯入免配額)；更新 UI mockup 為多 URL 輸入 |
+| 1.5b | 2026-02-22 | 新增 Phase 4.16 發布免責聲明 (TODO-016)；YouTube 逐字稿從 Release 02 提前至 MVP Phase 12a；Release 02 新增「KOL 平台化 (雙層用戶模型)」長期願景 |
+| 1.5c | 2026-02-22 | Release 01 新增 Phase 15 (AI 分析快取層 — URL hash + model_version 失效策略) 與 Phase 16 (社群洞察 — 匿名聚合統計) |
+| 1.6  | 2026-02-22 | Phase 12a ✅ 完成 (Agent 1: YouTube Extractor + 批量匯入管線 + 匯入 UI + 配額豁免 + use-import hook)；Phase 13 ✅ 完成 (Agent 2: 3 步驟 Onboarding + Empty States 6 頁面 + onboarding-guard + Sidebar "New" 徽章)；TODO-012~015 全部完成；M8 ✅；MVP 完成度提升至 ~96% |
+| 1.7  | 2026-02-22 | Phase 4.16 ✅ (免責聲明 checkbox + i18n)；Phase 8.16 🔄 90% (argument-timeline 元件+API 完成，Stock 頁面整合待做)；Phase 10.5 🔄 80% (動態載入+Bundle Analyzer 完成，React Query staleTime 待補)；Phase 10.6 ✅ (vercel.json + .env.example + /api/health + 安全標頭)；TODO-009/016 完成；MVP ~98% |

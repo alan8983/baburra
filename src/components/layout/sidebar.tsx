@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Sparkles,
   LogOut,
+  Import,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,8 @@ import { APP_CONFIG } from '@/lib/constants/config';
 import { useAiUsage } from '@/hooks/use-ai';
 import { useAuth } from '@/hooks/use-auth';
 import { useDraftCount } from '@/hooks/use-drafts';
+import { useOnboarding } from '@/hooks/use-onboarding';
+import { Badge } from '@/components/ui/badge';
 
 const iconMap = {
   LayoutDashboard,
@@ -38,6 +41,7 @@ const iconMap = {
   Newspaper,
   Bookmark,
   Settings,
+  Import,
 };
 
 // Navigation items will be translated in component
@@ -46,9 +50,11 @@ const navItems: Array<{
   href: string;
   icon: keyof typeof iconMap;
   showBadge?: boolean;
+  showNewWhenNotOnboarded?: boolean;
 }> = [
   { key: 'dashboard', href: ROUTES.DASHBOARD, icon: 'LayoutDashboard' },
   { key: 'quickInput', href: ROUTES.INPUT, icon: 'PenLine' },
+  { key: 'import', href: ROUTES.IMPORT, icon: 'Import', showNewWhenNotOnboarded: true },
   { key: 'drafts', href: ROUTES.DRAFTS, icon: 'FileText', showBadge: true },
   { key: 'bookmarks', href: ROUTES.BOOKMARKS, icon: 'Bookmark' },
 ];
@@ -74,10 +80,11 @@ interface NavItemProps {
   href: string;
   icon: keyof typeof iconMap;
   badgeCount?: number;
+  showNewBadge?: boolean;
   isCollapsed: boolean;
 }
 
-function NavItem({ label, href, icon, badgeCount, isCollapsed }: NavItemProps) {
+function NavItem({ label, href, icon, badgeCount, showNewBadge, isCollapsed }: NavItemProps) {
   const pathname = usePathname();
   const isActive = pathname === href || pathname.startsWith(`${href}/`);
   const Icon = iconMap[icon];
@@ -100,6 +107,11 @@ function NavItem({ label, href, icon, badgeCount, isCollapsed }: NavItemProps) {
               <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-medium text-white">
                 {badgeCount}
               </span>
+            )}
+            {showNewBadge && (
+              <Badge variant="secondary" className="ml-auto px-1.5 py-0 text-[10px]">
+                New
+              </Badge>
             )}
           </>
         )}
@@ -187,6 +199,7 @@ export function Sidebar() {
   const t = useTranslations('common');
   const { sidebarOpen, toggleSidebar } = useUIStore();
   const { data: draftCount = 0 } = useDraftCount();
+  const { isOnboardingCompleted } = useOnboarding();
 
   return (
     <aside
@@ -223,6 +236,7 @@ export function Sidebar() {
               href={item.href}
               icon={item.icon}
               badgeCount={item.showBadge ? draftCount : undefined}
+              showNewBadge={item.showNewWhenNotOnboarded && !isOnboardingCompleted}
               isCollapsed={!sidebarOpen}
             />
           ))}

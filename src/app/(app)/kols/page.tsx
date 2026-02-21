@@ -1,10 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Plus, Search, User } from 'lucide-react';
+import { Plus, Search, User, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { ROUTES } from '@/lib/constants';
 import { formatDate } from '@/lib/utils/date';
 import { useKols } from '@/hooks';
+import { EmptyState } from '@/components/shared/empty-state';
 
 export default function KolsPage() {
   const router = useRouter();
@@ -121,23 +121,26 @@ export default function KolsPage() {
       )}
 
       {/* Empty State */}
-      {!isLoading && filteredKols.length === 0 && (
-        <Card className="py-12">
-          <CardContent className="flex flex-col items-center justify-center text-center">
-            <User className="text-muted-foreground h-12 w-12" />
-            <h3 className="mt-4 text-lg font-semibold">{t('empty.noKols')}</h3>
-            <p className="text-muted-foreground mt-2 text-sm">
-              {searchQuery ? t('empty.noResults', { query: searchQuery }) : t('empty.description')}
-            </p>
-            {!searchQuery && (
-              <Button className="mt-4">
-                <Plus className="mr-2 h-4 w-4" />
-                {t('newKol')}
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      {!isLoading &&
+        filteredKols.length === 0 &&
+        (searchQuery ? (
+          <Card className="py-12">
+            <CardContent className="flex flex-col items-center justify-center text-center">
+              <Users className="text-muted-foreground h-12 w-12" />
+              <h3 className="mt-4 text-lg font-semibold">{t('empty.noKols')}</h3>
+              <p className="text-muted-foreground mt-2 text-sm">
+                {t('empty.noResults', { query: searchQuery })}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <EmptyState
+            icon={<Users className="h-12 w-12" />}
+            title={t('empty.noKols')}
+            description={t('empty.description')}
+            primaryAction={{ label: t('empty.importKol'), href: ROUTES.IMPORT }}
+          />
+        ))}
     </div>
   );
 }

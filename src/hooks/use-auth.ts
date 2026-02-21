@@ -20,6 +20,7 @@ export interface AuthState {
 export interface UseAuthReturn extends AuthState {
   signUp: (email: string, password: string, displayName?: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
@@ -177,6 +178,24 @@ export function useAuth(): UseAuthReturn {
     [supabase, router]
   );
 
+  // Google OAuth 登入
+  const signInWithGoogle = useCallback(async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}${ROUTES.AUTH_CALLBACK}`,
+      },
+    });
+
+    if (error) {
+      setState((prev) => ({
+        ...prev,
+        error: error as AuthError,
+      }));
+      throw error;
+    }
+  }, [supabase]);
+
   // 登出
   const signOut = useCallback(async () => {
     setState((prev) => ({ ...prev, loading: true, error: null }));
@@ -208,7 +227,7 @@ export function useAuth(): UseAuthReturn {
 
       try {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}${ROUTES.AUTH_CALLBACK}?next=/settings`,
+          redirectTo: `${window.location.origin}${ROUTES.AUTH_CALLBACK}?next=${ROUTES.RESET_PASSWORD_CONFIRM}`,
         });
 
         if (error) throw error;
@@ -263,6 +282,7 @@ export function useAuth(): UseAuthReturn {
     ...state,
     signUp,
     signIn,
+    signInWithGoogle,
     signOut,
     resetPassword,
     updatePassword,

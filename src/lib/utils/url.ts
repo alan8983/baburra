@@ -3,6 +3,7 @@
 /** 目前支援自動擷取的平台 */
 const SUPPORTED_PATTERNS: { platform: string; pattern: RegExp }[] = [
   { platform: 'Twitter / X', pattern: /twitter\.com|x\.com/i },
+  { platform: 'YouTube', pattern: /youtube\.com|youtu\.be/i },
 ];
 
 /** 預計未來支援的平台 (Release 02) — 需要 Meta Developer App */

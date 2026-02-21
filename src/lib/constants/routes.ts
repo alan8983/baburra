@@ -10,10 +10,13 @@ export const ROUTES = {
   LOGIN: '/login',
   REGISTER: '/register',
   AUTH_CALLBACK: '/auth/callback',
+  RESET_PASSWORD: '/reset-password',
+  RESET_PASSWORD_CONFIRM: '/reset-password/confirm',
 
   // App pages
   DASHBOARD: '/dashboard',
   INPUT: '/input',
+  IMPORT: '/import',
   DRAFTS: '/drafts',
   DRAFT_DETAIL: (id: string) => `/drafts/${id}`,
   KOLS: '/kols',
@@ -24,6 +27,7 @@ export const ROUTES = {
   POST_DETAIL: (id: string) => `/posts/${id}`,
   BOOKMARKS: '/bookmarks',
   SETTINGS: '/settings',
+  ONBOARDING: '/onboarding',
 } as const;
 
 // API 路由
@@ -81,12 +85,17 @@ export const API_ROUTES = {
 
   // Profile
   PROFILE: '/api/profile',
+  PROFILE_ONBOARDING: '/api/profile/onboarding',
+
+  // Import
+  IMPORT_BATCH: '/api/import/batch',
 } as const;
 
 // 導航項目
 export const NAV_ITEMS = [
   { label: 'Dashboard', href: ROUTES.DASHBOARD, icon: 'LayoutDashboard' },
   { label: '快速輸入', href: ROUTES.INPUT, icon: 'PenLine' },
+  { label: '匯入 KOL', href: ROUTES.IMPORT, icon: 'Import' },
   { label: '草稿', href: ROUTES.DRAFTS, icon: 'FileText', showBadge: true },
   { label: 'KOL 列表', href: ROUTES.KOLS, icon: 'Users' },
   { label: '投資標的', href: ROUTES.STOCKS, icon: 'TrendingUp' },

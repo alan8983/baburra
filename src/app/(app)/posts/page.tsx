@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Search, User, Filter, Trash2 } from 'lucide-react';
+import { Search, User, Filter, Trash2, Newspaper } from 'lucide-react';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -24,6 +23,7 @@ import { SENTIMENT_COLORS } from '@/domain/models/post';
 import { sentimentKey } from '@/lib/utils/sentiment';
 import { formatDateTime } from '@/lib/utils/date';
 import { usePosts, useDeletePost } from '@/hooks';
+import { EmptyState } from '@/components/shared/empty-state';
 
 export default function PostsPage() {
   const router = useRouter();
@@ -241,15 +241,25 @@ export default function PostsPage() {
       )}
 
       {/* Empty State */}
-      {!isLoading && filteredPosts.length === 0 && (
-        <Card className="py-12">
-          <CardContent className="flex flex-col items-center justify-center text-center">
-            <Search className="text-muted-foreground h-12 w-12" />
-            <h3 className="mt-4 text-lg font-semibold">{t('empty.noPosts')}</h3>
-            <p className="text-muted-foreground mt-2 text-sm">{t('empty.description')}</p>
-          </CardContent>
-        </Card>
-      )}
+      {!isLoading &&
+        filteredPosts.length === 0 &&
+        (searchQuery || sentimentFilter !== 'all' ? (
+          <Card className="py-12">
+            <CardContent className="flex flex-col items-center justify-center text-center">
+              <Search className="text-muted-foreground h-12 w-12" />
+              <h3 className="mt-4 text-lg font-semibold">{t('empty.noPosts')}</h3>
+              <p className="text-muted-foreground mt-2 text-sm">{t('empty.description')}</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <EmptyState
+            icon={<Newspaper className="h-12 w-12" />}
+            title={t('empty.noPosts')}
+            description={t('empty.description')}
+            primaryAction={{ label: t('empty.importKol'), href: ROUTES.IMPORT }}
+            secondaryAction={{ label: t('empty.addPost'), href: ROUTES.INPUT }}
+          />
+        ))}
     </div>
   );
 }

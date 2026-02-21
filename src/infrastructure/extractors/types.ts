@@ -6,7 +6,7 @@ export interface UrlFetchResult {
   // Required fields
   content: string; // Plain text, 10-10,000 characters
   sourceUrl: string; // Complete URL
-  sourcePlatform: 'twitter' | 'facebook' | 'threads' | 'instagram' | 'manual';
+  sourcePlatform: 'twitter' | 'facebook' | 'threads' | 'instagram' | 'youtube' | 'manual';
 
   // Optional fields
   title: string | null;

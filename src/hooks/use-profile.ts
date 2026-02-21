@@ -12,6 +12,8 @@ import { API_ROUTES } from '@/lib/constants/routes';
 export interface ProfileData {
   displayName: string | null;
   timezone: string;
+  onboardingCompleted: boolean;
+  onboardingCompletedAt: string | null;
 }
 
 interface UpdateProfileInput {

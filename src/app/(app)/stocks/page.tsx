@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { ROUTES } from '@/lib/constants';
 import { formatDate } from '@/lib/utils/date';
 import { useStocks } from '@/hooks';
+import { EmptyState } from '@/components/shared/empty-state';
 
 export default function StocksPage() {
   const router = useRouter();
@@ -120,23 +121,26 @@ export default function StocksPage() {
       )}
 
       {/* Empty State */}
-      {!isLoading && filteredStocks.length === 0 && (
-        <Card className="py-12">
-          <CardContent className="flex flex-col items-center justify-center text-center">
-            <TrendingUp className="text-muted-foreground h-12 w-12" />
-            <h3 className="mt-4 text-lg font-semibold">{t('empty.noStocks')}</h3>
-            <p className="text-muted-foreground mt-2 text-sm">
-              {searchQuery ? t('empty.noResults', { query: searchQuery }) : t('empty.description')}
-            </p>
-            {!searchQuery && (
-              <Button className="mt-4">
-                <Plus className="mr-2 h-4 w-4" />
-                {t('newStock')}
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      {!isLoading &&
+        filteredStocks.length === 0 &&
+        (searchQuery ? (
+          <Card className="py-12">
+            <CardContent className="flex flex-col items-center justify-center text-center">
+              <TrendingUp className="text-muted-foreground h-12 w-12" />
+              <h3 className="mt-4 text-lg font-semibold">{t('empty.noStocks')}</h3>
+              <p className="text-muted-foreground mt-2 text-sm">
+                {t('empty.noResults', { query: searchQuery })}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <EmptyState
+            icon={<TrendingUp className="h-12 w-12" />}
+            title={t('empty.noStocks')}
+            description={t('empty.description')}
+            primaryAction={{ label: t('empty.addPost'), href: ROUTES.INPUT }}
+          />
+        ))}
     </div>
   );
 }

@@ -13,9 +13,10 @@
     "loadFailed": "Failed to load stock list, please try again later."
   },
   "empty": {
-    "noStocks": "No stocks found",
+    "noStocks": "No stocks tracked yet",
     "noResults": "No stocks matching \"{query}\"",
-    "description": "No stocks yet, click the button above to add"
+    "description": "Stocks appear automatically when you add posts.",
+    "addPost": "Add a Post"
   },
   "detail": {
     "backToList": "Back to Stock List",
@@ -84,7 +85,11 @@
       "lastMentioned": "Last mentioned: {date}",
       "bullishArguments": "▲ Bullish ({count})",
       "neutralArguments": "● Neutral ({count})",
-      "bearishArguments": "▼ Bearish ({count})"
+      "bearishArguments": "▼ Bearish ({count})",
+      "timeline": {
+        "title": "Argument Timeline",
+        "sizeHint": "Dot size = confidence"
+      }
     },
     "loading": "Loading...",
     "priceLoading": "Loading price...",

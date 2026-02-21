@@ -3,10 +3,12 @@
 import Link from 'next/link';
 import { useTranslations, useLocale } from 'next-intl';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { TrendingUp, Users, FileText, Newspaper } from 'lucide-react';
+import { TrendingUp, Users, FileText, Newspaper, BarChart3 } from 'lucide-react';
 import { LocaleSwitcher } from '@/components/layout/locale-switcher';
 import { useDashboard } from '@/hooks/use-dashboard';
 import { SENTIMENT_COLORS } from '@/domain/models';
+import { EmptyState } from '@/components/shared/empty-state';
+import { ROUTES } from '@/lib/constants';
 
 // 格式化數字（千分位）- 使用動態語系
 function formatNumber(num: number, locale: string): string {
@@ -106,6 +108,33 @@ export default function DashboardPage() {
   }
 
   const { stats, recentPosts, topKols } = data;
+
+  const isEmpty =
+    stats.kolCount === 0 &&
+    stats.stockCount === 0 &&
+    stats.postCount === 0 &&
+    stats.draftCount === 0;
+
+  if (isEmpty) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+            <p className="text-muted-foreground">{t('description')}</p>
+          </div>
+          <LocaleSwitcher />
+        </div>
+        <EmptyState
+          icon={<BarChart3 className="h-12 w-12" />}
+          title={t('empty.title')}
+          description={t('empty.description')}
+          primaryAction={{ label: t('empty.importKol'), href: ROUTES.IMPORT }}
+          secondaryAction={{ label: t('empty.addPost'), href: ROUTES.INPUT }}
+        />
+      </div>
+    );
+  }
 
   // 統計卡片資料
   const statsCards = [

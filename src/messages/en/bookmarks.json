@@ -6,8 +6,9 @@
     "loadFailed": "Failed to load bookmarks, please try again later."
   },
   "empty": {
-    "noBookmarks": "No bookmarks",
-    "description": "Click the bookmark button on a post detail page to save articles"
+    "noBookmarks": "No bookmarks yet",
+    "description": "Bookmark posts to find them easily later.",
+    "browsePosts": "Browse Posts"
   },
   "removeSuccess": "Bookmark removed"
 }

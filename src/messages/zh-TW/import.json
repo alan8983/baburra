@@ -1,0 +1,53 @@
+{
+  "title": "快速匯入 KOL 文章",
+  "description": "貼入 KOL 的文章或影片 URL，系統自動擷取內容並以 AI 分析",
+  "form": {
+    "kolName": "KOL 名稱",
+    "kolNamePlaceholder": "例如: 股癌、財報狗、Graham Stephan...",
+    "urlLabel": "文章/影片 URL",
+    "urlPlaceholder": "貼上 Twitter/X 或 YouTube URL",
+    "addUrl": "新增 URL",
+    "removeUrl": "移除",
+    "maxUrls": "最多 {max} 則 URL",
+    "supportedPlatforms": "支援: Twitter/X 推文、YouTube 影片",
+    "onboardingHint": "首次匯入免消耗 AI 配額！",
+    "submit": "開始匯入",
+    "submitting": "匯入中..."
+  },
+  "result": {
+    "title": "匯入結果",
+    "kolCreated": "已建立新 KOL: {name}",
+    "kolMatched": "已匹配現有 KOL: {name}",
+    "imported": "成功匯入 {count} 篇文章",
+    "duplicates": "{count} 篇重複（已略過）",
+    "errors": "{count} 篇失敗",
+    "statusSuccess": "成功",
+    "statusDuplicate": "已存在",
+    "statusError": "失敗",
+    "stocksIdentified": "識別到標的: {tickers}",
+    "viewKol": "查看 KOL 詳情",
+    "importMore": "繼續匯入",
+    "onboardingQuotaNote": "本次匯入已使用免費配額"
+  },
+  "errors": {
+    "importFailed": "匯入失敗，請稍後再試",
+    "unauthorized": "請先登入",
+    "aiQuotaExceeded": "AI 配額已用完，請下週再試",
+    "noUrls": "請至少輸入一則 URL",
+    "invalidUrl": "無效的 URL 格式",
+    "unsupportedUrl": "不支援此 URL 平台",
+    "kolNameRequired": "請輸入 KOL 名稱"
+  },
+  "loadingOverlay": {
+    "title": "正在匯入 KOL 文章",
+    "steps": {
+      "checkingQuota": "檢查 AI 配額...",
+      "creatingKol": "建立 KOL...",
+      "extractingContent": "擷取文章內容...",
+      "aiAnalyzing": "AI 分析投資觀點...",
+      "extractingArguments": "提取投資論點...",
+      "creatingPosts": "建立文章記錄...",
+      "finishing": "完成匯入..."
+    }
+  }
+}

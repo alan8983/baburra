@@ -45,6 +45,12 @@
     "allPosts": "所有文章",
     "allPostsDesc": "瀏覽收錄文章"
   },
+  "empty": {
+    "title": "尚無資料",
+    "description": "開始追蹤 KOL 投資觀點吧！",
+    "importKol": "匯入 KOL 文章",
+    "addPost": "手動新增文章"
+  },
   "errors": {
     "loadError": "載入資料時發生錯誤：{error}",
     "unknownError": "未知錯誤"

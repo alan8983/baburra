@@ -2,6 +2,7 @@
 
 import { use, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { format } from 'date-fns';
@@ -23,6 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -42,8 +44,12 @@ import {
   ImageUploader,
   AiTickerSuggestions,
 } from '@/components/forms';
-import { PostArguments, type TickerArgumentGroup } from '@/components/ai/post-arguments';
+import type { TickerArgumentGroup } from '@/components/ai/post-arguments';
 import { FRAMEWORK_CATEGORIES } from '@/domain/models/argument-categories';
+
+const PostArguments = dynamic(() =>
+  import('@/components/ai/post-arguments').then((mod) => ({ default: mod.PostArguments }))
+);
 import type {
   KOLSearchResult,
   StockSearchResult,
@@ -182,6 +188,7 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
   // Publish state
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
 
   // Duplicate URL check
   const { data: duplicateCheck } = useCheckDuplicateUrl(sourceUrl);
@@ -872,7 +879,13 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
       />
 
       {/* Publish Confirmation Dialog */}
-      <Dialog open={publishDialogOpen} onOpenChange={setPublishDialogOpen}>
+      <Dialog
+        open={publishDialogOpen}
+        onOpenChange={(open) => {
+          setPublishDialogOpen(open);
+          if (!open) setDisclaimerAccepted(false);
+        }}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>{t('detail.publishDialog.title')}</DialogTitle>
@@ -938,11 +951,34 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
               </div>
             )}
           </div>
+          {/* Disclaimer checkbox */}
+          {canPublish && (
+            <div className="border-muted rounded-md border p-3">
+              <label className="flex cursor-pointer items-start gap-3">
+                <Checkbox
+                  checked={disclaimerAccepted}
+                  onCheckedChange={(v) => setDisclaimerAccepted(v === true)}
+                  className="mt-0.5"
+                />
+                <div className="text-sm leading-relaxed">
+                  <span className="font-medium">{t('detail.publishDialog.disclaimer')}</span>
+                  <ol className="text-muted-foreground mt-1 list-inside list-decimal space-y-0.5">
+                    <li>{t('detail.publishDialog.disclaimerItems.notPaywalled')}</li>
+                    <li>{t('detail.publishDialog.disclaimerItems.noLiability')}</li>
+                    <li>{t('detail.publishDialog.disclaimerItems.userResponsibility')}</li>
+                  </ol>
+                </div>
+              </label>
+            </div>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setPublishDialogOpen(false)}>
               {t('detail.publishDialog.cancel')}
             </Button>
-            <Button onClick={handlePublish} disabled={!canPublish || isPublishing}>
+            <Button
+              onClick={handlePublish}
+              disabled={!canPublish || !disclaimerAccepted || isPublishing}
+            >
               {isPublishing ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -13,8 +13,10 @@
   },
   "loading": "Loading...",
   "empty": {
-    "noPosts": "No posts found",
-    "description": "No posts matching the search criteria"
+    "noPosts": "No posts yet",
+    "description": "Start by importing or manually adding KOL opinion posts!",
+    "importKol": "Import KOL Posts",
+    "addPost": "Add Post Manually"
   },
   "detail": {
     "backToList": "Back to Post List",

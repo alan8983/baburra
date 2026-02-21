@@ -2,6 +2,7 @@
 
 import { use, useMemo } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { ArrowLeft, ExternalLink, HelpCircle, Loader2, User } from 'lucide-react';
@@ -16,10 +17,17 @@ import { formatDate } from '@/lib/utils/date';
 import { SENTIMENT_COLORS, type Sentiment } from '@/domain/models/post';
 import { sentimentKey } from '@/lib/utils/sentiment';
 import { useStockPricesForChart } from '@/hooks/use-stock-prices';
-import { SentimentLineChart } from '@/components/charts';
 import type { LineChartMarker } from '@/components/charts';
 import { useKol, useKolPosts } from '@/hooks';
 import { formatReturnRate, getReturnRateColorClass } from '@/domain/calculators';
+
+const SentimentLineChart = dynamic(
+  () =>
+    import('@/components/charts/sentiment-line-chart').then((mod) => ({
+      default: mod.SentimentLineChart,
+    })),
+  { ssr: false }
+);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

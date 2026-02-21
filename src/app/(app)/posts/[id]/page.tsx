@@ -3,6 +3,7 @@
 import { use, useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { ArrowLeft, Bookmark, BookmarkCheck, ExternalLink, Trash2, User } from 'lucide-react';
@@ -18,8 +19,6 @@ import { SENTIMENT_COLORS } from '@/domain/models/post';
 import { sentimentKey } from '@/lib/utils/sentiment';
 import { useStockPricesForChart } from '@/hooks/use-stock-prices';
 import {
-  CandlestickChart,
-  SentimentLineChart,
   ChartToolbar,
   aggregateCandles,
   aggregateVolumes,
@@ -33,7 +32,27 @@ import {
   usePostArguments,
   useDeletePost,
 } from '@/hooks';
-import { PostArguments, type TickerArgumentGroup } from '@/components/ai/post-arguments';
+import type { TickerArgumentGroup } from '@/components/ai/post-arguments';
+
+const CandlestickChart = dynamic(
+  () =>
+    import('@/components/charts/candlestick-chart').then((mod) => ({
+      default: mod.CandlestickChart,
+    })),
+  { ssr: false }
+);
+
+const SentimentLineChart = dynamic(
+  () =>
+    import('@/components/charts/sentiment-line-chart').then((mod) => ({
+      default: mod.SentimentLineChart,
+    })),
+  { ssr: false }
+);
+
+const PostArguments = dynamic(() =>
+  import('@/components/ai/post-arguments').then((mod) => ({ default: mod.PostArguments }))
+);
 import { FRAMEWORK_CATEGORIES } from '@/domain/models/argument-categories';
 import type { PostArgumentResponse } from '@/hooks/use-ai';
 import type { Sentiment } from '@/domain/models/post';

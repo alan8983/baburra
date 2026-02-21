@@ -10,6 +10,8 @@ import settings from './settings.json';
 import auth from './auth.json';
 import forms from './forms.json';
 import bookmarks from './bookmarks.json';
+import importMessages from './import.json';
+import onboarding from './onboarding.json';
 
 const zhTWMessages = {
   common,
@@ -23,6 +25,8 @@ const zhTWMessages = {
   auth,
   forms,
   bookmarks,
+  import: importMessages,
+  onboarding,
 };
 
 export default zhTWMessages;

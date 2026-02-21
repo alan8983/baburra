@@ -13,9 +13,10 @@
     "loadFailed": "無法載入標的列表，請稍後再試。"
   },
   "empty": {
-    "noStocks": "找不到標的",
+    "noStocks": "尚無追蹤的標的",
     "noResults": "沒有符合「{query}」的投資標的",
-    "description": "還沒有任何投資標的，點擊上方按鈕新增"
+    "description": "投資標的會在新增文章時自動建立。",
+    "addPost": "新增文章"
   },
   "detail": {
     "backToList": "返回標的列表",
@@ -84,7 +85,11 @@
       "lastMentioned": "最近提及: {date}",
       "bullishArguments": "▲ 看多論點 ({count})",
       "neutralArguments": "● 中立論點 ({count})",
-      "bearishArguments": "▼ 看空論點 ({count})"
+      "bearishArguments": "▼ 看空論點 ({count})",
+      "timeline": {
+        "title": "論點時間分布",
+        "sizeHint": "圓點大小 = 信心度"
+      }
     },
     "loading": "載入中...",
     "priceLoading": "載入股價中...",

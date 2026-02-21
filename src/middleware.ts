@@ -5,10 +5,17 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
 // 不需要認證的公開路由
-const publicRoutes = ['/', '/login', '/register', '/auth/callback', '/forgot-password'];
+const publicRoutes = [
+  '/',
+  '/login',
+  '/register',
+  '/auth/callback',
+  '/reset-password',
+  '/reset-password/confirm',
+];
 
 // API 路由（部分需要認證）
-const publicApiRoutes = ['/api/auth'];
+const publicApiRoutes = ['/api/auth', '/api/health'];
 
 // 檢查 Supabase 是否正確配置（非占位符）
 const isSupabaseConfigured =

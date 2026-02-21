@@ -1,0 +1,53 @@
+{
+  "title": "Quick Import KOL Articles",
+  "description": "Paste KOL article or video URLs, AI auto-extracts content and analyzes",
+  "form": {
+    "kolName": "KOL Name",
+    "kolNamePlaceholder": "e.g., StockGuru, Graham Stephan...",
+    "urlLabel": "Article / Video URL",
+    "urlPlaceholder": "Paste a Twitter/X or YouTube URL",
+    "addUrl": "Add URL",
+    "removeUrl": "Remove",
+    "maxUrls": "Up to {max} URLs",
+    "supportedPlatforms": "Supports: Twitter/X posts, YouTube videos",
+    "onboardingHint": "First import is AI-quota-free!",
+    "submit": "Start Import",
+    "submitting": "Importing..."
+  },
+  "result": {
+    "title": "Import Results",
+    "kolCreated": "Created new KOL: {name}",
+    "kolMatched": "Matched existing KOL: {name}",
+    "imported": "Successfully imported {count} post(s)",
+    "duplicates": "{count} duplicate(s) skipped",
+    "errors": "{count} failed",
+    "statusSuccess": "Success",
+    "statusDuplicate": "Already exists",
+    "statusError": "Failed",
+    "stocksIdentified": "Stocks identified: {tickers}",
+    "viewKol": "View KOL Details",
+    "importMore": "Import More",
+    "onboardingQuotaNote": "This import used your free quota"
+  },
+  "errors": {
+    "importFailed": "Import failed, please try again",
+    "unauthorized": "Please log in first",
+    "aiQuotaExceeded": "AI quota exceeded, please try again next week",
+    "noUrls": "Please enter at least one URL",
+    "invalidUrl": "Invalid URL format",
+    "unsupportedUrl": "This URL platform is not supported",
+    "kolNameRequired": "KOL name is required"
+  },
+  "loadingOverlay": {
+    "title": "Importing KOL Articles",
+    "steps": {
+      "checkingQuota": "Checking AI quota...",
+      "creatingKol": "Creating KOL profile...",
+      "extractingContent": "Extracting article content...",
+      "aiAnalyzing": "AI analyzing investment views...",
+      "extractingArguments": "Extracting investment arguments...",
+      "creatingPosts": "Creating article records...",
+      "finishing": "Finishing up..."
+    }
+  }
+}

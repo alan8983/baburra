@@ -20,7 +20,7 @@ export const createPostSchema = z.object({
   content: z.string().min(1).max(50000),
   sourceUrl: z.string().url().max(2000).optional(),
   sourcePlatform: z
-    .enum(['twitter', 'facebook', 'threads', 'instagram', 'manual'])
+    .enum(['twitter', 'facebook', 'threads', 'instagram', 'youtube', 'manual'])
     .default('manual'),
   images: z.array(z.string().url().max(2000)).max(10).optional(),
   sentiment: sentimentValue,

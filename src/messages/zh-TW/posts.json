@@ -13,8 +13,10 @@
   },
   "loading": "載入中...",
   "empty": {
-    "noPosts": "找不到文章",
-    "description": "沒有符合搜尋條件的文章"
+    "noPosts": "尚無文章",
+    "description": "開始匯入或手動新增 KOL 投資觀點文章！",
+    "importKol": "匯入 KOL 文章",
+    "addPost": "手動新增文章"
   },
   "detail": {
     "backToList": "返回文章列表",

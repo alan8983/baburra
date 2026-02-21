@@ -6,3 +6,4 @@ export type { LineChartMarker } from './sentiment-line-chart';
 export { ChartToolbar } from './chart-toolbar';
 export { aggregateCandles, aggregateVolumes, getStartDateForRange } from './candle-aggregator';
 export type { CandleInterval, TimeRange } from './candle-aggregator';
+export { ArgumentTimeline } from './argument-timeline';

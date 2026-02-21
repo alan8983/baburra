@@ -1,0 +1,30 @@
+{
+  "step1": {
+    "title": "Welcome to Stock KOL Tracker!",
+    "features": {
+      "track": "Track KOL investment opinions",
+      "measure": "Measure prediction accuracy with return rates",
+      "ai": "AI-powered sentiment & argument analysis",
+      "chart": "K-line charts with sentiment markers"
+    },
+    "getStarted": "Get Started",
+    "skip": "Skip"
+  },
+  "step2": {
+    "title": "Import your first KOL!",
+    "description": "Paste a few posts from a KOL you follow. We'll analyze them with AI automatically.",
+    "freeQuota": "Your first import is FREE — no quota used!",
+    "back": "Back",
+    "skip": "Skip",
+    "next": "Next"
+  },
+  "step3": {
+    "title": "You're all set!",
+    "importedSummary": "Imported {count} posts for @{kolName}",
+    "importedDetail": "AI analyzed sentiment and arguments, return rate calculations ready",
+    "skippedMessage": "Start by importing a KOL from the sidebar anytime",
+    "viewKol": "View KOL Detail",
+    "goToDashboard": "Go to Dashboard"
+  },
+  "stepIndicator": "Step {current} of {total}"
+}

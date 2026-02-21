@@ -13,9 +13,11 @@
     "loadFailed": "Failed to load KOL list, please try again later."
   },
   "empty": {
-    "noKols": "No KOLs found",
+    "noKols": "No KOLs tracked yet",
     "noResults": "No KOLs matching \"{query}\"",
-    "description": "No KOLs yet, click the button above to add"
+    "description": "Start by importing or manually adding a KOL!",
+    "importKol": "Import Your First KOL",
+    "addKol": "Add KOL Manually"
   },
   "detail": {
     "backToList": "Back to KOL List",
