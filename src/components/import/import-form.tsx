@@ -34,20 +34,19 @@ function getPlatformIcon(url: string) {
 }
 
 interface ImportFormProps {
-  onSubmit: (kolName: string, urls: string[]) => void;
+  onSubmit: (urls: string[]) => void;
   isLoading: boolean;
 }
 
 export function ImportForm({ onSubmit, isLoading }: ImportFormProps) {
   const t = useTranslations('import');
-  const [kolName, setKolName] = useState('');
   const [urls, setUrls] = useState<string[]>(['']);
 
   const validUrls = useMemo(() => urls.filter((u) => u.trim()), [urls]);
 
   const hasInvalidUrls = useMemo(() => validUrls.some((u) => !isUrlSupported(u)), [validUrls]);
 
-  const canSubmit = kolName.trim() && validUrls.length > 0 && !hasInvalidUrls && !isLoading;
+  const canSubmit = validUrls.length > 0 && !hasInvalidUrls && !isLoading;
 
   const handleAddUrl = () => {
     if (urls.length < MAX_URLS) {
@@ -72,10 +71,7 @@ export function ImportForm({ onSubmit, isLoading }: ImportFormProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
-    onSubmit(
-      kolName.trim(),
-      validUrls.map((u) => u.trim())
-    );
+    onSubmit(validUrls.map((u) => u.trim()));
   };
 
   return (
@@ -85,18 +81,6 @@ export function ImportForm({ onSubmit, isLoading }: ImportFormProps) {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* KOL Name */}
-          <div className="space-y-2">
-            <Label htmlFor="kolName">{t('form.kolName')}</Label>
-            <Input
-              id="kolName"
-              value={kolName}
-              onChange={(e) => setKolName(e.target.value)}
-              placeholder={t('form.kolNamePlaceholder')}
-              disabled={isLoading}
-            />
-          </div>
-
           {/* URL List */}
           <div className="space-y-3">
             <Label>{t('form.urlLabel')}</Label>

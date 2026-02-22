@@ -15,6 +15,7 @@ import { ROUTES } from '@/lib/constants';
 import { formatDateTime } from '@/lib/utils/date';
 import { SENTIMENT_COLORS } from '@/domain/models/post';
 import { sentimentKey } from '@/lib/utils/sentiment';
+import { StockArgumentsTab } from '@/components/ai/stock-arguments-tab';
 import { useStockPricesForChart } from '@/hooks/use-stock-prices';
 import {
   ChartToolbar,
@@ -322,18 +323,8 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
 
       {/* Bottom 2-column: Arguments + Posts */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Left: Arguments placeholder */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('detail.arguments.title')}</CardTitle>
-            <CardDescription>{t('detail.arguments.noArgumentsHint')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-muted-foreground flex h-48 items-center justify-center rounded-lg border border-dashed text-sm">
-              {t('detail.arguments.noArguments')}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Left: Arguments */}
+        <StockArgumentsTab ticker={decodedTicker} />
 
         {/* Right: Posts list */}
         <Card className="flex flex-col">

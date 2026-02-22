@@ -46,6 +46,8 @@ export function usePosts(params?: {
       if (!res.ok) throw new Error('Failed to fetch posts');
       return res.json();
     },
+    staleTime: 2 * 60 * 1000,
+    gcTime: 4 * 60 * 1000,
   });
 }
 
@@ -59,6 +61,8 @@ export function usePost(id: string) {
       return res.json();
     },
     enabled: !!id,
+    staleTime: 1 * 60 * 1000,
+    gcTime: 2 * 60 * 1000,
   });
 }
 
@@ -72,6 +76,8 @@ export function useCheckDuplicateUrl(url: string) {
       return res.json();
     },
     enabled: !!url && url.startsWith('http'),
+    staleTime: 1 * 60 * 1000,
+    gcTime: 2 * 60 * 1000,
   });
 }
 

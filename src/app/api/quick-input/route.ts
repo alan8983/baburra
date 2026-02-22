@@ -196,8 +196,9 @@ export async function POST(request: NextRequest) {
     // 9. 建立草稿
     const draft = await createDraft(userId, draftInput);
 
-    // 10. 回傳結果
-    return NextResponse.json({ draft: { id: draft.id } });
+    // 10. 回傳結果（若未辨識到任何標的，附帶 warning）
+    const warning = aiAnalyzed && aiStockTickers.length === 0 ? 'no_tickers_identified' : undefined;
+    return NextResponse.json({ draft: { id: draft.id }, warning });
   } catch (error) {
     console.error('POST /api/quick-input error:', error);
     return NextResponse.json(

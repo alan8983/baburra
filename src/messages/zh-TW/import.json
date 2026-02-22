@@ -2,8 +2,6 @@
   "title": "快速匯入 KOL 文章",
   "description": "貼入 KOL 的文章或影片 URL，系統自動擷取內容並以 AI 分析",
   "form": {
-    "kolName": "KOL 名稱",
-    "kolNamePlaceholder": "例如: 股癌、財報狗、Graham Stephan...",
     "urlLabel": "文章/影片 URL",
     "urlPlaceholder": "貼上 Twitter/X 或 YouTube URL",
     "addUrl": "新增 URL",
@@ -18,6 +16,7 @@
     "title": "匯入結果",
     "kolCreated": "已建立新 KOL: {name}",
     "kolMatched": "已匹配現有 KOL: {name}",
+    "postCount": "{count} 篇",
     "imported": "成功匯入 {count} 篇文章",
     "duplicates": "{count} 篇重複（已略過）",
     "errors": "{count} 篇失敗",
@@ -36,13 +35,14 @@
     "noUrls": "請至少輸入一則 URL",
     "invalidUrl": "無效的 URL 格式",
     "unsupportedUrl": "不支援此 URL 平台",
-    "kolNameRequired": "請輸入 KOL 名稱"
+    "noTickersIdentified": "未辨識出任何投資標的，此文章可能與投資無關",
+    "noTickersIdentifiedHint": "您可以在草稿中手動新增標的後發布"
   },
   "loadingOverlay": {
     "title": "正在匯入 KOL 文章",
     "steps": {
       "checkingQuota": "檢查 AI 配額...",
-      "creatingKol": "建立 KOL...",
+      "creatingKol": "偵測 KOL...",
       "extractingContent": "擷取文章內容...",
       "aiAnalyzing": "AI 分析投資觀點...",
       "extractingArguments": "提取投資論點...",

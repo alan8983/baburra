@@ -10,7 +10,7 @@
  */
 
 import { SocialMediaExtractor, UrlFetchResult, ExtractorConfig, ExtractorError } from './types';
-import { YoutubeTranscript } from 'youtube-transcript';
+import { YoutubeTranscript } from 'youtube-transcript-plus';
 
 /** Shape of the YouTube oEmbed API JSON response */
 interface YouTubeOEmbedResponse {

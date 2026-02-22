@@ -2,14 +2,14 @@
   "title": "快速輸入",
   "description": "貼上 KOL 的投資觀點文章，AI 自動識別 KOL、標的與情緒",
   "inputCard": {
-    "placeholder": "貼上文章內容或 Twitter / X 網址..."
+    "placeholder": "貼上文章內容或 Twitter / X / YouTube 網址..."
   },
   "actions": {
     "createDraft": "建立草稿",
     "analyzing": "AI 分析中..."
   },
   "tips": {
-    "hint": "支援貼上文字或 Twitter / X 網址，AI 會自動識別 KOL、標的與情緒"
+    "hint": "支援貼上文字或 Twitter / X / YouTube 網址，AI 會自動識別 KOL、標的與情緒"
   },
   "loadingOverlay": {
     "title": "AI 正在分析您的內容",
@@ -21,6 +21,10 @@
       "extractingArguments": "提取投資論點...",
       "creatingDraft": "建立草稿中..."
     }
+  },
+  "warnings": {
+    "noTickersIdentified": "未辨識出任何投資標的，此文章可能與投資無關",
+    "noTickersIdentifiedHint": "您可以在草稿中手動新增標的後發布"
   },
   "errors": {
     "createDraftFailed": "建立草稿失敗",

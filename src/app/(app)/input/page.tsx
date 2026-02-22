@@ -23,6 +23,11 @@ export default function InputPage() {
     try {
       const result = await quickInput.mutateAsync(content.trim());
       setContent('');
+      if (result.warning === 'no_tickers_identified') {
+        toast.warning(t('warnings.noTickersIdentified'), {
+          description: t('warnings.noTickersIdentifiedHint'),
+        });
+      }
       router.push(ROUTES.DRAFT_DETAIL(result.draft.id));
     } catch (error) {
       toast.error(t('errors.createDraftFailed'), {

@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   CheckCircle2,
   Import,
+  Lightbulb,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,19 +37,28 @@ export default function OnboardingPage() {
   const [importDone, setImportDone] = useState(false);
   const importBatch = useImportBatch();
 
-  const handleImportSubmit = async (kolName: string, urls: string[]) => {
+  const handleImportSubmit = async (urls: string[]) => {
     try {
-      const result = await importBatch.mutateAsync({ kolName, urls });
+      const result = await importBatch.mutateAsync({ urls });
       setImportResult(result);
       setImportDone(true);
 
       if (result.totalImported > 0) {
-        toast.success(
-          t('step3.importedSummary', {
-            count: result.totalImported,
-            kolName: result.kolName,
-          })
-        );
+        if (result.kols.length === 1) {
+          toast.success(
+            t('step3.importedSummary', {
+              count: result.totalImported,
+              kolName: result.kols[0].kolName,
+            })
+          );
+        } else {
+          toast.success(
+            t('step3.importedSummaryMulti', {
+              count: result.totalImported,
+              kolCount: result.kols.length,
+            })
+          );
+        }
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Import failed');
@@ -59,8 +69,8 @@ export default function OnboardingPage() {
     async (destination: 'kol' | 'dashboard') => {
       await completeOnboarding();
 
-      if (destination === 'kol' && importResult) {
-        router.push(ROUTES.KOL_DETAIL(importResult.kolId));
+      if (destination === 'kol' && importResult && importResult.kols.length > 0) {
+        router.push(ROUTES.KOL_DETAIL(importResult.kols[0].kolId));
       } else {
         router.push(ROUTES.DASHBOARD);
       }
@@ -130,6 +140,25 @@ export default function OnboardingPage() {
               {t('step2.freeQuota')}
             </Badge>
 
+            {!importDone && (
+              <Card className="border-dashed">
+                <CardContent className="pt-4 pb-4">
+                  <div className="flex items-start gap-2">
+                    <Lightbulb className="text-muted-foreground mt-0.5 h-4 w-4 flex-shrink-0" />
+                    <div>
+                      <p className="text-muted-foreground mb-1.5 text-sm font-medium">
+                        {t('step2.guidanceTitle')}
+                      </p>
+                      <ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
+                        <li>{t('step2.guidancePattern1')}</li>
+                        <li>{t('step2.guidancePattern2')}</li>
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {!importDone ? (
               <ImportForm onSubmit={handleImportSubmit} isLoading={importBatch.isPending} />
             ) : (
@@ -171,10 +200,15 @@ export default function OnboardingPage() {
                       <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-green-500" />
                       <div>
                         <p className="font-medium">
-                          {t('step3.importedSummary', {
-                            count: importResult.totalImported,
-                            kolName: importResult.kolName,
-                          })}
+                          {importResult.kols.length === 1
+                            ? t('step3.importedSummary', {
+                                count: importResult.totalImported,
+                                kolName: importResult.kols[0].kolName,
+                              })
+                            : t('step3.importedSummaryMulti', {
+                                count: importResult.totalImported,
+                                kolCount: importResult.kols.length,
+                              })}
                         </p>
                         <p className="text-muted-foreground mt-1 text-sm">
                           {t('step3.importedDetail')}
@@ -189,7 +223,7 @@ export default function OnboardingPage() {
             </Card>
 
             <div className="flex items-center justify-center gap-3">
-              {importResult && importResult.totalImported > 0 && (
+              {importResult && importResult.kols.length === 1 && (
                 <Button onClick={() => handleComplete('kol')}>
                   {t('step3.viewKol')}
                   <ArrowRight className="ml-2 h-4 w-4" />

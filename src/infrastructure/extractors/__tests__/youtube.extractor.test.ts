@@ -7,13 +7,13 @@ import { youtubeExtractor } from '../youtube.extractor';
 import type { ExtractorError } from '../types';
 
 // Mock youtube-transcript module
-vi.mock('youtube-transcript', () => ({
+vi.mock('youtube-transcript-plus', () => ({
   YoutubeTranscript: {
     fetchTranscript: vi.fn(),
   },
 }));
 
-import { YoutubeTranscript } from 'youtube-transcript';
+import { YoutubeTranscript } from 'youtube-transcript-plus';
 
 /** Build a mock YouTube oEmbed JSON response */
 function buildYouTubeOEmbedResponse(
@@ -52,7 +52,7 @@ function mockOEmbedFetch(response: ReturnType<typeof buildYouTubeOEmbedResponse>
 
 /** Build mock transcript segments */
 function buildTranscript(texts: string[]) {
-  return texts.map((text, i) => ({ text, duration: 5, offset: i * 5 }));
+  return texts.map((text, i) => ({ text, duration: 5, offset: i * 5, lang: 'en' }));
 }
 
 describe('YouTubeExtractor', () => {

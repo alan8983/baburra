@@ -7,6 +7,7 @@ import { draftKeys } from './use-drafts';
 
 interface QuickInputResult {
   draft: { id: string };
+  warning?: 'no_tickers_identified';
 }
 
 /**

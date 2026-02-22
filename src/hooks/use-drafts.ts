@@ -34,6 +34,8 @@ export function useDrafts(params?: { page?: number; limit?: number }) {
       if (!res.ok) throw new Error('Failed to fetch drafts');
       return res.json();
     },
+    staleTime: 2 * 60 * 1000,
+    gcTime: 4 * 60 * 1000,
   });
 }
 
@@ -47,6 +49,8 @@ export function useDraft(id: string) {
       return res.json();
     },
     enabled: !!id,
+    staleTime: 1 * 60 * 1000,
+    gcTime: 2 * 60 * 1000,
   });
 }
 
@@ -60,6 +64,8 @@ export function useDraftCount() {
       const { count } = await res.json();
       return count ?? 0;
     },
+    staleTime: 2 * 60 * 1000,
+    gcTime: 4 * 60 * 1000,
   });
 }
 

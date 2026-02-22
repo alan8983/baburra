@@ -21,15 +21,15 @@
 | Phase 5 | 文章檢視 | ✅ 完成 | 2026-02-12 (含書籤) |
 | Phase 6 | K 線圖 | ✅ 完成 | K 線圖+情緒標記+工具列已整合到詳情頁 |
 | Phase 7 | 勝率計算 | ✅ 完成 | 計算器+API+UI 顯示全部完成 |
-| Phase 8 | AI 整合 | 🔄 95% | 情緒/論點提取/論點彙整/時間分布圖元件完成，StockArgumentsTab 待整合至 Stock 詳情頁 |
+| Phase 8 | AI 整合 | ✅ 完成 | 情緒/論點提取/論點彙整/時間分布圖全部完成 (2026-02-22) |
 | Phase 9 | App Layout | ✅ 完成 | 2026-02-10 |
-| Phase 10 | 測試與優化 | 🔄 80% | 測試框架+動態載入+Vercel 部署+安全標頭完成；React Query staleTime 部分 hooks 待補 |
+| Phase 10 | 測試與優化 | ✅ 完成 | 測試框架+動態載入+Vercel 部署+安全標頭+React Query staleTime 全部完成 (2026-02-22) |
 | Phase 11 | Google OAuth & Auth 強化 | ✅ 完成 | Google OAuth + 密碼重設 + Email 驗證設定 (2026-02-22) |
 | Phase 12 | KOL 匯入工具 | ✅ 完成 | YouTube Extractor + 批量匯入管線 + 匯入 UI + 配額豁免 (2026-02-22) |
 | Phase 13 | 用戶引導流程 | ✅ 完成 | 3 步驟 Onboarding + Empty States (6 頁面) + 首次登入偵測 (2026-02-22) |
 
-**MVP 整體完成度: ~98%** (Phase 0-13 幾乎全部完成；僅餘: 8.16 Stock 頁面整合 + 10.5 React Query staleTime 補齊)
-**含商業功能: ~98%** (Phase 0-13)
+**MVP 整體完成度: 100%** (Phase 0-13 全部完成，TODO-001~017 全部 ✅ 🎉)
+**含商業功能: 100%** (Phase 0-13)
 
 ### 額外已完成功能（計畫外）
 
@@ -80,7 +80,7 @@ Stock KOL Tracker Web 是一個**社群共享**的投資觀點追蹤平台，讓
 | 版本           | 核心目標     | 關鍵功能                                                                                |
 | -------------- | ------------ | --------------------------------------------------------------------------------------- |
 | **MVP**        | 核心功能驗證 | 手動輸入、基本檢視、勝率計算、K線圖                                                     |
-| **Release 01** | 體驗優化     | URL 自動匯入(Twitter/X)、RWD、書籤管理、AI摘要、AI 快取層、社群洞察                     |
+| **Release 01** | 體驗優化     | URL 自動匯入(Twitter/X)、RWD、書籤管理、AI摘要、AI 快取層、社群洞察、行銷首頁           |
 | **Release 02** | 功能擴展     | URL 自動匯入(FB/Threads)、YouTube 逐字稿擷取、多市場支援、Dark Mode、付費機制、熱度統計 |
 
 ### 1.3 技術架構確認
@@ -1007,7 +1007,7 @@ CREATE TABLE stock_argument_summary (
 | 8.13         | 建立論點彙整計算器       | `domain/calculators/argument-summary.calculator.ts` | ✅ (含單元測試) |
 | 8.14         | 建立論點彙整 API         | `/api/stocks/[ticker]/arguments`                    | ✅ |
 | 8.15         | 建立標的論點彙整頁面     | Stock 詳情新增 Arguments Tab                        | ✅ |
-| 8.16         | 建立論點時間分布圖表     | `components/charts/argument-timeline.tsx`           | 🔄 (元件+API 完成，Stock 頁面整合待做) |
+| 8.16         | 建立論點時間分布圖表     | `components/charts/argument-timeline.tsx` + StockArgumentsTab 已整合至 Stock 詳情頁 | ✅ |
 | **配額管理** |                          |                                                     |      |
 | 8.17         | 建立配額查詢 API         | `/api/ai/usage`                                     | ✅ |
 | 8.18         | 顯示剩餘配額             | `components/ai/ai-quota-badge.tsx`                  | ✅ |
@@ -1279,7 +1279,7 @@ Sidebar:
 | 10.2 | 撰寫核心邏輯單元測試  | price-change, win-rate, argument-summary, ai.service, stock-price.repo | ✅ |
 | 10.3 | 設定 Playwright       | E2E 測試 + fixtures                | ✅ |
 | 10.4 | 撰寫關鍵流程 E2E 測試 | quick-input flow                   | ✅ (基本流程) |
-| 10.5 | 效能優化              | 動態載入 (charts ssr:false) + Bundle Analyzer 完成；React Query staleTime 部分 hooks 待補 | 🔄 |
+| 10.5 | 效能優化              | 動態載入 + Bundle Analyzer + React Query staleTime (26 hooks 全部設定) | ✅ |
 | 10.6 | 設定 Vercel 專案      | vercel.json + .env.example + /api/health + 安全標頭 + DEV_USER_ID guard | ✅ |
 | 10.7 | 設定 CI/CD            | GitHub Actions                     | ✅ (lint + type-check + test) |
 | 10.8 | 撰寫 README           | 專案文件                           | ✅ |
@@ -1615,8 +1615,8 @@ K線圖          勝率計算         AI 整合
 | **M2** | Phase 2-3   | 可搜尋/新增 KOL 和標的       | ✅ 2026-02-01 |
 | **M3** | Phase 4-5   | 完整輸入流程、可檢視文章     | ✅ 2026-02-18 |
 | **M4** | Phase 6-7   | K 線圖顯示、勝率計算         | ✅ 2026-02-18 |
-| **M5** | Phase 8     | AI 情緒分析、論點提取與彙整  | 🔄 95% — argument-timeline 元件完成，Stock 頁面整合待做 |
-| **M6** | Phase 10, 1 | 測試優化、認證系統、完整 MVP | 🔄 90% — 認證+Vercel 部署完成，React Query staleTime 待補 |
+| **M5** | Phase 8     | AI 情緒分析、論點提取與彙整  | ✅ 2026-02-22 |
+| **M6** | Phase 10, 1 | 測試優化、認證系統、完整 MVP | ✅ 2026-02-22 |
 | **M7** | Phase 11    | Google OAuth、Email 驗證、密碼重設 | ✅ 2026-02-22 |
 | **M8** | Phase 12-13 | KOL 匯入工具 + 用戶引導流程 | ✅ 2026-02-22 |
 
@@ -1634,8 +1634,8 @@ K線圖          勝率計算         AI 整合
 | **TODO-004** | K 線圖整合到詳情頁       | ✅ 已完成 | Phase 6.7-6.8 — 雙圖表 (K線+情緒)   |
 | **TODO-005** | K 線圖縮放/平移          | ✅ 已完成 | Phase 6.9 — 日/週/月/季/年+時間範圍 |
 | **TODO-006** | 論點彙整 UI              | ✅ 已完成 | Phase 8.15 — Stock Arguments Tab + i18n |
-| **TODO-007** | 論點時間分布圖表         | 🔄 90%  | Phase 8.16 — argument-timeline 元件+API 完成，StockArgumentsTab 待整合至 Stock 詳情頁 (Agent 3) |
-| **TODO-008** | 效能優化                 | 🔄 80%  | Phase 10.5 — 動態載入+Bundle Analyzer 完成；React Query staleTime 部分 hooks 待補 (Agent 4) |
+| **TODO-007** | 論點時間分布圖表         | ✅ 已完成 | Phase 8.16 — argument-timeline + StockArgumentsTab 整合至 Stock 詳情頁 (Agent 5) |
+| **TODO-008** | 效能優化                 | ✅ 已完成 | Phase 10.5 — 動態載入 + Bundle Analyzer + React Query staleTime 26 hooks 全部設定 (Agent 6) |
 | **TODO-009** | Vercel 部署              | ✅ 已完成 | Phase 10.6 — vercel.json + .env.example + /api/health + 安全標頭 (Agent 4) |
 | **TODO-010** | Google OAuth             | ✅ 已完成 | Phase 11.1-11.4 — Google 一鍵登入 (Session A) |
 | **TODO-011** | Email 驗證 + 密碼重設    | ✅ 已完成 | Phase 11.5-11.7 — Auth 強化 (Session C) |
@@ -1644,6 +1644,7 @@ K線圖          勝率計算         AI 整合
 | **TODO-014** | 匯入 UI                  | ✅ 已完成 | Phase 12.7-12.9 — /import 頁面 + import-form + loading-overlay + result (Agent 1) |
 | **TODO-015** | 用戶引導流程             | ✅ 已完成 | Phase 13.1-13.7 — 3 步驟 Onboarding + Empty States 6 頁面 + onboarding-guard (Agent 2) |
 | **TODO-016** | 發布免責聲明             | ✅ 已完成 | Phase 4.16 — 3 點免責聲明 checkbox + 按鈕禁用邏輯 + i18n (Agent 3) |
+| **TODO-017** | 零 Ticker 文章攔截       | ✅ 已完成 | 匯入管線 reject + Quick Input toast 警告 + validation.ts min(1) + import-result amber 警告 + i18n (Agent 7) |
 
 ### Release 01
 
@@ -1663,6 +1664,16 @@ K線圖          勝率計算         AI 整合
   - 原則：**分享計數與趨勢，絕不暴露個人資料**
   - Dashboard 趨勢卡片 + KOL 詳情頁社群熱度標示
   - 不需更動 RLS — 使用 admin client 執行跨用戶 COUNT/GROUP BY 聚合查詢
+- [ ] **行銷首頁 (Phase 17)**
+  - 靜態行銷登陸頁，位於同一 Next.js app 的 `(marketing)` route group (`/`)
+  - 區塊：Hero + 痛點陳述 + 功能介紹 (6 卡片) + 使用流程 (3 步驟) + Freemium 定價表 + FAQ + Footer CTA
+  - CTA 按鈕：「免費試用」「註冊」→ 均導向 `/register`（同一流程，免費試用為行銷用語）
+  - 已登入用戶顯示「前往 Dashboard」取代註冊 CTA
+  - 導覽列：Logo + 功能/定價/FAQ 錨點捲動 + 語言切換 (zh-TW/EN)
+  - i18n：新增 `landing.json` (zh-TW + en)
+  - 定價方案：Free (5 KOL / 20 AI 分析/月) vs Pro (無限制，價格 TBD)
+  - 響應式設計：mobile-first，靜態頁面無需 client-side data fetching（僅 auth 狀態檢查）
+  - 不含：Stripe 結帳流程 (Release 02)、法律條款內容 (placeholder 連結)、A/B 測試、Analytics
 
 ### Release 02
 
@@ -1699,3 +1710,7 @@ K線圖          勝率計算         AI 整合
 | 1.5c | 2026-02-22 | Release 01 新增 Phase 15 (AI 分析快取層 — URL hash + model_version 失效策略) 與 Phase 16 (社群洞察 — 匿名聚合統計) |
 | 1.6  | 2026-02-22 | Phase 12a ✅ 完成 (Agent 1: YouTube Extractor + 批量匯入管線 + 匯入 UI + 配額豁免 + use-import hook)；Phase 13 ✅ 完成 (Agent 2: 3 步驟 Onboarding + Empty States 6 頁面 + onboarding-guard + Sidebar "New" 徽章)；TODO-012~015 全部完成；M8 ✅；MVP 完成度提升至 ~96% |
 | 1.7  | 2026-02-22 | Phase 4.16 ✅ (免責聲明 checkbox + i18n)；Phase 8.16 🔄 90% (argument-timeline 元件+API 完成，Stock 頁面整合待做)；Phase 10.5 🔄 80% (動態載入+Bundle Analyzer 完成，React Query staleTime 待補)；Phase 10.6 ✅ (vercel.json + .env.example + /api/health + 安全標頭)；TODO-009/016 完成；MVP ~98% |
+| 2.0  | 2026-02-22 | **MVP 100% 完成 🎉** Phase 8.16 ✅ (StockArgumentsTab 整合至 Stock 詳情頁, Agent 5)；Phase 10.5 ✅ (React Query staleTime 26 hooks 全部設定, Agent 6)；TODO-001~016 全部完成；M1-M8 全部 ✅；Phase 0-13 全部完成 |
+| 2.1  | 2026-02-23 | Release 01 新增 Phase 17 (行銷首頁 — Freemium 定價表 + Hero + 功能介紹 + FAQ，同一 Next.js app `(marketing)` route group) |
+| 2.1a | 2026-02-23 | MVP 新增 TODO-017 (零 Ticker 文章攔截 — 匯入管線 reject + Quick Input 警告)；MVP 回調至 ~99% |
+| 2.1b | 2026-02-23 | TODO-017 ✅ 完成 (Agent 7: import-pipeline reject + quick-input toast + validation min(1) + import-result amber 警告 + i18n)；MVP 恢復 100% |

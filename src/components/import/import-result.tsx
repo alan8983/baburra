@@ -2,7 +2,15 @@
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { CheckCircle2, AlertCircle, XCircle, ArrowRight, RotateCcw, Info } from 'lucide-react';
+import {
+  CheckCircle2,
+  AlertCircle,
+  AlertTriangle,
+  XCircle,
+  ArrowRight,
+  RotateCcw,
+  Info,
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,11 +36,20 @@ export function ImportResult({ result, onImportMore }: ImportResultProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* KOL info */}
-          <p className="text-sm">
-            {result.kolCreated
-              ? t('result.kolCreated', { name: result.kolName })
-              : t('result.kolMatched', { name: result.kolName })}
-          </p>
+          {result.kols.length > 0 && (
+            <div className="space-y-1">
+              {result.kols.map((kol) => (
+                <p key={kol.kolId} className="text-sm">
+                  {kol.kolCreated
+                    ? t('result.kolCreated', { name: kol.kolName })
+                    : t('result.kolMatched', { name: kol.kolName })}{' '}
+                  <Badge variant="outline" className="text-xs">
+                    {t('result.postCount', { count: kol.postCount })}
+                  </Badge>
+                </p>
+              ))}
+            </div>
+          )}
 
           {/* Stats */}
           <div className="flex flex-wrap gap-2">
@@ -66,7 +83,10 @@ export function ImportResult({ result, onImportMore }: ImportResultProps) {
                 {urlResult.status === 'duplicate' && (
                   <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-yellow-500" />
                 )}
-                {urlResult.status === 'error' && (
+                {urlResult.status === 'error' && urlResult.error === 'no_tickers_identified' && (
+                  <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-500" />
+                )}
+                {urlResult.status === 'error' && urlResult.error !== 'no_tickers_identified' && (
                   <XCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500" />
                 )}
 
@@ -111,6 +131,12 @@ export function ImportResult({ result, onImportMore }: ImportResultProps) {
                         {urlResult.sourcePlatform}
                       </Badge>
                     )}
+
+                    {urlResult.kolName && (
+                      <Badge variant="outline" className="text-xs">
+                        @{urlResult.kolName}
+                      </Badge>
+                    )}
                   </div>
 
                   {/* Tickers */}
@@ -123,7 +149,15 @@ export function ImportResult({ result, onImportMore }: ImportResultProps) {
                   )}
 
                   {/* Error message */}
-                  {urlResult.error && (
+                  {urlResult.error && urlResult.error === 'no_tickers_identified' && (
+                    <div className="mt-1 space-y-0.5">
+                      <p className="text-xs text-amber-600">{t('errors.noTickersIdentified')}</p>
+                      <p className="text-muted-foreground text-xs">
+                        {t('errors.noTickersIdentifiedHint')}
+                      </p>
+                    </div>
+                  )}
+                  {urlResult.error && urlResult.error !== 'no_tickers_identified' && (
                     <p className="text-destructive mt-1 text-xs">{urlResult.error}</p>
                   )}
                 </div>
@@ -142,13 +176,24 @@ export function ImportResult({ result, onImportMore }: ImportResultProps) {
       </Card>
 
       {/* CTAs */}
-      <div className="flex gap-3">
-        <Button asChild className="flex-1">
-          <Link href={ROUTES.KOL_DETAIL(result.kolId)}>
-            {t('result.viewKol')}
-            <ArrowRight className="ml-1 h-4 w-4" />
-          </Link>
-        </Button>
+      <div className="flex flex-wrap gap-3">
+        {result.kols.length === 1 && (
+          <Button asChild className="flex-1">
+            <Link href={ROUTES.KOL_DETAIL(result.kols[0].kolId)}>
+              {t('result.viewKol')}
+              <ArrowRight className="ml-1 h-4 w-4" />
+            </Link>
+          </Button>
+        )}
+        {result.kols.length > 1 &&
+          result.kols.map((kol) => (
+            <Button key={kol.kolId} asChild variant="outline" size="sm">
+              <Link href={ROUTES.KOL_DETAIL(kol.kolId)}>
+                @{kol.kolName}
+                <ArrowRight className="ml-1 h-4 w-4" />
+              </Link>
+            </Button>
+          ))}
         <Button variant="outline" onClick={onImportMore} className="flex-1">
           <RotateCcw className="mr-1 h-4 w-4" />
           {t('result.importMore')}

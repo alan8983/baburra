@@ -41,6 +41,8 @@ export function useKols(params?: { search?: string; page?: number; limit?: numbe
       if (!res.ok) throw new Error('Failed to fetch KOLs');
       return res.json();
     },
+    staleTime: 2 * 60 * 1000,
+    gcTime: 4 * 60 * 1000,
   });
 }
 
@@ -54,6 +56,8 @@ export function useKol(id: string) {
       return res.json();
     },
     enabled: !!id,
+    staleTime: 1 * 60 * 1000,
+    gcTime: 2 * 60 * 1000,
   });
 }
 
@@ -71,6 +75,8 @@ export function useKolPosts(id: string, params?: { page?: number; limit?: number
       return res.json();
     },
     enabled: !!id,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 4 * 60 * 1000,
   });
 }
 
@@ -85,6 +91,8 @@ export function useKolSearch(query: string) {
       return data;
     },
     enabled: query.length >= 1,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 4 * 60 * 1000,
   });
 }
 
@@ -119,5 +127,6 @@ export function useKolReturnRate(id: string) {
     },
     enabled: !!id,
     staleTime: 5 * 60 * 1000, // 5 分鐘內不重新請求
+    gcTime: 10 * 60 * 1000,
   });
 }

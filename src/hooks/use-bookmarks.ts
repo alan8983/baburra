@@ -27,6 +27,8 @@ export function useBookmarks(params?: { page?: number; limit?: number }) {
       if (!res.ok) throw new Error('Failed to fetch bookmarks');
       return res.json();
     },
+    staleTime: 2 * 60 * 1000,
+    gcTime: 4 * 60 * 1000,
   });
 }
 
@@ -40,6 +42,8 @@ export function useBookmarkStatus(postId: string) {
       return res.json();
     },
     enabled: !!postId,
+    staleTime: 1 * 60 * 1000,
+    gcTime: 2 * 60 * 1000,
   });
 }
 

@@ -16,9 +16,9 @@ export default function ImportPage() {
   const [result, setResult] = useState<ImportBatchResult | null>(null);
   const importBatch = useImportBatch();
 
-  const handleSubmit = async (kolName: string, urls: string[]) => {
+  const handleSubmit = async (urls: string[]) => {
     try {
-      const batchResult = await importBatch.mutateAsync({ kolName, urls });
+      const batchResult = await importBatch.mutateAsync({ urls });
       setResult(batchResult);
       setPageState('result');
 

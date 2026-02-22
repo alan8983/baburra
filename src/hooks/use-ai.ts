@@ -96,6 +96,7 @@ export function useAiUsage() {
       return res.json();
     },
     staleTime: 30 * 1000, // 30 seconds
+    gcTime: 60 * 1000,
   });
 }
 
@@ -199,6 +200,7 @@ export function useArgumentCategories() {
       return res.json();
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000,
   });
 }
 
@@ -324,6 +326,7 @@ export function usePostArguments(postId: string) {
     },
     enabled: !!postId,
     staleTime: 60 * 1000,
+    gcTime: 2 * 60 * 1000,
   });
 }
 
@@ -342,5 +345,6 @@ export function useStockArguments(ticker: string) {
     },
     enabled: !!ticker,
     staleTime: 60 * 1000, // 1 minute
+    gcTime: 2 * 60 * 1000,
   });
 }

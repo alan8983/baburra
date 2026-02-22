@@ -2,7 +2,7 @@
  * Batch Import API — 批次匯入 KOL 文章
  * POST /api/import/batch
  *
- * 接受 KOL 名稱 + 1-5 則 URL，自動擷取內容、建立 KOL/Post、AI 分析
+ * 接受 1-5 則 URL，自動擷取內容、偵測 KOL、建立 Post、AI 分析
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -13,7 +13,6 @@ import { parseBody } from '@/lib/api/validation';
 import { internalError } from '@/lib/api/error';
 
 const importBatchSchema = z.object({
-  kolName: z.string().trim().min(1, 'KOL name is required').max(200),
   urls: z
     .array(z.string().url().max(2000))
     .min(1, 'At least one URL is required')
@@ -33,10 +32,7 @@ export async function POST(request: NextRequest) {
     const parsed = await parseBody(request, importBatchSchema);
     if ('error' in parsed) return parsed.error;
 
-    const result = await executeBatchImport(
-      { kolName: parsed.data.kolName, urls: parsed.data.urls },
-      userId
-    );
+    const result = await executeBatchImport({ urls: parsed.data.urls }, userId);
 
     return NextResponse.json(result);
   } catch (error) {

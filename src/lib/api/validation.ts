@@ -26,7 +26,7 @@ export const createPostSchema = z.object({
   sentiment: sentimentValue,
   sentimentAiGenerated: z.boolean().optional(),
   postedAt: z.union([z.string().datetime(), z.string().min(1)]).transform((v) => new Date(v)),
-  stockIds: z.array(uuid).max(20).default([]),
+  stockIds: z.array(uuid).min(1).max(20),
   stockSentiments: z.record(z.string(), sentimentValue).optional(),
   draftAiArguments: z.array(z.any()).optional(),
 });

@@ -45,5 +45,6 @@ export function useDashboard() {
       return res.json();
     },
     staleTime: 5 * 60 * 1000, // 5 分鐘 - 與全域預設一致
+    gcTime: 10 * 60 * 1000,
   });
 }

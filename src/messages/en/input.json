@@ -2,14 +2,14 @@
   "title": "Quick Input",
   "description": "Paste KOL investment opinion articles, AI auto-identifies KOL, tickers and sentiment",
   "inputCard": {
-    "placeholder": "Paste article content or a Twitter / X URL..."
+    "placeholder": "Paste article content or a Twitter / X / YouTube URL..."
   },
   "actions": {
     "createDraft": "Create Draft",
     "analyzing": "Analyzing..."
   },
   "tips": {
-    "hint": "Supports text or Twitter / X URLs — AI will auto-identify KOL, tickers and sentiment"
+    "hint": "Supports text or Twitter / X / YouTube URLs — AI will auto-identify KOL, tickers and sentiment"
   },
   "loadingOverlay": {
     "title": "AI is analyzing your content",
@@ -21,6 +21,10 @@
       "extractingArguments": "Extracting investment arguments...",
       "creatingDraft": "Creating draft..."
     }
+  },
+  "warnings": {
+    "noTickersIdentified": "No investment targets identified — this article may not be investment-related",
+    "noTickersIdentifiedHint": "You can manually add tickers in the draft editor before publishing"
   },
   "errors": {
     "createDraftFailed": "Failed to create draft",

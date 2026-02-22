@@ -17,12 +17,20 @@ export interface ImportUrlResult {
   error?: string;
   stockTickers?: string[];
   sentiment?: Sentiment;
+  kolId?: string;
+  kolName?: string;
+  kolCreated?: boolean;
 }
 
-export interface ImportBatchResult {
+export interface ImportKolSummary {
   kolId: string;
   kolName: string;
   kolCreated: boolean;
+  postCount: number;
+}
+
+export interface ImportBatchResult {
+  kols: ImportKolSummary[];
   urlResults: ImportUrlResult[];
   totalImported: number;
   totalDuplicate: number;
@@ -31,7 +39,6 @@ export interface ImportBatchResult {
 }
 
 export interface ImportBatchInput {
-  kolName: string;
   urls: string[];
 }
 

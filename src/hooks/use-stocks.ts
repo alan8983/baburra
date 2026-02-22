@@ -45,6 +45,8 @@ export function useStocks(params?: { search?: string; page?: number; limit?: num
       if (!res.ok) throw new Error('Failed to fetch stocks');
       return res.json();
     },
+    staleTime: 2 * 60 * 1000,
+    gcTime: 4 * 60 * 1000,
   });
 }
 
@@ -58,6 +60,8 @@ export function useStock(ticker: string) {
       return res.json();
     },
     enabled: !!ticker,
+    staleTime: 1 * 60 * 1000,
+    gcTime: 2 * 60 * 1000,
   });
 }
 
@@ -72,6 +76,8 @@ export function useStockSearch(query: string) {
       return data;
     },
     enabled: query.length >= 1,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 4 * 60 * 1000,
   });
 }
 
@@ -89,6 +95,8 @@ export function useStockPosts(ticker: string, params?: { page?: number; limit?: 
       return res.json();
     },
     enabled: !!ticker,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 4 * 60 * 1000,
   });
 }
 
@@ -107,6 +115,8 @@ export function useStockPrices(ticker: string, params?: { startDate?: string; en
       return res.json();
     },
     enabled: !!ticker,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 }
 
@@ -141,5 +151,6 @@ export function useStockReturnRate(ticker: string) {
     },
     enabled: !!ticker,
     staleTime: 5 * 60 * 1000, // 5 分鐘內不重新請求
+    gcTime: 10 * 60 * 1000,
   });
 }

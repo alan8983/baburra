@@ -6,8 +6,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ExtractorFactory, extractorFactory } from '../factory';
 import type { ExtractorError } from '../types';
 
-// Mock youtube-transcript to avoid real network calls from factory initialization
-vi.mock('youtube-transcript', () => ({
+// Mock youtube-transcript-plus to avoid real network calls from factory initialization
+vi.mock('youtube-transcript-plus', () => ({
   YoutubeTranscript: {
     fetchTranscript: vi.fn(),
   },

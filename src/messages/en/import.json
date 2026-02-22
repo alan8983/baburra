@@ -2,8 +2,6 @@
   "title": "Quick Import KOL Articles",
   "description": "Paste KOL article or video URLs, AI auto-extracts content and analyzes",
   "form": {
-    "kolName": "KOL Name",
-    "kolNamePlaceholder": "e.g., StockGuru, Graham Stephan...",
     "urlLabel": "Article / Video URL",
     "urlPlaceholder": "Paste a Twitter/X or YouTube URL",
     "addUrl": "Add URL",
@@ -18,6 +16,7 @@
     "title": "Import Results",
     "kolCreated": "Created new KOL: {name}",
     "kolMatched": "Matched existing KOL: {name}",
+    "postCount": "{count} post(s)",
     "imported": "Successfully imported {count} post(s)",
     "duplicates": "{count} duplicate(s) skipped",
     "errors": "{count} failed",
@@ -36,13 +35,14 @@
     "noUrls": "Please enter at least one URL",
     "invalidUrl": "Invalid URL format",
     "unsupportedUrl": "This URL platform is not supported",
-    "kolNameRequired": "KOL name is required"
+    "noTickersIdentified": "No investment targets identified — this article may not be investment-related",
+    "noTickersIdentifiedHint": "You can manually add tickers in the draft editor before publishing"
   },
   "loadingOverlay": {
     "title": "Importing KOL Articles",
     "steps": {
       "checkingQuota": "Checking AI quota...",
-      "creatingKol": "Creating KOL profile...",
+      "creatingKol": "Detecting KOL profiles...",
       "extractingContent": "Extracting article content...",
       "aiAnalyzing": "AI analyzing investment views...",
       "extractingArguments": "Extracting investment arguments...",

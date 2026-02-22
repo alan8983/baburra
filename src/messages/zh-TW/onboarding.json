@@ -11,9 +11,12 @@
     "skip": "略過"
   },
   "step2": {
-    "title": "匯入你的第一位 KOL！",
-    "description": "貼上你追蹤的 KOL 的幾篇文章，系統會自動以 AI 分析。",
+    "title": "匯入你的第一批文章！",
+    "description": "貼上幾篇文章或影片的 URL，系統會自動偵測 KOL 並以 AI 分析。",
     "freeQuota": "首次匯入免費，不消耗 AI 配額！",
+    "guidanceTitle": "可以匯入什麼？",
+    "guidancePattern1": "不同 KOL 討論同一個主題或標的的文章",
+    "guidancePattern2": "同一位 KOL 討論不同標的的多篇文章",
     "back": "上一步",
     "skip": "略過",
     "next": "下一步"
@@ -21,6 +24,7 @@
   "step3": {
     "title": "設定完成！",
     "importedSummary": "已匯入 {count} 篇 @{kolName} 的文章",
+    "importedSummaryMulti": "已匯入 {count} 篇文章，涵蓋 {kolCount} 位 KOL",
     "importedDetail": "AI 已分析情緒與論點，報酬率計算就緒",
     "skippedMessage": "你可以隨時從側邊欄的「匯入 KOL」開始新增",
     "viewKol": "查看 KOL 詳情",
