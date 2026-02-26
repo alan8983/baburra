@@ -4,6 +4,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { API_ROUTES } from '@/lib/constants/routes';
+import type { ColorPalette } from '@/domain/models/user';
 
 // =====================
 // Types
@@ -12,6 +13,7 @@ import { API_ROUTES } from '@/lib/constants/routes';
 export interface ProfileData {
   displayName: string | null;
   timezone: string;
+  colorPalette: ColorPalette;
   onboardingCompleted: boolean;
   onboardingCompletedAt: string | null;
 }
@@ -19,6 +21,7 @@ export interface ProfileData {
 interface UpdateProfileInput {
   displayName?: string;
   timezone?: string;
+  colorPalette?: ColorPalette;
 }
 
 // =====================

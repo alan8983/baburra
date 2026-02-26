@@ -15,8 +15,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ROUTES } from '@/lib/constants';
 import { formatDateTime } from '@/lib/utils/date';
-import { SENTIMENT_COLORS } from '@/domain/models/post';
 import { sentimentKey } from '@/lib/utils/sentiment';
+import { useColorPalette } from '@/lib/colors/color-palette-context';
+import { recolorVolumes } from '@/lib/colors/financial-colors';
 import { useStockPricesForChart } from '@/hooks/use-stock-prices';
 import {
   ChartToolbar,
@@ -124,6 +125,7 @@ function PostStockChart({
   sentimentMarker: LineChartMarker;
 }) {
   const t = useTranslations('posts');
+  const { colors } = useColorPalette();
   const [interval, setInterval] = useState<CandleInterval>('day');
   const [timeRange, setTimeRange] = useState<TimeRange>('1Y');
 
@@ -134,9 +136,15 @@ function PostStockChart({
     () => (data ? aggregateCandles(data.candles, interval) : []),
     [data, interval]
   );
+  const volumeColors = useMemo(() => ({ up: colors.volumeUp, down: colors.volumeDown }), [colors]);
   const aggVolumes = useMemo(
-    () => (data ? aggregateVolumes(data.volumes, data.candles, interval) : []),
-    [data, interval]
+    () =>
+      data
+        ? interval === 'day'
+          ? recolorVolumes(data.volumes, colors, data.candles)
+          : aggregateVolumes(data.volumes, data.candles, interval, volumeColors)
+        : [],
+    [data, interval, colors, volumeColors]
   );
 
   if (isLoading) {
@@ -262,6 +270,7 @@ function transformPostArguments(
 export default function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const t = useTranslations('posts');
   const tCommon = useTranslations('common');
+  const { colors } = useColorPalette();
   const router = useRouter();
   const { id } = use(params);
   const { data: post, isLoading, error } = usePost(id);
@@ -386,7 +395,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
               <Link href={ROUTES.KOL_DETAIL(post.kol.id)} className="font-semibold hover:underline">
                 {post.kol.name}
               </Link>
-              <Badge variant="outline" className={SENTIMENT_COLORS[post.sentiment]}>
+              <Badge variant="outline" className={colors.sentimentBadgeColors[post.sentiment]}>
                 {tCommon(`sentiment.${sentimentKey(post.sentiment)}`)}
               </Badge>
               {post.sentimentAiGenerated && (
@@ -428,7 +437,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                   {stock.sentiment !== null && stock.sentiment !== post.sentiment && (
                     <Badge
                       variant="outline"
-                      className={SENTIMENT_COLORS[stock.sentiment as Sentiment]}
+                      className={colors.sentimentBadgeColors[stock.sentiment as Sentiment]}
                     >
                       {tCommon(`sentiment.${sentimentKey(stock.sentiment)}`)}
                     </Badge>
@@ -437,8 +446,8 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                     className={
                       changes?.day5 != null
                         ? changes.day5 >= 0
-                          ? 'text-green-600'
-                          : 'text-red-600'
+                          ? colors.bullish.text
+                          : colors.bearish.text
                         : 'text-muted-foreground'
                     }
                   >
@@ -451,8 +460,8 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                     className={
                       changes?.day30 != null
                         ? changes.day30 >= 0
-                          ? 'text-green-600'
-                          : 'text-red-600'
+                          ? colors.bullish.text
+                          : colors.bearish.text
                         : 'text-muted-foreground'
                     }
                   >

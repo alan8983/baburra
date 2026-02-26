@@ -6,6 +6,7 @@ import { TrendingDown, TrendingUp, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { Sentiment } from '@/domain/models';
+import { useColorPalette } from '@/lib/colors/color-palette-context';
 
 export interface SentimentOption {
   value: Sentiment;
@@ -20,24 +21,25 @@ export interface SentimentOption {
 // Helper function to get sentiment options with translations
 function useSentimentOptions(): SentimentOption[] {
   const t = useTranslations('common');
+  const { colors } = useColorPalette();
 
   return [
     {
       value: -2,
       label: t('sentiment.stronglyBearish'),
       shortLabel: t('sentiment.stronglyBearishShort'),
-      color: 'text-red-700',
-      bgColor: 'bg-red-600 text-white border-red-600',
-      hoverColor: 'hover:bg-red-50 hover:text-red-700 hover:border-red-300',
+      color: colors.bearish.textStrong,
+      bgColor: colors.bearish.bgBadge,
+      hoverColor: colors.bearish.hoverBorder,
       icon: <TrendingDown className="h-4 w-4" />,
     },
     {
       value: -1,
       label: t('sentiment.bearish'),
       shortLabel: t('sentiment.bearishShort'),
-      color: 'text-red-600',
-      bgColor: 'bg-red-100 text-red-700 border-red-200',
-      hoverColor: 'hover:bg-red-50 hover:text-red-600 hover:border-red-200',
+      color: colors.bearish.text,
+      bgColor: colors.bearish.bgBadgeLight,
+      hoverColor: colors.bearish.hoverBorder,
       icon: <TrendingDown className="h-4 w-4" />,
     },
     {
@@ -53,18 +55,18 @@ function useSentimentOptions(): SentimentOption[] {
       value: 1,
       label: t('sentiment.bullish'),
       shortLabel: t('sentiment.bullishShort'),
-      color: 'text-green-600',
-      bgColor: 'bg-green-100 text-green-700 border-green-200',
-      hoverColor: 'hover:bg-green-50 hover:text-green-600 hover:border-green-200',
+      color: colors.bullish.text,
+      bgColor: colors.bullish.bgBadgeLight,
+      hoverColor: colors.bullish.hoverBorder,
       icon: <TrendingUp className="h-4 w-4" />,
     },
     {
       value: 2,
       label: t('sentiment.stronglyBullish'),
       shortLabel: t('sentiment.stronglyBullishShort'),
-      color: 'text-green-700',
-      bgColor: 'bg-green-600 text-white border-green-600',
-      hoverColor: 'hover:bg-green-50 hover:text-green-700 hover:border-green-300',
+      color: colors.bullish.textStrong,
+      bgColor: colors.bullish.bgBadge,
+      hoverColor: colors.bullish.hoverBorder,
       icon: <TrendingUp className="h-4 w-4" />,
     },
   ];

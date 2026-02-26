@@ -26,6 +26,10 @@
     "noTickersIdentified": "No investment targets identified — this article may not be investment-related",
     "noTickersIdentifiedHint": "You can manually add tickers in the draft editor before publishing"
   },
+  "urlImport": {
+    "sectionTitle": "Or import by URL",
+    "sectionDescription": "Paste Twitter/X or YouTube URLs to directly import as published posts"
+  },
   "errors": {
     "createDraftFailed": "Failed to create draft",
     "tryAgain": "Please try again later",

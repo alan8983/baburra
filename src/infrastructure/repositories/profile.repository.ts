@@ -3,7 +3,7 @@
  */
 
 import { createAdminClient } from '@/infrastructure/supabase/admin';
-import type { UpdateProfileInput } from '@/domain/models/user';
+import type { UpdateProfileInput, ColorPalette } from '@/domain/models/user';
 
 const DEFAULT_TIMEZONE = 'Asia/Taipei';
 
@@ -41,6 +41,7 @@ export async function getProfile(userId: string) {
     return {
       displayName: null,
       timezone: DEFAULT_TIMEZONE,
+      colorPalette: 'asian' as ColorPalette,
       onboardingCompleted: false,
       onboardingCompletedAt: null,
     };
@@ -48,7 +49,7 @@ export async function getProfile(userId: string) {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('display_name, timezone, onboarding_completed, onboarding_completed_at')
+    .select('display_name, timezone, color_palette, onboarding_completed, onboarding_completed_at')
     .eq('id', userId)
     .single();
 
@@ -57,6 +58,7 @@ export async function getProfile(userId: string) {
       return {
         displayName: null,
         timezone: DEFAULT_TIMEZONE,
+        colorPalette: 'asian' as ColorPalette,
         onboardingCompleted: false,
         onboardingCompletedAt: null,
       };
@@ -67,6 +69,7 @@ export async function getProfile(userId: string) {
   return {
     displayName: data.display_name as string | null,
     timezone: (data.timezone as string) || DEFAULT_TIMEZONE,
+    colorPalette: ((data.color_palette as string) || 'asian') as ColorPalette,
     onboardingCompleted: data.onboarding_completed === true,
     onboardingCompletedAt: data.onboarding_completed_at
       ? new Date(data.onboarding_completed_at as string)
@@ -89,6 +92,9 @@ export async function updateProfile(userId: string, input: UpdateProfileInput): 
   }
   if (input.timezone !== undefined) {
     updateData.timezone = input.timezone;
+  }
+  if (input.colorPalette !== undefined) {
+    updateData.color_palette = input.colorPalette;
   }
 
   if (Object.keys(updateData).length === 0) return;

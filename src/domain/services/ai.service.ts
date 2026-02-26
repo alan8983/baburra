@@ -95,7 +95,7 @@ Analysis Framework Categories:
 {frameworkCategories}
 
 Extraction rules:
-1. Extract 3–7 arguments. If the article is rich in content, you may return up to 10 — but never more.
+1. Extract 1–5 arguments. Never return more than 5.
 2. Per category: at most 3 arguments. Prioritize the highest-confidence ones.
 3. Spread across categories: the combined set of arguments should collectively cover as many distinct investment angles from the article as possible. Do not let any single category dominate.
 4. Only extract points explicitly stated in the article — do not infer or speculate.
@@ -135,7 +135,7 @@ Stock: ${ticker} - ${stockName}
 Your previous extraction:
 ${previousArgsJson}
 
-Please revise: select at most 7 arguments total, with at most 3 per category. Keep the clearest, most insightful ones that collectively cover the broadest range of investment angles from the article. Remove duplicates and low-value points. Do not let a single category dominate.
+Please revise: select at most 5 arguments total, with at most 3 per category. Keep the clearest, most insightful ones that collectively cover the broadest range of investment angles from the article. Remove duplicates and low-value points. Do not let a single category dominate.
 
 Quality signal: arguments with specific numbers, comparisons, or unique insight deserve higher confidence scores.
 
@@ -148,7 +148,7 @@ Return JSON only, same format as before:
 /**
  * Apply hard caps to extracted arguments:
  * - Max 3 per category (highest confidence kept)
- * - Max 10 total (highest confidence kept)
+ * - Max 5 total (highest confidence kept)
  */
 export function applyHardCaps(args: ExtractedArgument[]): ExtractedArgument[] {
   // Group by category
@@ -164,8 +164,8 @@ export function applyHardCaps(args: ExtractedArgument[]): ExtractedArgument[] {
     group.sort((a, b) => b.confidence - a.confidence).slice(0, 3)
   );
 
-  // Cap total at 10 (highest confidence first)
-  return capped.sort((a, b) => b.confidence - a.confidence).slice(0, 10);
+  // Cap total at 5 (highest confidence first)
+  return capped.sort((a, b) => b.confidence - a.confidence).slice(0, 5);
 }
 
 function buildDraftAnalysisPrompt(timezone: string): string {
@@ -593,13 +593,13 @@ export async function extractArguments(
   let validated = validateAndClamp(result.arguments);
 
   // Round 2: if too many, send mediocre feedback and ask Gemini to revise
-  if (validated.length > 7) {
+  if (validated.length > 5) {
     const revisionPrompt = buildRevisionPrompt(content, ticker, stockName, validated);
     const revised = await generateJson<ArgumentExtractionResult>(revisionPrompt, genOptions);
     validated = validateAndClamp(revised.arguments);
   }
 
-  // Hard caps: max 3 per category, max 10 total
+  // Hard caps: max 3 per category, max 5 total
   return { arguments: applyHardCaps(validated) };
 }
 

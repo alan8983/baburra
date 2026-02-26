@@ -26,6 +26,10 @@
     "noTickersIdentified": "未辨識出任何投資標的，此文章可能與投資無關",
     "noTickersIdentifiedHint": "您可以在草稿中手動新增標的後發布"
   },
+  "urlImport": {
+    "sectionTitle": "或透過 URL 匯入",
+    "sectionDescription": "貼上 Twitter/X 或 YouTube 網址，直接匯入為已發布的文章"
+  },
   "errors": {
     "createDraftFailed": "建立草稿失敗",
     "tryAgain": "請稍後再試",

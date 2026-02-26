@@ -20,6 +20,7 @@ import { LocaleSwitcher } from '@/components/layout/locale-switcher';
 import { useAuth } from '@/hooks/use-auth';
 import { useProfile, useUpdateProfile } from '@/hooks/use-profile';
 import { createClient } from '@/infrastructure/supabase/client';
+import type { ColorPalette } from '@/domain/models/user';
 
 const TIMEZONE_OPTION_KEYS = [
   { value: 'Asia/Taipei', key: 'taipei' },
@@ -45,6 +46,7 @@ export default function SettingsPage() {
   const updateProfile = useUpdateProfile();
   const [displayName, setDisplayName] = useState('');
   const [timezone, setTimezone] = useState('Asia/Taipei');
+  const [colorPalette, setColorPalette] = useState<ColorPalette>('asian');
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -60,6 +62,7 @@ export default function SettingsPage() {
     if (profile) {
       if (profile.displayName) setDisplayName(profile.displayName);
       setTimezone(profile.timezone);
+      setColorPalette(profile.colorPalette ?? 'asian');
     }
   }, [profile]);
 
@@ -81,8 +84,8 @@ export default function SettingsPage() {
 
       if (error) throw error;
 
-      // 更新 profiles 表（displayName + timezone）
-      await updateProfile.mutateAsync({ displayName, timezone });
+      // 更新 profiles 表（displayName + timezone + colorPalette）
+      await updateProfile.mutateAsync({ displayName, timezone, colorPalette });
 
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
@@ -192,6 +195,35 @@ export default function SettingsPage() {
               </SelectContent>
             </Select>
             <p className="text-muted-foreground text-xs">{t('timezone.description')}</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t('colorPalette.label')}</Label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={colorPalette === 'asian' ? 'default' : 'outline'}
+                size="sm"
+                disabled={isSaving}
+                onClick={() => setColorPalette('asian')}
+              >
+                <span className="text-red-400">&#9650;</span>
+                <span className="text-green-400">&#9660;</span>
+                <span className="ml-1">{t('colorPalette.asian')}</span>
+              </Button>
+              <Button
+                type="button"
+                variant={colorPalette === 'american' ? 'default' : 'outline'}
+                size="sm"
+                disabled={isSaving}
+                onClick={() => setColorPalette('american')}
+              >
+                <span className="text-green-400">&#9650;</span>
+                <span className="text-red-400">&#9660;</span>
+                <span className="ml-1">{t('colorPalette.american')}</span>
+              </Button>
+            </div>
+            <p className="text-muted-foreground text-xs">{t('colorPalette.description')}</p>
           </div>
 
           <Button onClick={handleSave} disabled={isSaving}>

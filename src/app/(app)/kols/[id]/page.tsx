@@ -14,7 +14,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Separator } from '@/components/ui/separator';
 import { ROUTES } from '@/lib/constants';
 import { formatDate } from '@/lib/utils/date';
-import { SENTIMENT_COLORS, type Sentiment } from '@/domain/models/post';
+import { type Sentiment } from '@/domain/models/post';
+import { useColorPalette } from '@/lib/colors/color-palette-context';
 import { sentimentKey } from '@/lib/utils/sentiment';
 import { useStockPricesForChart } from '@/hooks/use-stock-prices';
 import type { LineChartMarker } from '@/components/charts';
@@ -79,6 +80,7 @@ function KolStockSection({ stock }: { stock: StockGroup }) {
   const t = useTranslations('kols');
   const tCommon = useTranslations('common');
   const router = useRouter();
+  const { palette, colors } = useColorPalette();
 
   const { data: chartData, isLoading: chartLoading } = useStockPricesForChart(stock.ticker);
 
@@ -206,7 +208,7 @@ function KolStockSection({ stock }: { stock: StockGroup }) {
                   <div key={item.key} className="rounded-lg border p-2 text-center">
                     <p className="text-muted-foreground text-xs font-medium">{item.label}</p>
                     <p
-                      className={`mt-1 text-lg font-bold ${getReturnRateColorClass(item.data.avgReturn)}`}
+                      className={`mt-1 text-lg font-bold ${getReturnRateColorClass(item.data.avgReturn, palette)}`}
                     >
                       {formatReturnRate(item.data.avgReturn)}
                     </p>
@@ -222,7 +224,7 @@ function KolStockSection({ stock }: { stock: StockGroup }) {
                 <div className="flex items-center justify-between rounded-lg border p-2">
                   <span className="text-muted-foreground text-xs">{t('detail.winRate')}</span>
                   <span
-                    className={`text-sm font-bold ${winRate >= 50 ? 'text-green-600' : 'text-red-600'}`}
+                    className={`text-sm font-bold ${winRate >= 50 ? colors.bullish.text : colors.bearish.text}`}
                   >
                     {winRate.toFixed(1)}%
                     <span className="text-muted-foreground ml-1 text-xs font-normal">
@@ -250,7 +252,7 @@ function KolStockSection({ stock }: { stock: StockGroup }) {
                 <div className="flex items-center gap-2">
                   <Badge
                     variant="outline"
-                    className={`text-xs ${SENTIMENT_COLORS[post.sentiment]}`}
+                    className={`text-xs ${colors.sentimentBadgeColors[post.sentiment]}`}
                   >
                     {tCommon(`sentiment.${sentimentKey(post.sentiment)}`)}
                   </Badge>
@@ -262,8 +264,8 @@ function KolStockSection({ stock }: { stock: StockGroup }) {
                     className={
                       post.priceChanges.day5 != null
                         ? post.priceChanges.day5 >= 0
-                          ? 'text-green-600'
-                          : 'text-red-600'
+                          ? colors.bullish.text
+                          : colors.bearish.text
                         : 'text-muted-foreground'
                     }
                   >
@@ -276,8 +278,8 @@ function KolStockSection({ stock }: { stock: StockGroup }) {
                     className={
                       post.priceChanges.day30 != null
                         ? post.priceChanges.day30 >= 0
-                          ? 'text-green-600'
-                          : 'text-red-600'
+                          ? colors.bullish.text
+                          : colors.bearish.text
                         : 'text-muted-foreground'
                     }
                   >

@@ -13,6 +13,7 @@ import {
 import type { CandlestickData } from '@/domain/models/stock';
 import type { Sentiment } from '@/domain/models/post';
 import { sentimentKey } from '@/lib/utils/sentiment';
+import { useColorPalette } from '@/lib/colors/color-palette-context';
 import { resolveThemeColors } from './chart-utils';
 
 export interface LineChartMarker {
@@ -30,18 +31,6 @@ interface SentimentLineChartProps {
   className?: string;
 }
 
-const SENTIMENT_MARKER_COLORS: Record<number, string> = {
-  2: '#166534', // Strong Buy — dark green
-  1: '#22c55e', // Buy — bright green
-  0: '#eab308', // Hold — orange-yellow
-  [-1]: '#ef4444', // Sell — bright red
-  [-2]: '#991b1b', // Strong Sell — dark red
-};
-
-function sentimentToMarkerColor(sentiment: number): string {
-  return SENTIMENT_MARKER_COLORS[sentiment] ?? '#6b7280';
-}
-
 export function SentimentLineChart({
   candles,
   sentimentMarkers = [],
@@ -50,6 +39,8 @@ export function SentimentLineChart({
   className = '',
 }: SentimentLineChartProps) {
   const t = useTranslations('common');
+  const { colors } = useColorPalette();
+  const sentimentMarkerHex = colors.sentimentMarkerHex;
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ReturnType<typeof createChart> | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -135,7 +126,7 @@ export function SentimentLineChart({
         time: m.time as string,
         position: 'inBar' as const,
         shape: 'circle' as const,
-        color: sentimentToMarkerColor(m.sentiment),
+        color: sentimentMarkerHex[m.sentiment] ?? '#6b7280',
         size: 2,
       }));
       createSeriesMarkers(areaSeries, markers);
@@ -160,7 +151,7 @@ export function SentimentLineChart({
       // Build tooltip content
       const lines = matched.map((m) => {
         const label = t(`sentiment.${sentimentKey(m.sentiment)}`);
-        const color = sentimentToMarkerColor(m.sentiment);
+        const color = sentimentMarkerHex[m.sentiment] ?? '#6b7280';
         const name = m.text ?? '';
         return `<div class="flex items-center gap-1.5"><span style="background:${color}" class="inline-block h-2.5 w-2.5 rounded-full"></span><span class="font-medium">${name}</span><span class="text-muted-foreground">${label}</span></div>`;
       });
@@ -189,7 +180,7 @@ export function SentimentLineChart({
       chart.remove();
       chartRef.current = null;
     };
-  }, [candles, sentimentMarkers, height, handleClick]);
+  }, [candles, sentimentMarkers, height, handleClick, sentimentMarkerHex]);
 
   return (
     <div className="relative">
@@ -208,12 +199,13 @@ export function SentimentLineChart({
 
 function SentimentLineLegend() {
   const t = useTranslations('common');
+  const { colors } = useColorPalette();
   const levels: { sentiment: Sentiment; color: string }[] = [
-    { sentiment: 2, color: SENTIMENT_MARKER_COLORS[2] },
-    { sentiment: 1, color: SENTIMENT_MARKER_COLORS[1] },
-    { sentiment: 0, color: SENTIMENT_MARKER_COLORS[0] },
-    { sentiment: -1, color: SENTIMENT_MARKER_COLORS[-1] },
-    { sentiment: -2, color: SENTIMENT_MARKER_COLORS[-2] },
+    { sentiment: 2, color: colors.sentimentMarkerHex[2] },
+    { sentiment: 1, color: colors.sentimentMarkerHex[1] },
+    { sentiment: 0, color: colors.sentimentMarkerHex[0] },
+    { sentiment: -1, color: colors.sentimentMarkerHex[-1] },
+    { sentiment: -2, color: colors.sentimentMarkerHex[-2] },
   ];
 
   return (

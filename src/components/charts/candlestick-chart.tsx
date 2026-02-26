@@ -10,6 +10,8 @@ import {
 } from 'lightweight-charts';
 import type { AutoscaleInfo } from 'lightweight-charts';
 import type { CandlestickData, VolumeData } from '@/domain/models/stock';
+import { useColorPalette } from '@/lib/colors/color-palette-context';
+import type { FinancialColors } from '@/lib/colors/financial-colors';
 import { resolveThemeColors } from './chart-utils';
 
 export interface SentimentMarkerItem {
@@ -33,10 +35,10 @@ function sentimentToMarkerShape(sentiment: number): 'arrowUp' | 'arrowDown' | 'c
   return 'circle';
 }
 
-function sentimentToColor(sentiment: number): string {
-  if (sentiment > 0) return '#22c55e';
-  if (sentiment < 0) return '#ef4444';
-  return '#6b7280';
+function sentimentToColor(sentiment: number, colors: FinancialColors): string {
+  if (sentiment > 0) return colors.bullish.hex;
+  if (sentiment < 0) return colors.bearish.hex;
+  return colors.neutral.hex;
 }
 
 export function CandlestickChart({
@@ -48,6 +50,7 @@ export function CandlestickChart({
 }: CandlestickChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ReturnType<typeof createChart> | null>(null);
+  const { colors } = useColorPalette();
 
   useEffect(() => {
     if (!containerRef.current || candles.length === 0) return;
@@ -80,12 +83,12 @@ export function CandlestickChart({
     chartRef.current = chart;
 
     const candlestickSeries = chart.addSeries(CandlestickSeries, {
-      upColor: '#22c55e',
-      downColor: '#ef4444',
-      borderUpColor: '#22c55e',
-      borderDownColor: '#ef4444',
-      wickUpColor: '#22c55e',
-      wickDownColor: '#ef4444',
+      upColor: colors.candlestick.upColor,
+      downColor: colors.candlestick.downColor,
+      borderUpColor: colors.candlestick.upColor,
+      borderDownColor: colors.candlestick.downColor,
+      wickUpColor: colors.candlestick.upColor,
+      wickDownColor: colors.candlestick.downColor,
     });
     candlestickSeries.setData(candles);
 
@@ -94,7 +97,7 @@ export function CandlestickChart({
         time: m.time as string,
         position: 'aboveBar' as const,
         shape: sentimentToMarkerShape(m.sentiment) as 'arrowUp' | 'arrowDown' | 'circle',
-        color: sentimentToColor(m.sentiment),
+        color: sentimentToColor(m.sentiment, colors),
         text: m.text,
         ...(m.price != null && { price: m.price }),
       }));
@@ -134,7 +137,7 @@ export function CandlestickChart({
       chart.remove();
       chartRef.current = null;
     };
-  }, [candles, volumes, sentimentMarkers, height]);
+  }, [candles, volumes, sentimentMarkers, height, colors]);
 
   return <div ref={containerRef} className={className} />;
 }

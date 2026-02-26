@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/constants';
-import { SENTIMENT_COLORS } from '@/domain/models/post';
+import { useColorPalette } from '@/lib/colors/color-palette-context';
 import { sentimentKey } from '@/lib/utils/sentiment';
 import { formatDateTime } from '@/lib/utils/date';
 import { useBookmarks, useRemoveBookmark } from '@/hooks';
@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 export default function BookmarksPage() {
   const t = useTranslations('bookmarks');
   const tCommon = useTranslations('common');
+  const { colors } = useColorPalette();
   const { data, isLoading, error } = useBookmarks();
   const removeBookmark = useRemoveBookmark();
 
@@ -78,7 +79,9 @@ export default function BookmarksPage() {
                           <Badge
                             variant="outline"
                             className={
-                              SENTIMENT_COLORS[post.sentiment as keyof typeof SENTIMENT_COLORS]
+                              colors.sentimentBadgeColors[
+                                post.sentiment as keyof typeof colors.sentimentBadgeColors
+                              ]
                             }
                           >
                             {tCommon(`sentiment.${sentimentKey(post.sentiment)}`)}

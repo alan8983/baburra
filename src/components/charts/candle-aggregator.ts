@@ -75,7 +75,8 @@ export function aggregateCandles(
 export function aggregateVolumes(
   volumes: VolumeData[],
   candles: CandlestickData[],
-  interval: CandleInterval
+  interval: CandleInterval,
+  volumeColors?: { up: string; down: string }
 ): VolumeData[] {
   if (interval === 'day' || volumes.length === 0) return volumes;
 
@@ -111,7 +112,9 @@ export function aggregateVolumes(
     result.push({
       time: aggCandle?.time ?? time,
       value: totalVolume,
-      color: isUp ? 'rgba(34, 197, 94, 0.5)' : 'rgba(239, 68, 68, 0.5)',
+      color: isUp
+        ? (volumeColors?.up ?? 'rgba(34, 197, 94, 0.5)')
+        : (volumeColors?.down ?? 'rgba(239, 68, 68, 0.5)'),
     });
   }
 

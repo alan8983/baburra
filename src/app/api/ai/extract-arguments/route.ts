@@ -11,7 +11,6 @@ import { internalError } from '@/lib/api/error';
 import {
   getArgumentCategoryByCode,
   createPostArguments,
-  updateStockArgumentSummary,
 } from '@/infrastructure/repositories/argument.repository';
 
 interface ExtractArgumentsRequest {
@@ -113,9 +112,6 @@ export async function POST(request: NextRequest) {
             confidence: arg.confidence,
           },
         ]);
-
-        // 更新彙整
-        await updateStockArgumentSummary(stockArgs.stockId, category.id);
 
         savedArguments.push({
           stockId: stockArgs.stockId,

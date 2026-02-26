@@ -23,7 +23,7 @@
 - **MVP 核心功能**: **100% 完成** (TODO-001~017 全部 ✅)
 - **Release 01 功能**: 約 15% 完成 (書籤已提前完成)
 - **關鍵待實現功能**: Release 01 — 行銷首頁、RWD、AI 摘要、AI 快取層、社群洞察
-- **本次更新**: TODO-017 ✅ 零 Ticker 文章攔截完成 (Agent 7)；MVP 恢復 100%
+- **本次更新**: 盤點計畫外功能：色盤偏好設定、KOL 歸屬論點、論點 per-user 隔離 (migration 012)、AI 論點上限 10→5
 
 > **注意**: 本專案已從 Flutter 移動端遷移至 Next.js 16 Web 版本 (2026-02-01 起)。
 > 下方 User Story 中的元件名稱已更新為 Web 版對應元件。
@@ -389,12 +389,16 @@
 9. ✅ **書籤管理** - full-stack 書籤功能 (`use-bookmarks.ts` hook)
 10. ✅ **Profile 時區** - 用戶時區設定支援
 11. ✅ **URL 擷取框架** - ExtractorFactory + Twitter/Facebook/Threads stubs
+12. ✅ **色盤偏好設定** - Asian (紅漲綠跌) / American (綠漲紅跌)，settings 頁面切換 + ColorPaletteProvider + 全 UI 元件 (K 線圖、情緒標記、論點圖表、報酬率) 動態套用
+13. ✅ **KOL 歸屬論點** - Stock Arguments Tab 顯示 KOL 頭像與名稱，論點來源可溯
+14. ✅ **論點 per-user 隔離** - 移除全域 stock_argument_summary 表，改為 real-time 計算；RLS 限制使用者只能看自己的論點 (migration 012)
+15. ✅ **AI 論點擷取上限調整** - 每篇文章最多 5 則論點 (原 10)，降低 token 消耗與雜訊
 
 ### 開發工具
 
-12. ✅ **CI/CD** - GitHub Actions (lint + type-check + test)
-13. ✅ **E2E 測試框架** - Playwright + fixtures + teardown
-14. ✅ **安全機制** - Git Pre-commit Hook 防止 API Keys 洩露
+16. ✅ **CI/CD** - GitHub Actions (lint + type-check + test)
+17. ✅ **E2E 測試框架** - Playwright + fixtures + teardown
+18. ✅ **安全機制** - Git Pre-commit Hook 防止 API Keys 洩露
 
 ---
 

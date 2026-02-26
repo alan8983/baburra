@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { TrendingUp, Users, FileText, Newspaper, BarChart3 } from 'lucide-react';
 import { LocaleSwitcher } from '@/components/layout/locale-switcher';
 import { useDashboard } from '@/hooks/use-dashboard';
-import { SENTIMENT_COLORS } from '@/domain/models';
+import { useColorPalette } from '@/lib/colors/color-palette-context';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ROUTES } from '@/lib/constants';
 
@@ -44,6 +44,7 @@ export default function DashboardPage() {
   const t = useTranslations('dashboard');
   const tCommon = useTranslations('common');
   const locale = useLocale();
+  const { colors } = useColorPalette();
   const { data, isLoading, error } = useDashboard();
 
   // Helper to get sentiment label
@@ -224,7 +225,7 @@ export default function DashboardPage() {
                         post.priceChanges[firstStockId].day5 ??
                         null)
                       : null;
-                  const sentimentColor = SENTIMENT_COLORS[post.sentiment];
+                  const sentimentColor = colors.sentimentBadgeColors[post.sentiment];
 
                   return (
                     <div
@@ -247,7 +248,7 @@ export default function DashboardPage() {
                         {priceChange !== null && (
                           <span
                             className={`text-sm font-medium ${
-                              priceChange >= 0 ? 'text-green-600' : 'text-red-600'
+                              priceChange >= 0 ? colors.bullish.text : colors.bearish.text
                             }`}
                           >
                             {priceChange >= 0 ? '+' : ''}

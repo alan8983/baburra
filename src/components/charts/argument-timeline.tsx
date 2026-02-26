@@ -9,6 +9,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { StockArgumentSummary } from '@/hooks/use-ai';
+import { useColorPalette } from '@/lib/colors/color-palette-context';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -22,6 +23,7 @@ interface TimelinePoint {
   sentiment: number;
   confidence: number | null;
   summary: string | null;
+  kolName: string;
 }
 
 interface ArgumentTimelineProps {
@@ -38,13 +40,7 @@ const MIN_CHART_HEIGHT = 160;
 const DOT_MIN_R = 4;
 const DOT_MAX_R = 10;
 
-function sentimentColor(s: number): string {
-  if (s >= 2) return '#16a34a'; // green-600
-  if (s >= 1) return '#22c55e'; // green-500
-  if (s === 0) return '#9ca3af'; // gray-400
-  if (s >= -1) return '#ef4444'; // red-500
-  return '#dc2626'; // red-600
-}
+// sentimentColor is now resolved inside the component via useColorPalette
 
 function sentimentOpacity(s: number): number {
   return Math.abs(s) >= 2 ? 0.9 : 0.7;
@@ -68,6 +64,7 @@ function flattenArguments(data: StockArgumentSummary): TimelinePoint[] {
           sentiment: arg.sentiment,
           confidence: arg.confidence,
           summary: arg.summary,
+          kolName: arg.kol?.name ?? '',
         });
       }
     }
@@ -100,6 +97,16 @@ function dotRadius(confidence: number | null): number {
 
 export function ArgumentTimeline({ data }: ArgumentTimelineProps) {
   const t = useTranslations('stocks.detail.arguments');
+  const { colors } = useColorPalette();
+
+  const sentimentColor = (s: number): string => {
+    if (s >= 2) return colors.bullish.hexDark;
+    if (s >= 1) return colors.bullish.hex;
+    if (s === 0) return '#9ca3af'; // gray-400
+    if (s >= -1) return colors.bearish.hex;
+    return colors.bearish.hexDark;
+  };
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [tooltip, setTooltip] = useState<{
     x: number;
@@ -281,6 +288,9 @@ export function ArgumentTimeline({ data }: ArgumentTimelineProps) {
           }}
         >
           <div className="font-medium">{tooltip.point.categoryName}</div>
+          {tooltip.point.kolName && (
+            <div className="text-muted-foreground mt-0.5 text-[10px]">{tooltip.point.kolName}</div>
+          )}
           {tooltip.point.summary && (
             <div className="text-muted-foreground mt-1 line-clamp-2">{tooltip.point.summary}</div>
           )}
@@ -315,7 +325,10 @@ export function ArgumentTimeline({ data }: ArgumentTimelineProps) {
       {/* Legend */}
       <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs">
         <span className="flex items-center gap-1">
-          <span className="inline-block h-2.5 w-2.5 rounded-full bg-green-500" />
+          <span
+            className="inline-block h-2.5 w-2.5 rounded-full"
+            style={{ backgroundColor: colors.bullish.hex }}
+          />
           {t('bullish')}
         </span>
         <span className="flex items-center gap-1">
@@ -323,7 +336,10 @@ export function ArgumentTimeline({ data }: ArgumentTimelineProps) {
           {t('neutral')}
         </span>
         <span className="flex items-center gap-1">
-          <span className="inline-block h-2.5 w-2.5 rounded-full bg-red-500" />
+          <span
+            className="inline-block h-2.5 w-2.5 rounded-full"
+            style={{ backgroundColor: colors.bearish.hex }}
+          />
           {t('bearish')}
         </span>
         <span className="text-muted-foreground ml-2">{t('timeline.sizeHint')}</span>

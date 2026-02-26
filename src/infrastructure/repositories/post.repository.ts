@@ -2,11 +2,7 @@
 
 import { createAdminClient } from '@/infrastructure/supabase/admin';
 import { escapePostgrestSearch } from '@/lib/api/search';
-import {
-  getArgumentCategoryByCode,
-  createPostArguments,
-  updateStockArgumentSummary,
-} from './argument.repository';
+import { getArgumentCategoryByCode, createPostArguments } from './argument.repository';
 import type { CreatePostArgumentInput } from './argument.repository';
 import type {
   Post,
@@ -252,10 +248,6 @@ export async function createPost(input: CreatePostInput, createdBy: string | nul
 
         if (argInputs.length > 0) {
           await createPostArguments(argInputs);
-          const categoryIds = [...new Set(argInputs.map((a) => a.categoryId))];
-          for (const catId of categoryIds) {
-            await updateStockArgumentSummary(stockId, catId);
-          }
         }
       }
     }
