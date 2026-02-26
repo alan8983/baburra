@@ -64,6 +64,15 @@ Follow this pattern: domain model → repository → API route → hook → comp
 
 Uses **next-intl**. Default locale is `zh-TW` (Traditional Chinese), also supports `en`. Translation files in `src/messages/{locale}/`. Locale stored in `NEXT_LOCALE` cookie. Config in `src/i18n/config.ts`.
 
+## Branch Workflow
+
+**IMPORTANT:** At the start of every session, if the user does not specify which branch to work on, **ask which branch before making any changes.** Run `git branch` to show available branches and confirm with the user.
+
+- `main` — stable production code. Do not commit directly unless the user explicitly says so.
+- Feature/rebrand branches (e.g., `rebrand`) — used for isolated work. Always confirm the active branch before editing files.
+- When committing, push to the current branch with `-u` flag if it has no upstream yet.
+- When creating a new branch, always branch from `main` unless the user says otherwise.
+
 ## Key Conventions
 
 - Path alias: `@/` maps to `src/`
