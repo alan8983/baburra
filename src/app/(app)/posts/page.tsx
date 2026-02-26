@@ -19,8 +19,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ROUTES } from '@/lib/constants';
-import { SENTIMENT_COLORS } from '@/domain/models/post';
 import { sentimentKey } from '@/lib/utils/sentiment';
+import { useColorPalette } from '@/lib/colors/color-palette-context';
 import { formatDateTime } from '@/lib/utils/date';
 import { usePosts, useDeletePost } from '@/hooks';
 import { EmptyState } from '@/components/shared/empty-state';
@@ -29,6 +29,7 @@ export default function PostsPage() {
   const router = useRouter();
   const t = useTranslations('posts');
   const tCommon = useTranslations('common');
+  const { colors } = useColorPalette();
   const [searchQuery, setSearchQuery] = useState('');
   const [sentimentFilter, setSentimentFilter] = useState<string>('all');
   const [openDeleteId, setOpenDeleteId] = useState<string | null>(null);
@@ -133,7 +134,10 @@ export default function PostsPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-medium">{post.kol.name}</span>
-                        <Badge variant="outline" className={SENTIMENT_COLORS[post.sentiment]}>
+                        <Badge
+                          variant="outline"
+                          className={colors.sentimentBadgeColors[post.sentiment]}
+                        >
                           {tCommon(`sentiment.${sentimentKey(post.sentiment)}`)}
                         </Badge>
                         <span className="text-muted-foreground text-sm">
@@ -164,7 +168,9 @@ export default function PostsPage() {
                                     {best.label}
                                   </span>
                                   <span
-                                    className={best.value >= 0 ? 'text-green-600' : 'text-red-600'}
+                                    className={
+                                      best.value >= 0 ? colors.bullish.text : colors.bearish.text
+                                    }
                                   >
                                     {best.value >= 0 ? '+' : ''}
                                     {best.value.toFixed(1)}%

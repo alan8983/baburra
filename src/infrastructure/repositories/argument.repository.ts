@@ -36,21 +36,24 @@ export interface PostArgumentWithCategory extends PostArgument {
   category: ArgumentCategory;
 }
 
-export interface StockArgumentSummary {
+export interface KolInfo {
   id: string;
-  stockId: string;
+  name: string;
+  avatarUrl: string | null;
+}
+
+export interface PostArgumentWithCategoryAndKol extends PostArgumentWithCategory {
+  kol: KolInfo;
+}
+
+export interface ComputedCategorySummary {
   categoryId: string;
   mentionCount: number;
   bullishCount: number;
   bearishCount: number;
+  avgSentiment: number | null;
   firstMentionedAt: Date | null;
   lastMentionedAt: Date | null;
-  avgSentiment: number | null;
-  updatedAt: Date;
-}
-
-export interface StockArgumentSummaryWithCategory extends StockArgumentSummary {
-  category: ArgumentCategory;
 }
 
 export interface CreatePostArgumentInput {
@@ -215,20 +218,39 @@ export async function getPostArguments(postId: string): Promise<PostArgumentWith
 }
 
 /**
- * 取得標的的所有論點
+ * 取得標的的所有論點（限定使用者，含 KOL 資訊）
  */
-export async function getStockArguments(stockId: string): Promise<PostArgumentWithCategory[]> {
+export async function getStockArguments(
+  stockId: string,
+  userId: string
+): Promise<PostArgumentWithCategoryAndKol[]> {
   const supabase = createAdminClient();
 
+  // Step 1: get user's post IDs for this stock
+  const { data: postRows, error: postError } = await supabase
+    .from('posts')
+    .select('id, kol_id')
+    .eq('created_by', userId);
+
+  if (postError) {
+    throw new Error(`Failed to get user posts: ${postError.message}`);
+  }
+
+  const userPostIds = (postRows || []).map((p) => p.id as string);
+  if (userPostIds.length === 0) return [];
+
+  // Step 2: get arguments for these posts filtered by stock
   const { data, error } = await supabase
     .from('post_arguments')
     .select(
       `
       *,
-      category:argument_categories(*)
+      category:argument_categories(*),
+      post:posts!inner(id, kol_id, kols(id, name, avatar_url))
     `
     )
     .eq('stock_id', stockId)
+    .in('post_id', userPostIds)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -238,104 +260,47 @@ export async function getStockArguments(stockId: string): Promise<PostArgumentWi
   return (data || []).map((row) => ({
     ...mapPostArgument(row),
     category: mapArgumentCategory(row.category),
+    kol: mapKolInfo(row.post?.kols),
   }));
 }
 
 // =====================
-// Stock Argument Summary
+// Computed Summary (replaces stock_argument_summary table)
 // =====================
 
 /**
- * 取得標的的論點彙整
+ * 即時計算標的論點彙整（依使用者）
  */
-export async function getStockArgumentSummary(
-  stockId: string
-): Promise<StockArgumentSummaryWithCategory[]> {
-  const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from('stock_argument_summary')
-    .select(
-      `
-      *,
-      category:argument_categories(*)
-    `
-    )
-    .eq('stock_id', stockId)
-    .order('mention_count', { ascending: false });
-
-  if (error) {
-    throw new Error(`Failed to get stock argument summary: ${error.message}`);
-  }
-
-  return (data || []).map((row) => ({
-    ...mapStockArgumentSummary(row),
-    category: mapArgumentCategory(row.category),
-  }));
-}
-
-/**
- * 更新標的論點彙整（在新增論點後呼叫）
- */
-export async function updateStockArgumentSummary(
+export async function computeStockArgumentSummary(
   stockId: string,
-  categoryId: string
-): Promise<void> {
-  const supabase = createAdminClient();
+  userId: string
+): Promise<ComputedCategorySummary[]> {
+  const args = await getStockArguments(stockId, userId);
 
-  // 計算該標的該類別的統計資料
-  const { data: arguments_data, error: argsError } = await supabase
-    .from('post_arguments')
-    .select('sentiment, created_at')
-    .eq('stock_id', stockId)
-    .eq('category_id', categoryId);
-
-  if (argsError) {
-    throw new Error(`Failed to get arguments for summary: ${argsError.message}`);
+  // Group by categoryId
+  const grouped = new Map<string, PostArgumentWithCategoryAndKol[]>();
+  for (const arg of args) {
+    const group = grouped.get(arg.categoryId) ?? [];
+    group.push(arg);
+    grouped.set(arg.categoryId, group);
   }
 
-  const args = arguments_data || [];
+  return Array.from(grouped.entries()).map(([categoryId, categoryArgs]) => {
+    const dates = categoryArgs.map((a) => a.createdAt).sort((a, b) => a.getTime() - b.getTime());
 
-  if (args.length === 0) {
-    // 如果沒有論點，刪除彙整記錄
-    await supabase
-      .from('stock_argument_summary')
-      .delete()
-      .eq('stock_id', stockId)
-      .eq('category_id', categoryId);
-    return;
-  }
-
-  // 計算統計資料
-  const mentionCount = args.length;
-  const bullishCount = args.filter((a) => a.sentiment > 0).length;
-  const bearishCount = args.filter((a) => a.sentiment < 0).length;
-  const avgSentiment = args.reduce((sum, a) => sum + a.sentiment, 0) / args.length;
-  const dates = args.map((a) => new Date(a.created_at)).sort((a, b) => a.getTime() - b.getTime());
-  const firstMentionedAt = dates[0];
-  const lastMentionedAt = dates[dates.length - 1];
-
-  // Upsert 彙整記錄
-  const { error: upsertError } = await supabase.from('stock_argument_summary').upsert(
-    {
-      stock_id: stockId,
-      category_id: categoryId,
-      mention_count: mentionCount,
-      bullish_count: bullishCount,
-      bearish_count: bearishCount,
-      first_mentioned_at: firstMentionedAt.toISOString(),
-      last_mentioned_at: lastMentionedAt.toISOString(),
-      avg_sentiment: avgSentiment,
-      updated_at: new Date().toISOString(),
-    },
-    {
-      onConflict: 'stock_id,category_id',
-    }
-  );
-
-  if (upsertError) {
-    throw new Error(`Failed to upsert stock argument summary: ${upsertError.message}`);
-  }
+    return {
+      categoryId,
+      mentionCount: categoryArgs.length,
+      bullishCount: categoryArgs.filter((a) => a.sentiment > 0).length,
+      bearishCount: categoryArgs.filter((a) => a.sentiment < 0).length,
+      avgSentiment:
+        categoryArgs.length > 0
+          ? categoryArgs.reduce((sum, a) => sum + a.sentiment, 0) / categoryArgs.length
+          : null,
+      firstMentionedAt: dates[0] ?? null,
+      lastMentionedAt: dates[dates.length - 1] ?? null,
+    };
+  });
 }
 
 // =====================
@@ -372,17 +337,10 @@ function mapPostArgument(row: any): PostArgument {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapStockArgumentSummary(row: any): StockArgumentSummary {
+function mapKolInfo(row: any): KolInfo {
   return {
-    id: row.id,
-    stockId: row.stock_id,
-    categoryId: row.category_id,
-    mentionCount: row.mention_count,
-    bullishCount: row.bullish_count,
-    bearishCount: row.bearish_count,
-    firstMentionedAt: row.first_mentioned_at ? new Date(row.first_mentioned_at) : null,
-    lastMentionedAt: row.last_mentioned_at ? new Date(row.last_mentioned_at) : null,
-    avgSentiment: row.avg_sentiment,
-    updatedAt: new Date(row.updated_at),
+    id: row?.id ?? '',
+    name: row?.name ?? 'Unknown',
+    avatarUrl: row?.avatar_url ?? null,
   };
 }

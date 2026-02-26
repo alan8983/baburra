@@ -4,9 +4,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { getStockByTicker } from '@/infrastructure/repositories/stock.repository';
 import {
-  getStockArgumentSummary,
+  computeStockArgumentSummary,
   getStockArguments,
   getArgumentCategories,
 } from '@/infrastructure/repositories/argument.repository';
@@ -17,6 +18,11 @@ interface RouteParams {
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { ticker } = await params;
 
     // 取得標的
@@ -25,11 +31,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Stock not found' }, { status: 404 });
     }
 
-    // 取得論點彙整
-    const summary = await getStockArgumentSummary(stock.id);
+    // 取得使用者的論點（含 KOL 資訊）
+    const argumentsList = await getStockArguments(stock.id, userId);
 
-    // 取得所有論點（含詳情）
-    const arguments_list = await getStockArguments(stock.id);
+    // 即時計算彙整
+    const summary = await computeStockArgumentSummary(stock.id, userId);
 
     // 取得類別階層資訊
     const categories = await getArgumentCategories();
@@ -42,7 +48,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         const childSummaries = childCategories
           .map((child) => {
             const summaryItem = summary.find((s) => s.categoryId === child.id);
-            const categoryArguments = arguments_list.filter((a) => a.categoryId === child.id);
+            const categoryArguments = argumentsList.filter((a) => a.categoryId === child.id);
 
             return {
               category: {
@@ -65,6 +71,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 sentiment: a.sentiment,
                 confidence: a.confidence,
                 createdAt: a.createdAt.toISOString(),
+                kol: {
+                  id: a.kol.id,
+                  name: a.kol.name,
+                  avatarUrl: a.kol.avatarUrl,
+                },
               })),
             };
           })
@@ -91,7 +102,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         name: stock.name,
       },
       summary: groupedSummary,
-      totalArgumentCount: arguments_list.length,
+      totalArgumentCount: argumentsList.length,
     });
   } catch (error) {
     console.error('Get stock arguments error:', error);

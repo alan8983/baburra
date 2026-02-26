@@ -41,7 +41,7 @@ export async function getCurrentUserId(): Promise<string | null> {
     // ignore
   }
   if (process.env.NODE_ENV !== 'production') {
-    return process.env.DEV_USER_ID ?? process.env.TEST_USER_ID ?? null;
+    return process.env.DEV_USER_ID || process.env.TEST_USER_ID || null;
   }
   return null;
 }

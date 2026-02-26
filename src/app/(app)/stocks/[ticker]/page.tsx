@@ -13,8 +13,9 @@ import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ROUTES } from '@/lib/constants';
 import { formatDateTime } from '@/lib/utils/date';
-import { SENTIMENT_COLORS } from '@/domain/models/post';
 import { sentimentKey } from '@/lib/utils/sentiment';
+import { useColorPalette } from '@/lib/colors/color-palette-context';
+import { recolorVolumes } from '@/lib/colors/financial-colors';
 import { StockArgumentsTab } from '@/components/ai/stock-arguments-tab';
 import { useStockPricesForChart } from '@/hooks/use-stock-prices';
 import {
@@ -52,6 +53,7 @@ function toDateStr(postedAt: Date | string): string {
 export default function StockDetailPage({ params }: { params: Promise<{ ticker: string }> }) {
   const t = useTranslations('stocks');
   const tCommon = useTranslations('common');
+  const { palette, colors } = useColorPalette();
   const router = useRouter();
   const { ticker } = use(params);
   const decodedTicker = decodeURIComponent(ticker);
@@ -75,9 +77,15 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
     () => (chartData ? aggregateCandles(chartData.candles, interval) : []),
     [chartData, interval]
   );
+  const volumeColors = useMemo(() => ({ up: colors.volumeUp, down: colors.volumeDown }), [colors]);
   const aggVolumes = useMemo(
-    () => (chartData ? aggregateVolumes(chartData.volumes, chartData.candles, interval) : []),
-    [chartData, interval]
+    () =>
+      chartData
+        ? interval === 'day'
+          ? recolorVolumes(chartData.volumes, colors, chartData.candles)
+          : aggregateVolumes(chartData.volumes, chartData.candles, interval, volumeColors)
+        : [],
+    [chartData, interval, colors, volumeColors]
   );
 
   // Sentiment markers for line chart
@@ -146,7 +154,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                 <Badge
                   variant="default"
                   className={
-                    stock.returnRate != null && stock.returnRate >= 0 ? 'bg-green-600' : ''
+                    stock.returnRate != null && stock.returnRate >= 0 ? colors.bullish.bgDark : ''
                   }
                 >
                   {stock.returnRate != null
@@ -259,7 +267,7 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                     <div key={item.key} className="rounded-lg border p-2 text-center">
                       <p className="text-muted-foreground text-xs font-medium">{item.label}</p>
                       <p
-                        className={`mt-1 text-lg font-bold ${getReturnRateColorClass(item.data.avgReturn)}`}
+                        className={`mt-1 text-lg font-bold ${getReturnRateColorClass(item.data.avgReturn, palette)}`}
                       >
                         {formatReturnRate(item.data.avgReturn)}
                       </p>
@@ -368,9 +376,9 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                           <Badge
                             variant="outline"
                             className={`text-xs ${
-                              SENTIMENT_COLORS[
+                              colors.sentimentBadgeColors[
                                 (currentStock?.sentiment ??
-                                  post.sentiment) as keyof typeof SENTIMENT_COLORS
+                                  post.sentiment) as keyof typeof colors.sentimentBadgeColors
                               ]
                             }`}
                           >
@@ -390,8 +398,8 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                             className={
                               changes?.day5 != null
                                 ? changes.day5 >= 0
-                                  ? 'text-green-600'
-                                  : 'text-red-600'
+                                  ? colors.bullish.text
+                                  : colors.bearish.text
                                 : 'text-muted-foreground'
                             }
                           >
@@ -404,8 +412,8 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                             className={
                               changes?.day30 != null
                                 ? changes.day30 >= 0
-                                  ? 'text-green-600'
-                                  : 'text-red-600'
+                                  ? colors.bullish.text
+                                  : colors.bearish.text
                                 : 'text-muted-foreground'
                             }
                           >

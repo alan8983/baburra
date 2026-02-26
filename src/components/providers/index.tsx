@@ -4,6 +4,7 @@
 
 import { ReactNode } from 'react';
 import { QueryProvider } from './query-provider';
+import { ColorPaletteProvider } from '@/lib/colors/color-palette-context';
 import { Toaster } from '@/components/ui/sonner';
 
 interface ProvidersProps {
@@ -13,8 +14,10 @@ interface ProvidersProps {
 export function Providers({ children }: ProvidersProps) {
   return (
     <QueryProvider>
-      {children}
-      <Toaster position="top-right" richColors />
+      <ColorPaletteProvider>
+        {children}
+        <Toaster position="top-right" richColors />
+      </ColorPaletteProvider>
     </QueryProvider>
   );
 }

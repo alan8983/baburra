@@ -6,9 +6,14 @@ import { useTranslations } from 'next-intl';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Separator } from '@/components/ui/separator';
 import { ROUTES } from '@/lib/constants';
 import { useQuickInput } from '@/hooks';
+import { useImportBatch, type ImportBatchResult } from '@/hooks/use-import';
 import { AnalysisLoadingOverlay } from '@/components/loading/analysis-loading-overlay';
+import { ImportForm } from '@/components/import/import-form';
+import { ImportResult } from '@/components/import/import-result';
+import { ImportLoadingOverlay } from '@/components/import/import-loading-overlay';
 import { toast } from 'sonner';
 
 export default function InputPage() {
@@ -17,6 +22,11 @@ export default function InputPage() {
   const [content, setContent] = useState('');
 
   const quickInput = useQuickInput();
+
+  // URL import state
+  const importBatch = useImportBatch();
+  const [importResult, setImportResult] = useState<ImportBatchResult | null>(null);
+  const [importDone, setImportDone] = useState(false);
 
   const handleSubmit = async () => {
     if (!content.trim()) return;
@@ -36,6 +46,16 @@ export default function InputPage() {
     }
   };
 
+  const handleImportSubmit = async (urls: string[]) => {
+    try {
+      const result = await importBatch.mutateAsync({ urls });
+      setImportResult(result);
+      setImportDone(true);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Import failed');
+    }
+  };
+
   return (
     <div className="flex min-h-[calc(100vh-8rem)] flex-col items-center justify-center px-4">
       <div className="w-full max-w-2xl space-y-4">
@@ -45,7 +65,7 @@ export default function InputPage() {
           <p className="text-muted-foreground mt-2">{t('description')}</p>
         </div>
 
-        {/* Input Area */}
+        {/* Text Input Area */}
         <Textarea
           placeholder={t('inputCard.placeholder')}
           value={content}
@@ -73,9 +93,37 @@ export default function InputPage() {
             )}
           </Button>
         </div>
+
+        {/* Separator */}
+        <div className="relative py-4">
+          <Separator />
+          <span className="bg-background text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-3 text-sm">
+            {t('urlImport.sectionTitle')}
+          </span>
+        </div>
+
+        {/* URL Import Section */}
+        <p className="text-muted-foreground text-center text-sm">
+          {t('urlImport.sectionDescription')}
+        </p>
+
+        {!importDone ? (
+          <ImportForm onSubmit={handleImportSubmit} isLoading={importBatch.isPending} />
+        ) : (
+          importResult && (
+            <ImportResult
+              result={importResult}
+              onImportMore={() => {
+                setImportDone(false);
+                setImportResult(null);
+              }}
+            />
+          )
+        )}
       </div>
 
       <AnalysisLoadingOverlay isVisible={quickInput.isPending} />
+      <ImportLoadingOverlay isVisible={importBatch.isPending} />
     </div>
   );
 }

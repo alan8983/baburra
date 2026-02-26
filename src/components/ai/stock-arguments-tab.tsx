@@ -12,9 +12,11 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { SENTIMENT_COLORS, type Sentiment } from '@/domain/models/post';
+import { type Sentiment } from '@/domain/models/post';
 import { sentimentKey } from '@/lib/utils/sentiment';
-import { ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { useColorPalette } from '@/lib/colors/color-palette-context';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ChevronDown, ChevronUp, ExternalLink, User } from 'lucide-react';
 import Link from 'next/link';
 import { ROUTES } from '@/lib/constants/routes';
 import { ArgumentTimeline } from '@/components/charts/argument-timeline';
@@ -142,6 +144,7 @@ interface CategoryCardProps {
 
 function CategoryCard({ data, t, locale }: CategoryCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const { colors } = useColorPalette();
   const icon = CATEGORY_ICONS[data.category.code] || '📌';
 
   // 計算看多/看空比例
@@ -179,20 +182,20 @@ function CategoryCard({ data, t, locale }: CategoryCardProps) {
         {/* 看多/看空比例條 */}
         <div className="space-y-1">
           <div className="flex justify-between text-xs">
-            <span className="text-green-600">
+            <span className={colors.bullish.text}>
               {t('bullish')} {data.bullishCount}
             </span>
-            <span className="text-red-600">
+            <span className={colors.bearish.text}>
               {t('bearish')} {data.bearishCount}
             </span>
           </div>
           <div className="bg-muted flex h-2 overflow-hidden rounded-full">
             <div
-              className="bg-green-500 transition-all"
+              className={`${colors.bullish.bg} transition-all`}
               style={{ width: `${bullishPercentage}%` }}
             />
             <div
-              className="bg-red-500 transition-all"
+              className={`${colors.bearish.bg} transition-all`}
               style={{ width: `${100 - bullishPercentage}%` }}
             />
           </div>
@@ -214,7 +217,7 @@ function CategoryCard({ data, t, locale }: CategoryCardProps) {
               {/* 看多論點 */}
               {bullishArgs.length > 0 && (
                 <div>
-                  <h5 className="mb-2 text-sm font-medium text-green-600">
+                  <h5 className={`mb-2 text-sm font-medium ${colors.bullish.text}`}>
                     {t('bullishArguments', { count: bullishArgs.length })}
                   </h5>
                   <div className="space-y-2">
@@ -242,7 +245,7 @@ function CategoryCard({ data, t, locale }: CategoryCardProps) {
               {/* 看空論點 */}
               {bearishArgs.length > 0 && (
                 <div>
-                  <h5 className="mb-2 text-sm font-medium text-red-600">
+                  <h5 className={`mb-2 text-sm font-medium ${colors.bearish.text}`}>
                     {t('bearishArguments', { count: bearishArgs.length })}
                   </h5>
                   <div className="space-y-2">
@@ -267,13 +270,23 @@ interface ArgumentItemProps {
 
 function ArgumentItem({ argument, locale }: ArgumentItemProps) {
   const tCommon = useTranslations('common');
+  const { colors } = useColorPalette();
   const sentimentLabel = tCommon(`sentiment.${sentimentKey(argument.sentiment)}`);
-  const sentimentColors = SENTIMENT_COLORS[argument.sentiment as Sentiment];
+  const sentimentBadgeColor = colors.sentimentBadgeColors[argument.sentiment as Sentiment];
 
   return (
     <div className="rounded-lg border p-2 text-sm">
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
+          <div className="mb-1 flex items-center gap-1.5">
+            <Avatar className="h-4 w-4">
+              <AvatarImage src={argument.kol.avatarUrl || undefined} />
+              <AvatarFallback>
+                <User className="h-3 w-3" />
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-muted-foreground text-xs font-medium">{argument.kol.name}</span>
+          </div>
           {argument.summary && <p className="mb-1">{argument.summary}</p>}
           {argument.originalText && (
             <blockquote className="border-muted text-muted-foreground border-l-2 pl-2 text-xs italic">
@@ -284,7 +297,7 @@ function ArgumentItem({ argument, locale }: ArgumentItemProps) {
           )}
         </div>
         <div className="flex flex-col items-end gap-1">
-          <Badge className={`${sentimentColors} text-xs`}>{sentimentLabel}</Badge>
+          <Badge className={`${sentimentBadgeColor} text-xs`}>{sentimentLabel}</Badge>
           <Link href={ROUTES.POST_DETAIL(argument.postId)}>
             <Button variant="ghost" size="sm" className="h-6 px-2">
               <ExternalLink className="h-3 w-3" />

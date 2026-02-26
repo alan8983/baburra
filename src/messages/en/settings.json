@@ -49,6 +49,12 @@
       "utc": "UTC"
     }
   },
+  "colorPalette": {
+    "label": "Color Style",
+    "description": "Choose how bullish/bearish colors are displayed in charts and data",
+    "asian": "Asian (Red = Up)",
+    "american": "American (Green = Up)"
+  },
   "dangerZone": {
     "title": "Danger Zone",
     "description": "These actions cannot be undone, please proceed with caution",

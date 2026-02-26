@@ -40,6 +40,10 @@
 | URL 擷取框架 | 2026-02-05 | ExtractorFactory + Twitter/FB/Threads stubs |
 | Profile 時區 | 2026-02-19 | 用戶時區設定 |
 | 情緒折線圖 | 2026-02-18 | sentiment-line-chart 元件 |
+| 色盤偏好設定 | 2026-02-23 | Asian (紅漲綠跌) / American (綠漲紅跌)，settings 頁面 + ColorPaletteProvider + 全 UI 元件整合 |
+| KOL 歸屬論點 | 2026-02-23 | Stock Arguments Tab 顯示 KOL 頭像與名稱，論點來源可溯 |
+| 論點 per-user 隔離 | 2026-02-23 | argument.repository 改為 real-time 計算 (移除 stock_argument_summary 表)；RLS 限制使用者只能看自己的論點 |
+| AI 論點擷取上限調整 | 2026-02-23 | 每篇文章最多 5 則論點 (原 10)，降低 token 消耗 |
 
 ### 開發時程
 
@@ -60,6 +64,7 @@
 2026-02-22  ██████     Phase 13 (Onboarding 3 步驟 + Empty States 6 頁面)
 2026-02-22  ████       Phase 8.16 (argument-timeline 元件) + Phase 4.16 (免責聲明 checkbox)
 2026-02-22  ██████     Phase 10.5-10.6 (動態載入 + Bundle Analyzer + Vercel 部署 + 安全標頭)
+2026-02-23  ████       色盤偏好 (Asian/American) + KOL 歸屬論點 + 論點 per-user 隔離 + AI 上限調整
 ```
 
 ---
@@ -1714,3 +1719,4 @@ K線圖          勝率計算         AI 整合
 | 2.1  | 2026-02-23 | Release 01 新增 Phase 17 (行銷首頁 — Freemium 定價表 + Hero + 功能介紹 + FAQ，同一 Next.js app `(marketing)` route group) |
 | 2.1a | 2026-02-23 | MVP 新增 TODO-017 (零 Ticker 文章攔截 — 匯入管線 reject + Quick Input 警告)；MVP 回調至 ~99% |
 | 2.1b | 2026-02-23 | TODO-017 ✅ 完成 (Agent 7: import-pipeline reject + quick-input toast + validation min(1) + import-result amber 警告 + i18n)；MVP 恢復 100% |
+| 2.2  | 2026-02-23 | 計畫外功能盤點：色盤偏好設定 (Asian/American + settings UI + ColorPaletteProvider + 全 UI 整合 + migration 011)；KOL 歸屬論點 (Stock Arguments Tab 顯示 KOL 頭像)；論點 per-user 隔離 (migration 012 移除 stock_argument_summary 表 + RLS 收緊 + real-time 計算)；AI 論點上限 10→5 |

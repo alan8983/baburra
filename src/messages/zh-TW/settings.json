@@ -49,6 +49,12 @@
       "utc": "UTC"
     }
   },
+  "colorPalette": {
+    "label": "漲跌顏色風格",
+    "description": "選擇圖表和數據中看多／看空的顏色顯示方式",
+    "asian": "亞洲風格（紅色 = 上漲）",
+    "american": "美式風格（綠色 = 上漲）"
+  },
   "dangerZone": {
     "title": "危險區域",
     "description": "這些操作無法復原，請謹慎操作",

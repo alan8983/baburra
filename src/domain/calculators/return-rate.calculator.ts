@@ -5,6 +5,8 @@
 
 import type { Sentiment, PriceChangeByPeriod } from '@/domain/models/post';
 import type { PriceChangePeriod } from './price-change.calculator';
+import type { ColorPalette } from '@/domain/models/user';
+import { getFinancialColors } from '@/lib/colors/financial-colors';
 
 export interface ReturnRateResult {
   period: PriceChangePeriod;
@@ -180,12 +182,14 @@ export function formatReturnRate(rate: number | null): string {
 /**
  * 根據報酬率返回顏色類別
  * @param rate 報酬率 (%)
+ * @param palette 顏色風格（可選，預設 'asian'）
  * @returns Tailwind CSS 顏色類別
  */
-export function getReturnRateColorClass(rate: number | null): string {
+export function getReturnRateColorClass(rate: number | null, palette?: ColorPalette): string {
   if (rate === null) return 'text-gray-400';
-  if (rate >= 5) return 'text-green-600';
-  if (rate >= 0) return 'text-green-500';
+  const colors = getFinancialColors(palette ?? 'asian');
+  if (rate >= 5) return colors.bullish.text;
+  if (rate >= 0) return colors.bullish.textLight;
   if (rate >= -5) return 'text-yellow-500';
-  return 'text-red-500';
+  return colors.bearish.textLight;
 }

@@ -284,6 +284,11 @@ export interface StockArgumentSummary {
         sentiment: number;
         confidence: number | null;
         createdAt: string;
+        kol: {
+          id: string;
+          name: string;
+          avatarUrl: string | null;
+        };
       }[];
     }[];
   }[];

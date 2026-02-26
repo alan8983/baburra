@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import type { SentimentMarkerItem } from './candlestick-chart';
 import { sentimentKey } from '@/lib/utils/sentiment';
+import { useColorPalette } from '@/lib/colors/color-palette-context';
 
 export type { SentimentMarkerItem };
 
@@ -28,6 +29,7 @@ export function postToSentimentMarker(
  */
 export function SentimentMarkerLegend({ markers }: { markers: SentimentMarkerItem[] }) {
   const t = useTranslations('common');
+  const { colors } = useColorPalette();
   if (markers.length === 0) return null;
   return (
     <div className="text-muted-foreground mt-2 flex flex-wrap gap-3 text-xs">
@@ -38,9 +40,9 @@ export function SentimentMarkerLegend({ markers }: { markers: SentimentMarkerIte
             <span
               className={
                 m.sentiment > 0
-                  ? 'text-green-600'
+                  ? colors.bullish.text
                   : m.sentiment < 0
-                    ? 'text-red-600'
+                    ? colors.bearish.text
                     : 'text-muted-foreground'
               }
             >

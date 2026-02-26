@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { getProfile, updateProfile } from '@/infrastructure/repositories/profile.repository';
+import type { ColorPalette } from '@/domain/models/user';
 
 export async function GET() {
   try {
@@ -40,12 +41,13 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { displayName, timezone } = body as {
+    const { displayName, timezone, colorPalette } = body as {
       displayName?: string;
       timezone?: string;
+      colorPalette?: ColorPalette;
     };
 
-    await updateProfile(userId, { displayName, timezone });
+    await updateProfile(userId, { displayName, timezone, colorPalette });
 
     const updated = await getProfile(userId);
     return NextResponse.json(updated);
