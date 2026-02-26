@@ -29,7 +29,7 @@ Review all API routes in src/app/api/ focusing on:
 
 ### Option 3: Full Codebase Review
 ```
-Conduct a comprehensive code review of the Investment Idea Monitor codebase.
+Conduct a comprehensive code review of the Baburra.io codebase.
 Focus areas: Critical issues, Type safety, Security, Performance, Code quality.
 
 [Paste the full prompt from CODEX_REVIEW_PROMPT.md]

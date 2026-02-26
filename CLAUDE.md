@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Investment Idea Monitor — a backtesting tool for retail investors to evaluate which KOLs' (Key Opinion Leaders) investment opinions are trustworthy and profitable. Users track investment ideas, record predictions with sentiment, and measure accuracy over time via K-line charts and win rate calculations.
+Baburra.io — a backtesting tool for retail investors to evaluate which KOLs' (Key Opinion Leaders) investment opinions are trustworthy and profitable. Users track investment ideas, record predictions with sentiment, and measure accuracy over time via K-line charts and win rate calculations.
 
 ## Commands
 

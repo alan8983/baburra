@@ -1,7 +1,7 @@
 # Codex 5.3 Pro Code Review Prompt
 
 ## Context
-You are reviewing code for **Investment Idea Monitor** - a backtesting tool for retail investors to evaluate KOLs' investment opinions. The codebase uses:
+You are reviewing code for **Baburra.io** - a backtesting tool for retail investors to evaluate KOLs' investment opinions. The codebase uses:
 - **Stack**: Next.js 16 (App Router) + React 19 + TypeScript + Supabase (PostgreSQL)
 - **Architecture**: Layered architecture (Pages → Hooks → API Routes → Repositories → Supabase)
 - **Codebase Size**: ~174 TypeScript/JavaScript files, ~22,629 lines of code

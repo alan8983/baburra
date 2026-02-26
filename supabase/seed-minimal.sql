@@ -1,4 +1,4 @@
--- Stock KOL Tracker Web - Minimal Seed (無假資料)
+-- Baburra.io - Minimal Seed (無假資料)
 -- 僅含參考資料，供「手動測試、無預建假內容」環境使用。
 -- 使用方式見 docs/MANUAL_TESTING_SETUP.md
 

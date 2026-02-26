@@ -1,4 +1,4 @@
--- Stock KOL Tracker Web - Seed Data
+-- Baburra.io - Seed Data
 -- 開發測試用初始資料
 
 -- =====================

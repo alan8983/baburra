@@ -1,4 +1,4 @@
-# Invariants - Stock KOL Tracker Web
+# Invariants - Baburra.io
 
 > **版本**: 1.0  
 > **最後更新**: 2026-01-29  
@@ -8,7 +8,7 @@
 
 ## 一、概述
 
-本文件定義 Stock KOL Tracker Web 應用的不變量（Invariants）。不變量是系統中必須始終為真的規則，違反不變量會導致資料不一致或業務邏輯錯誤。
+本文件定義 Baburra.io 應用的不變量（Invariants）。不變量是系統中必須始終為真的規則，違反不變量會導致資料不一致或業務邏輯錯誤。
 
 **所有 Agent 在實作功能時必須**：
 

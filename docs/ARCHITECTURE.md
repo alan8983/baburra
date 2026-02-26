@@ -1,4 +1,4 @@
-# Architecture Decision Records - Stock KOL Tracker Web
+# Architecture Decision Records - Baburra.io
 
 > **版本**: 1.0  
 > **最後更新**: 2026-01-29  
@@ -8,7 +8,7 @@
 
 ## 一、概述
 
-本文件記錄 Stock KOL Tracker Web 應用的架構決策（ADR - Architecture Decision Records）。所有技術選型和架構決策都記錄於此，供開發 Agent 參考。
+本文件記錄 Baburra.io 應用的架構決策（ADR - Architecture Decision Records）。所有技術選型和架構決策都記錄於此，供開發 Agent 參考。
 
 ---
 

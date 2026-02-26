@@ -1,4 +1,4 @@
--- Stock KOL Tracker Web - Enable RLS Policies
+-- Baburra.io - Enable RLS Policies
 -- Version: 1.0
 -- Date: 2026-02-01
 -- Purpose: 啟用 RLS 政策並補充缺少的政策

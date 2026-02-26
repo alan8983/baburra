@@ -2,8 +2,8 @@
 
 export const APP_CONFIG = {
   // 應用程式名稱
-  APP_NAME: 'Stock KOL Tracker',
-  APP_DESCRIPTION: '追蹤 KOL 投資觀點，計算平均報酬率',
+  APP_NAME: 'Baburra',
+  APP_DESCRIPTION: 'Track KOL investment opinions and measure accuracy over time',
 
   // 分頁設定
   DEFAULT_PAGE_SIZE: 20,

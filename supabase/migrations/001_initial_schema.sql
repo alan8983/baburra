@@ -1,4 +1,4 @@
--- Stock KOL Tracker Web - Initial Database Schema
+-- Baburra.io - Initial Database Schema
 -- Version: 1.0
 -- Date: 2026-02-01
 

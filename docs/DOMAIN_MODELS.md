@@ -1,4 +1,4 @@
-# Domain Models - Stock KOL Tracker Web
+# Domain Models - Baburra.io
 
 > **版本**: 1.0  
 > **最後更新**: 2026-01-29  
@@ -8,7 +8,7 @@
 
 ## 一、概述
 
-本文件定義 Stock KOL Tracker Web 應用的領域模型，作為所有開發 Agent 的「唯一真理來源」。任何程式碼實作必須符合此處定義的模型結構。
+本文件定義 Baburra.io 應用的領域模型，作為所有開發 Agent 的「唯一真理來源」。任何程式碼實作必須符合此處定義的模型結構。
 
 ---
 

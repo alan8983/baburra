@@ -2,7 +2,7 @@
 
 ## Instructions
 
-You are reviewing code for **Investment Idea Monitor** - a Next.js 16 + React 19 + TypeScript application for tracking investment KOLs' opinions.
+You are reviewing code for **Baburra.io** - a Next.js 16 + React 19 + TypeScript application for tracking investment KOLs' opinions.
 
 ## Review Focus Areas
 

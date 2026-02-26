@@ -1,4 +1,4 @@
-# API Specification - Stock KOL Tracker Web
+# API Specification - Baburra.io
 
 > **版本**: 1.0  
 > **最後更新**: 2026-01-29  
@@ -8,7 +8,7 @@
 
 ## 一、概述
 
-本文件定義 Stock KOL Tracker Web 應用的 API 契約。所有 API 實作必須符合此規格。
+本文件定義 Baburra.io 應用的 API 契約。所有 API 實作必須符合此規格。
 
 ### 基本資訊
 
