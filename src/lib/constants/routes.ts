@@ -89,6 +89,11 @@ export const API_ROUTES = {
 
   // Import
   IMPORT_BATCH: '/api/import/batch',
+
+  // Stripe
+  STRIPE_CHECKOUT: '/api/stripe/checkout',
+  STRIPE_PORTAL: '/api/stripe/portal',
+  STRIPE_WEBHOOK: '/api/stripe/webhook',
 } as const;
 
 // 導航項目

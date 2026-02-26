@@ -21,6 +21,7 @@
     "resetWeekly": "每週一重置",
     "times": "次",
     "freeUserDescription": "免費用戶每週可使用 15 次 AI 分析功能。升級至 Premium 可獲得更多配額。",
+    "premiumUserDescription": "Premium 方案：每週 100 次 AI 分析。",
     "upgradeToPremium": "升級至 Premium"
   },
   "subscription": {
@@ -32,7 +33,12 @@
     "upgrade": "升級",
     "freePlanName": "Free Plan",
     "premiumPlanName": "Premium Plan",
-    "premiumPrice": "$9.99/月"
+    "premiumPrice": "$8/月",
+    "manageSubscription": "管理訂閱",
+    "monthly": "月付",
+    "annual": "年付",
+    "month": "月",
+    "year": "年"
   },
   "timezone": {
     "label": "時區",

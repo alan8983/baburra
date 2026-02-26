@@ -10,6 +10,9 @@ export interface Profile {
   aiUsageCount: number;
   aiUsageResetAt: Date | null;
   subscriptionTier: SubscriptionTier;
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
+  subscriptionPeriodEnd: Date | null;
   onboardingCompleted: boolean;
   onboardingCompletedAt: Date | null;
   createdAt: Date;

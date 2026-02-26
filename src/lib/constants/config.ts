@@ -23,6 +23,10 @@ export const APP_CONFIG = {
   MAX_IMAGE_SIZE_MB: 5,
   MAX_IMAGES_PER_POST: 10,
   ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+
+  // Stripe 訂閱
+  PREMIUM_MONTHLY_PRICE: 8,
+  PREMIUM_ANNUAL_PRICE: 72,
 } as const;
 
 // 情緒值對應

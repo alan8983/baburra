@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { User, Loader2, AlertCircle } from 'lucide-react';
+import { User, Loader2, AlertCircle, Crown, ExternalLink } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +19,10 @@ import {
 import { LocaleSwitcher } from '@/components/layout/locale-switcher';
 import { useAuth } from '@/hooks/use-auth';
 import { useProfile, useUpdateProfile } from '@/hooks/use-profile';
+import { useAiUsage } from '@/hooks/use-ai';
+import { useStripeCheckout, useStripePortal } from '@/hooks/use-subscription';
 import { createClient } from '@/infrastructure/supabase/client';
+import { APP_CONFIG } from '@/lib/constants/config';
 
 const TIMEZONE_OPTION_KEYS = [
   { value: 'Asia/Taipei', key: 'taipei' },
@@ -43,11 +46,20 @@ export default function SettingsPage() {
   const { user, loading: authLoading } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const updateProfile = useUpdateProfile();
+  const { data: aiUsage } = useAiUsage();
+  const stripeCheckout = useStripeCheckout();
+  const stripePortal = useStripePortal();
   const [displayName, setDisplayName] = useState('');
   const [timezone, setTimezone] = useState('Asia/Taipei');
+  const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('monthly');
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const isPremium = aiUsage?.subscriptionTier === 'premium';
+  const usageCount = aiUsage?.usageCount ?? 0;
+  const weeklyLimit = aiUsage?.weeklyLimit ?? APP_CONFIG.AI_FREE_WEEKLY_LIMIT;
+  const usagePercent = weeklyLimit > 0 ? Math.round((usageCount / weeklyLimit) * 100) : 0;
 
   // 初始化顯示名稱和時區
   useEffect(() => {
@@ -210,7 +222,10 @@ export default function SettingsPage() {
       {/* AI Quota Section */}
       <Card>
         <CardHeader>
-          <CardTitle>{t('aiQuota.title')}</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            {t('aiQuota.title')}
+            {isPremium && <Crown className="h-4 w-4 text-yellow-500" />}
+          </CardTitle>
           <CardDescription>{t('aiQuota.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -220,20 +235,47 @@ export default function SettingsPage() {
               <p className="text-muted-foreground text-sm">{t('aiQuota.resetWeekly')}</p>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-bold">12 / 15</p>
+              <p className="text-2xl font-bold">
+                {usageCount} / {weeklyLimit}
+              </p>
               <p className="text-muted-foreground text-xs">{t('aiQuota.times')}</p>
             </div>
           </div>
 
           <div className="bg-muted h-2 w-full rounded-full">
-            <div className="bg-primary h-full rounded-full" style={{ width: '80%' }} />
+            <div
+              className={`h-full rounded-full ${
+                usagePercent > 80
+                  ? 'bg-red-500'
+                  : usagePercent > 50
+                    ? 'bg-yellow-500'
+                    : 'bg-primary'
+              }`}
+              style={{ width: `${Math.min(usagePercent, 100)}%` }}
+            />
           </div>
 
-          <p className="text-muted-foreground text-sm">{t('aiQuota.freeUserDescription')}</p>
+          <p className="text-muted-foreground text-sm">
+            {isPremium ? t('aiQuota.premiumUserDescription') : t('aiQuota.freeUserDescription')}
+          </p>
 
-          <Button variant="outline" className="w-full">
-            {t('aiQuota.upgradeToPremium')}
-          </Button>
+          {!isPremium && (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                const priceId =
+                  billingPeriod === 'annual'
+                    ? process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL
+                    : process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY;
+                if (priceId) stripeCheckout.mutate({ priceId });
+              }}
+              disabled={stripeCheckout.isPending}
+            >
+              {stripeCheckout.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {t('aiQuota.upgradeToPremium')}
+            </Button>
+          )}
         </CardContent>
       </Card>
 
@@ -244,30 +286,107 @@ export default function SettingsPage() {
           <CardDescription>{t('subscription.description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Current plan badge */}
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div>
-              <p className="font-medium">{t('subscription.freePlanName')}</p>
-              <p className="text-muted-foreground text-sm">{t('subscription.freeDescription')}</p>
+              <p className="font-medium">
+                {isPremium ? t('subscription.premiumPlanName') : t('subscription.freePlanName')}
+              </p>
+              <p className="text-muted-foreground text-sm">
+                {isPremium
+                  ? t('subscription.premiumDescription')
+                  : t('subscription.freeDescription')}
+              </p>
             </div>
             <span className="bg-primary/10 text-primary rounded-full px-3 py-1 text-sm font-medium">
               {t('subscription.currentPlan')}
             </span>
           </div>
 
-          <Separator />
+          {isPremium ? (
+            /* Premium user: manage subscription */
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => stripePortal.mutate()}
+              disabled={stripePortal.isPending}
+            >
+              {stripePortal.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <ExternalLink className="mr-2 h-4 w-4" />
+              )}
+              {t('subscription.manageSubscription')}
+            </Button>
+          ) : (
+            /* Free user: upgrade options */
+            <>
+              <Separator />
 
-          <div className="rounded-lg border p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">{t('subscription.premiumPlanName')}</p>
-                <p className="text-muted-foreground text-sm">
-                  {t('subscription.premiumDescription')}
-                </p>
+              <div className="rounded-lg border p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">{t('subscription.premiumPlanName')}</p>
+                    <p className="text-muted-foreground text-sm">
+                      {t('subscription.premiumDescription')}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold">
+                      $
+                      {billingPeriod === 'annual'
+                        ? APP_CONFIG.PREMIUM_ANNUAL_PRICE
+                        : APP_CONFIG.PREMIUM_MONTHLY_PRICE}
+                      /
+                      {billingPeriod === 'annual'
+                        ? t('subscription.year')
+                        : t('subscription.month')}
+                    </p>
+                    {billingPeriod === 'annual' && (
+                      <p className="text-xs text-green-600">
+                        ${APP_CONFIG.PREMIUM_ANNUAL_PRICE / 12}/{t('subscription.month')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Billing period toggle */}
+                <div className="mt-3 flex gap-2">
+                  <Button
+                    variant={billingPeriod === 'monthly' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setBillingPeriod('monthly')}
+                  >
+                    {t('subscription.monthly')}
+                  </Button>
+                  <Button
+                    variant={billingPeriod === 'annual' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setBillingPeriod('annual')}
+                  >
+                    {t('subscription.annual')} (-25%)
+                  </Button>
+                </div>
+
+                <Button
+                  className="mt-4 w-full"
+                  onClick={() => {
+                    const priceId =
+                      billingPeriod === 'annual'
+                        ? process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL
+                        : process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY;
+                    if (priceId) stripeCheckout.mutate({ priceId });
+                  }}
+                  disabled={stripeCheckout.isPending}
+                >
+                  {stripeCheckout.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
+                  {t('subscription.upgrade')}
+                </Button>
               </div>
-              <p className="font-bold">{t('subscription.premiumPrice')}</p>
-            </div>
-            <Button className="mt-4 w-full">{t('subscription.upgrade')}</Button>
-          </div>
+            </>
+          )}
         </CardContent>
       </Card>
 

@@ -21,6 +21,7 @@
     "resetWeekly": "Resets every Monday",
     "times": "times",
     "freeUserDescription": "Free users can use AI analysis 15 times per week. Upgrade to Premium for more quota.",
+    "premiumUserDescription": "Premium plan: 100 AI analyses per week.",
     "upgradeToPremium": "Upgrade to Premium"
   },
   "subscription": {
@@ -32,7 +33,12 @@
     "upgrade": "Upgrade",
     "freePlanName": "Free Plan",
     "premiumPlanName": "Premium Plan",
-    "premiumPrice": "$9.99/mo"
+    "premiumPrice": "$8/mo",
+    "manageSubscription": "Manage Subscription",
+    "monthly": "Monthly",
+    "annual": "Annual",
+    "month": "mo",
+    "year": "yr"
   },
   "timezone": {
     "label": "Timezone",

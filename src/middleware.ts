@@ -15,7 +15,7 @@ const publicRoutes = [
 ];
 
 // API 路由（部分需要認證）
-const publicApiRoutes = ['/api/auth', '/api/health'];
+const publicApiRoutes = ['/api/auth', '/api/health', '/api/stripe/webhook'];
 
 // 檢查 Supabase 是否正確配置（非占位符）
 const isSupabaseConfigured =
