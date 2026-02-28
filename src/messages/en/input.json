@@ -28,7 +28,8 @@
   },
   "urlImport": {
     "sectionTitle": "Or import by URL",
-    "sectionDescription": "Paste Twitter/X or YouTube URLs to directly import as published posts"
+    "sectionDescription": "Paste Twitter/X or YouTube URLs to directly import as published posts",
+    "viewPosts": "View Posts"
   },
   "errors": {
     "createDraftFailed": "Failed to create draft",

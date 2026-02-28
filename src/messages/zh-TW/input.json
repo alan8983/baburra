@@ -28,7 +28,8 @@
   },
   "urlImport": {
     "sectionTitle": "或透過 URL 匯入",
-    "sectionDescription": "貼上 Twitter/X 或 YouTube 網址，直接匯入為已發布的文章"
+    "sectionDescription": "貼上 Twitter/X 或 YouTube 網址，直接匯入為已發布的文章",
+    "viewPosts": "查看文章"
   },
   "errors": {
     "createDraftFailed": "建立草稿失敗",

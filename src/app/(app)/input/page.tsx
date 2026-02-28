@@ -6,7 +6,6 @@ import { useTranslations } from 'next-intl';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
 import { ROUTES } from '@/lib/constants';
 import { useQuickInput } from '@/hooks';
 import { useImportBatch, type ImportBatchResult } from '@/hooks/use-import';
@@ -58,68 +57,70 @@ export default function InputPage() {
 
   return (
     <div className="flex min-h-[calc(100vh-8rem)] flex-col items-center justify-center px-4">
-      <div className="w-full max-w-2xl space-y-4">
+      <div className="w-full max-w-5xl space-y-6">
         {/* Page Header */}
         <div className="text-center">
           <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
           <p className="text-muted-foreground mt-2">{t('description')}</p>
         </div>
 
-        {/* Text Input Area */}
-        <Textarea
-          placeholder={t('inputCard.placeholder')}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          className="min-h-[200px] resize-none"
-        />
+        {/* Two-column layout */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Left column: URL Import */}
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold">{t('urlImport.sectionTitle')}</h2>
+            <p className="text-muted-foreground text-sm">{t('urlImport.sectionDescription')}</p>
 
-        <div className="flex items-center justify-between">
-          <p className="text-muted-foreground text-xs">{t('tips.hint')}</p>
-          <Button
-            onClick={handleSubmit}
-            disabled={!content.trim() || quickInput.isPending}
-            size="lg"
-          >
-            {quickInput.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {t('actions.analyzing')}
-              </>
+            {!importDone ? (
+              <ImportForm onSubmit={handleImportSubmit} isLoading={importBatch.isPending} />
             ) : (
-              <>
-                {t('actions.createDraft')}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </>
+              importResult && (
+                <ImportResult
+                  result={importResult}
+                  onImportMore={() => {
+                    setImportDone(false);
+                    setImportResult(null);
+                  }}
+                  onProceed={() => router.push(ROUTES.POSTS)}
+                  proceedLabel={t('urlImport.viewPosts')}
+                />
+              )
             )}
-          </Button>
-        </div>
+          </div>
 
-        {/* Separator */}
-        <div className="relative py-4">
-          <Separator />
-          <span className="bg-background text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-3 text-sm">
-            {t('urlImport.sectionTitle')}
-          </span>
-        </div>
+          {/* Right column: Plain Text Input */}
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold">{t('inputCard.placeholder')}</h2>
 
-        {/* URL Import Section */}
-        <p className="text-muted-foreground text-center text-sm">
-          {t('urlImport.sectionDescription')}
-        </p>
-
-        {!importDone ? (
-          <ImportForm onSubmit={handleImportSubmit} isLoading={importBatch.isPending} />
-        ) : (
-          importResult && (
-            <ImportResult
-              result={importResult}
-              onImportMore={() => {
-                setImportDone(false);
-                setImportResult(null);
-              }}
+            <Textarea
+              placeholder={t('inputCard.placeholder')}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              className="min-h-[200px] resize-none"
             />
-          )
-        )}
+
+            <div className="flex items-center justify-between">
+              <p className="text-muted-foreground text-xs">{t('tips.hint')}</p>
+              <Button
+                onClick={handleSubmit}
+                disabled={!content.trim() || quickInput.isPending}
+                size="lg"
+              >
+                {quickInput.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {t('actions.analyzing')}
+                  </>
+                ) : (
+                  <>
+                    {t('actions.createDraft')}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <AnalysisLoadingOverlay isVisible={quickInput.isPending} />

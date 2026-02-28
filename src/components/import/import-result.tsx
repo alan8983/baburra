@@ -21,9 +21,11 @@ import type { ImportBatchResult } from '@/hooks/use-import';
 interface ImportResultProps {
   result: ImportBatchResult;
   onImportMore: () => void;
+  onProceed?: () => void;
+  proceedLabel?: string;
 }
 
-export function ImportResult({ result, onImportMore }: ImportResultProps) {
+export function ImportResult({ result, onImportMore, onProceed, proceedLabel }: ImportResultProps) {
   const t = useTranslations('import');
   const tCommon = useTranslations('common');
 
@@ -177,23 +179,32 @@ export function ImportResult({ result, onImportMore }: ImportResultProps) {
 
       {/* CTAs */}
       <div className="flex flex-wrap gap-3">
-        {result.kols.length === 1 && (
-          <Button asChild className="flex-1">
-            <Link href={ROUTES.KOL_DETAIL(result.kols[0].kolId)}>
-              {t('result.viewKol')}
-              <ArrowRight className="ml-1 h-4 w-4" />
-            </Link>
+        {onProceed ? (
+          <Button onClick={onProceed} className="flex-1">
+            {proceedLabel || 'Proceed'}
+            <ArrowRight className="ml-1 h-4 w-4" />
           </Button>
+        ) : (
+          <>
+            {result.kols.length === 1 && (
+              <Button asChild className="flex-1">
+                <Link href={ROUTES.KOL_DETAIL(result.kols[0].kolId)}>
+                  {t('result.viewKol')}
+                  <ArrowRight className="ml-1 h-4 w-4" />
+                </Link>
+              </Button>
+            )}
+            {result.kols.length > 1 &&
+              result.kols.map((kol) => (
+                <Button key={kol.kolId} asChild variant="outline" size="sm">
+                  <Link href={ROUTES.KOL_DETAIL(kol.kolId)}>
+                    @{kol.kolName}
+                    <ArrowRight className="ml-1 h-4 w-4" />
+                  </Link>
+                </Button>
+              ))}
+          </>
         )}
-        {result.kols.length > 1 &&
-          result.kols.map((kol) => (
-            <Button key={kol.kolId} asChild variant="outline" size="sm">
-              <Link href={ROUTES.KOL_DETAIL(kol.kolId)}>
-                @{kol.kolName}
-                <ArrowRight className="ml-1 h-4 w-4" />
-              </Link>
-            </Button>
-          ))}
         <Button variant="outline" onClick={onImportMore} className="flex-1">
           <RotateCcw className="mr-1 h-4 w-4" />
           {t('result.importMore')}
