@@ -107,7 +107,8 @@
     "weeklyRemaining": "Weekly remaining AI analyses",
     "nextWeek": "Next week",
     "otherCategory": "Other",
-    "underDevelopment": "Under Development"
+    "underDevelopment": "Under Development",
+    "argumentComingSoon": "Argument analysis is under development. This feature will automatically extract and categorize investment arguments from posts."
   },
   "chart": {
     "intervals": {

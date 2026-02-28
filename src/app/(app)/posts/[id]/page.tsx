@@ -27,14 +27,8 @@ import {
   getStartDateForRange,
 } from '@/components/charts';
 import type { LineChartMarker, CandleInterval, TimeRange } from '@/components/charts';
-import {
-  usePost,
-  useBookmarkStatus,
-  useToggleBookmark,
-  usePostArguments,
-  useDeletePost,
-} from '@/hooks';
-import type { TickerArgumentGroup } from '@/components/ai/post-arguments';
+import { usePost, useBookmarkStatus, useToggleBookmark, useDeletePost } from '@/hooks';
+import { ArgumentPlaceholder } from '@/components/ai/argument-placeholder';
 
 const CandlestickChart = dynamic(
   () =>
@@ -51,12 +45,6 @@ const SentimentLineChart = dynamic(
     })),
   { ssr: false }
 );
-
-const PostArguments = dynamic(() =>
-  import('@/components/ai/post-arguments').then((mod) => ({ default: mod.PostArguments }))
-);
-import { FRAMEWORK_CATEGORIES } from '@/domain/models/argument-categories';
-import type { PostArgumentResponse } from '@/hooks/use-ai';
 import type { Sentiment } from '@/domain/models/post';
 
 function toDateString(postedAt: Date | string): string {
@@ -231,43 +219,6 @@ function PostStockChart({
   );
 }
 
-/**
- * Transform PostArgumentResponse[] to TickerArgumentGroup[] by grouping by stockId
- */
-function transformPostArguments(
-  args: PostArgumentResponse[],
-  stocks: { id: string; ticker: string; name: string }[],
-  fallbackParentName: string
-): TickerArgumentGroup[] {
-  const stockMap = new Map(stocks.map((s) => [s.id, s]));
-  const grouped = new Map<string, PostArgumentResponse[]>();
-  for (const arg of args) {
-    const existing = grouped.get(arg.stockId) || [];
-    existing.push(arg);
-    grouped.set(arg.stockId, existing);
-  }
-  return Array.from(grouped.entries()).map(([stockId, stockArgs]) => {
-    const stock = stockMap.get(stockId);
-    return {
-      ticker: stock?.ticker ?? 'Unknown',
-      name: stock?.name ?? '',
-      arguments: stockArgs.map((arg) => {
-        const fw = FRAMEWORK_CATEGORIES[arg.category.code];
-        return {
-          id: arg.id,
-          categoryCode: arg.category.code,
-          categoryName: fw?.name ?? arg.category.name,
-          parentName: fw?.parentName ?? fallbackParentName,
-          originalText: arg.originalText,
-          summary: arg.summary,
-          sentiment: arg.sentiment as Sentiment,
-          confidence: arg.confidence,
-        };
-      }),
-    };
-  });
-}
-
 export default function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const t = useTranslations('posts');
   const tCommon = useTranslations('common');
@@ -275,7 +226,6 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   const router = useRouter();
   const { id } = use(params);
   const { data: post, isLoading, error } = usePost(id);
-  const { data: postArgs } = usePostArguments(id);
   const { data: bookmarkData } = useBookmarkStatus(id);
   const toggleBookmark = useToggleBookmark(id);
   const deletePost = useDeletePost();
@@ -517,12 +467,8 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
         </div>
       </div>
 
-      {/* Arguments section */}
-      {postArgs && postArgs.length > 0 && (
-        <PostArguments
-          tickerGroups={transformPostArguments(postArgs, post.stocks, tCommon('ai.otherCategory'))}
-        />
-      )}
+      {/* Arguments section — placeholder while feature is under development */}
+      <ArgumentPlaceholder />
     </div>
   );
 }

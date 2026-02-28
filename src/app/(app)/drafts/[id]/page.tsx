@@ -2,7 +2,6 @@
 
 import { use, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useTranslations, useLocale } from 'next-intl';
 import { format } from 'date-fns';
@@ -15,7 +14,6 @@ import {
   Loader2,
   AlertTriangle,
   CheckCircle2,
-  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -44,19 +42,13 @@ import {
   ImageUploader,
   AiTickerSuggestions,
 } from '@/components/forms';
-import type { TickerArgumentGroup } from '@/components/ai/post-arguments';
-import { FRAMEWORK_CATEGORIES } from '@/domain/models/argument-categories';
-
-const PostArguments = dynamic(() =>
-  import('@/components/ai/post-arguments').then((mod) => ({ default: mod.PostArguments }))
-);
+import { ArgumentPlaceholder } from '@/components/ai/argument-placeholder';
 import type {
   KOLSearchResult,
   StockSearchResult,
   Sentiment,
   CreatePostInput,
   DraftWithRelations,
-  DraftAiArguments,
 } from '@/domain/models';
 import { useCreatePost, useCheckDuplicateUrl } from '@/hooks/use-posts';
 import { detectPlatform } from '@/lib/utils/format';
@@ -70,7 +62,6 @@ import {
   getSupportedPlatform,
   getSupportedPlatformNames,
 } from '@/hooks';
-import { useExtractDraftArguments } from '@/hooks/use-ai';
 import type { IdentifiedTicker } from '@/hooks/use-ai';
 import { API_ROUTES } from '@/lib/constants/routes';
 import { toast } from 'sonner';
@@ -97,32 +88,6 @@ function parseStockNameInputs(inputs: string[]): IdentifiedTicker[] {
       return null;
     })
     .filter((t): t is IdentifiedTicker => t !== null);
-}
-
-/**
- * Transform DraftAiArguments[] to TickerArgumentGroup[] for PostArguments
- */
-function transformAiArguments(
-  aiArguments: DraftAiArguments[],
-  fallbackParentName: string
-): TickerArgumentGroup[] {
-  return aiArguments.map((stockArgs) => ({
-    ticker: stockArgs.ticker,
-    name: stockArgs.name,
-    arguments: stockArgs.arguments.map((arg, i) => {
-      const category = FRAMEWORK_CATEGORIES[arg.categoryCode];
-      return {
-        id: `${stockArgs.ticker}-${arg.categoryCode}-${i}`,
-        categoryCode: arg.categoryCode,
-        categoryName: category?.name ?? arg.categoryCode,
-        parentName: category?.parentName ?? fallbackParentName,
-        originalText: arg.originalText,
-        summary: arg.summary,
-        sentiment: arg.sentiment,
-        confidence: arg.confidence,
-      };
-    }),
-  }));
 }
 
 // 表單組件 - 接收 draft 作為 prop，使用 key 來重置狀態
@@ -197,37 +162,6 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
   const [tickerSuggestions, setTickerSuggestions] = useState<IdentifiedTicker[]>(() =>
     parseStockNameInputs(draft.stockNameInputs ?? [])
   );
-
-  // AI arguments from draft
-  const displayArguments = useMemo(
-    () =>
-      draft.aiArguments ? transformAiArguments(draft.aiArguments, tCommon('ai.otherCategory')) : [],
-    [draft.aiArguments, tCommon]
-  );
-
-  // AI argument extraction
-  const extractDraftArgs = useExtractDraftArguments();
-
-  const handleExtractArguments = async () => {
-    if (!content.trim() || selectedStocks.length === 0) return;
-    try {
-      const result = await extractDraftArgs.mutateAsync({
-        content: content.trim(),
-        stocks: selectedStocks.map((s) => ({ ticker: s.ticker, name: s.name })),
-      });
-      if (result.arguments.length > 0) {
-        await updateDraft.mutateAsync({ aiArguments: result.arguments });
-        toast.success(t('detail.ai.analyzeSuccess'));
-      } else {
-        toast.info(t('detail.ai.noArguments'));
-      }
-    } catch (error) {
-      toast.error(t('detail.ai.analyzeFailed'), {
-        description:
-          error instanceof Error ? error.message : t('detail.ai.analyzeFailedDescription'),
-      });
-    }
-  };
 
   // Auto-save state
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
@@ -823,36 +757,8 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
         </Card>
       )}
 
-      {/* AI Argument Analysis */}
-      {selectedStocks.length > 0 && content.trim() && (
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            onClick={handleExtractArguments}
-            disabled={extractDraftArgs.isPending}
-          >
-            {extractDraftArgs.isPending ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="mr-2 h-4 w-4" />
-            )}
-            {extractDraftArgs.isPending
-              ? t('detail.ai.analyzing')
-              : t('detail.ai.analyzeArguments')}
-          </Button>
-          <Badge variant="outline" className="text-muted-foreground text-[10px] font-normal">
-            {tCommon('ai.underDevelopment')}
-          </Badge>
-          {displayArguments.length > 0 && (
-            <span className="text-muted-foreground text-sm">
-              {t('detail.ai.argumentCount', {
-                count: displayArguments.reduce((sum, g) => sum + g.arguments.length, 0),
-              })}
-            </span>
-          )}
-        </div>
-      )}
-      {displayArguments.length > 0 && <PostArguments tickerGroups={displayArguments} />}
+      {/* AI Argument Analysis — placeholder while feature is under development */}
+      <ArgumentPlaceholder />
 
       {/* KOL Form Dialog */}
       <KOLFormDialog

@@ -107,7 +107,8 @@
     "weeklyRemaining": "本週剩餘 AI 分析次數",
     "nextWeek": "下週",
     "otherCategory": "其他",
-    "underDevelopment": "開發中"
+    "underDevelopment": "開發中",
+    "argumentComingSoon": "論點分析功能開發中。此功能將自動從文章中提取並分類投資論點。"
   },
   "chart": {
     "intervals": {

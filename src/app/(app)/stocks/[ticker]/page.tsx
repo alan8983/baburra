@@ -17,7 +17,7 @@ import { sentimentKey } from '@/lib/utils/sentiment';
 import { useColorPalette } from '@/lib/colors/color-palette-context';
 import { recolorVolumes } from '@/lib/colors/financial-colors';
 import { PriceChangeBadge } from '@/components/shared/price-change-badge';
-import { StockArgumentsTab } from '@/components/ai/stock-arguments-tab';
+import { ArgumentPlaceholder } from '@/components/ai/argument-placeholder';
 import { useStockPricesForChart } from '@/hooks/use-stock-prices';
 import {
   ChartToolbar,
@@ -353,8 +353,8 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
 
       {/* Bottom 2-column: Arguments + Posts */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Left: Arguments */}
-        <StockArgumentsTab ticker={decodedTicker} />
+        {/* Left: Arguments — placeholder while feature is under development */}
+        <ArgumentPlaceholder />
 
         {/* Right: Posts list */}
         <Card className="flex flex-col">
