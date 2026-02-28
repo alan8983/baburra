@@ -97,7 +97,10 @@ describe('stock-price.repository', () => {
 
   describe('getStockPrices', () => {
     it('should return data from Supabase cache when valid (historical dates)', async () => {
-      setupMockChain({ data: { id: STOCK_ID }, error: null }, { data: dbRows, error: null });
+      setupMockChain(
+        { data: { id: STOCK_ID, market: 'US' }, error: null },
+        { data: dbRows, error: null }
+      );
 
       const result = await getStockPrices('AAPL', {
         startDate: '2025-01-02',
@@ -118,7 +121,7 @@ describe('stock-price.repository', () => {
 
     it('should fetch from Tiingo and cache on cache miss', async () => {
       setupMockChain(
-        { data: { id: STOCK_ID }, error: null },
+        { data: { id: STOCK_ID, market: 'US' }, error: null },
         { data: [], error: null },
         { error: null }
       );
@@ -132,6 +135,7 @@ describe('stock-price.repository', () => {
       expect(fetchTiingoPrices).toHaveBeenCalledWith('AAPL', {
         startDate: '2025-01-02',
         endDate: '2025-01-03',
+        market: 'US',
       });
       expect(result.candles).toHaveLength(2);
       expect(result.candles[0].close).toBe(105);
@@ -157,7 +161,7 @@ describe('stock-price.repository', () => {
       ];
 
       setupMockChain(
-        { data: { id: STOCK_ID }, error: null },
+        { data: { id: STOCK_ID, market: 'US' }, error: null },
         { data: todayDbRows, error: null },
         { error: null }
       );
@@ -211,7 +215,7 @@ describe('stock-price.repository', () => {
       ];
 
       setupMockChain(
-        { data: { id: STOCK_ID }, error: null },
+        { data: { id: STOCK_ID, market: 'US' }, error: null },
         { data: staleWithToday, error: null }
       );
       vi.mocked(fetchTiingoPrices).mockRejectedValueOnce(new Error('Tiingo API error 500'));
@@ -225,7 +229,10 @@ describe('stock-price.repository', () => {
     });
 
     it('should throw when Tiingo fails and no stale cache exists', async () => {
-      setupMockChain({ data: { id: STOCK_ID }, error: null }, { data: [], error: null });
+      setupMockChain(
+        { data: { id: STOCK_ID, market: 'US' }, error: null },
+        { data: [], error: null }
+      );
       vi.mocked(fetchTiingoPrices).mockRejectedValueOnce(new Error('Tiingo API error 500'));
 
       await expect(
@@ -249,7 +256,10 @@ describe('stock-price.repository', () => {
         },
       ];
 
-      setupMockChain({ data: { id: STOCK_ID }, error: null }, { data: freshDbRows, error: null });
+      setupMockChain(
+        { data: { id: STOCK_ID, market: 'US' }, error: null },
+        { data: freshDbRows, error: null }
+      );
 
       const result = await getStockPrices('AAPL', {
         startDate: '2025-01-10',

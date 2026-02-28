@@ -11,6 +11,7 @@
     "bearish": "看空",
     "stronglyBearish": "強烈看空"
   },
+  "newCount": "{count} 則新文章",
   "loading": "載入中...",
   "empty": {
     "noPosts": "尚無文章",

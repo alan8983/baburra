@@ -5,6 +5,7 @@
 
 import { NextResponse } from 'next/server';
 import { getArgumentCategories } from '@/infrastructure/repositories/argument.repository';
+import { internalError } from '@/lib/api/error';
 
 export async function GET() {
   try {
@@ -36,10 +37,6 @@ export async function GET() {
 
     return NextResponse.json(result);
   } catch (error) {
-    console.error('Get argument categories error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Internal server error' },
-      { status: 500 }
-    );
+    return internalError(error, 'Failed to fetch argument categories');
   }
 }

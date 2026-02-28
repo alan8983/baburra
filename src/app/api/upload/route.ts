@@ -2,6 +2,13 @@
 
 import { NextResponse } from 'next/server';
 import { createServerSupabaseClient, getCurrentUserId } from '@/infrastructure/supabase';
+import {
+  unauthorizedError,
+  badRequestError,
+  forbiddenError,
+  internalError,
+  errorResponse,
+} from '@/lib/api/error';
 
 const BUCKET_NAME = 'images';
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -11,30 +18,24 @@ export async function POST(request: Request) {
   try {
     const userId = await getCurrentUserId();
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return unauthorizedError();
     }
 
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
 
     if (!file) {
-      return NextResponse.json({ error: 'No file provided' }, { status: 400 });
+      return badRequestError('No file provided');
     }
 
     // 驗證檔案類型
     if (!ALLOWED_TYPES.includes(file.type)) {
-      return NextResponse.json(
-        { error: `Invalid file type. Allowed: ${ALLOWED_TYPES.join(', ')}` },
-        { status: 400 }
-      );
+      return badRequestError(`Invalid file type. Allowed: ${ALLOWED_TYPES.join(', ')}`);
     }
 
     // 驗證檔案大小
     if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { error: `File too large. Max size: ${MAX_FILE_SIZE / 1024 / 1024}MB` },
-        { status: 400 }
-      );
+      return badRequestError(`File too large. Max size: ${MAX_FILE_SIZE / 1024 / 1024}MB`);
     }
 
     // 生成唯一檔名
@@ -54,8 +55,7 @@ export async function POST(request: Request) {
     });
 
     if (error) {
-      console.error('Upload error:', error);
-      return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
+      return errorResponse(500, 'UPLOAD_FAILED', 'Upload failed');
     }
 
     // 取得公開 URL
@@ -66,8 +66,7 @@ export async function POST(request: Request) {
       path: data.path,
     });
   } catch (error) {
-    console.error('Upload error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return internalError(error, 'Upload failed');
   }
 }
 
@@ -76,14 +75,14 @@ export async function DELETE(request: Request) {
   try {
     const userId = await getCurrentUserId();
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return unauthorizedError();
     }
 
     const { searchParams } = new URL(request.url);
     const path = searchParams.get('path');
 
     if (!path) {
-      return NextResponse.json({ error: 'No path provided' }, { status: 400 });
+      return badRequestError('No path provided');
     }
 
     const normalizedPath = path
@@ -98,20 +97,18 @@ export async function DELETE(request: Request) {
       normalizedPath.includes('\\') ||
       !normalizedPath.startsWith(`${userId}/`)
     ) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      return forbiddenError();
     }
 
     const supabase = await createServerSupabaseClient();
     const { error } = await supabase.storage.from(BUCKET_NAME).remove([normalizedPath]);
 
     if (error) {
-      console.error('Delete error:', error);
-      return NextResponse.json({ error: 'Delete failed' }, { status: 500 });
+      return errorResponse(500, 'DELETE_FAILED', 'Delete failed');
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Delete error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return internalError(error, 'Delete failed');
   }
 }

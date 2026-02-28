@@ -5,14 +5,18 @@
  * 以標的分組、卡片網格呈現 AI 提取的投資論點
  */
 
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { SENTIMENT_COLORS, type Sentiment } from '@/domain/models/post';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import { type Sentiment } from '@/domain/models/post';
 import { sentimentKey } from '@/lib/utils/sentiment';
 import { CATEGORY_ICONS } from '@/domain/models/argument-categories';
 import { cn } from '@/lib/utils';
+import { useColorPalette } from '@/lib/colors/color-palette-context';
+import type { FinancialColors } from '@/lib/colors/financial-colors';
 
 // =====================
 // Types (exported for consumers)
@@ -41,16 +45,22 @@ interface PostArgumentsProps {
 }
 
 // =====================
-// Sentiment border colors
+// Palette-aware color helpers
 // =====================
 
-const SENTIMENT_BORDER: Record<Sentiment, string> = {
-  [-2]: 'border-l-red-600',
-  [-1]: 'border-l-red-400',
-  [0]: 'border-l-gray-300',
-  [1]: 'border-l-green-400',
-  [2]: 'border-l-green-600',
-};
+function getSentimentBorderColor(sentiment: Sentiment, colors: FinancialColors): string {
+  if (sentiment >= 2) return colors.bullish.textStrong.replace('text-', 'border-l-');
+  if (sentiment >= 1) return colors.bullish.textLight.replace('text-', 'border-l-');
+  if (sentiment === 0) return 'border-l-gray-300';
+  if (sentiment >= -1) return colors.bearish.textLight.replace('text-', 'border-l-');
+  return colors.bearish.textStrong.replace('text-', 'border-l-');
+}
+
+function getSentimentTextColor(sentiment: Sentiment, colors: FinancialColors): string {
+  if (sentiment > 0) return colors.bullish.text;
+  if (sentiment < 0) return colors.bearish.text;
+  return colors.neutral.text;
+}
 
 // =====================
 // Main component
@@ -62,7 +72,12 @@ export function PostArguments({ tickerGroups, className }: PostArgumentsProps) {
   if (!tickerGroups || tickerGroups.length === 0) {
     return (
       <div className={cn('rounded-lg border p-6', className)}>
-        <h3 className="text-base font-semibold">{t('ai.argumentAnalysis')}</h3>
+        <h3 className="flex items-center gap-2 text-base font-semibold">
+          {t('ai.argumentAnalysis')}
+          <Badge variant="outline" className="text-muted-foreground text-[10px] font-normal">
+            {t('ai.underDevelopment')}
+          </Badge>
+        </h3>
         <p className="text-muted-foreground mt-2 text-sm">{t('ai.noArguments')}</p>
       </div>
     );
@@ -77,6 +92,9 @@ export function PostArguments({ tickerGroups, className }: PostArgumentsProps) {
         <h3 className="flex items-center gap-2 text-base font-semibold">
           <span>🧠</span>
           <span>{t('ai.argumentAnalysis')}</span>
+          <Badge variant="outline" className="text-muted-foreground text-[10px] font-normal">
+            {t('ai.underDevelopment')}
+          </Badge>
         </h3>
         <Badge variant="secondary">{t('ai.argumentCount', { count: totalCount })}</Badge>
       </div>
@@ -97,6 +115,8 @@ export function PostArguments({ tickerGroups, className }: PostArgumentsProps) {
 // =====================
 
 function TickerSection({ group }: { group: TickerArgumentGroup }) {
+  const [isExpanded, setIsExpanded] = useState(true);
+
   // Group by parentName within this ticker
   const byParent = group.arguments.reduce(
     (acc, arg) => {
@@ -110,26 +130,38 @@ function TickerSection({ group }: { group: TickerArgumentGroup }) {
 
   return (
     <div className="space-y-4">
-      {/* Ticker header */}
-      <div className="flex items-center gap-2">
+      {/* Ticker header — clickable to collapse/expand */}
+      <button
+        type="button"
+        className="flex w-full items-center gap-2"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
         <Badge variant="outline" className="text-sm font-semibold">
           {group.ticker}
         </Badge>
         <span className="text-muted-foreground text-sm">{group.name}</span>
         <span className="text-muted-foreground text-xs">({group.arguments.length})</span>
-      </div>
+        {isExpanded ? (
+          <ChevronUp className="text-muted-foreground ml-auto h-4 w-4" />
+        ) : (
+          <ChevronDown className="text-muted-foreground ml-auto h-4 w-4" />
+        )}
+      </button>
 
       {/* Category sub-groups with card grids */}
-      {Object.entries(byParent).map(([parentName, args]) => (
-        <div key={parentName} className="space-y-2">
-          <h4 className="text-muted-foreground text-xs font-medium tracking-wide">{parentName}</h4>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            {args.map((arg) => (
-              <ArgumentCard key={arg.id} argument={arg} />
-            ))}
+      {isExpanded &&
+        Object.entries(byParent).map(([parentName, args]) => (
+          <div key={parentName} className="space-y-2">
+            <h4 className="text-muted-foreground text-xs font-medium tracking-wide">
+              {parentName}
+            </h4>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+              {args.map((arg) => (
+                <ArgumentCard key={arg.id} argument={arg} />
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
     </div>
   );
 }
@@ -140,10 +172,11 @@ function TickerSection({ group }: { group: TickerArgumentGroup }) {
 
 function ArgumentCard({ argument }: { argument: ArgumentItem }) {
   const t = useTranslations('common');
+  const { colors } = useColorPalette();
   const icon = CATEGORY_ICONS[argument.categoryCode] || '📌';
-  const borderColor = SENTIMENT_BORDER[argument.sentiment];
+  const borderColor = getSentimentBorderColor(argument.sentiment, colors);
   const sentimentLabel = t(`sentiment.${sentimentKey(argument.sentiment)}`);
-  const sentimentTextColor = SENTIMENT_COLORS[argument.sentiment]?.split(' ')[0] || '';
+  const sentimentTextColor = getSentimentTextColor(argument.sentiment, colors);
 
   const hasDetails = argument.originalText || argument.confidence !== null;
 

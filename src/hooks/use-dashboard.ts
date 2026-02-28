@@ -5,6 +5,7 @@
 import { useQuery } from '@tanstack/react-query';
 import type { PostWithPriceChanges } from '@/domain/models';
 import { API_ROUTES } from '@/lib/constants';
+import { throwIfNotOk } from '@/lib/api/fetch-error';
 
 // Dashboard 資料型別
 export interface DashboardStats {
@@ -19,6 +20,7 @@ export interface DashboardStats {
 }
 
 export interface TopKol {
+  id: string;
   name: string;
   postCount: number;
   lastPostAt: string | null;
@@ -41,7 +43,7 @@ export function useDashboard() {
     queryKey: dashboardKeys.all,
     queryFn: async (): Promise<DashboardData> => {
       const res = await fetch(API_ROUTES.DASHBOARD);
-      if (!res.ok) throw new Error('Failed to fetch dashboard data');
+      await throwIfNotOk(res);
       return res.json();
     },
     staleTime: 5 * 60 * 1000, // 5 分鐘 - 與全域預設一致

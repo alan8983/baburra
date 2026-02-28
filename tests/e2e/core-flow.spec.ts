@@ -17,7 +17,6 @@ const TEST_STOCK_TICKER = 'AAPL';
 
 let testDraftId: string | null = null;
 let testPostId: string | null = null;
-let testKolId: string | null = null;
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -31,7 +30,7 @@ test.describe('草稿編輯與發布流程', () => {
     const supabase = getSupabase();
 
     // 建立或查詢測試用 KOL
-    const { data: kolData, error: kolError } = await supabase
+    const { error: kolError } = await supabase
       .from('kols')
       .insert({
         name: TEST_KOL_NAME,
@@ -41,17 +40,8 @@ test.describe('草稿編輯與發布流程', () => {
       .select()
       .single();
 
-    if (kolError?.message?.includes('duplicate')) {
-      const { data: existing } = await supabase
-        .from('kols')
-        .select('id')
-        .eq('name', TEST_KOL_NAME)
-        .single();
-      testKolId = existing?.id || null;
-    } else if (kolError) {
+    if (kolError && !kolError.message?.includes('duplicate')) {
       throw new Error(`Failed to create test KOL: ${kolError.message}`);
-    } else {
-      testKolId = kolData?.id || null;
     }
 
     // 確保測試用 Stock 存在

@@ -6,7 +6,6 @@ import {
   createChart,
   ColorType,
   AreaSeries,
-  createSeriesMarkers,
   type MouseEventParams,
   type Time,
 } from 'lightweight-charts';
@@ -15,6 +14,7 @@ import type { Sentiment } from '@/domain/models/post';
 import { sentimentKey } from '@/lib/utils/sentiment';
 import { useColorPalette } from '@/lib/colors/color-palette-context';
 import { resolveThemeColors } from './chart-utils';
+import { TriangleMarkersPrimitive } from './triangle-markers-primitive';
 
 export interface LineChartMarker {
   time: string;
@@ -60,6 +60,22 @@ export function SentimentLineChart({
   useEffect(() => {
     markersByTimeRef.current = markersByTime;
   }, [markersByTime]);
+
+  // Refs for values used inside the chart effect but that should not trigger chart re-creation
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
+
+  const sentimentMarkerHexRef = useRef(sentimentMarkerHex);
+  useEffect(() => {
+    sentimentMarkerHexRef.current = sentimentMarkerHex;
+  }, [sentimentMarkerHex]);
+
+  const sentimentMarkersRef = useRef(sentimentMarkers);
+  useEffect(() => {
+    sentimentMarkersRef.current = sentimentMarkers;
+  }, [sentimentMarkers]);
 
   const handleClick = useCallback(
     (param: MouseEventParams<Time>) => {
@@ -120,16 +136,20 @@ export function SentimentLineChart({
     const lineData = candles.map((c) => ({ time: c.time, value: c.close }));
     areaSeries.setData(lineData);
 
-    // Add sentiment markers on the line
-    if (sentimentMarkers.length > 0) {
-      const markers = sentimentMarkers.map((m) => ({
-        time: m.time as string,
-        position: 'inBar' as const,
-        shape: 'circle' as const,
-        color: sentimentMarkerHex[m.sentiment] ?? '#6b7280',
-        size: 2,
-      }));
-      createSeriesMarkers(areaSeries, markers);
+    // Add custom triangle sentiment markers via canvas primitive
+    const currentMarkers = sentimentMarkersRef.current;
+    const currentHex = sentimentMarkerHexRef.current;
+    if (currentMarkers.length > 0) {
+      const trianglePrimitive = new TriangleMarkersPrimitive();
+      trianglePrimitive.setPriceData(candles.map((c) => ({ time: c.time, close: c.close })));
+      trianglePrimitive.setData(
+        currentMarkers.map((m) => ({
+          time: m.time,
+          sentiment: m.sentiment,
+          color: currentHex[m.sentiment] ?? '#6b7280',
+        }))
+      );
+      areaSeries.attachPrimitive(trianglePrimitive);
     }
 
     // Hover tooltip via crosshair move
@@ -148,10 +168,10 @@ export function SentimentLineChart({
         return;
       }
 
-      // Build tooltip content
+      // Build tooltip content (uses refs for latest values without triggering effect re-runs)
       const lines = matched.map((m) => {
-        const label = t(`sentiment.${sentimentKey(m.sentiment)}`);
-        const color = sentimentMarkerHex[m.sentiment] ?? '#6b7280';
+        const label = tRef.current(`sentiment.${sentimentKey(m.sentiment)}`);
+        const color = sentimentMarkerHexRef.current[m.sentiment] ?? '#6b7280';
         const name = m.text ?? '';
         return `<div class="flex items-center gap-1.5"><span style="background:${color}" class="inline-block h-2.5 w-2.5 rounded-full"></span><span class="font-medium">${name}</span><span class="text-muted-foreground">${label}</span></div>`;
       });
@@ -180,7 +200,7 @@ export function SentimentLineChart({
       chart.remove();
       chartRef.current = null;
     };
-  }, [candles, sentimentMarkers, height, handleClick, sentimentMarkerHex]);
+  }, [candles, height, handleClick]);
 
   return (
     <div className="relative">
@@ -212,10 +232,30 @@ function SentimentLineLegend() {
     <div className="mt-2 flex flex-wrap justify-center gap-4 text-xs">
       {levels.map((l) => (
         <span key={l.sentiment} className="flex items-center gap-1.5">
-          <span
-            className="inline-block h-2.5 w-2.5 rounded-full"
-            style={{ backgroundColor: l.color }}
-          />
+          {l.sentiment > 0 ? (
+            <span
+              className="inline-block h-0 w-0"
+              style={{
+                borderLeft: '5px solid transparent',
+                borderRight: '5px solid transparent',
+                borderBottom: `8px solid ${l.color}`,
+              }}
+            />
+          ) : l.sentiment < 0 ? (
+            <span
+              className="inline-block h-0 w-0"
+              style={{
+                borderLeft: '5px solid transparent',
+                borderRight: '5px solid transparent',
+                borderTop: `8px solid ${l.color}`,
+              }}
+            />
+          ) : (
+            <span
+              className="inline-block h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: l.color }}
+            />
+          )}
           <span className="text-muted-foreground">
             {t(`sentiment.${sentimentKey(l.sentiment)}`)}
           </span>

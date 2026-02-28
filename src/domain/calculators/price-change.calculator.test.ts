@@ -51,21 +51,29 @@ describe('price-change.calculator', () => {
 
       // 基準價 100，5天後 105 = +5%
       expect(result.day5).toBe(5);
+      expect(result.day5Status).toBe('value');
       // 基準價 100，30天後 115 = +15%
       expect(result.day30).toBe(15);
+      expect(result.day30Status).toBe('value');
       // 基準價 100，90天後 90 = -10%
       expect(result.day90).toBe(-10);
-      // 365 天尚未到達（期間未到），回傳 null
+      expect(result.day90Status).toBe('value');
+      // 365 天尚未到達（期間未到），回傳 null + pending
       expect(result.day365).toBeNull();
+      expect(result.day365Status).toBe('pending');
     });
 
     it('處理空的 K 線資料', () => {
       const result = calculatePriceChanges([], new Date('2026-01-01'));
 
       expect(result.day5).toBeNull();
+      expect(result.day5Status).toBe('no_data');
       expect(result.day30).toBeNull();
+      expect(result.day30Status).toBe('no_data');
       expect(result.day90).toBeNull();
+      expect(result.day90Status).toBe('no_data');
       expect(result.day365).toBeNull();
+      expect(result.day365Status).toBe('no_data');
     });
 
     it('處理找不到基準日期的情況', () => {
@@ -147,6 +155,10 @@ describe('price-change.calculator', () => {
         day30: null,
         day90: null,
         day365: null,
+        day5Status: 'no_data',
+        day30Status: 'no_data',
+        day90Status: 'no_data',
+        day365Status: 'no_data',
       });
     });
   });

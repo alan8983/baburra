@@ -10,6 +10,7 @@ import type {
   UpdateDraftInput,
 } from '@/domain/models';
 import { API_ROUTES } from '@/lib/constants';
+import { throwIfNotOk } from '@/lib/api/fetch-error';
 
 // Query Keys
 export const draftKeys = {
@@ -31,7 +32,7 @@ export function useDrafts(params?: { page?: number; limit?: number }) {
       if (params?.limit) searchParams.set('limit', params.limit.toString());
       const url = `${API_ROUTES.DRAFTS}?${searchParams.toString()}`;
       const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch drafts');
+      await throwIfNotOk(res);
       return res.json();
     },
     staleTime: 2 * 60 * 1000,
@@ -45,7 +46,7 @@ export function useDraft(id: string) {
     queryKey: draftKeys.detail(id),
     queryFn: async (): Promise<DraftWithRelations> => {
       const res = await fetch(API_ROUTES.DRAFT_DETAIL(id));
-      if (!res.ok) throw new Error('Failed to fetch draft');
+      await throwIfNotOk(res);
       return res.json();
     },
     enabled: !!id,
@@ -79,7 +80,7 @@ export function useCreateDraft() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
       });
-      if (!res.ok) throw new Error('Failed to create draft');
+      await throwIfNotOk(res);
       return res.json();
     },
     onSuccess: () => {
@@ -99,7 +100,7 @@ export function useUpdateDraft(id: string) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
       });
-      if (!res.ok) throw new Error('Failed to update draft');
+      await throwIfNotOk(res);
       return res.json();
     },
     onSuccess: () => {
@@ -115,7 +116,7 @@ export function useDeleteDraft() {
   return useMutation({
     mutationFn: async (id: string): Promise<void> => {
       const res = await fetch(API_ROUTES.DRAFT_DETAIL(id), { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete draft');
+      await throwIfNotOk(res);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: draftKeys.lists() });

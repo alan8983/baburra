@@ -92,8 +92,11 @@ export class YouTubeExtractor extends SocialMediaExtractor {
       } as ExtractorError;
     }
 
-    // 1. Fetch oEmbed metadata
-    const metadata = await this.fetchOEmbed(url, timeout);
+    // 1. Fetch oEmbed metadata + publish date in parallel
+    const [metadata, publishDate] = await Promise.all([
+      this.fetchOEmbed(url, timeout),
+      this.fetchPublishDate(videoId, timeout),
+    ]);
 
     // 2. Fetch transcript
     let transcriptText: string;
@@ -121,10 +124,52 @@ export class YouTubeExtractor extends SocialMediaExtractor {
       sourcePlatform: 'youtube',
       title: metadata.title || null,
       images: metadata.thumbnail_url ? [metadata.thumbnail_url] : [],
-      postedAt: null,
+      postedAt: publishDate,
       kolName: metadata.author_name || null,
       kolAvatarUrl: null,
     };
+  }
+
+  /**
+   * Fetch the YouTube video page HTML and extract the publish date from meta tags.
+   * Returns an ISO 8601 date string or null if extraction fails.
+   */
+  private async fetchPublishDate(videoId: string, timeout: number): Promise<string | null> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    try {
+      const response = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; bot)',
+          Accept: 'text/html',
+        },
+      });
+
+      if (!response.ok) return null;
+
+      const html = await response.text();
+
+      // Try <meta itemprop="datePublished" content="YYYY-MM-DD">
+      const metaMatch = html.match(/<meta\s+itemprop="datePublished"\s+content="([^"]+)"/);
+      if (metaMatch) return metaMatch[1];
+
+      // Try JSON-LD "datePublished"
+      const jsonLdMatch = html.match(/"datePublished"\s*:\s*"([^"]+)"/);
+      if (jsonLdMatch) return jsonLdMatch[1];
+
+      // Try "uploadDate" from JSON-LD
+      const uploadMatch = html.match(/"uploadDate"\s*:\s*"([^"]+)"/);
+      if (uploadMatch) return uploadMatch[1];
+
+      return null;
+    } catch {
+      // Non-critical — fall back to null silently
+      return null;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   private async fetchOEmbed(url: string, timeout: number): Promise<YouTubeOEmbedResponse> {

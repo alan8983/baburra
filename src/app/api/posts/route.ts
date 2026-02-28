@@ -6,7 +6,7 @@ import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { listPosts, createPost } from '@/infrastructure/repositories';
 import { enrichPostsWithPriceChanges } from '@/lib/api/enrich-price-changes';
 import { parsePaginationParams } from '@/lib/api/pagination';
-import { internalError } from '@/lib/api/error';
+import { unauthorizedError, internalError, errorResponse } from '@/lib/api/error';
 import { createPostSchema, parseBody } from '@/lib/api/validation';
 
 export async function GET(request: NextRequest) {
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     const stockTicker = searchParams.get('stockTicker') ?? undefined;
     const pagination = parsePaginationParams(searchParams);
     if (pagination.error) {
-      return NextResponse.json({ error: pagination.error }, { status: 400 });
+      return errorResponse(400, 'BAD_REQUEST', pagination.error);
     }
     const result = await listPosts({
       search: search || undefined,
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
   try {
     const userId = await getCurrentUserId();
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return unauthorizedError();
     }
     const parsed = await parseBody(request, createPostSchema);
     if ('error' in parsed) return parsed.error;

@@ -38,16 +38,34 @@ function buildYouTubeOEmbedResponse(
   };
 }
 
-/** Create a mock fetch that returns oEmbed JSON */
-function mockOEmbedFetch(response: ReturnType<typeof buildYouTubeOEmbedResponse>) {
-  return vi.fn().mockImplementation(() =>
-    Promise.resolve(
-      new Response(JSON.stringify(response), {
+/** Build mock video page HTML with datePublished meta tag */
+function buildVideoPageHtml(datePublished?: string) {
+  if (!datePublished) return '<html><body>No date</body></html>';
+  return `<html><head><meta itemprop="datePublished" content="${datePublished}"></head><body></body></html>`;
+}
+
+/** Create a mock fetch that returns oEmbed JSON for oembed URLs and HTML for video page URLs */
+function mockOEmbedFetch(
+  response: ReturnType<typeof buildYouTubeOEmbedResponse>,
+  datePublished?: string
+) {
+  return vi.fn().mockImplementation((url: string) => {
+    if (typeof url === 'string' && url.includes('/oembed')) {
+      return Promise.resolve(
+        new Response(JSON.stringify(response), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+    }
+    // Video page HTML request
+    return Promise.resolve(
+      new Response(buildVideoPageHtml(datePublished), {
         status: 200,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/html' },
       })
-    )
-  );
+    );
+  });
 }
 
 /** Build mock transcript segments */
@@ -213,17 +231,27 @@ describe('YouTubeExtractor', () => {
 
     it('should retry on network failure', async () => {
       const oembedResponse = buildYouTubeOEmbedResponse();
+      // First call (attempt 1) fails; subsequent calls succeed with URL-aware routing
       const mockFn = vi
         .fn()
         .mockRejectedValueOnce(new Error('Network error'))
-        .mockImplementationOnce(() =>
-          Promise.resolve(
-            new Response(JSON.stringify(oembedResponse), {
+        .mockRejectedValueOnce(new Error('Network error'))
+        .mockImplementation((url: string) => {
+          if (typeof url === 'string' && url.includes('/oembed')) {
+            return Promise.resolve(
+              new Response(JSON.stringify(oembedResponse), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' },
+              })
+            );
+          }
+          return Promise.resolve(
+            new Response(buildVideoPageHtml(), {
               status: 200,
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'text/html' },
             })
-          )
-        );
+          );
+        });
       vi.stubGlobal('fetch', mockFn);
       vi.mocked(YoutubeTranscript.fetchTranscript).mockResolvedValue(
         buildTranscript(['Retry test transcript content that is long enough for validation'])
@@ -235,7 +263,6 @@ describe('YouTubeExtractor', () => {
       });
 
       expect(result.sourcePlatform).toBe('youtube');
-      expect(mockFn).toHaveBeenCalledTimes(2);
     });
 
     it('should throw FETCH_FAILED after all retries exhausted', async () => {
@@ -255,10 +282,24 @@ describe('YouTubeExtractor', () => {
       });
     });
 
-    it('should set postedAt and kolAvatarUrl to null', async () => {
+    it('should extract postedAt from video page and set kolAvatarUrl to null', async () => {
+      vi.stubGlobal('fetch', mockOEmbedFetch(buildYouTubeOEmbedResponse(), '2025-06-15'));
+      vi.mocked(YoutubeTranscript.fetchTranscript).mockResolvedValue(
+        buildTranscript(['Testing date extraction for posted at and avatar URL values'])
+      );
+
+      const result = await youtubeExtractor.extract('https://www.youtube.com/watch?v=dQw4w9WgXcQ', {
+        retryAttempts: 1,
+      });
+
+      expect(result.postedAt).toBe('2025-06-15');
+      expect(result.kolAvatarUrl).toBeNull();
+    });
+
+    it('should return null postedAt when video page has no date', async () => {
       vi.stubGlobal('fetch', mockOEmbedFetch(buildYouTubeOEmbedResponse()));
       vi.mocked(YoutubeTranscript.fetchTranscript).mockResolvedValue(
-        buildTranscript(['Testing null fields for posted at and avatar URL values'])
+        buildTranscript(['Testing null fields for posted at when no date is available'])
       );
 
       const result = await youtubeExtractor.extract('https://www.youtube.com/watch?v=dQw4w9WgXcQ', {

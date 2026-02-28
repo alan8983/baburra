@@ -12,6 +12,7 @@ import type {
   PostWithPriceChanges,
 } from '@/domain/models';
 import { API_ROUTES } from '@/lib/constants';
+import { throwIfNotOk } from '@/lib/api/fetch-error';
 
 import type { ReturnRateStats } from '@/domain/calculators';
 
@@ -42,7 +43,7 @@ export function useStocks(params?: { search?: string; page?: number; limit?: num
 
       const url = `${API_ROUTES.STOCKS}?${searchParams.toString()}`;
       const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch stocks');
+      await throwIfNotOk(res);
       return res.json();
     },
     staleTime: 2 * 60 * 1000,
@@ -56,7 +57,7 @@ export function useStock(ticker: string) {
     queryKey: stockKeys.detail(ticker),
     queryFn: async (): Promise<StockWithStats> => {
       const res = await fetch(API_ROUTES.STOCK_DETAIL(ticker));
-      if (!res.ok) throw new Error('Failed to fetch stock');
+      await throwIfNotOk(res);
       return res.json();
     },
     enabled: !!ticker,
@@ -71,7 +72,7 @@ export function useStockSearch(query: string) {
     queryKey: stockKeys.search(query),
     queryFn: async (): Promise<StockSearchResult[]> => {
       const res = await fetch(`${API_ROUTES.STOCKS}?search=${encodeURIComponent(query)}&limit=10`);
-      if (!res.ok) throw new Error('Failed to search stocks');
+      await throwIfNotOk(res);
       const { data } = await res.json();
       return data;
     },
@@ -91,7 +92,7 @@ export function useStockPosts(ticker: string, params?: { page?: number; limit?: 
       if (params?.limit) searchParams.set('limit', params.limit.toString());
       const url = `${API_ROUTES.STOCK_POSTS(ticker)}?${searchParams.toString()}`;
       const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch stock posts');
+      await throwIfNotOk(res);
       return res.json();
     },
     enabled: !!ticker,
@@ -111,7 +112,7 @@ export function useStockPrices(ticker: string, params?: { startDate?: string; en
 
       const url = `${API_ROUTES.STOCK_PRICES(ticker)}?${searchParams.toString()}`;
       const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch stock prices');
+      await throwIfNotOk(res);
       return res.json();
     },
     enabled: !!ticker,
@@ -131,7 +132,7 @@ export function useCreateStock() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
       });
-      if (!res.ok) throw new Error('Failed to create stock');
+      await throwIfNotOk(res);
       return res.json();
     },
     onSuccess: () => {
@@ -146,7 +147,7 @@ export function useStockReturnRate(ticker: string) {
     queryKey: stockKeys.returnRate(ticker),
     queryFn: async (): Promise<ReturnRateStats> => {
       const res = await fetch(API_ROUTES.STOCK_RETURN_RATE(ticker));
-      if (!res.ok) throw new Error('Failed to fetch stock return rate');
+      await throwIfNotOk(res);
       return res.json();
     },
     enabled: !!ticker,

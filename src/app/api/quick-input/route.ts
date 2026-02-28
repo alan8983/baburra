@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
+import { unauthorizedError, errorResponse, internalError } from '@/lib/api/error';
 import { createDraft, findKolByName } from '@/infrastructure/repositories';
 import { consumeAiQuota } from '@/infrastructure/repositories/ai-usage.repository';
 import { getUserTimezone } from '@/infrastructure/repositories/profile.repository';
@@ -19,32 +20,20 @@ import { extractorFactory } from '@/infrastructure/extractors';
 import { isUrlLike, getSupportedPlatform } from '@/lib/utils/url';
 import type { CreateDraftInput, DraftAiArguments } from '@/domain/models';
 import type { Sentiment } from '@/domain/models/post';
-
-interface QuickInputRequest {
-  content: string;
-}
+import { quickInputSchema, parseBody } from '@/lib/api/validation';
 
 export async function POST(request: NextRequest) {
   try {
     // 1. 驗證身份
     const userId = await getCurrentUserId();
     if (!userId) {
-      return NextResponse.json(
-        { error: { code: 'UNAUTHORIZED', message: 'Please log in' } },
-        { status: 401 }
-      );
+      return unauthorizedError();
     }
 
     // 2. 解析請求
-    const body = (await request.json()) as QuickInputRequest;
-    const content = body.content?.trim();
-
-    if (!content) {
-      return NextResponse.json(
-        { error: { code: 'EMPTY_CONTENT', message: 'Content is required' } },
-        { status: 400 }
-      );
-    }
+    const parsed = await parseBody(request, quickInputSchema);
+    if ('error' in parsed) return parsed.error;
+    const content = parsed.data.content;
 
     // 3. 原子性消耗 AI 配額（先扣再用，避免 race condition）
     try {
@@ -56,10 +45,7 @@ export async function POST(request: NextRequest) {
         'code' in quotaErr &&
         (quotaErr as { code: string }).code === 'AI_QUOTA_EXCEEDED'
       ) {
-        return NextResponse.json(
-          { error: { code: 'AI_QUOTA_EXCEEDED', message: 'AI quota exceeded' } },
-          { status: 429 }
-        );
+        return errorResponse(429, 'AI_QUOTA_EXCEEDED', 'AI quota exceeded');
       }
       throw quotaErr;
     }
@@ -70,10 +56,7 @@ export async function POST(request: NextRequest) {
 
     // 不支援的 URL → 直接回傳錯誤
     if (inputIsUrl && !supportedPlatform) {
-      return NextResponse.json(
-        { error: { code: 'UNSUPPORTED_URL', message: 'This URL platform is not supported' } },
-        { status: 400 }
-      );
+      return errorResponse(400, 'UNSUPPORTED_URL', 'This URL platform is not supported');
     }
 
     // 5. 若為支援的 URL，先擷取內容
@@ -101,7 +84,7 @@ export async function POST(request: NextRequest) {
           fetchError && typeof fetchError === 'object' && 'message' in fetchError
             ? (fetchError as { message: string }).message
             : 'Failed to fetch URL content';
-        return NextResponse.json({ error: { code, message } }, { status: 400 });
+        return errorResponse(400, code, message);
       }
     }
 
@@ -200,15 +183,6 @@ export async function POST(request: NextRequest) {
     const warning = aiAnalyzed && aiStockTickers.length === 0 ? 'no_tickers_identified' : undefined;
     return NextResponse.json({ draft: { id: draft.id }, warning });
   } catch (error) {
-    console.error('POST /api/quick-input error:', error);
-    return NextResponse.json(
-      {
-        error: {
-          code: 'INTERNAL_ERROR',
-          message: error instanceof Error ? error.message : 'Internal server error',
-        },
-      },
-      { status: 500 }
-    );
+    return internalError(error, 'Quick input failed');
   }
 }

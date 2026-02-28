@@ -11,6 +11,7 @@ import type {
   UpdatePostInput,
 } from '@/domain/models';
 import { API_ROUTES } from '@/lib/constants';
+import { throwIfNotOk } from '@/lib/api/fetch-error';
 
 // Query Keys
 export const postKeys = {
@@ -43,7 +44,7 @@ export function usePosts(params?: {
 
       const url = `${API_ROUTES.POSTS}?${searchParams.toString()}`;
       const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch posts');
+      await throwIfNotOk(res);
       return res.json();
     },
     staleTime: 2 * 60 * 1000,
@@ -57,7 +58,7 @@ export function usePost(id: string) {
     queryKey: postKeys.detail(id),
     queryFn: async (): Promise<PostWithPriceChanges> => {
       const res = await fetch(API_ROUTES.POST_DETAIL(id));
-      if (!res.ok) throw new Error('Failed to fetch post');
+      await throwIfNotOk(res);
       return res.json();
     },
     enabled: !!id,
@@ -72,7 +73,7 @@ export function useCheckDuplicateUrl(url: string) {
     queryKey: ['posts', 'checkDuplicate', url],
     queryFn: async (): Promise<{ isDuplicate: boolean; existingPost?: PostWithRelations }> => {
       const res = await fetch(`${API_ROUTES.POST_CHECK_DUPLICATE}?url=${encodeURIComponent(url)}`);
-      if (!res.ok) throw new Error('Failed to check duplicate');
+      await throwIfNotOk(res);
       return res.json();
     },
     enabled: !!url && url.startsWith('http'),
@@ -92,7 +93,7 @@ export function useCreatePost() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
       });
-      if (!res.ok) throw new Error('Failed to create post');
+      await throwIfNotOk(res);
       return res.json();
     },
     onSuccess: () => {
@@ -112,7 +113,7 @@ export function useUpdatePost(id: string) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
       });
-      if (!res.ok) throw new Error('Failed to update post');
+      await throwIfNotOk(res);
       return res.json();
     },
     onSuccess: () => {
@@ -131,7 +132,7 @@ export function useDeletePost() {
       const res = await fetch(API_ROUTES.POST_DETAIL(id), {
         method: 'DELETE',
       });
-      if (!res.ok) throw new Error('Failed to delete post');
+      await throwIfNotOk(res);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: postKeys.lists() });

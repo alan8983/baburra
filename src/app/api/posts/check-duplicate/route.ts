@@ -2,13 +2,14 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { findPostBySourceUrl } from '@/infrastructure/repositories';
+import { badRequestError, internalError } from '@/lib/api/error';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const url = searchParams.get('url');
     if (!url?.trim()) {
-      return NextResponse.json({ error: 'url query is required' }, { status: 400 });
+      return badRequestError('url query is required');
     }
     const existing = await findPostBySourceUrl(url.trim());
     if (!existing) {
@@ -16,10 +17,6 @@ export async function GET(request: NextRequest) {
     }
     return NextResponse.json({ isDuplicate: true, existingPost: existing });
   } catch (err) {
-    console.error('GET /api/posts/check-duplicate', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to check duplicate' },
-      { status: 500 }
-    );
+    return internalError(err, 'Failed to check duplicate');
   }
 }

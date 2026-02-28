@@ -5,7 +5,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ArrowLeft, HelpCircle, Loader2, User } from 'lucide-react';
+import { ArrowLeft, Clock, HelpCircle, Loader2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -16,6 +16,7 @@ import { formatDateTime } from '@/lib/utils/date';
 import { sentimentKey } from '@/lib/utils/sentiment';
 import { useColorPalette } from '@/lib/colors/color-palette-context';
 import { recolorVolumes } from '@/lib/colors/financial-colors';
+import { PriceChangeBadge } from '@/components/shared/price-change-badge';
 import { StockArgumentsTab } from '@/components/ai/stock-arguments-tab';
 import { useStockPricesForChart } from '@/hooks/use-stock-prices';
 import {
@@ -154,7 +155,11 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                 <Badge
                   variant="default"
                   className={
-                    stock.returnRate != null && stock.returnRate >= 0 ? colors.bullish.bgDark : ''
+                    stock.returnRate != null
+                      ? stock.returnRate >= 0
+                        ? colors.bullish.bgDark
+                        : colors.bearish.bgDark
+                      : ''
                   }
                 >
                   {stock.returnRate != null
@@ -263,23 +268,40 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                       label: t('detail.returnRate.periods.365d'),
                       data: returnRateStats.day365,
                     },
-                  ].map((item) => (
-                    <div key={item.key} className="rounded-lg border p-2 text-center">
-                      <p className="text-muted-foreground text-xs font-medium">{item.label}</p>
-                      <p
-                        className={`mt-1 text-lg font-bold ${getReturnRateColorClass(item.data.avgReturn, palette)}`}
-                      >
-                        {formatReturnRate(item.data.avgReturn)}
-                      </p>
-                      <p className="text-muted-foreground text-xs">
-                        {t('detail.returnRate.posNeg', {
-                          positive: item.data.positiveCount,
-                          negative: item.data.negativeCount,
-                          na: item.data.naCount,
-                        })}
-                      </p>
-                    </div>
-                  ))}
+                  ].map((item) => {
+                    const allPending =
+                      item.data.pendingCount === item.data.total && item.data.total > 0;
+                    return (
+                      <div key={item.key} className="rounded-lg border p-2 text-center">
+                        <p className="text-muted-foreground text-xs font-medium">{item.label}</p>
+                        {allPending ? (
+                          <>
+                            <p className="text-muted-foreground mt-1 text-lg">
+                              <Clock className="inline h-4 w-4" />
+                            </p>
+                            <p className="text-muted-foreground text-xs">
+                              {t('detail.returnRate.pending')}
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p
+                              className={`mt-1 text-lg font-bold ${getReturnRateColorClass(item.data.avgReturn, palette)}`}
+                            >
+                              {formatReturnRate(item.data.avgReturn)}
+                            </p>
+                            <p className="text-muted-foreground text-xs">
+                              {t('detail.returnRate.posNeg', {
+                                positive: item.data.positiveCount,
+                                negative: item.data.negativeCount,
+                                na: item.data.naCount,
+                              })}
+                            </p>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
                 <p className="text-muted-foreground text-center">
@@ -394,34 +416,16 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                           {post.content}
                         </p>
                         <div className="mt-1.5 flex flex-wrap gap-3 text-xs">
-                          <span
-                            className={
-                              changes?.day5 != null
-                                ? changes.day5 >= 0
-                                  ? colors.bullish.text
-                                  : colors.bearish.text
-                                : 'text-muted-foreground'
-                            }
-                          >
-                            {t('detail.priceChange.5d')}{' '}
-                            {changes?.day5 != null
-                              ? `${changes.day5 >= 0 ? '+' : ''}${changes.day5.toFixed(1)}%`
-                              : '—'}
-                          </span>
-                          <span
-                            className={
-                              changes?.day30 != null
-                                ? changes.day30 >= 0
-                                  ? colors.bullish.text
-                                  : colors.bearish.text
-                                : 'text-muted-foreground'
-                            }
-                          >
-                            {t('detail.priceChange.30d')}{' '}
-                            {changes?.day30 != null
-                              ? `${changes.day30 >= 0 ? '+' : ''}${changes.day30.toFixed(1)}%`
-                              : '—'}
-                          </span>
+                          <PriceChangeBadge
+                            value={changes?.day5 ?? null}
+                            status={changes?.day5Status}
+                            label={t('detail.priceChange.5d')}
+                          />
+                          <PriceChangeBadge
+                            value={changes?.day30 ?? null}
+                            status={changes?.day30Status}
+                            label={t('detail.priceChange.30d')}
+                          />
                         </div>
                       </div>
                     </div>

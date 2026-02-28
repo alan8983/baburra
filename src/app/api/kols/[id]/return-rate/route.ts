@@ -2,6 +2,7 @@
 // GET /api/kols/[id]/return-rate - 取得 KOL 的報酬率統計
 
 import { NextResponse } from 'next/server';
+import { internalError } from '@/lib/api/error';
 import { listPosts } from '@/infrastructure/repositories/post.repository';
 import { getStockPrices } from '@/infrastructure/repositories/stock-price.repository';
 import {
@@ -33,6 +34,7 @@ export async function GET(request: Request, context: RouteContext) {
           positiveCount: 0,
           negativeCount: 0,
           naCount: 0,
+          pendingCount: 0,
           avgReturn: null,
         },
         day30: {
@@ -41,6 +43,7 @@ export async function GET(request: Request, context: RouteContext) {
           positiveCount: 0,
           negativeCount: 0,
           naCount: 0,
+          pendingCount: 0,
           avgReturn: null,
         },
         day90: {
@@ -49,6 +52,7 @@ export async function GET(request: Request, context: RouteContext) {
           positiveCount: 0,
           negativeCount: 0,
           naCount: 0,
+          pendingCount: 0,
           avgReturn: null,
         },
         day365: {
@@ -57,6 +61,7 @@ export async function GET(request: Request, context: RouteContext) {
           positiveCount: 0,
           negativeCount: 0,
           naCount: 0,
+          pendingCount: 0,
           avgReturn: null,
         },
         overall: { total: 0, avgReturn: null },
@@ -117,6 +122,10 @@ export async function GET(request: Request, context: RouteContext) {
             day30: null,
             day90: null,
             day365: null,
+            day5Status: 'no_data',
+            day30Status: 'no_data',
+            day90Status: 'no_data',
+            day365Status: 'no_data',
           };
         }
       }
@@ -142,7 +151,6 @@ export async function GET(request: Request, context: RouteContext) {
 
     return NextResponse.json(stats);
   } catch (error) {
-    console.error('Failed to calculate KOL return rate:', error);
-    return NextResponse.json({ error: 'Failed to calculate return rate' }, { status: 500 });
+    return internalError(error, 'Failed to calculate return rate');
   }
 }

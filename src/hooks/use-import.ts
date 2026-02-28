@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { API_ROUTES } from '@/lib/constants';
+import { throwIfNotOk } from '@/lib/api/fetch-error';
 import { kolKeys } from './use-kols';
 import { postKeys } from './use-posts';
 import type { Sentiment } from '@/domain/models/post';
@@ -61,12 +62,7 @@ export function useImportBatch() {
         body: JSON.stringify(input),
       });
 
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        const serverMessage = errorData?.error?.message || errorData?.error || 'Import failed';
-        throw new Error(typeof serverMessage === 'string' ? serverMessage : 'Import failed');
-      }
-
+      await throwIfNotOk(res);
       return res.json();
     },
     onSuccess: () => {

@@ -3,23 +3,12 @@
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import {
-  BarChart3,
-  TrendingUp,
-  Bot,
-  LineChart,
-  ArrowRight,
-  ChevronLeft,
-  CheckCircle2,
-  Import,
-  Lightbulb,
-} from 'lucide-react';
+import { CheckCircle2, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ImportForm } from '@/components/import/import-form';
-import { ImportResult } from '@/components/import/import-result';
 import { ImportLoadingOverlay } from '@/components/import/import-loading-overlay';
+import { StepIntro } from '@/components/onboarding/step-intro';
+import { StepImport } from '@/components/onboarding/step-import';
 import { useImportBatch, type ImportBatchResult } from '@/hooks/use-import';
 import { useOnboarding } from '@/hooks/use-onboarding';
 import { ROUTES } from '@/lib/constants';
@@ -88,101 +77,20 @@ export default function OnboardingPage() {
     <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-8">
       <div className="w-full max-w-2xl space-y-6">
         {/* Step 1: Product Introduction */}
-        {step === 1 && (
-          <div className="space-y-6">
-            <div className="text-center">
-              <h1 className="text-3xl font-bold tracking-tight">{t('step1.title')}</h1>
-            </div>
-
-            <Card>
-              <CardContent className="space-y-4 pt-6">
-                <FeatureItem
-                  icon={<BarChart3 className="h-5 w-5 text-blue-500" />}
-                  text={t('step1.features.track')}
-                />
-                <FeatureItem
-                  icon={<TrendingUp className="h-5 w-5 text-green-500" />}
-                  text={t('step1.features.measure')}
-                />
-                <FeatureItem
-                  icon={<Bot className="h-5 w-5 text-purple-500" />}
-                  text={t('step1.features.ai')}
-                />
-                <FeatureItem
-                  icon={<LineChart className="h-5 w-5 text-orange-500" />}
-                  text={t('step1.features.chart')}
-                />
-              </CardContent>
-            </Card>
-
-            <div className="flex items-center justify-center gap-3">
-              <Button onClick={() => setStep(2)} size="lg">
-                {t('step1.getStarted')}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-              <Button variant="ghost" onClick={handleSkipToEnd}>
-                {t('step1.skip')}
-              </Button>
-            </div>
-          </div>
-        )}
+        {step === 1 && <StepIntro onNext={() => setStep(2)} onSkip={handleSkipToEnd} />}
 
         {/* Step 2: Import KOL Posts */}
         {step === 2 && (
-          <div className="space-y-6">
-            <div className="text-center">
-              <h1 className="text-3xl font-bold tracking-tight">{t('step2.title')}</h1>
-              <p className="text-muted-foreground mt-2">{t('step2.description')}</p>
-            </div>
-
-            <Badge variant="secondary" className="mx-auto flex w-fit gap-1 px-3 py-1">
-              <Import className="h-3 w-3" />
-              {t('step2.freeQuota')}
-            </Badge>
-
-            {!importDone && (
-              <Card className="border-dashed">
-                <CardContent className="pt-4 pb-4">
-                  <div className="flex items-start gap-2">
-                    <Lightbulb className="text-muted-foreground mt-0.5 h-4 w-4 flex-shrink-0" />
-                    <div>
-                      <p className="text-muted-foreground mb-1.5 text-sm font-medium">
-                        {t('step2.guidanceTitle')}
-                      </p>
-                      <ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
-                        <li>{t('step2.guidancePattern1')}</li>
-                        <li>{t('step2.guidancePattern2')}</li>
-                      </ul>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {!importDone ? (
-              <ImportForm onSubmit={handleImportSubmit} isLoading={importBatch.isPending} />
-            ) : (
-              importResult && (
-                <ImportResult result={importResult} onImportMore={() => setImportDone(false)} />
-              )
-            )}
-
-            <div className="flex items-center justify-center gap-3">
-              <Button variant="outline" onClick={() => setStep(1)}>
-                <ChevronLeft className="mr-1 h-4 w-4" />
-                {t('step2.back')}
-              </Button>
-              <Button variant="ghost" onClick={handleSkipToEnd}>
-                {t('step2.skip')}
-              </Button>
-              {importDone && (
-                <Button onClick={() => setStep(3)}>
-                  {t('step2.next')}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </div>
+          <StepImport
+            onBack={() => setStep(1)}
+            onNext={() => setStep(3)}
+            onSkip={handleSkipToEnd}
+            importResult={importResult}
+            importDone={importDone}
+            onImportSubmit={handleImportSubmit}
+            onImportMore={() => setImportDone(false)}
+            isImporting={importBatch.isPending}
+          />
         )}
 
         {/* Step 3: Done */}
@@ -258,15 +166,6 @@ export default function OnboardingPage() {
       </div>
 
       <ImportLoadingOverlay isVisible={importBatch.isPending} />
-    </div>
-  );
-}
-
-function FeatureItem({ icon, text }: { icon: React.ReactNode; text: string }) {
-  return (
-    <div className="flex items-center gap-3">
-      {icon}
-      <span className="text-sm font-medium">{text}</span>
     </div>
   );
 }

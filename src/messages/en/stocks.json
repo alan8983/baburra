@@ -68,7 +68,8 @@
         "neutral": "Neutral posts are not included in return rate calculation",
         "allKols": "Calculation based on all KOL posts for this stock"
       },
-      "loadFailed": "Failed to load return rate data"
+      "loadFailed": "Failed to load return rate data",
+      "pending": "Pending"
     },
     "arguments": {
       "title": "Argument Distribution",

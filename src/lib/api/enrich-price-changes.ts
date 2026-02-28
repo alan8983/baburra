@@ -1,5 +1,6 @@
 /**
  * Enrich posts with stock price change data (5-day, 30-day, etc.)
+ * Calculates price changes relative to each post's publication date.
  * Shared helper used by post-related API routes.
  */
 
@@ -19,7 +20,7 @@ export async function enrichPostsWithPriceChanges(posts: PostWithPriceChanges[])
   }
   if (stockMap.size === 0) return;
 
-  // Find earliest post date to determine price fetch range
+  // Find earliest post date and fetch candles from that point (minus buffer for weekends)
   const earliestDate = posts.reduce((min, post) => {
     const d = new Date(post.postedAt);
     return d < min ? d : min;
@@ -35,23 +36,25 @@ export async function enrichPostsWithPriceChanges(posts: PostWithPriceChanges[])
     entries.map(([, ticker]) => getStockPrices(ticker, { startDate: startDateStr }))
   );
   for (let i = 0; i < entries.length; i++) {
-    const [stockId] = entries[i];
+    const [stockId, ticker] = entries[i];
     const result = results[i];
+    if (result.status === 'rejected') {
+      console.error(`[enrichPriceChanges] Failed to fetch prices for ${ticker}:`, result.reason);
+    }
     candlesByStock[stockId] = result.status === 'fulfilled' ? result.value.candles : [];
   }
 
-  // Batch-calculate price changes
-  const batchInput = posts.map((p) => ({
-    id: p.id,
-    postedAt: new Date(p.postedAt),
-    stockIds: p.stocks.map((s) => s.id),
+  // Build posts input for batch calculation (post-relative price changes)
+  const postsInput = posts.map((post) => ({
+    id: post.id,
+    postedAt: new Date(post.postedAt),
+    stockIds: post.stocks.map((s) => s.id),
   }));
-  const allChanges = calculateBatchPriceChanges(batchInput, candlesByStock);
 
-  // Merge results into posts
+  const priceChangesByPost = calculateBatchPriceChanges(postsInput, candlesByStock);
+
+  // Assign each post its own price changes (relative to its postedAt date)
   for (const post of posts) {
-    if (allChanges[post.id]) {
-      post.priceChanges = allChanges[post.id];
-    }
+    post.priceChanges = priceChangesByPost[post.id] ?? {};
   }
 }

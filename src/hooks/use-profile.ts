@@ -4,6 +4,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { API_ROUTES } from '@/lib/constants/routes';
+import { throwIfNotOk } from '@/lib/api/fetch-error';
 import type { ColorPalette } from '@/domain/models/user';
 
 // =====================
@@ -41,7 +42,7 @@ export function useProfile() {
     queryKey: profileKeys.all,
     queryFn: async () => {
       const res = await fetch(API_ROUTES.PROFILE);
-      if (!res.ok) throw new Error('Failed to fetch profile');
+      await throwIfNotOk(res);
       return res.json();
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -59,7 +60,7 @@ export function useUpdateProfile() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
       });
-      if (!res.ok) throw new Error('Failed to update profile');
+      await throwIfNotOk(res);
       return res.json();
     },
     onSuccess: () => {

@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { executeBatchImport } from '@/domain/services/import-pipeline.service';
 import { parseBody } from '@/lib/api/validation';
-import { internalError } from '@/lib/api/error';
+import { unauthorizedError, internalError } from '@/lib/api/error';
 
 const importBatchSchema = z.object({
   urls: z
@@ -23,10 +23,7 @@ export async function POST(request: NextRequest) {
   try {
     const userId = await getCurrentUserId();
     if (!userId) {
-      return NextResponse.json(
-        { error: { code: 'UNAUTHORIZED', message: 'Please log in' } },
-        { status: 401 }
-      );
+      return unauthorizedError();
     }
 
     const parsed = await parseBody(request, importBatchSchema);

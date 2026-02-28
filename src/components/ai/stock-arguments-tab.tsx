@@ -84,7 +84,12 @@ export function StockArgumentsTab({ ticker }: StockArgumentsTabProps) {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center justify-between text-base">
-            <span>📊 {t('title')}</span>
+            <span className="flex items-center gap-2">
+              📊 {t('title')}
+              <Badge variant="outline" className="text-muted-foreground text-[10px] font-normal">
+                {tCommon('ai.underDevelopment')}
+              </Badge>
+            </span>
             <Badge variant="secondary">
               {t('totalArguments', { count: data.totalArgumentCount })}
             </Badge>

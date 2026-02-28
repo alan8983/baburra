@@ -5,7 +5,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ArrowLeft, ExternalLink, HelpCircle, Loader2, User } from 'lucide-react';
+import { ArrowLeft, Clock, ExternalLink, HelpCircle, Loader2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -17,6 +17,7 @@ import { formatDate } from '@/lib/utils/date';
 import { type Sentiment } from '@/domain/models/post';
 import { useColorPalette } from '@/lib/colors/color-palette-context';
 import { sentimentKey } from '@/lib/utils/sentiment';
+import { PriceChangeBadge } from '@/components/shared/price-change-badge';
 import { useStockPricesForChart } from '@/hooks/use-stock-prices';
 import type { LineChartMarker } from '@/components/charts';
 import { useKol, useKolPosts } from '@/hooks';
@@ -32,6 +33,8 @@ const SentimentLineChart = dynamic(
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+type PriceChangeStatusType = 'pending' | 'no_data' | 'value';
+
 type StockPost = {
   id: string;
   content: string;
@@ -42,6 +45,10 @@ type StockPost = {
     day30: number | null;
     day90: number | null;
     day365: number | null;
+    day5Status: PriceChangeStatusType;
+    day30Status: PriceChangeStatusType;
+    day90Status: PriceChangeStatusType;
+    day365Status: PriceChangeStatusType;
   };
 };
 
@@ -60,9 +67,18 @@ function toDateStr(postedAt: Date | string): string {
   return s.includes('T') ? s.slice(0, 10) : s.slice(0, 10);
 }
 
-function calcPeriodStats(posts: StockPost[], period: keyof StockPost['priceChanges']) {
-  const relevant = posts.filter((p) => p.sentiment !== 0 && p.priceChanges[period] != null);
-  if (!relevant.length) return { avgReturn: null, positiveCount: 0, negativeCount: 0 };
+function calcPeriodStats(posts: StockPost[], period: 'day5' | 'day30' | 'day90' | 'day365') {
+  const statusKey = `${period}Status` as const;
+  const nonNeutral = posts.filter((p) => p.sentiment !== 0);
+  if (!nonNeutral.length)
+    return { avgReturn: null, positiveCount: 0, negativeCount: 0, allPending: false };
+
+  const pendingCount = nonNeutral.filter((p) => p.priceChanges[statusKey] === 'pending').length;
+  const allPending = pendingCount === nonNeutral.length;
+
+  const relevant = nonNeutral.filter((p) => p.priceChanges[period] != null);
+  if (!relevant.length) return { avgReturn: null, positiveCount: 0, negativeCount: 0, allPending };
+
   const returns = relevant.map((p) => {
     const change = p.priceChanges[period]!;
     return p.sentiment > 0 ? change : -change;
@@ -71,6 +87,7 @@ function calcPeriodStats(posts: StockPost[], period: keyof StockPost['priceChang
     avgReturn: returns.reduce((a, b) => a + b, 0) / returns.length,
     positiveCount: returns.filter((r) => r > 0).length,
     negativeCount: returns.filter((r) => r < 0).length,
+    allPending,
   };
 }
 
@@ -207,14 +224,27 @@ function KolStockSection({ stock }: { stock: StockGroup }) {
                 ].map((item) => (
                   <div key={item.key} className="rounded-lg border p-2 text-center">
                     <p className="text-muted-foreground text-xs font-medium">{item.label}</p>
-                    <p
-                      className={`mt-1 text-lg font-bold ${getReturnRateColorClass(item.data.avgReturn, palette)}`}
-                    >
-                      {formatReturnRate(item.data.avgReturn)}
-                    </p>
-                    <p className="text-muted-foreground text-xs">
-                      {item.data.positiveCount}+ / {item.data.negativeCount}-
-                    </p>
+                    {item.data.allPending ? (
+                      <>
+                        <p className="text-muted-foreground mt-1 text-lg">
+                          <Clock className="inline h-4 w-4" />
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          {t('detail.returnRate.pending')}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p
+                          className={`mt-1 text-lg font-bold ${getReturnRateColorClass(item.data.avgReturn, palette)}`}
+                        >
+                          {formatReturnRate(item.data.avgReturn)}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          {item.data.positiveCount}+ / {item.data.negativeCount}-
+                        </p>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
@@ -260,34 +290,16 @@ function KolStockSection({ stock }: { stock: StockGroup }) {
                 </div>
                 <p className="text-muted-foreground mt-1.5 line-clamp-2 text-xs">{post.content}</p>
                 <div className="mt-1.5 flex flex-wrap gap-3 text-xs">
-                  <span
-                    className={
-                      post.priceChanges.day5 != null
-                        ? post.priceChanges.day5 >= 0
-                          ? colors.bullish.text
-                          : colors.bearish.text
-                        : 'text-muted-foreground'
-                    }
-                  >
-                    5d:{' '}
-                    {post.priceChanges.day5 != null
-                      ? `${post.priceChanges.day5 >= 0 ? '+' : ''}${post.priceChanges.day5.toFixed(1)}%`
-                      : '—'}
-                  </span>
-                  <span
-                    className={
-                      post.priceChanges.day30 != null
-                        ? post.priceChanges.day30 >= 0
-                          ? colors.bullish.text
-                          : colors.bearish.text
-                        : 'text-muted-foreground'
-                    }
-                  >
-                    30d:{' '}
-                    {post.priceChanges.day30 != null
-                      ? `${post.priceChanges.day30 >= 0 ? '+' : ''}${post.priceChanges.day30.toFixed(1)}%`
-                      : '—'}
-                  </span>
+                  <PriceChangeBadge
+                    value={post.priceChanges.day5}
+                    status={post.priceChanges.day5Status}
+                    label="5d:"
+                  />
+                  <PriceChangeBadge
+                    value={post.priceChanges.day30}
+                    status={post.priceChanges.day30Status}
+                    label="30d:"
+                  />
                 </div>
               </div>
             ))}
@@ -332,6 +344,10 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
             day30: pc?.day30 ?? null,
             day90: pc?.day90 ?? null,
             day365: pc?.day365 ?? null,
+            day5Status: pc?.day5Status ?? 'no_data',
+            day30Status: pc?.day30Status ?? 'no_data',
+            day90Status: pc?.day90Status ?? 'no_data',
+            day365Status: pc?.day365Status ?? 'no_data',
           },
         });
       }

@@ -106,7 +106,8 @@
     "quotaDisplay": "AI Quota: {remaining}/{limit}",
     "weeklyRemaining": "Weekly remaining AI analyses",
     "nextWeek": "Next week",
-    "otherCategory": "Other"
+    "otherCategory": "Other",
+    "underDevelopment": "Under Development"
   },
   "chart": {
     "intervals": {
@@ -123,6 +124,10 @@
       "1Y": "1Y",
       "5Y": "5Y"
     }
+  },
+  "priceChange": {
+    "pending": "Period not yet elapsed",
+    "noData": "No price data available"
   },
   "errors": {
     "generic": "An error occurred, please try again later",

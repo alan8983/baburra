@@ -10,11 +10,12 @@ import { getFinancialColors } from '@/lib/colors/financial-colors';
 
 export interface ReturnRateResult {
   period: PriceChangePeriod;
-  total: number; // 完整母體：positiveCount + negativeCount + naCount（排除中立情緒）
+  total: number; // 完整母體：positiveCount + negativeCount + naCount + pendingCount（排除中立情緒）
   positiveCount: number; // 正報酬筆數（獲利）
   negativeCount: number; // 負報酬筆數（虧損）
-  naCount: number; // 不適用筆數（期間未到或無股價資料）
-  avgReturn: number | null; // 平均報酬率 %（僅含正負報酬，排除 N/A）
+  naCount: number; // 不適用筆數（無股價資料）
+  pendingCount: number; // 期間未到筆數
+  avgReturn: number | null; // 平均報酬率 %（僅含正負報酬，排除 N/A 及 pending）
 }
 
 export interface ReturnRateStats {
@@ -60,9 +61,15 @@ function calculatePeriodReturnRate(
   posts: PostForReturnRate[],
   period: PriceChangePeriod
 ): ReturnRateResult {
-  const periodKey = `day${period}` as keyof PriceChangeByPeriod;
+  const periodKey = `day${period}` as 'day5' | 'day30' | 'day90' | 'day365';
+  const statusKey = `${periodKey}Status` as
+    | 'day5Status'
+    | 'day30Status'
+    | 'day90Status'
+    | 'day365Status';
   const returns: number[] = [];
   let naCount = 0;
+  let pendingCount = 0;
 
   for (const post of posts) {
     const stockIds = Object.keys(post.priceChanges);
@@ -70,13 +77,16 @@ function calculatePeriodReturnRate(
       const effectiveSentiment = post.stockSentiments?.[stockId] ?? post.sentiment;
       if (effectiveSentiment === 0) continue;
 
-      const priceChange = post.priceChanges[stockId]?.[periodKey];
+      const priceChange = post.priceChanges[stockId]?.[periodKey] ?? null;
+      const status = post.priceChanges[stockId]?.[statusKey];
       const ret = calculateReturn(effectiveSentiment, priceChange);
 
       if (ret !== null) {
         returns.push(ret);
+      } else if (status === 'pending') {
+        pendingCount++;
       } else {
-        // 期間未到或無股價資料 — 計入母體但不納入報酬率計算
+        // 無股價資料 — 計入母體但不納入報酬率計算
         naCount++;
       }
     }
@@ -84,7 +94,7 @@ function calculatePeriodReturnRate(
 
   const positiveCount = returns.filter((r) => r > 0).length;
   const negativeCount = returns.filter((r) => r < 0).length;
-  const total = returns.length + naCount;
+  const total = returns.length + naCount + pendingCount;
   // 使用高精度計算，避免浮點數誤差
   const avgReturn =
     returns.length > 0
@@ -97,6 +107,7 @@ function calculatePeriodReturnRate(
     positiveCount,
     negativeCount,
     naCount,
+    pendingCount,
     avgReturn,
   };
 }

@@ -106,7 +106,6 @@ test.describe('快速輸入 — 煙霧測試', () => {
         const toastText = await page
           .locator('[data-sonner-toast][data-type="error"]')
           .textContent();
-        // eslint-disable-next-line no-console
         console.log(`  ⚠ "${tc.name}" got error toast: ${toastText}`);
         return;
       }
@@ -133,11 +132,9 @@ test.describe('快速輸入 — 煙霧測試', () => {
 
       // AI 欄位 — soft log（不影響測試結果）
       if (draft!.sentiment == null) {
-        // eslint-disable-next-line no-console
         console.log(`  ℹ AI sentiment not set for "${tc.name}"`);
       }
       if (!draft!.stock_name_inputs?.length) {
-        // eslint-disable-next-line no-console
         console.log(`  ℹ AI stock identification empty for "${tc.name}"`);
       }
     });

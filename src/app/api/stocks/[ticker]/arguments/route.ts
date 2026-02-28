@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { getStockByTicker } from '@/infrastructure/repositories/stock.repository';
+import { unauthorizedError, notFoundError, internalError } from '@/lib/api/error';
 import {
   computeStockArgumentSummary,
   getStockArguments,
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const userId = await getCurrentUserId();
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return unauthorizedError();
     }
 
     const { ticker } = await params;
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // 取得標的
     const stock = await getStockByTicker(ticker);
     if (!stock) {
-      return NextResponse.json({ error: 'Stock not found' }, { status: 404 });
+      return notFoundError('Stock');
     }
 
     // 取得使用者的論點（含 KOL 資訊）
@@ -105,10 +106,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       totalArgumentCount: argumentsList.length,
     });
   } catch (error) {
-    console.error('Get stock arguments error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Internal server error' },
-      { status: 500 }
-    );
+    return internalError(error, 'Failed to fetch stock arguments');
   }
 }

@@ -18,6 +18,7 @@ import { formatDateTime } from '@/lib/utils/date';
 import { sentimentKey } from '@/lib/utils/sentiment';
 import { useColorPalette } from '@/lib/colors/color-palette-context';
 import { recolorVolumes } from '@/lib/colors/financial-colors';
+import { PriceChangeBadge } from '@/components/shared/price-change-badge';
 import { useStockPricesForChart } from '@/hooks/use-stock-prices';
 import {
   ChartToolbar,
@@ -442,34 +443,16 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                       {tCommon(`sentiment.${sentimentKey(stock.sentiment)}`)}
                     </Badge>
                   )}
-                  <span
-                    className={
-                      changes?.day5 != null
-                        ? changes.day5 >= 0
-                          ? colors.bullish.text
-                          : colors.bearish.text
-                        : 'text-muted-foreground'
-                    }
-                  >
-                    {t('detail.priceChange5d')}{' '}
-                    {changes?.day5 != null
-                      ? `${changes.day5 >= 0 ? '+' : ''}${changes.day5.toFixed(1)}%`
-                      : '—'}
-                  </span>
-                  <span
-                    className={
-                      changes?.day30 != null
-                        ? changes.day30 >= 0
-                          ? colors.bullish.text
-                          : colors.bearish.text
-                        : 'text-muted-foreground'
-                    }
-                  >
-                    {t('detail.priceChange30d')}{' '}
-                    {changes?.day30 != null
-                      ? `${changes.day30 >= 0 ? '+' : ''}${changes.day30.toFixed(1)}%`
-                      : '—'}
-                  </span>
+                  <PriceChangeBadge
+                    value={changes?.day5 ?? null}
+                    status={changes?.day5Status}
+                    label={t('detail.priceChange5d')}
+                  />
+                  <PriceChangeBadge
+                    value={changes?.day30 ?? null}
+                    status={changes?.day30Status}
+                    label={t('detail.priceChange30d')}
+                  />
                 </div>
               );
             })}

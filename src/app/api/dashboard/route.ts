@@ -4,7 +4,8 @@ import { NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { createAdminClient } from '@/infrastructure/supabase/admin';
 import { listPosts } from '@/infrastructure/repositories/post.repository';
-import { internalError } from '@/lib/api/error';
+import { enrichPostsWithPriceChanges } from '@/lib/api/enrich-price-changes';
+import { unauthorizedError, internalError } from '@/lib/api/error';
 
 // 計算本月開始時間（UTC）
 function getMonthStart(): Date {
@@ -26,7 +27,7 @@ export async function GET() {
   try {
     const userId = await getCurrentUserId();
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return unauthorizedError();
     }
     const supabase = createAdminClient();
 
@@ -106,7 +107,8 @@ export async function GET() {
       .slice(0, 5)
       .map(([id]) => id);
 
-    let topKols: Array<{ name: string; postCount: number; lastPostAt: string | null }> = [];
+    let topKols: Array<{ id: string; name: string; postCount: number; lastPostAt: string | null }> =
+      [];
     if (topKolIds.length > 0) {
       const [kolNamesResult, lastPostsResult] = await Promise.all([
         supabase.from('kols').select('id, name').in('id', topKolIds),
@@ -128,11 +130,15 @@ export async function GET() {
       }
 
       topKols = topKolIds.map((id) => ({
+        id,
         name: kolNameMap[id] ?? '',
         postCount: postsByKol[id],
         lastPostAt: lastPostByKol[id] ?? null,
       }));
     }
+
+    const recentPosts = recentPostsResult.data ?? [];
+    await enrichPostsWithPriceChanges(recentPosts);
 
     return NextResponse.json({
       stats: {
@@ -145,7 +151,7 @@ export async function GET() {
         draftCount: draftsResult.count ?? 0,
         draftLastUpdated,
       },
-      recentPosts: recentPostsResult.data ?? [],
+      recentPosts,
       topKols,
     });
   } catch (err) {

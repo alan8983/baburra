@@ -26,6 +26,7 @@ import { Separator } from '@/components/ui/separator';
 import { useUIStore } from '@/stores';
 import { ROUTES } from '@/lib/constants';
 import { APP_CONFIG } from '@/lib/constants/config';
+import { TrumpetIcon } from '@/components/icons/trumpet-icon';
 import { useAiUsage } from '@/hooks/use-ai';
 import { useAuth } from '@/hooks/use-auth';
 import { useDraftCount } from '@/hooks/use-drafts';
@@ -217,7 +218,7 @@ export function Sidebar() {
       >
         {sidebarOpen && (
           <Link href={ROUTES.DASHBOARD} className="flex items-center gap-2">
-            <TrendingUp className="text-primary h-6 w-6" />
+            <TrumpetIcon className="text-primary h-6 w-6" />
             <span className="font-semibold">{APP_CONFIG.APP_NAME}</span>
           </Link>
         )}

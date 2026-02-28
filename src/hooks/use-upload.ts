@@ -3,6 +3,7 @@
 // 圖片上傳 Hook
 
 import { useState, useCallback } from 'react';
+import { throwIfNotOk } from '@/lib/api/fetch-error';
 
 interface UploadResult {
   url: string;
@@ -39,10 +40,7 @@ export function useUploadImage(options?: UseUploadOptions) {
 
         setProgress(80);
 
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || 'Upload failed');
-        }
+        await throwIfNotOk(res);
 
         const result: UploadResult = await res.json();
         setProgress(100);
@@ -66,10 +64,7 @@ export function useUploadImage(options?: UseUploadOptions) {
         method: 'DELETE',
       });
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Delete failed');
-      }
+      await throwIfNotOk(res);
 
       return true;
     } catch (err) {
@@ -113,10 +108,7 @@ export function useUploadImages(options?: UseUploadOptions) {
             body: formData,
           });
 
-          if (!res.ok) {
-            const data = await res.json();
-            throw new Error(data.error || 'Upload failed');
-          }
+          await throwIfNotOk(res);
 
           const result: UploadResult = await res.json();
           results.push(result);

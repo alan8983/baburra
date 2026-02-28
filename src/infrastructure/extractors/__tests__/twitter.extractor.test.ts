@@ -286,7 +286,7 @@ describe('TwitterExtractor', () => {
       expect(result.content).toContain('this amazing stock analysis article');
     });
 
-    it('should set images, postedAt, kolAvatarUrl to null/empty', async () => {
+    it('should set images, kolAvatarUrl to null/empty and extract postedAt from tweet ID', async () => {
       const response = buildOEmbedResponse({
         tweetText: 'Testing that oEmbed does not provide images or timestamps',
       });
@@ -297,9 +297,49 @@ describe('TwitterExtractor', () => {
       });
 
       expect(result.images).toEqual([]);
-      expect(result.postedAt).toBeNull();
+      expect(result.postedAt).not.toBeNull();
+      expect(typeof result.postedAt).toBe('string');
       expect(result.kolAvatarUrl).toBeNull();
       expect(result.title).toBeNull();
+    });
+
+    it('should extract correct timestamp from tweet snowflake ID', async () => {
+      // Tweet ID 2019237463227519273 → 2026-02-05T02:31:41.508Z
+      const response = buildOEmbedResponse({
+        tweetText: 'Testing snowflake timestamp extraction from real tweet IDs',
+      });
+      vi.stubGlobal('fetch', mockOEmbedFetch(response));
+
+      const result = await twitterExtractor.extract(
+        'https://x.com/ManuInvests/status/2019237463227519273',
+        { retryAttempts: 1 }
+      );
+
+      expect(result.postedAt).toBe('2026-02-05T02:31:41.508Z');
+    });
+
+    it('should extract all paragraphs from multi-paragraph tweets', async () => {
+      const html =
+        '<blockquote class="twitter-tweet"><p lang="en" dir="ltr">First paragraph of the tweet with enough content to pass validation.</p><p lang="en" dir="ltr">Second paragraph continues the analysis with more details about the stock.</p>&mdash; Analyst (@analyst) <a href="https://twitter.com/analyst/status/123">January 15, 2026</a></blockquote>';
+      const response = {
+        url: 'https://twitter.com/analyst/status/123',
+        author_name: 'Analyst',
+        author_url: 'https://twitter.com/analyst',
+        html,
+        width: 550,
+        type: 'rich',
+        provider_name: 'Twitter',
+        version: '1.0',
+      };
+      vi.stubGlobal('fetch', mockOEmbedFetch(response));
+
+      const result = await twitterExtractor.extract('https://x.com/analyst/status/123', {
+        retryAttempts: 1,
+      });
+
+      expect(result.content).toContain('First paragraph');
+      expect(result.content).toContain('Second paragraph');
+      expect(result.content).toContain('\n\n');
     });
 
     it('should throw CONTENT_TOO_SHORT (wrapped as FETCH_FAILED)', async () => {

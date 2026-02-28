@@ -7,45 +7,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { extractArguments } from '@/domain/services/ai.service';
 import { consumeAiQuota } from '@/infrastructure/repositories/ai-usage.repository';
-import { internalError } from '@/lib/api/error';
+import { unauthorizedError, internalError, errorResponse } from '@/lib/api/error';
 import {
   getArgumentCategoryByCode,
   createPostArguments,
 } from '@/infrastructure/repositories/argument.repository';
-
-interface ExtractArgumentsRequest {
-  content: string;
-  postId: string;
-  stocks: {
-    id: string;
-    ticker: string;
-    name: string;
-  }[];
-}
+import { aiExtractArgumentsSchema, parseBody } from '@/lib/api/validation';
 
 export async function POST(request: NextRequest) {
   try {
     const userId = await getCurrentUserId();
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return unauthorizedError();
     }
-    const body = (await request.json()) as ExtractArgumentsRequest;
-
-    // 驗證輸入
-    if (!body.content || typeof body.content !== 'string') {
-      return NextResponse.json(
-        { error: 'content is required and must be a string' },
-        { status: 400 }
-      );
-    }
-
-    if (!body.postId) {
-      return NextResponse.json({ error: 'postId is required' }, { status: 400 });
-    }
-
-    if (!body.stocks || !Array.isArray(body.stocks) || body.stocks.length === 0) {
-      return NextResponse.json({ error: 'stocks must be a non-empty array' }, { status: 400 });
-    }
+    const parsed = await parseBody(request, aiExtractArgumentsSchema);
+    if ('error' in parsed) return parsed.error;
 
     // 原子性消耗配額（先扣再用，避免 race condition）
     let usage;
@@ -58,9 +34,10 @@ export async function POST(request: NextRequest) {
         'code' in quotaErr &&
         (quotaErr as { code: string }).code === 'AI_QUOTA_EXCEEDED'
       ) {
-        return NextResponse.json(
-          { error: 'AI quota exceeded. Please wait until next week.' },
-          { status: 429 }
+        return errorResponse(
+          429,
+          'AI_QUOTA_EXCEEDED',
+          'AI quota exceeded. Please wait until next week.'
         );
       }
       throw quotaErr;
@@ -73,8 +50,8 @@ export async function POST(request: NextRequest) {
       arguments: Awaited<ReturnType<typeof extractArguments>>['arguments'];
     }[] = [];
 
-    for (const stock of body.stocks) {
-      const result = await extractArguments(body.content, stock.ticker, stock.name);
+    for (const stock of parsed.data.stocks) {
+      const result = await extractArguments(parsed.data.content, stock.ticker, stock.name);
       allArguments.push({
         stockId: stock.id,
         ticker: stock.ticker,
@@ -103,7 +80,7 @@ export async function POST(request: NextRequest) {
         // 建立論點記錄
         await createPostArguments([
           {
-            postId: body.postId,
+            postId: parsed.data.postId,
             stockId: stockArgs.stockId,
             categoryId: category.id,
             originalText: arg.originalText,

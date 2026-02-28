@@ -4,7 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { TrendingUp, Loader2, Lock, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Loader2, Lock, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { TrumpetIcon } from '@/components/icons/trumpet-icon';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -64,7 +65,7 @@ export default function ResetPasswordConfirmPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <div className="bg-primary mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg">
-            <TrendingUp className="text-primary-foreground h-6 w-6" />
+            <TrumpetIcon className="text-primary-foreground h-6 w-6" />
           </div>
           <CardTitle className="text-2xl font-bold">{t('resetPasswordConfirm.title')}</CardTitle>
           <CardDescription>{t('resetPasswordConfirm.description')}</CardDescription>

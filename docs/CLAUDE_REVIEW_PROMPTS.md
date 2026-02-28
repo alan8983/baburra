@@ -1,96 +1,137 @@
-# Claude Follow-up Prompts (from latest review)
+# Claude Follow-up Prompts (latest full re-review)
 
-## Prompt 1 - Atomic AI quota consumption (critical)
-Please refactor `src/infrastructure/repositories/ai-usage.repository.ts` so `consumeAiQuota(userId)` is atomic under concurrent requests.
+## Prompt 1 - Make AI quota consume strictly atomic (critical)
+Please harden `consumeAiQuota(userId)` in `src/infrastructure/repositories/ai-usage.repository.ts`.
+
+Current risk:
+- RPC path is atomic, but fallback path remains read-then-update and can race under concurrency.
 
 Requirements:
-- No read-then-write race condition.
-- Prefer a single SQL/RPC update.
-- Preserve existing return shape (`AiUsageInfo`).
-- Add/adjust tests for concurrent calls.
-- Keep behavior for weekly reset logic.
+- No non-atomic fallback in production path.
+- Prefer one DB atomic path (RPC / guarded SQL update).
+- Keep current return type (`AiUsageInfo`).
+- Add tests for concurrent consumption and quota exhaustion edge cases.
 
 Deliverables:
-- Code changes
-- Brief migration note if DB function is required
-- Test evidence
+- Code + migration (if needed)
+- Updated tests
+- Notes on failure behavior when RPC is unavailable
 
 ---
 
-## Prompt 2 - Enforce post ownership authorization
-Please harden post update/delete authorization.
+## Prompt 2 - Transactionalize post creation pipeline
+Please refactor `createPost()` in `src/infrastructure/repositories/post.repository.ts` to be all-or-nothing.
 
-Scope:
-- `src/app/api/posts/[id]/route.ts`
-- `src/infrastructure/repositories/post.repository.ts`
+Current risk:
+- Post insert, post_stocks insert, and post_arguments insert are multi-step with compensating deletes.
 
 Requirements:
-- Only post creator can PATCH/DELETE.
-- Return 403 for authenticated-but-forbidden.
-- Keep 401 for unauthenticated.
-- Avoid leaking extra details in errors.
+- Enforce true transactional behavior (DB function/RPC preferred).
+- Preserve current API contract and output.
+- Remove fragile compensation-only rollback pattern.
+
+Deliverables:
+- Refactored repository logic
+- SQL migration/RPC if needed
+- Failure-path test plan
+
+---
+
+## Prompt 3 - Add authorization policy for KOL updates
+Please add explicit authorization rules for `PATCH /api/kols/[id]`.
+
+Scope:
+- `src/app/api/kols/[id]/route.ts`
+- `src/infrastructure/repositories/kol.repository.ts`
+
+Requirements:
+- Decide and implement one rule: creator-only or admin-only (configurable preferred).
+- Return 401 for unauthenticated, 403 for unauthorized.
+- Keep GET public behavior unchanged.
 
 Deliverables:
 - Implementation
-- Any required repository signature changes
-- Backward compatibility notes
+- Policy notes in code comments/docs
+- Any required schema/repository signature changes
 
 ---
 
-## Prompt 3 - Transactional post creation flow
-Please make `createPost()` in `src/infrastructure/repositories/post.repository.ts` transactional.
+## Prompt 4 - Standardize API error contract everywhere
+Please unify all API errors to:
+`{ error: { code: string, message: string, details?: Record<string, string[]> } }`
 
-Current issue:
-- post insert, post_stocks insert, argument insert, summary update are split and may partially fail.
+Focus files:
+- `src/lib/api/error.ts`
+- `src/lib/api/validation.ts`
+- `src/app/api/**/route.ts` (priority: drafts, quick-input, ai, posts, stocks, kols, upload)
 
 Requirements:
-- Ensure all-or-nothing behavior.
-- Keep current API response contract.
-- If using DB-side function, include migration SQL.
+- Keep HTTP status codes correct.
+- No plain-string `error` payloads.
+- Frontend hooks should parse structured errors consistently.
 
 Deliverables:
-- Refactored repository flow
-- Migration file (if needed)
-- Failure-case test suggestions
+- Shared helpers
+- Route migrations
+- Frontend compatibility update
 
 ---
 
-## Prompt 4 - Standardize API error response format
-Please introduce a shared API error helper and migrate key routes to consistent error shape:
-`{ error: { code: string, message: string } }`.
+## Prompt 5 - Replace remaining unsafe body casts with Zod
+Please remove remaining `request.json() as ...` in high-traffic routes and use shared schema parsing.
 
 Priority routes:
-- `src/app/api/posts/route.ts`
+- `src/app/api/quick-input/route.ts`
 - `src/app/api/drafts/route.ts`
-- `src/app/api/bookmarks/route.ts`
-- `src/app/api/kols/route.ts`
-- `src/app/api/stocks/route.ts`
+- `src/app/api/drafts/[id]/route.ts`
+- `src/app/api/profile/route.ts`
+- `src/app/api/ai/analyze/route.ts`
+- `src/app/api/ai/identify-tickers/route.ts`
+- `src/app/api/ai/extract-arguments/route.ts`
 
 Requirements:
-- Minimal churn, clear error codes.
-- Keep status codes unchanged unless incorrect.
-- Update any affected frontend parsing.
+- Validate lengths/ranges/UUIDs explicitly.
+- Return structured 400 payload.
+- Preserve existing business logic.
 
 Deliverables:
-- Shared helper
-- Route migrations
-- Quick compatibility notes
+- Zod schemas + route refactors
+- Rejected payload examples
 
 ---
 
-## Prompt 5 - Add Zod request validation to core routes
-Please replace unsafe `request.json() as ...` with Zod validation for these routes:
-- `src/app/api/quick-input/route.ts`
-- `src/app/api/posts/route.ts`
-- `src/app/api/drafts/route.ts`
-- `src/app/api/bookmarks/route.ts`
+## Prompt 6 - Improve frontend resilience and observability
+Please improve hooks/component error handling and chart performance hotspots.
+
+Scope:
+- `src/hooks/use-posts.ts`, `use-kols.ts`, `use-stocks.ts`, `use-bookmarks.ts`
+- `src/components/charts/sentiment-line-chart.tsx`
+- `src/app/(app)/posts/[id]/page.tsx`
 
 Requirements:
-- Return 400 with structured error payload.
-- Keep existing business logic intact.
-- Validate boundaries (length/range) explicitly.
+- Parse server error payload and expose status/code in hooks.
+- Avoid unnecessary chart re-creation from unstable dependencies.
+- Fix mismatched error message keys (e.g., post detail load using price error copy).
 
 Deliverables:
-- Zod schemas (shared where useful)
-- Route updates
-- Short summary of rejected payload examples
+- Hook-level typed error utilities
+- Chart effect dependency optimization
+- UX copy/key fixes
+
+---
+
+## Prompt 7 - Add missing tests for hooks/components
+Please add a focused test bundle for high-risk client logic.
+
+Priority:
+- Hooks: `usePosts`, `useBookmarks`, `useStockPosts`
+- Components: `kol-selector`, `stock-selector`, `sentiment-line-chart`
+
+Requirements:
+- Cover success + failure + loading states.
+- Include at least one mutation failure rollback/assertion case.
+- Keep tests stable (mock network and query client).
+
+Deliverables:
+- New test files
+- Short coverage summary and known remaining gaps

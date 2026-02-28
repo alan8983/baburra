@@ -1071,21 +1071,21 @@ describe('extractArguments', () => {
     expect(result.arguments[0].confidence).toBe(0.5);
   });
 
-  it('7 arguments or fewer — does NOT trigger a second Gemini call', async () => {
-    const sevenArgs = Array.from({ length: 7 }, (_, i) => ({
+  it('5 arguments or fewer — does NOT trigger a second Gemini call', async () => {
+    const fiveArgs = Array.from({ length: 5 }, (_, i) => ({
       categoryCode: 'FINANCIALS',
       originalText: `text ${i}`,
       summary: `summary ${i}`,
       sentiment: 1,
       confidence: 0.8,
     }));
-    mockGenerateJson.mockResolvedValueOnce({ arguments: sevenArgs });
+    mockGenerateJson.mockResolvedValueOnce({ arguments: fiveArgs });
 
     await extractArguments('article', 'AAPL', 'Apple');
     expect(mockGenerateJson).toHaveBeenCalledTimes(1);
   });
 
-  it('more than 7 arguments — triggers a second (revision) Gemini call', async () => {
+  it('more than 5 arguments — triggers a second (revision) Gemini call', async () => {
     const eightArgs = Array.from({ length: 8 }, (_, i) => ({
       categoryCode: i < 4 ? 'FINANCIALS' : 'MOMENTUM',
       originalText: `text ${i}`,
@@ -1111,7 +1111,7 @@ describe('extractArguments', () => {
     expect(result.arguments[0].summary).toBe('rev sum');
   });
 
-  it('applies hard caps: result never exceeds 10 total even if revision returns more', async () => {
+  it('applies hard caps: result never exceeds 5 total even if revision returns more', async () => {
     const eightArgs = Array.from({ length: 8 }, (_, i) => ({
       categoryCode: 'FINANCIALS',
       originalText: `t${i}`,
@@ -1119,7 +1119,7 @@ describe('extractArguments', () => {
       sentiment: 0,
       confidence: 0.8,
     }));
-    // revision returns 11 — still capped at 10
+    // revision returns 11 — still capped at 5
     const elevenArgs = Array.from({ length: 11 }, (_, i) => ({
       categoryCode: 'CATALYST',
       originalText: `t${i}`,
@@ -1131,7 +1131,7 @@ describe('extractArguments', () => {
     mockGenerateJson.mockResolvedValueOnce({ arguments: elevenArgs });
 
     const result = await extractArguments('article', 'AAPL', 'Apple');
-    expect(result.arguments.length).toBeLessThanOrEqual(10);
+    expect(result.arguments.length).toBeLessThanOrEqual(5);
   });
 });
 
@@ -1167,8 +1167,8 @@ describe('applyHardCaps', () => {
     expect(financials[2].confidence).toBe(0.7);
   });
 
-  it('caps total at 10, keeping highest confidence across categories', () => {
-    // 4 categories × 3 each = 12 potential, should be trimmed to 10
+  it('caps total at 5, keeping highest confidence across categories', () => {
+    // 4 categories × 3 each = 12 potential, capped per-category to 12, then total capped to 5
     const args = [
       ...Array.from({ length: 3 }, (_, i) => makeArg('FINANCIALS', 0.95 - i * 0.01)),
       ...Array.from({ length: 3 }, (_, i) => makeArg('MOMENTUM', 0.9 - i * 0.01)),
@@ -1176,10 +1176,10 @@ describe('applyHardCaps', () => {
       ...Array.from({ length: 3 }, (_, i) => makeArg('CATALYST', 0.5 - i * 0.01)), // lowest
     ];
     const result = applyHardCaps(args);
-    expect(result).toHaveLength(10);
-    // The 2 lowest CATALYST args (0.49, 0.48) should be dropped
-    const lowestConfidence = result[result.length - 1].confidence;
-    expect(lowestConfidence).toBeGreaterThan(0.48);
+    expect(result).toHaveLength(5);
+    // Should keep the 5 highest-confidence args overall
+    expect(result[0].confidence).toBe(0.95);
+    expect(result[result.length - 1].confidence).toBe(0.89);
   });
 
   it('returns all args unchanged when within limits', () => {

@@ -6,6 +6,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { API_ROUTES } from '@/lib/constants/routes';
+import { throwIfNotOk } from '@/lib/api/fetch-error';
 import { useProfile, profileKeys } from './use-profile';
 
 export function useOnboarding() {
@@ -17,7 +18,7 @@ export function useOnboarding() {
       const res = await fetch(API_ROUTES.PROFILE_ONBOARDING, {
         method: 'POST',
       });
-      if (!res.ok) throw new Error('Failed to complete onboarding');
+      await throwIfNotOk(res);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: profileKeys.all });

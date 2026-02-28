@@ -102,13 +102,24 @@ export class TwitterExtractor extends SocialMediaExtractor {
     try {
       let content = this.extractTextFromHtml(data.html);
 
-      content = this.sanitizeText(content);
+      // Sanitize each paragraph individually to preserve paragraph breaks
+      content = content
+        .split('\n\n')
+        .map((p) => this.sanitizeText(p))
+        .filter((p) => p.length > 0)
+        .join('\n\n');
       content = content
         .replace(/\s+pic\.twitter\.com\/\w+/g, '')
         .replace(/\s+https?:\/\/t\.co\/\w+/g, '');
-      content = this.sanitizeText(content);
+      content = content
+        .split('\n\n')
+        .map((p) => this.sanitizeText(p))
+        .filter((p) => p.length > 0)
+        .join('\n\n');
 
       this.validateContent(content);
+
+      const postedAt = this.extractTimestampFromUrl(originalUrl);
 
       return {
         content,
@@ -116,7 +127,7 @@ export class TwitterExtractor extends SocialMediaExtractor {
         sourcePlatform: 'twitter',
         title: null,
         images: [],
-        postedAt: null,
+        postedAt: postedAt ? postedAt.toISOString() : null,
         kolName: data.author_name || null,
         kolAvatarUrl: null,
       };
@@ -130,19 +141,41 @@ export class TwitterExtractor extends SocialMediaExtractor {
     }
   }
 
+  /**
+   * Extract tweet creation timestamp from the tweet ID using Twitter's snowflake algorithm.
+   * Twitter IDs encode the timestamp: (id >> 22) + 1288834974657 = epoch ms.
+   */
+  private extractTimestampFromUrl(url: string): Date | null {
+    const match = url.match(/\/status\/(\d+)/);
+    if (!match) return null;
+
+    try {
+      const tweetId = BigInt(match[1]);
+      const timestampMs = Number((tweetId >> 22n) + 1288834974657n);
+      const date = new Date(timestampMs);
+      if (isNaN(date.getTime())) return null;
+      return date;
+    } catch {
+      return null;
+    }
+  }
+
   private extractTextFromHtml(html: string): string {
-    // Extract content from the <p> tag inside the blockquote
-    const pMatch = html.match(/<p[^>]*>([\s\S]*?)<\/p>/);
-    if (!pMatch) {
+    // Extract content from all <p> tags inside the blockquote
+    const pMatches = [...html.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/g)];
+    if (pMatches.length === 0) {
       // Fallback: strip all tags from the full HTML
       return this.decodeHtmlEntities(this.stripHtmlTags(html));
     }
 
-    let text = pMatch[1];
-    text = this.stripHtmlTags(text);
-    text = this.decodeHtmlEntities(text);
+    const paragraphs = pMatches.map((m) => {
+      let text = m[1];
+      text = this.stripHtmlTags(text);
+      text = this.decodeHtmlEntities(text);
+      return text;
+    });
 
-    return text;
+    return paragraphs.join('\n\n');
   }
 
   private stripHtmlTags(html: string): string {

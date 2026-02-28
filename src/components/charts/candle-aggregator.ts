@@ -1,7 +1,10 @@
 import type { CandlestickData, VolumeData } from '@/domain/models/stock';
+import { getFinancialColors, DEFAULT_PALETTE } from '@/lib/colors/financial-colors';
 
 export type CandleInterval = 'day' | 'week' | 'month' | 'quarter' | 'year';
 export type TimeRange = '1M' | '1Q' | 'YTD' | '1Y' | '5Y';
+
+const defaultColors = getFinancialColors(DEFAULT_PALETTE);
 
 /**
  * Get the group key for a given date string (YYYY-MM-DD) based on the interval.
@@ -113,8 +116,8 @@ export function aggregateVolumes(
       time: aggCandle?.time ?? time,
       value: totalVolume,
       color: isUp
-        ? (volumeColors?.up ?? 'rgba(34, 197, 94, 0.5)')
-        : (volumeColors?.down ?? 'rgba(239, 68, 68, 0.5)'),
+        ? (volumeColors?.up ?? defaultColors.volumeUp)
+        : (volumeColors?.down ?? defaultColors.volumeDown),
     });
   }
 

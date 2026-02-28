@@ -74,27 +74,21 @@ export async function listKols(params: {
     return { data: [], total: count ?? 0 };
   }
 
-  const { data: postStats } = await supabase
-    .from('posts')
-    .select('kol_id, posted_at')
-    .in('kol_id', ids)
-    .order('posted_at', { ascending: false });
+  const { data: stats } = await supabase
+    .from('kol_stats')
+    .select('kol_id, post_count, last_post_at')
+    .in('kol_id', ids);
 
-  const countByKol: Record<string, number> = {};
-  const lastPostByKol: Record<string, string> = {};
-  for (const p of postStats ?? []) {
-    const kid = p.kol_id as string;
-    countByKol[kid] = (countByKol[kid] ?? 0) + 1;
-    if (!lastPostByKol[kid]) lastPostByKol[kid] = p.posted_at as string;
-  }
+  const statsByKol = new Map((stats ?? []).map((s) => [s.kol_id as string, s]));
 
   const data: KOLWithStats[] = (rows as DbKol[]).map((r) => {
     const kol = mapDbToKol(r);
+    const stat = statsByKol.get(kol.id);
     return {
       ...kol,
-      postCount: countByKol[kol.id] ?? 0,
+      postCount: (stat?.post_count as number) ?? 0,
       returnRate: null,
-      lastPostAt: lastPostByKol[kol.id] ? new Date(lastPostByKol[kol.id]) : null,
+      lastPostAt: stat?.last_post_at ? new Date(stat.last_post_at as string) : null,
     };
   });
 
@@ -103,27 +97,18 @@ export async function listKols(params: {
 
 export async function getKolById(id: string): Promise<KOLWithStats | null> {
   const supabase = createAdminClient();
-  const { data: row, error } = await supabase.from('kols').select('*').eq('id', id).single();
+  const [{ data: row, error }, { data: stat }] = await Promise.all([
+    supabase.from('kols').select('*').eq('id', id).single(),
+    supabase.from('kol_stats').select('post_count, last_post_at').eq('kol_id', id).single(),
+  ]);
   if (error || !row) return null;
 
   const kol = mapDbToKol(row as DbKol);
-  const { count } = await supabase
-    .from('posts')
-    .select('*', { count: 'exact', head: true })
-    .eq('kol_id', id);
-  const { data: lastPost } = await supabase
-    .from('posts')
-    .select('posted_at')
-    .eq('kol_id', id)
-    .order('posted_at', { ascending: false })
-    .limit(1)
-    .single();
-
   return {
     ...kol,
-    postCount: count ?? 0,
+    postCount: (stat?.post_count as number) ?? 0,
     returnRate: null,
-    lastPostAt: lastPost?.posted_at ? new Date(lastPost.posted_at as string) : null,
+    lastPostAt: stat?.last_post_at ? new Date(stat.last_post_at as string) : null,
   };
 }
 
@@ -159,7 +144,11 @@ export async function createKol(input: CreateKOLInput): Promise<KOL> {
   return mapDbToKol(row as DbKol);
 }
 
-export async function updateKol(id: string, input: UpdateKOLInput): Promise<KOL | null> {
+export async function updateKol(
+  id: string,
+  userId: string,
+  input: UpdateKOLInput
+): Promise<KOL | null> {
   const supabase = createAdminClient();
   const payload: Record<string, unknown> = {};
   if (input.name !== undefined) payload.name = input.name;
@@ -172,9 +161,14 @@ export async function updateKol(id: string, input: UpdateKOLInput): Promise<KOL 
     .from('kols')
     .update(payload)
     .eq('id', id)
+    .eq('created_by', userId)
     .select()
     .single();
-  if (error) throw new Error(error.message);
+  if (error) {
+    // PGRST116 = "no rows returned" — means KOL not found or not owned by user
+    if (error.code === 'PGRST116') return null;
+    throw new Error(error.message);
+  }
   return row ? mapDbToKol(row as DbKol) : null;
 }
 

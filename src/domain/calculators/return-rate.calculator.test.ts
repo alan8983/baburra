@@ -7,7 +7,24 @@ import {
   getReturnRateColorClass,
   type PostForReturnRate,
 } from './return-rate.calculator';
-import type { Sentiment } from '@/domain/models/post';
+import type { Sentiment, PriceChangeByPeriod, PriceChangeStatus } from '@/domain/models/post';
+
+/** Helper: builds PriceChangeByPeriod with sensible default statuses */
+function pc(vals: {
+  day5: number | null;
+  day30: number | null;
+  day90: number | null;
+  day365: number | null;
+}): PriceChangeByPeriod {
+  const status = (v: number | null): PriceChangeStatus => (v !== null ? 'value' : 'no_data');
+  return {
+    ...vals,
+    day5Status: status(vals.day5),
+    day30Status: status(vals.day30),
+    day90Status: status(vals.day90),
+    day365Status: status(vals.day365),
+  };
+}
 
 describe('return-rate.calculator', () => {
   describe('calculateReturn', () => {
@@ -55,6 +72,7 @@ describe('return-rate.calculator', () => {
 
       expect(stats.day5.total).toBe(0);
       expect(stats.day5.naCount).toBe(0);
+      expect(stats.day5.pendingCount).toBe(0);
       expect(stats.day5.avgReturn).toBeNull();
       expect(stats.overall.total).toBe(0);
       expect(stats.overall.avgReturn).toBeNull();
@@ -66,12 +84,12 @@ describe('return-rate.calculator', () => {
           id: '1',
           sentiment: 1 as Sentiment, // 看多
           priceChanges: {
-            'stock-1': {
+            'stock-1': pc({
               day5: 5.0, // 報酬 +5%
               day30: 10.0, // 報酬 +10%
               day90: -5.0, // 報酬 -5%
               day365: null, // 無資料
-            },
+            }),
           },
         },
       ];
@@ -82,21 +100,25 @@ describe('return-rate.calculator', () => {
       expect(stats.day5.positiveCount).toBe(1);
       expect(stats.day5.negativeCount).toBe(0);
       expect(stats.day5.naCount).toBe(0);
+      expect(stats.day5.pendingCount).toBe(0);
       expect(stats.day5.avgReturn).toBe(5.0);
 
       expect(stats.day30.total).toBe(1);
       expect(stats.day30.naCount).toBe(0);
+      expect(stats.day30.pendingCount).toBe(0);
       expect(stats.day30.avgReturn).toBe(10.0);
 
       expect(stats.day90.total).toBe(1);
       expect(stats.day90.positiveCount).toBe(0);
       expect(stats.day90.negativeCount).toBe(1);
       expect(stats.day90.naCount).toBe(0);
+      expect(stats.day90.pendingCount).toBe(0);
       expect(stats.day90.avgReturn).toBe(-5.0);
 
       // day365: period not elapsed → naCount=1, total=1, avgReturn=null
       expect(stats.day365.total).toBe(1);
       expect(stats.day365.naCount).toBe(1);
+      expect(stats.day365.pendingCount).toBe(0);
       expect(stats.day365.avgReturn).toBeNull();
 
       expect(stats.overall.total).toBe(1);
@@ -108,22 +130,22 @@ describe('return-rate.calculator', () => {
           id: '1',
           sentiment: 1 as Sentiment, // 看多
           priceChanges: {
-            'stock-1': { day5: 5.0, day30: 10.0, day90: null, day365: null },
-            'stock-2': { day5: -3.0, day30: -5.0, day90: null, day365: null },
+            'stock-1': pc({ day5: 5.0, day30: 10.0, day90: null, day365: null }),
+            'stock-2': pc({ day5: -3.0, day30: -5.0, day90: null, day365: null }),
           },
         },
         {
           id: '2',
           sentiment: -1 as Sentiment, // 看空
           priceChanges: {
-            'stock-1': { day5: -5.0, day30: 10.0, day90: null, day365: null },
+            'stock-1': pc({ day5: -5.0, day30: 10.0, day90: null, day365: null }),
           },
         },
         {
           id: '3',
           sentiment: 0 as Sentiment, // 中立 - 不計入
           priceChanges: {
-            'stock-1': { day5: 5.0, day30: 10.0, day90: null, day365: null },
+            'stock-1': pc({ day5: 5.0, day30: 10.0, day90: null, day365: null }),
           },
         },
       ];
@@ -154,7 +176,7 @@ describe('return-rate.calculator', () => {
           id: '1',
           sentiment: 0 as Sentiment,
           priceChanges: {
-            'stock-1': { day5: 10.0, day30: 20.0, day90: null, day365: null },
+            'stock-1': pc({ day5: 10.0, day30: 20.0, day90: null, day365: null }),
           },
         },
       ];
@@ -172,21 +194,21 @@ describe('return-rate.calculator', () => {
           id: '1',
           sentiment: 0 as Sentiment,
           priceChanges: {
-            'stock-1': { day5: 10.0, day30: 20.0, day90: 15.0, day365: 25.0 },
+            'stock-1': pc({ day5: 10.0, day30: 20.0, day90: 15.0, day365: 25.0 }),
           },
         },
         {
           id: '2',
           sentiment: 0 as Sentiment,
           priceChanges: {
-            'stock-1': { day5: -5.0, day30: -10.0, day90: -8.0, day365: -12.0 },
+            'stock-1': pc({ day5: -5.0, day30: -10.0, day90: -8.0, day365: -12.0 }),
           },
         },
         {
           id: '3',
           sentiment: 0 as Sentiment,
           priceChanges: {
-            'stock-1': { day5: 0, day30: 0, day90: 0, day365: 0 },
+            'stock-1': pc({ day5: 0, day30: 0, day90: 0, day365: 0 }),
           },
         },
       ];
@@ -221,21 +243,21 @@ describe('return-rate.calculator', () => {
           id: '1',
           sentiment: 1 as Sentiment,
           priceChanges: {
-            'stock-1': { day5: null, day30: null, day90: null, day365: null },
+            'stock-1': pc({ day5: null, day30: null, day90: null, day365: null }),
           },
         },
         {
           id: '2',
           sentiment: -1 as Sentiment,
           priceChanges: {
-            'stock-1': { day5: null, day30: null, day90: null, day365: null },
+            'stock-1': pc({ day5: null, day30: null, day90: null, day365: null }),
           },
         },
         {
           id: '3',
           sentiment: 2 as Sentiment,
           priceChanges: {
-            'stock-1': { day5: null, day30: null, day90: null, day365: null },
+            'stock-1': pc({ day5: null, day30: null, day90: null, day365: null }),
           },
         },
       ];
@@ -272,14 +294,14 @@ describe('return-rate.calculator', () => {
           id: '1',
           sentiment: 1 as Sentiment,
           priceChanges: {
-            'stock-1': { day5: 5.0, day30: null, day90: 10.0, day365: null },
+            'stock-1': pc({ day5: 5.0, day30: null, day90: 10.0, day365: null }),
           },
         },
         {
           id: '2',
           sentiment: -1 as Sentiment,
           priceChanges: {
-            'stock-1': { day5: null, day30: -5.0, day90: null, day365: -8.0 },
+            'stock-1': pc({ day5: null, day30: -5.0, day90: null, day365: -8.0 }),
           },
         },
       ];
@@ -315,18 +337,18 @@ describe('return-rate.calculator', () => {
           id: '1',
           sentiment: 1 as Sentiment, // 看多
           priceChanges: {
-            'stock-1': { day5: 5.0, day30: 10.0, day90: 15.0, day365: 20.0 },
-            'stock-2': { day5: -3.0, day30: -5.0, day90: -8.0, day365: -10.0 },
-            'stock-3': { day5: 2.0, day30: 4.0, day90: 6.0, day365: 8.0 },
-            'stock-4': { day5: -1.0, day30: 1.0, day90: -2.0, day365: 3.0 },
+            'stock-1': pc({ day5: 5.0, day30: 10.0, day90: 15.0, day365: 20.0 }),
+            'stock-2': pc({ day5: -3.0, day30: -5.0, day90: -8.0, day365: -10.0 }),
+            'stock-3': pc({ day5: 2.0, day30: 4.0, day90: 6.0, day365: 8.0 }),
+            'stock-4': pc({ day5: -1.0, day30: 1.0, day90: -2.0, day365: 3.0 }),
           },
         },
         {
           id: '2',
           sentiment: -1 as Sentiment, // 看空
           priceChanges: {
-            'stock-1': { day5: -5.0, day30: -10.0, day90: -15.0, day365: -20.0 },
-            'stock-2': { day5: 3.0, day30: 5.0, day90: 8.0, day365: 10.0 },
+            'stock-1': pc({ day5: -5.0, day30: -10.0, day90: -15.0, day365: -20.0 }),
+            'stock-2': pc({ day5: 3.0, day30: 5.0, day90: 8.0, day365: 10.0 }),
           },
         },
       ];
@@ -358,21 +380,21 @@ describe('return-rate.calculator', () => {
           id: '1',
           sentiment: 1 as Sentiment,
           priceChanges: {
-            'stock-1': { day5: 1.0, day30: null, day90: null, day365: null },
+            'stock-1': pc({ day5: 1.0, day30: null, day90: null, day365: null }),
           },
         },
         {
           id: '2',
           sentiment: 1 as Sentiment,
           priceChanges: {
-            'stock-1': { day5: 2.0, day30: null, day90: null, day365: null },
+            'stock-1': pc({ day5: 2.0, day30: null, day90: null, day365: null }),
           },
         },
         {
           id: '3',
           sentiment: 1 as Sentiment,
           priceChanges: {
-            'stock-1': { day5: -1.0, day30: null, day90: null, day365: null },
+            'stock-1': pc({ day5: -1.0, day30: null, day90: null, day365: null }),
           },
         },
       ];
@@ -394,21 +416,21 @@ describe('return-rate.calculator', () => {
           id: '1',
           sentiment: 1 as Sentiment,
           priceChanges: {
-            'stock-1': { day5: 1.0, day30: null, day90: null, day365: null },
+            'stock-1': pc({ day5: 1.0, day30: null, day90: null, day365: null }),
           },
         },
         {
           id: '2',
           sentiment: 1 as Sentiment,
           priceChanges: {
-            'stock-1': { day5: -1.0, day30: null, day90: null, day365: null },
+            'stock-1': pc({ day5: -1.0, day30: null, day90: null, day365: null }),
           },
         },
         {
           id: '3',
           sentiment: 1 as Sentiment,
           priceChanges: {
-            'stock-1': { day5: -1.0, day30: null, day90: null, day365: null },
+            'stock-1': pc({ day5: -1.0, day30: null, day90: null, day365: null }),
           },
         },
       ];
@@ -430,28 +452,28 @@ describe('return-rate.calculator', () => {
           id: '1',
           sentiment: 0 as Sentiment, // 中立 - 不計入
           priceChanges: {
-            'stock-1': { day5: 10.0, day30: 20.0, day90: null, day365: null },
+            'stock-1': pc({ day5: 10.0, day30: 20.0, day90: null, day365: null }),
           },
         },
         {
           id: '2',
           sentiment: 1 as Sentiment, // 看多
           priceChanges: {
-            'stock-1': { day5: 5.0, day30: null, day90: 10.0, day365: null },
+            'stock-1': pc({ day5: 5.0, day30: null, day90: 10.0, day365: null }),
           },
         },
         {
           id: '3',
           sentiment: -1 as Sentiment, // 看空
           priceChanges: {
-            'stock-1': { day5: null, day30: -5.0, day90: null, day365: -8.0 },
+            'stock-1': pc({ day5: null, day30: -5.0, day90: null, day365: -8.0 }),
           },
         },
         {
           id: '4',
           sentiment: 2 as Sentiment, // 強烈看多
           priceChanges: {
-            'stock-1': { day5: -2.0, day30: 3.0, day90: -1.0, day365: 4.0 },
+            'stock-1': pc({ day5: -2.0, day30: 3.0, day90: -1.0, day365: 4.0 }),
           },
         },
       ];
@@ -498,14 +520,14 @@ describe('return-rate.calculator', () => {
           id: '1',
           sentiment: 1 as Sentiment,
           priceChanges: {
-            'stock-1': { day5: 5.0, day30: 10.0, day90: -5.0, day365: null },
+            'stock-1': pc({ day5: 5.0, day30: 10.0, day90: -5.0, day365: null }),
           },
         },
         {
           id: '2',
           sentiment: -1 as Sentiment,
           priceChanges: {
-            'stock-1': { day5: -3.0, day30: 5.0, day90: -8.0, day365: null },
+            'stock-1': pc({ day5: -3.0, day30: 5.0, day90: -8.0, day365: null }),
           },
         },
       ];
@@ -544,7 +566,7 @@ describe('return-rate.calculator', () => {
           id: '1',
           sentiment: 0 as Sentiment,
           priceChanges: {
-            'stock-1': { day5: 10.0, day30: 20.0, day90: null, day365: null },
+            'stock-1': pc({ day5: 10.0, day30: 20.0, day90: null, day365: null }),
           },
         },
       ];
@@ -594,8 +616,8 @@ describe('return-rate.calculator', () => {
             // stock-2 has no override -> falls back to 1 (bullish)
           },
           priceChanges: {
-            'stock-1': { day5: -5.0, day30: null, day90: null, day365: null },
-            'stock-2': { day5: -5.0, day30: null, day90: null, day365: null },
+            'stock-1': pc({ day5: -5.0, day30: null, day90: null, day365: null }),
+            'stock-2': pc({ day5: -5.0, day30: null, day90: null, day365: null }),
           },
         },
       ];
@@ -619,7 +641,7 @@ describe('return-rate.calculator', () => {
           sentiment: 1 as Sentiment,
           stockSentiments: { 'stock-1': 0 as Sentiment },
           priceChanges: {
-            'stock-1': { day5: 10.0, day30: null, day90: null, day365: null },
+            'stock-1': pc({ day5: 10.0, day30: null, day90: null, day365: null }),
           },
         },
       ];
@@ -635,8 +657,8 @@ describe('return-rate.calculator', () => {
           id: '1',
           sentiment: 1 as Sentiment,
           priceChanges: {
-            'stock-1': { day5: 5.0, day30: null, day90: null, day365: null },
-            'stock-2': { day5: 3.0, day30: null, day90: null, day365: null },
+            'stock-1': pc({ day5: 5.0, day30: null, day90: null, day365: null }),
+            'stock-2': pc({ day5: 3.0, day30: null, day90: null, day365: null }),
           },
         },
       ];
@@ -656,7 +678,7 @@ describe('return-rate.calculator', () => {
             'stock-1': 1 as Sentiment, // but per-stock is bullish
           },
           priceChanges: {
-            'stock-1': { day5: 5.0, day30: null, day90: null, day365: null },
+            'stock-1': pc({ day5: 5.0, day30: null, day90: null, day365: null }),
           },
         },
       ];
@@ -678,8 +700,8 @@ describe('return-rate.calculator', () => {
             'stock-amd': -1 as Sentiment, // bearish on AMD
           },
           priceChanges: {
-            'stock-nvda': { day5: 10.0, day30: 20.0, day90: null, day365: null },
-            'stock-amd': { day5: -5.0, day30: 3.0, day90: null, day365: null },
+            'stock-nvda': pc({ day5: 10.0, day30: 20.0, day90: null, day365: null }),
+            'stock-amd': pc({ day5: -5.0, day30: 3.0, day90: null, day365: null }),
           },
         },
       ];
@@ -703,19 +725,249 @@ describe('return-rate.calculator', () => {
     });
   });
 
+  describe('pendingCount tracking', () => {
+    it('counts pending when status is pending', () => {
+      const posts: PostForReturnRate[] = [
+        {
+          id: '1',
+          sentiment: 1 as Sentiment,
+          priceChanges: {
+            'stock-1': {
+              day5: 5.0,
+              day30: null,
+              day90: null,
+              day365: null,
+              day5Status: 'value' as PriceChangeStatus,
+              day30Status: 'pending' as PriceChangeStatus,
+              day90Status: 'pending' as PriceChangeStatus,
+              day365Status: 'pending' as PriceChangeStatus,
+            },
+          },
+        },
+        {
+          id: '2',
+          sentiment: -1 as Sentiment,
+          priceChanges: {
+            'stock-1': {
+              day5: -3.0,
+              day30: null,
+              day90: null,
+              day365: null,
+              day5Status: 'value' as PriceChangeStatus,
+              day30Status: 'pending' as PriceChangeStatus,
+              day90Status: 'no_data' as PriceChangeStatus,
+              day365Status: 'pending' as PriceChangeStatus,
+            },
+          },
+        },
+      ];
+
+      const stats = calculateReturnRateStats(posts);
+
+      // day5: both have values
+      expect(stats.day5.total).toBe(2);
+      expect(stats.day5.positiveCount).toBe(2); // bullish+5=+5, bearish-3=+3
+      expect(stats.day5.naCount).toBe(0);
+      expect(stats.day5.pendingCount).toBe(0);
+      expect(stats.day5.avgReturn).toBe(4);
+
+      // day30: both null with pending status
+      expect(stats.day30.total).toBe(2);
+      expect(stats.day30.naCount).toBe(0);
+      expect(stats.day30.pendingCount).toBe(2);
+      expect(stats.day30.avgReturn).toBeNull();
+
+      // day90: post1 pending, post2 no_data
+      expect(stats.day90.total).toBe(2);
+      expect(stats.day90.naCount).toBe(1);
+      expect(stats.day90.pendingCount).toBe(1);
+      expect(stats.day90.avgReturn).toBeNull();
+
+      // day365: both pending
+      expect(stats.day365.total).toBe(2);
+      expect(stats.day365.naCount).toBe(0);
+      expect(stats.day365.pendingCount).toBe(2);
+      expect(stats.day365.avgReturn).toBeNull();
+    });
+
+    it('all posts pending for a period — avgReturn is null, pendingCount equals total', () => {
+      const posts: PostForReturnRate[] = [
+        {
+          id: '1',
+          sentiment: 1 as Sentiment,
+          priceChanges: {
+            'stock-1': {
+              day5: 5.0,
+              day30: 10.0,
+              day90: null,
+              day365: null,
+              day5Status: 'value' as PriceChangeStatus,
+              day30Status: 'value' as PriceChangeStatus,
+              day90Status: 'pending' as PriceChangeStatus,
+              day365Status: 'pending' as PriceChangeStatus,
+            },
+          },
+        },
+        {
+          id: '2',
+          sentiment: -1 as Sentiment,
+          priceChanges: {
+            'stock-1': {
+              day5: -3.0,
+              day30: 8.0,
+              day90: null,
+              day365: null,
+              day5Status: 'value' as PriceChangeStatus,
+              day30Status: 'value' as PriceChangeStatus,
+              day90Status: 'pending' as PriceChangeStatus,
+              day365Status: 'pending' as PriceChangeStatus,
+            },
+          },
+        },
+        {
+          id: '3',
+          sentiment: 2 as Sentiment,
+          priceChanges: {
+            'stock-1': {
+              day5: 2.0,
+              day30: -1.0,
+              day90: null,
+              day365: null,
+              day5Status: 'value' as PriceChangeStatus,
+              day30Status: 'value' as PriceChangeStatus,
+              day90Status: 'pending' as PriceChangeStatus,
+              day365Status: 'pending' as PriceChangeStatus,
+            },
+          },
+        },
+      ];
+
+      const stats = calculateReturnRateStats(posts);
+
+      // day5: has values for all 3
+      expect(stats.day5.total).toBe(3);
+      expect(stats.day5.pendingCount).toBe(0);
+      expect(stats.day5.avgReturn).not.toBeNull();
+
+      // day30: has values for all 3
+      expect(stats.day30.total).toBe(3);
+      expect(stats.day30.pendingCount).toBe(0);
+      expect(stats.day30.avgReturn).not.toBeNull();
+
+      // day90: all pending
+      expect(stats.day90.total).toBe(3);
+      expect(stats.day90.pendingCount).toBe(3);
+      expect(stats.day90.naCount).toBe(0);
+      expect(stats.day90.positiveCount).toBe(0);
+      expect(stats.day90.negativeCount).toBe(0);
+      expect(stats.day90.avgReturn).toBeNull();
+
+      // day365: all pending
+      expect(stats.day365.total).toBe(3);
+      expect(stats.day365.pendingCount).toBe(3);
+      expect(stats.day365.naCount).toBe(0);
+      expect(stats.day365.positiveCount).toBe(0);
+      expect(stats.day365.negativeCount).toBe(0);
+      expect(stats.day365.avgReturn).toBeNull();
+    });
+
+    it('mixed pending and no_data', () => {
+      const posts: PostForReturnRate[] = [
+        {
+          id: '1',
+          sentiment: 1 as Sentiment,
+          priceChanges: {
+            'stock-1': {
+              day5: null,
+              day30: null,
+              day90: null,
+              day365: null,
+              day5Status: 'pending' as PriceChangeStatus,
+              day30Status: 'no_data' as PriceChangeStatus,
+              day90Status: 'pending' as PriceChangeStatus,
+              day365Status: 'no_data' as PriceChangeStatus,
+            },
+          },
+        },
+        {
+          id: '2',
+          sentiment: -1 as Sentiment,
+          priceChanges: {
+            'stock-1': {
+              day5: null,
+              day30: null,
+              day90: null,
+              day365: null,
+              day5Status: 'no_data' as PriceChangeStatus,
+              day30Status: 'pending' as PriceChangeStatus,
+              day90Status: 'no_data' as PriceChangeStatus,
+              day365Status: 'pending' as PriceChangeStatus,
+            },
+          },
+        },
+        {
+          id: '3',
+          sentiment: 2 as Sentiment,
+          priceChanges: {
+            'stock-1': {
+              day5: null,
+              day30: null,
+              day90: null,
+              day365: null,
+              day5Status: 'pending' as PriceChangeStatus,
+              day30Status: 'pending' as PriceChangeStatus,
+              day90Status: 'no_data' as PriceChangeStatus,
+              day365Status: 'no_data' as PriceChangeStatus,
+            },
+          },
+        },
+      ];
+
+      const stats = calculateReturnRateStats(posts);
+
+      // day5: post1=pending, post2=no_data, post3=pending
+      expect(stats.day5.total).toBe(3);
+      expect(stats.day5.pendingCount).toBe(2);
+      expect(stats.day5.naCount).toBe(1);
+      expect(stats.day5.positiveCount).toBe(0);
+      expect(stats.day5.negativeCount).toBe(0);
+      expect(stats.day5.avgReturn).toBeNull();
+
+      // day30: post1=no_data, post2=pending, post3=pending
+      expect(stats.day30.total).toBe(3);
+      expect(stats.day30.pendingCount).toBe(2);
+      expect(stats.day30.naCount).toBe(1);
+      expect(stats.day30.avgReturn).toBeNull();
+
+      // day90: post1=pending, post2=no_data, post3=no_data
+      expect(stats.day90.total).toBe(3);
+      expect(stats.day90.pendingCount).toBe(1);
+      expect(stats.day90.naCount).toBe(2);
+      expect(stats.day90.avgReturn).toBeNull();
+
+      // day365: post1=no_data, post2=pending, post3=no_data
+      expect(stats.day365.total).toBe(3);
+      expect(stats.day365.pendingCount).toBe(1);
+      expect(stats.day365.naCount).toBe(2);
+      expect(stats.day365.avgReturn).toBeNull();
+    });
+  });
+
   describe('getReturnRateColorClass', () => {
     it('返回正確的顏色類別', () => {
-      expect(getReturnRateColorClass(10.0)).toBe('text-green-600');
-      expect(getReturnRateColorClass(2.0)).toBe('text-green-500');
+      // Default palette is 'asian': bullish=red, bearish=green
+      expect(getReturnRateColorClass(10.0)).toBe('text-red-600');
+      expect(getReturnRateColorClass(2.0)).toBe('text-red-500');
       expect(getReturnRateColorClass(-3.0)).toBe('text-yellow-500');
-      expect(getReturnRateColorClass(-10.0)).toBe('text-red-500');
+      expect(getReturnRateColorClass(-10.0)).toBe('text-green-500');
     });
 
     it('處理邊界值', () => {
-      expect(getReturnRateColorClass(5)).toBe('text-green-600');
-      expect(getReturnRateColorClass(0)).toBe('text-green-500');
+      // Default palette is 'asian': bullish=red, bearish=green
+      expect(getReturnRateColorClass(5)).toBe('text-red-600');
+      expect(getReturnRateColorClass(0)).toBe('text-red-500');
       expect(getReturnRateColorClass(-5)).toBe('text-yellow-500');
-      expect(getReturnRateColorClass(-5.01)).toBe('text-red-500');
+      expect(getReturnRateColorClass(-5.01)).toBe('text-green-500');
     });
 
     it('處理 null 值', () => {

@@ -68,7 +68,8 @@
         "neutral": "中立文章不納入報酬率計算",
         "allKols": "計算基於所有 KOL 對此標的的文章"
       },
-      "loadFailed": "無法載入報酬率資料"
+      "loadFailed": "無法載入報酬率資料",
+      "pending": "待計算"
     },
     "arguments": {
       "title": "論點分布統計",

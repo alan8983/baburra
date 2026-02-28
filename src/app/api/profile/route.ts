@@ -7,26 +7,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { getProfile, updateProfile } from '@/infrastructure/repositories/profile.repository';
-import type { ColorPalette } from '@/domain/models/user';
+import { unauthorizedError, internalError } from '@/lib/api/error';
+import { updateProfileSchema, parseBody } from '@/lib/api/validation';
 
 export async function GET() {
   try {
     const userId = await getCurrentUserId();
     if (!userId) {
-      return NextResponse.json(
-        { error: { code: 'UNAUTHORIZED', message: 'Please log in' } },
-        { status: 401 }
-      );
+      return unauthorizedError();
     }
 
     const profile = await getProfile(userId);
     return NextResponse.json(profile);
   } catch (error) {
-    console.error('GET /api/profile error:', error);
-    return NextResponse.json(
-      { error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } },
-      { status: 500 }
-    );
+    return internalError(error, 'Failed to fetch profile');
   }
 }
 
@@ -34,28 +28,17 @@ export async function PATCH(request: NextRequest) {
   try {
     const userId = await getCurrentUserId();
     if (!userId) {
-      return NextResponse.json(
-        { error: { code: 'UNAUTHORIZED', message: 'Please log in' } },
-        { status: 401 }
-      );
+      return unauthorizedError();
     }
 
-    const body = await request.json();
-    const { displayName, timezone, colorPalette } = body as {
-      displayName?: string;
-      timezone?: string;
-      colorPalette?: ColorPalette;
-    };
+    const parsed = await parseBody(request, updateProfileSchema);
+    if ('error' in parsed) return parsed.error;
 
-    await updateProfile(userId, { displayName, timezone, colorPalette });
+    await updateProfile(userId, parsed.data);
 
     const updated = await getProfile(userId);
     return NextResponse.json(updated);
   } catch (error) {
-    console.error('PATCH /api/profile error:', error);
-    return NextResponse.json(
-      { error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } },
-      { status: 500 }
-    );
+    return internalError(error, 'Failed to update profile');
   }
 }

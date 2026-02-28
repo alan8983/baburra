@@ -11,6 +11,7 @@ import type {
   PostWithPriceChanges,
 } from '@/domain/models';
 import { API_ROUTES } from '@/lib/constants';
+import { throwIfNotOk } from '@/lib/api/fetch-error';
 
 import type { ReturnRateStats } from '@/domain/calculators';
 
@@ -38,7 +39,7 @@ export function useKols(params?: { search?: string; page?: number; limit?: numbe
 
       const url = `${API_ROUTES.KOLS}?${searchParams.toString()}`;
       const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch KOLs');
+      await throwIfNotOk(res);
       return res.json();
     },
     staleTime: 2 * 60 * 1000,
@@ -52,7 +53,7 @@ export function useKol(id: string) {
     queryKey: kolKeys.detail(id),
     queryFn: async (): Promise<KOLWithStats> => {
       const res = await fetch(API_ROUTES.KOL_DETAIL(id));
-      if (!res.ok) throw new Error('Failed to fetch KOL');
+      await throwIfNotOk(res);
       return res.json();
     },
     enabled: !!id,
@@ -71,7 +72,7 @@ export function useKolPosts(id: string, params?: { page?: number; limit?: number
       if (params?.limit) searchParams.set('limit', params.limit.toString());
       const url = `${API_ROUTES.KOL_POSTS(id)}?${searchParams.toString()}`;
       const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch KOL posts');
+      await throwIfNotOk(res);
       return res.json();
     },
     enabled: !!id,
@@ -86,7 +87,7 @@ export function useKolSearch(query: string) {
     queryKey: kolKeys.search(query),
     queryFn: async (): Promise<KOLSearchResult[]> => {
       const res = await fetch(`${API_ROUTES.KOLS}?search=${encodeURIComponent(query)}&limit=10`);
-      if (!res.ok) throw new Error('Failed to search KOLs');
+      await throwIfNotOk(res);
       const { data } = await res.json();
       return data;
     },
@@ -107,7 +108,7 @@ export function useCreateKol() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
       });
-      if (!res.ok) throw new Error('Failed to create KOL');
+      await throwIfNotOk(res);
       return res.json();
     },
     onSuccess: () => {
@@ -122,7 +123,7 @@ export function useKolReturnRate(id: string) {
     queryKey: kolKeys.returnRate(id),
     queryFn: async (): Promise<ReturnRateStats> => {
       const res = await fetch(API_ROUTES.KOL_RETURN_RATE(id));
-      if (!res.ok) throw new Error('Failed to fetch KOL return rate');
+      await throwIfNotOk(res);
       return res.json();
     },
     enabled: !!id,

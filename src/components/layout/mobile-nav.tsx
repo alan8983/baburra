@@ -23,6 +23,7 @@ import { Separator } from '@/components/ui/separator';
 import { useUIStore } from '@/stores';
 import { ROUTES } from '@/lib/constants';
 import { APP_CONFIG } from '@/lib/constants/config';
+import { TrumpetIcon } from '@/components/icons/trumpet-icon';
 import { useAuth } from '@/hooks/use-auth';
 import { useDraftCount } from '@/hooks/use-drafts';
 
@@ -74,7 +75,7 @@ export function MobileNav() {
       <SheetContent side="left" className="w-72 p-0">
         <SheetHeader className="border-b p-4">
           <SheetTitle className="flex items-center gap-2">
-            <TrendingUp className="text-primary h-5 w-5" />
+            <TrumpetIcon className="text-primary h-5 w-5" />
             {APP_CONFIG.APP_NAME}
           </SheetTitle>
         </SheetHeader>

@@ -9,6 +9,7 @@
 import { useQuery } from '@tanstack/react-query';
 import type { CandlestickData, VolumeData } from '@/domain/models/stock';
 import { API_ROUTES } from '@/lib/constants';
+import { throwIfNotOk } from '@/lib/api/fetch-error';
 
 const stockPricesChartKeys = {
   all: ['stockPricesChart'] as const,
@@ -33,7 +34,7 @@ export function useStockPricesForChart(
       if (params?.endDate) searchParams.set('endDate', params.endDate);
       const url = `${API_ROUTES.STOCK_PRICES(ticker)}?${searchParams.toString()}`;
       const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch stock prices');
+      await throwIfNotOk(res);
       return res.json();
     },
     enabled: !!ticker,

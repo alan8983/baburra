@@ -2,8 +2,6 @@
 
 import { createAdminClient } from '@/infrastructure/supabase/admin';
 import { escapePostgrestSearch } from '@/lib/api/search';
-import { getArgumentCategoryByCode, createPostArguments } from './argument.repository';
-import type { CreatePostArgumentInput } from './argument.repository';
 import type {
   Post,
   PostWithRelations,
@@ -183,84 +181,66 @@ export async function getPostById(id: string): Promise<PostWithPriceChanges | nu
 
 export async function createPost(input: CreatePostInput, createdBy: string | null): Promise<Post> {
   const supabase = createAdminClient();
-  const { data: row, error } = await supabase
-    .from('posts')
-    .insert({
-      kol_id: input.kolId,
-      title: input.title ?? null,
-      content: input.content,
-      source_url: input.sourceUrl ?? null,
-      source_platform: input.sourcePlatform,
-      images: input.images ?? [],
-      sentiment: input.sentiment,
-      sentiment_ai_generated: input.sentimentAiGenerated ?? false,
-      posted_at: input.postedAt instanceof Date ? input.postedAt.toISOString() : input.postedAt,
-      created_by: createdBy,
-    })
-    .select()
-    .single();
 
-  if (error) throw new Error(error.message);
-  const post = mapDbToPost(row as DbPost);
+  // Build stock array for RPC
+  const stocksParam = (input.stockIds ?? []).map((stockId) => ({
+    stock_id: stockId,
+    sentiment: input.stockSentiments?.[stockId] ?? null,
+  }));
 
-  try {
-    if (input.stockIds?.length) {
-      const { error: psError } = await supabase.from('post_stocks').insert(
-        input.stockIds.map((stock_id) => ({
-          post_id: post.id,
-          stock_id,
-          sentiment: input.stockSentiments?.[stock_id] ?? null,
-        }))
-      );
-      if (psError) throw new Error(psError.message);
+  // Build arguments array for RPC (resolve ticker → stock_id)
+  let argumentsParam: unknown[] = [];
+  if (input.draftAiArguments?.length && input.stockIds?.length) {
+    // Look up ticker → stockId mapping
+    const { data: stockRows } = await supabase
+      .from('stocks')
+      .select('id, ticker')
+      .in('id', input.stockIds);
+
+    const tickerToStockId: Record<string, string> = {};
+    for (const s of stockRows ?? []) {
+      tickerToStockId[(s.ticker as string).toUpperCase()] = s.id as string;
     }
 
-    // Transfer draft AI arguments to post_arguments table
-    if (input.draftAiArguments?.length && input.stockIds?.length) {
-      const { data: stockRows } = await supabase
-        .from('stocks')
-        .select('id, ticker')
-        .in('id', input.stockIds);
-
-      const tickerToStockId: Record<string, string> = {};
-      for (const s of stockRows ?? []) {
-        tickerToStockId[(s.ticker as string).toUpperCase()] = s.id as string;
-      }
-
-      for (const tickerGroup of input.draftAiArguments) {
-        const stockId = tickerToStockId[tickerGroup.ticker.toUpperCase()];
-        if (!stockId) continue;
-
-        const argInputs: CreatePostArgumentInput[] = [];
-        for (const arg of tickerGroup.arguments) {
-          const category = await getArgumentCategoryByCode(arg.categoryCode);
-          if (!category) continue;
-          argInputs.push({
-            postId: post.id,
-            stockId,
-            categoryId: category.id,
-            originalText: arg.originalText,
-            summary: arg.summary,
-            sentiment: arg.sentiment,
-            confidence: arg.confidence,
-          });
-        }
-
-        if (argInputs.length > 0) {
-          await createPostArguments(argInputs);
-        }
-      }
-    }
-  } catch (followUpError) {
-    // Compensating cleanup: remove post + post_stocks on follow-up failure
-    console.error('Post creation follow-up failed, rolling back:', followUpError);
-    await supabase.from('post_arguments').delete().eq('post_id', post.id);
-    await supabase.from('post_stocks').delete().eq('post_id', post.id);
-    await supabase.from('posts').delete().eq('id', post.id);
-    throw followUpError;
+    argumentsParam = input.draftAiArguments
+      .filter((g) => tickerToStockId[g.ticker.toUpperCase()])
+      .map((g) => ({
+        ticker: g.ticker,
+        arguments: g.arguments.map((arg) => ({
+          stock_id: tickerToStockId[g.ticker.toUpperCase()],
+          category_code: arg.categoryCode,
+          original_text: arg.originalText,
+          summary: arg.summary,
+          sentiment: arg.sentiment,
+          confidence: arg.confidence,
+        })),
+      }));
   }
 
-  return post;
+  const postedAtStr =
+    input.postedAt instanceof Date ? input.postedAt.toISOString() : input.postedAt;
+
+  // Call atomic RPC
+  const { data: rpcData, error: rpcError } = await supabase.rpc('create_post_atomic', {
+    p_kol_id: input.kolId,
+    p_title: input.title ?? null,
+    p_content: input.content,
+    p_source_url: input.sourceUrl ?? null,
+    p_source_platform: input.sourcePlatform,
+    p_images: input.images ?? [],
+    p_sentiment: input.sentiment,
+    p_sentiment_ai_generated: input.sentimentAiGenerated ?? false,
+    p_posted_at: postedAtStr,
+    p_created_by: createdBy,
+    p_stocks: stocksParam,
+    p_arguments: argumentsParam,
+  });
+
+  if (rpcError) throw new Error(rpcError.message);
+
+  // RPC returns the post row as JSONB
+  const row = rpcData as DbPost;
+  return mapDbToPost(row);
 }
 
 export async function updatePost(

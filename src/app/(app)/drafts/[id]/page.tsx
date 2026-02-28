@@ -281,16 +281,7 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
         clearTimeout(autoSaveTimerRef.current);
       }
     };
-  }, [
-    content,
-    sourceUrl,
-    sentiment,
-    stockSentiments,
-    selectedKOL,
-    selectedStocks,
-    postedAt,
-    images,
-  ]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [doAutoSave]);
 
   // 處理新增 KOL
   const handleCreateKOL = (name: string) => {
@@ -849,6 +840,9 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
               ? t('detail.ai.analyzing')
               : t('detail.ai.analyzeArguments')}
           </Button>
+          <Badge variant="outline" className="text-muted-foreground text-[10px] font-normal">
+            {tCommon('ai.underDevelopment')}
+          </Badge>
           {displayArguments.length > 0 && (
             <span className="text-muted-foreground text-sm">
               {t('detail.ai.argumentCount', {

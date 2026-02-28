@@ -4,20 +4,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { listDraftsByUserId, createDraft } from '@/infrastructure/repositories';
-import type { CreateDraftInput } from '@/domain/models';
 import { parsePaginationParams } from '@/lib/api/pagination';
-import { internalError } from '@/lib/api/error';
+import { unauthorizedError, internalError, errorResponse } from '@/lib/api/error';
+import { createDraftSchema, parseBody } from '@/lib/api/validation';
 
 export async function GET(request: NextRequest) {
   try {
     const userId = await getCurrentUserId();
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return unauthorizedError();
     }
     const { searchParams } = new URL(request.url);
     const pagination = parsePaginationParams(searchParams);
     if (pagination.error) {
-      return NextResponse.json({ error: pagination.error }, { status: 400 });
+      return errorResponse(400, 'BAD_REQUEST', pagination.error);
     }
     const result = await listDraftsByUserId(userId, {
       page: pagination.data?.page,
@@ -33,10 +33,11 @@ export async function POST(request: NextRequest) {
   try {
     const userId = await getCurrentUserId();
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return unauthorizedError();
     }
-    const body = (await request.json()) as CreateDraftInput;
-    const draft = await createDraft(userId, body ?? {});
+    const parsed = await parseBody(request, createDraftSchema);
+    if ('error' in parsed) return parsed.error;
+    const draft = await createDraft(userId, parsed.data);
     return NextResponse.json(draft);
   } catch (err) {
     return internalError(err, 'Failed to create draft');

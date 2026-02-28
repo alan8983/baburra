@@ -20,6 +20,7 @@ import {
   createStock,
   consumeAiQuota,
 } from '@/infrastructure/repositories';
+import { refundAiQuota } from '@/infrastructure/repositories/ai-usage.repository';
 import {
   checkOnboardingImportUsed,
   markOnboardingImportUsed,
@@ -189,138 +190,155 @@ async function processUrl(
     }
   }
 
-  // 3. Extract content from URL
-  const fetchResult = await extractorFactory.extractFromUrl(url);
+  // Steps 3-9 are wrapped in try/catch to refund quota on failure
+  try {
+    // 3. Extract content from URL
+    const fetchResult = await extractorFactory.extractFromUrl(url);
 
-  // 4. AI analysis (sentiment + ticker identification in one call)
-  const analysis = await analyzeDraftContent(fetchResult.content, timezone);
+    // 4. AI analysis (sentiment + ticker identification in one call)
+    const analysis = await analyzeDraftContent(fetchResult.content, timezone);
 
-  // 5. Zero-ticker rejection — skip post creation if no stocks identified
-  if (analysis.stockTickers.length === 0) {
-    return { url, status: 'error', error: 'no_tickers_identified' };
-  }
-
-  // 6. Auto-detect KOL: extractor > AI > @handle > "Unknown"
-  const detectedKolName =
-    fetchResult.kolName ||
-    analysis.kolName ||
-    extractAtHandles(fetchResult.content)[0] ||
-    'Unknown';
-
-  const normalizedName = detectedKolName.trim().toLowerCase();
-  let kolEntry = kolCache.get(normalizedName);
-  let kolCreated = false;
-
-  if (!kolEntry) {
-    const existingKol = await findKolByName(detectedKolName);
-    if (existingKol) {
-      kolEntry = { kolId: existingKol.id, kolCreated: false };
-    } else {
-      const newKol = await createKol({ name: detectedKolName });
-      kolEntry = { kolId: newKol.id, kolCreated: true };
+    // 5. Zero-ticker rejection — skip post creation if no stocks identified
+    if (analysis.stockTickers.length === 0) {
+      // Refund quota since no post will be created
+      if (!quotaExempt) {
+        await refundAiQuota(userId).catch((err) =>
+          console.error('Quota refund failed (zero tickers):', err)
+        );
+      }
+      return { url, status: 'error', error: 'no_tickers_identified' };
     }
-    kolCache.set(normalizedName, kolEntry);
-  }
 
-  kolCreated = kolEntry.kolCreated;
-  const kolId = kolEntry.kolId;
+    // 6. Auto-detect KOL: extractor > AI > @handle > "Unknown"
+    const detectedKolName =
+      fetchResult.kolName ||
+      analysis.kolName ||
+      extractAtHandles(fetchResult.content)[0] ||
+      'Unknown';
 
-  // 7. Find or create stocks for identified tickers
-  const stockIds: string[] = [];
-  const stockSentiments: Record<string, Sentiment> = {};
-  const tickerToStockId: Record<string, string> = {};
+    const normalizedName = detectedKolName.trim().toLowerCase();
+    let kolEntry = kolCache.get(normalizedName);
+    let kolCreated = false;
 
-  for (const ticker of analysis.stockTickers) {
-    try {
-      const existingStock = await getStockByTicker(ticker.ticker);
-      if (existingStock) {
-        stockIds.push(existingStock.id);
-        tickerToStockId[ticker.ticker.toUpperCase()] = existingStock.id;
+    if (!kolEntry) {
+      const existingKol = await findKolByName(detectedKolName);
+      if (existingKol) {
+        kolEntry = { kolId: existingKol.id, kolCreated: false };
       } else {
-        const newStock = await createStock({
-          ticker: ticker.ticker,
-          name: ticker.name,
-          market: ticker.market,
-        });
-        stockIds.push(newStock.id);
-        tickerToStockId[ticker.ticker.toUpperCase()] = newStock.id;
+        const newKol = await createKol({ name: detectedKolName });
+        kolEntry = { kolId: newKol.id, kolCreated: true };
       }
-    } catch (stockErr) {
-      console.error(`Failed to find/create stock ${ticker.ticker}:`, stockErr);
+      kolCache.set(normalizedName, kolEntry);
     }
-  }
 
-  // Map per-ticker sentiments to per-stockId sentiments
-  if (analysis.stockSentiments) {
-    for (const [ticker, sentiment] of Object.entries(analysis.stockSentiments)) {
-      const stockId = tickerToStockId[ticker.toUpperCase()];
-      if (stockId) {
-        stockSentiments[stockId] = sentiment;
-      }
-    }
-  }
+    kolCreated = kolEntry.kolCreated;
+    const kolId = kolEntry.kolId;
 
-  // 8. Extract arguments per stock (parallel)
-  let draftAiArguments: DraftAiArguments[] | undefined;
-  if (analysis.stockTickers.length > 0) {
-    try {
-      const results = await Promise.allSettled(
-        analysis.stockTickers.map((ticker) =>
-          extractArguments(fetchResult.content, ticker.ticker, ticker.name)
-        )
-      );
-      const argumentResults: DraftAiArguments[] = [];
-      for (let i = 0; i < results.length; i++) {
-        const result = results[i];
-        if (result.status === 'fulfilled' && result.value.arguments.length > 0) {
-          argumentResults.push({
-            ticker: analysis.stockTickers[i].ticker,
-            name: analysis.stockTickers[i].name,
-            arguments: result.value.arguments,
+    // 7. Find or create stocks for identified tickers
+    const stockIds: string[] = [];
+    const stockSentiments: Record<string, Sentiment> = {};
+    const tickerToStockId: Record<string, string> = {};
+
+    for (const ticker of analysis.stockTickers) {
+      try {
+        const existingStock = await getStockByTicker(ticker.ticker);
+        if (existingStock) {
+          stockIds.push(existingStock.id);
+          tickerToStockId[ticker.ticker.toUpperCase()] = existingStock.id;
+        } else {
+          const newStock = await createStock({
+            ticker: ticker.ticker,
+            name: ticker.name,
+            market: ticker.market,
           });
+          stockIds.push(newStock.id);
+          tickerToStockId[ticker.ticker.toUpperCase()] = newStock.id;
+        }
+      } catch (stockErr) {
+        console.error(`Failed to find/create stock ${ticker.ticker}:`, stockErr);
+      }
+    }
+
+    // Map per-ticker sentiments to per-stockId sentiments
+    if (analysis.stockSentiments) {
+      for (const [ticker, sentiment] of Object.entries(analysis.stockSentiments)) {
+        const stockId = tickerToStockId[ticker.toUpperCase()];
+        if (stockId) {
+          stockSentiments[stockId] = sentiment;
         }
       }
-      if (argumentResults.length > 0) {
-        draftAiArguments = argumentResults;
-      }
-    } catch (argError) {
-      console.error('Argument extraction failed:', argError);
     }
-  }
 
-  // 9. Create post
-  const post = await createPost(
-    {
-      kolId,
-      stockIds,
-      content: fetchResult.content,
-      sourceUrl: fetchResult.sourceUrl,
-      sourcePlatform: fetchResult.sourcePlatform as SourcePlatform,
+    // 8. Extract arguments per stock (parallel)
+    let draftAiArguments: DraftAiArguments[] | undefined;
+    if (analysis.stockTickers.length > 0) {
+      try {
+        const results = await Promise.allSettled(
+          analysis.stockTickers.map((ticker) =>
+            extractArguments(fetchResult.content, ticker.ticker, ticker.name)
+          )
+        );
+        const argumentResults: DraftAiArguments[] = [];
+        for (let i = 0; i < results.length; i++) {
+          const result = results[i];
+          if (result.status === 'fulfilled' && result.value.arguments.length > 0) {
+            argumentResults.push({
+              ticker: analysis.stockTickers[i].ticker,
+              name: analysis.stockTickers[i].name,
+              arguments: result.value.arguments,
+            });
+          }
+        }
+        if (argumentResults.length > 0) {
+          draftAiArguments = argumentResults;
+        }
+      } catch (argError) {
+        console.error('Argument extraction failed:', argError);
+      }
+    }
+
+    // 9. Create post (atomic via RPC)
+    const post = await createPost(
+      {
+        kolId,
+        stockIds,
+        content: fetchResult.content,
+        sourceUrl: fetchResult.sourceUrl,
+        sourcePlatform: fetchResult.sourcePlatform as SourcePlatform,
+        title: fetchResult.title || undefined,
+        images: fetchResult.images,
+        sentiment: analysis.sentiment,
+        sentimentAiGenerated: true,
+        stockSentiments: Object.keys(stockSentiments).length > 0 ? stockSentiments : undefined,
+        postedAt: analysis.postedAt
+          ? new Date(analysis.postedAt)
+          : fetchResult.postedAt
+            ? new Date(fetchResult.postedAt)
+            : new Date(),
+        draftAiArguments,
+      },
+      userId
+    );
+
+    return {
+      url,
+      status: 'success',
+      postId: post.id,
       title: fetchResult.title || undefined,
-      images: fetchResult.images,
+      sourcePlatform: fetchResult.sourcePlatform,
+      stockTickers: analysis.stockTickers.map((t) => t.ticker),
       sentiment: analysis.sentiment,
-      sentimentAiGenerated: true,
-      stockSentiments: Object.keys(stockSentiments).length > 0 ? stockSentiments : undefined,
-      postedAt: analysis.postedAt
-        ? new Date(analysis.postedAt)
-        : fetchResult.postedAt
-          ? new Date(fetchResult.postedAt)
-          : new Date(),
-      draftAiArguments,
-    },
-    userId
-  );
-
-  return {
-    url,
-    status: 'success',
-    postId: post.id,
-    title: fetchResult.title || undefined,
-    sourcePlatform: fetchResult.sourcePlatform,
-    stockTickers: analysis.stockTickers.map((t) => t.ticker),
-    sentiment: analysis.sentiment,
-    kolId,
-    kolName: detectedKolName,
-    kolCreated,
-  };
+      kolId,
+      kolName: detectedKolName,
+      kolCreated,
+    };
+  } catch (pipelineErr) {
+    // Refund quota if consumed but pipeline failed
+    if (!quotaExempt) {
+      await refundAiQuota(userId).catch((refundErr) =>
+        console.error('Quota refund failed:', refundErr)
+      );
+    }
+    throw pipelineErr;
+  }
 }

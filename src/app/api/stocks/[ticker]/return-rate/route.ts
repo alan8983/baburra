@@ -2,6 +2,7 @@
 // GET /api/stocks/[ticker]/return-rate - 取得標的的報酬率統計
 
 import { NextResponse } from 'next/server';
+import { notFoundError, internalError } from '@/lib/api/error';
 import { listPosts } from '@/infrastructure/repositories/post.repository';
 import { getStockPrices } from '@/infrastructure/repositories/stock-price.repository';
 import {
@@ -29,7 +30,7 @@ export async function GET(request: Request, context: RouteContext) {
       .single();
 
     if (!stock) {
-      return NextResponse.json({ error: 'Stock not found' }, { status: 404 });
+      return notFoundError('Stock');
     }
 
     // 2. 取得與該標的相關的所有文章
@@ -46,6 +47,7 @@ export async function GET(request: Request, context: RouteContext) {
           positiveCount: 0,
           negativeCount: 0,
           naCount: 0,
+          pendingCount: 0,
           avgReturn: null,
         },
         day30: {
@@ -54,6 +56,7 @@ export async function GET(request: Request, context: RouteContext) {
           positiveCount: 0,
           negativeCount: 0,
           naCount: 0,
+          pendingCount: 0,
           avgReturn: null,
         },
         day90: {
@@ -62,6 +65,7 @@ export async function GET(request: Request, context: RouteContext) {
           positiveCount: 0,
           negativeCount: 0,
           naCount: 0,
+          pendingCount: 0,
           avgReturn: null,
         },
         day365: {
@@ -70,6 +74,7 @@ export async function GET(request: Request, context: RouteContext) {
           positiveCount: 0,
           negativeCount: 0,
           naCount: 0,
+          pendingCount: 0,
           avgReturn: null,
         },
         overall: { total: 0, avgReturn: null },
@@ -93,8 +98,17 @@ export async function GET(request: Request, context: RouteContext) {
         startDate: startDate.toISOString().slice(0, 10),
       });
       candles = priceData.candles;
-    } catch {
-      // 無法取得股價資料
+    } catch (err) {
+      console.error(
+        `[return-rate] Failed to fetch prices for ${ticker.toUpperCase()}:`,
+        err instanceof Error ? err.message : err
+      );
+    }
+
+    if (candles.length === 0) {
+      console.warn(
+        `[return-rate] No candles for ${ticker.toUpperCase()}, ${posts.length} posts will have null price changes`
+      );
     }
 
     // 4. 計算每篇文章的漲跌幅（只計算該標的）
@@ -109,6 +123,10 @@ export async function GET(request: Request, context: RouteContext) {
           day30: null,
           day90: null,
           day365: null,
+          day5Status: 'no_data',
+          day30Status: 'no_data',
+          day90Status: 'no_data',
+          day365Status: 'no_data',
         };
       }
 
@@ -133,7 +151,6 @@ export async function GET(request: Request, context: RouteContext) {
 
     return NextResponse.json(stats);
   } catch (error) {
-    console.error('Failed to calculate stock return rate:', error);
-    return NextResponse.json({ error: 'Failed to calculate return rate' }, { status: 500 });
+    return internalError(error, 'Failed to calculate return rate');
   }
 }

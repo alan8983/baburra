@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { extractorFactory, type ExtractorError } from '@/infrastructure/extractors';
+import { unauthorizedError, errorResponse, internalError } from '@/lib/api/error';
 
 /** Block requests to private/internal IP ranges to prevent SSRF */
 function isPrivateUrl(rawUrl: string): boolean {
@@ -33,37 +34,18 @@ export async function POST(request: NextRequest) {
   try {
     const userId = await getCurrentUserId();
     if (!userId) {
-      return NextResponse.json(
-        { error: { code: 'UNAUTHORIZED', message: 'Please log in' } },
-        { status: 401 }
-      );
+      return unauthorizedError();
     }
 
     const body = await request.json();
     const url = typeof body?.url === 'string' ? body.url.trim() : '';
 
     if (!url) {
-      return NextResponse.json(
-        {
-          error: {
-            code: 'INVALID_URL',
-            message: 'url is required and must be a non-empty string',
-          },
-        },
-        { status: 400 }
-      );
+      return errorResponse(400, 'INVALID_URL', 'url is required and must be a non-empty string');
     }
 
     if (isPrivateUrl(url)) {
-      return NextResponse.json(
-        {
-          error: {
-            code: 'INVALID_URL',
-            message: 'Private or internal URLs are not allowed',
-          },
-        },
-        { status: 400 }
-      );
+      return errorResponse(400, 'INVALID_URL', 'Private or internal URLs are not allowed');
     }
 
     try {
@@ -72,28 +54,11 @@ export async function POST(request: NextRequest) {
     } catch (err) {
       const extractorErr = err as ExtractorError;
       if (extractorErr.code) {
-        return NextResponse.json(
-          {
-            error: {
-              code: extractorErr.code,
-              message: extractorErr.message,
-            },
-          },
-          { status: 400 }
-        );
+        return errorResponse(400, extractorErr.code, extractorErr.message);
       }
       throw err;
     }
   } catch (err) {
-    console.error('POST /api/fetch-url', err);
-    return NextResponse.json(
-      {
-        error: {
-          code: 'FETCH_FAILED',
-          message: 'Failed to fetch URL content',
-        },
-      },
-      { status: 500 }
-    );
+    return internalError(err, 'Failed to fetch URL content');
   }
 }

@@ -1,6 +1,26 @@
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
 
+// ─── Error payload type ──────────────────────────────────────────
+
+export interface ApiErrorPayload {
+  code: string;
+  message: string;
+  details?: unknown;
+}
+
+/** Build a JSON error response with the standard `{ error: { code, message, details? } }` shape. */
+export function errorResponse(
+  status: number,
+  code: string,
+  message: string,
+  details?: unknown
+): NextResponse {
+  const body: { error: ApiErrorPayload } = { error: { code, message } };
+  if (details !== undefined) body.error.details = details;
+  return NextResponse.json(body, { status });
+}
+
 // ─── Shared validators ────────────────────────────────────────────
 
 const sentimentValue = z.union([
@@ -76,6 +96,85 @@ export const quickInputSchema = z.object({
   content: z.string().trim().min(1, 'Content is required').max(50000),
 });
 
+// ─── Draft schemas ───────────────────────────────────────────────
+
+const optionalDateTransform = z
+  .union([z.string().datetime(), z.string().min(1)])
+  .transform((v) => new Date(v))
+  .optional();
+
+export const createDraftSchema = z.object({
+  kolId: uuid.optional(),
+  kolNameInput: z.string().max(200).optional(),
+  content: z.string().max(50000).optional(),
+  sourceUrl: z.string().url().max(2000).optional(),
+  images: z.array(z.string().max(2000)).max(10).optional(),
+  sentiment: sentimentValue.optional(),
+  stockSentiments: z.record(z.string(), sentimentValue).optional(),
+  postedAt: optionalDateTransform,
+  stockIds: z.array(uuid).optional(),
+  stockNameInputs: z.array(z.string().max(200)).optional(),
+  aiArguments: z.array(z.any()).optional(),
+});
+
+export const updateDraftSchema = z.object({
+  kolId: uuid.nullable().optional(),
+  kolNameInput: z.string().max(200).nullable().optional(),
+  content: z.string().max(50000).nullable().optional(),
+  sourceUrl: z.string().url().max(2000).nullable().optional(),
+  images: z.array(z.string().max(2000)).max(10).optional(),
+  sentiment: sentimentValue.nullable().optional(),
+  stockSentiments: z.record(z.string(), sentimentValue).nullable().optional(),
+  postedAt: z
+    .union([z.string().datetime(), z.string().min(1)])
+    .transform((v) => new Date(v))
+    .nullable()
+    .optional(),
+  stockIds: z.array(uuid).optional(),
+  stockNameInputs: z.array(z.string().max(200)).optional(),
+  aiArguments: z.array(z.any()).nullable().optional(),
+});
+
+// ─── Profile schema ──────────────────────────────────────────────
+
+export const updateProfileSchema = z.object({
+  displayName: z.string().max(200).optional(),
+  timezone: z.string().max(100).optional(),
+  colorPalette: z.enum(['american', 'asian']).optional(),
+});
+
+// ─── AI schemas ──────────────────────────────────────────────────
+
+export const aiContentSchema = z.object({
+  content: z.string().min(10, 'content must be at least 10 characters').max(10000),
+});
+
+export const aiExtractArgumentsSchema = z.object({
+  content: z.string().min(1).max(50000),
+  postId: uuid,
+  stocks: z
+    .array(
+      z.object({
+        id: uuid,
+        ticker: z.string().min(1).max(20),
+        name: z.string().min(1).max(200),
+      })
+    )
+    .min(1),
+});
+
+export const aiExtractDraftArgumentsSchema = z.object({
+  content: z.string().min(1).max(50000),
+  stocks: z
+    .array(
+      z.object({
+        ticker: z.string().min(1).max(20),
+        name: z.string().min(1).max(200),
+      })
+    )
+    .min(1),
+});
+
 // ─── Helpers ──────────────────────────────────────────────────────
 
 /**
@@ -90,7 +189,7 @@ export async function parseBody<T extends z.ZodTypeAny>(
     raw = await request.json();
   } catch {
     return {
-      error: NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 }),
+      error: errorResponse(400, 'INVALID_JSON', 'Invalid JSON body'),
     };
   }
 
@@ -101,7 +200,7 @@ export async function parseBody<T extends z.ZodTypeAny>(
       ? `${firstIssue.path.join('.')}: ${firstIssue.message}`
       : 'Invalid request body';
     return {
-      error: NextResponse.json({ error: message }, { status: 400 }),
+      error: errorResponse(400, 'VALIDATION_ERROR', message, result.error.issues),
     };
   }
 

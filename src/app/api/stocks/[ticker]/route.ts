@@ -2,7 +2,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getStockByTicker } from '@/infrastructure/repositories';
-import { internalError } from '@/lib/api/error';
+import { notFoundError, internalError } from '@/lib/api/error';
+import { enrichStocksWithReturnRate } from '@/lib/api/enrich-stock-return-rate';
 
 export async function GET(
   _request: NextRequest,
@@ -11,7 +12,8 @@ export async function GET(
   try {
     const { ticker } = await params;
     const stock = await getStockByTicker(decodeURIComponent(ticker));
-    if (!stock) return NextResponse.json({ error: 'Stock not found' }, { status: 404 });
+    if (!stock) return notFoundError('Stock');
+    await enrichStocksWithReturnRate([stock]);
     return NextResponse.json(stock);
   } catch (err) {
     return internalError(err, 'Failed to fetch stock');

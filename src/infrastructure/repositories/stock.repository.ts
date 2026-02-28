@@ -56,44 +56,21 @@ export async function listStocks(params: {
     return { data: [], total: count ?? 0 };
   }
 
-  const { data: postStocks } = await supabase
-    .from('post_stocks')
-    .select('stock_id, post_id')
+  const { data: stats } = await supabase
+    .from('stock_stats')
+    .select('stock_id, post_count, last_post_at')
     .in('stock_id', ids);
-  const countByStock: Record<string, number> = {};
-  const postIdsByStock: Record<string, string[]> = {};
-  for (const ps of postStocks ?? []) {
-    const sid = ps.stock_id as string;
-    countByStock[sid] = (countByStock[sid] ?? 0) + 1;
-    if (!postIdsByStock[sid]) postIdsByStock[sid] = [];
-    postIdsByStock[sid].push(ps.post_id as string);
-  }
 
-  const allPostIds = [...new Set((postStocks ?? []).map((p) => p.post_id as string))];
-  const lastPostByStock: Record<string, string> = {};
-  if (allPostIds.length > 0) {
-    const { data: posts } = await supabase
-      .from('posts')
-      .select('id, posted_at')
-      .in('id', allPostIds);
-    const postDateById: Record<string, string> = {};
-    for (const p of posts ?? []) {
-      postDateById[p.id as string] = p.posted_at as string;
-    }
-    for (const sid of ids) {
-      const pids = postIdsByStock[sid] ?? [];
-      const dates = pids.map((pid) => postDateById[pid]).filter(Boolean);
-      if (dates.length > 0) lastPostByStock[sid] = dates.sort().reverse()[0];
-    }
-  }
+  const statsByStock = new Map((stats ?? []).map((s) => [s.stock_id as string, s]));
 
   const data: StockWithStats[] = (rows as DbStock[]).map((r) => {
     const stock = mapDbToStock(r);
+    const stat = statsByStock.get(stock.id);
     return {
       ...stock,
-      postCount: countByStock[stock.id] ?? 0,
+      postCount: (stat?.post_count as number) ?? 0,
       returnRate: null,
-      lastPostAt: lastPostByStock[stock.id] ? new Date(lastPostByStock[stock.id]) : null,
+      lastPostAt: stat?.last_post_at ? new Date(stat.last_post_at as string) : null,
     };
   });
 
@@ -110,33 +87,17 @@ export async function getStockByTicker(ticker: string): Promise<StockWithStats |
   if (error || !row) return null;
 
   const stock = mapDbToStock(row as DbStock);
-  const { count } = await supabase
-    .from('post_stocks')
-    .select('*', { count: 'exact', head: true })
-    .eq('stock_id', stock.id);
-
-  const { data: postLinks } = await supabase
-    .from('post_stocks')
-    .select('post_id')
-    .eq('stock_id', stock.id);
-  const postIds = (postLinks ?? []).map((p) => p.post_id as string);
-  let lastPostAt: Date | null = null;
-  if (postIds.length > 0) {
-    const { data: lastPost } = await supabase
-      .from('posts')
-      .select('posted_at')
-      .in('id', postIds)
-      .order('posted_at', { ascending: false })
-      .limit(1)
-      .single();
-    if (lastPost?.posted_at) lastPostAt = new Date(lastPost.posted_at as string);
-  }
+  const { data: stat } = await supabase
+    .from('stock_stats')
+    .select('post_count, last_post_at')
+    .eq('stock_id', stock.id)
+    .single();
 
   return {
     ...stock,
-    postCount: count ?? 0,
+    postCount: (stat?.post_count as number) ?? 0,
     returnRate: null,
-    lastPostAt,
+    lastPostAt: stat?.last_post_at ? new Date(stat.last_post_at as string) : null,
   };
 }
 

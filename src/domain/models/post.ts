@@ -63,11 +63,17 @@ export interface PostWithPriceChanges extends PostWithRelations {
   priceChanges: Record<string, PriceChangeByPeriod>; // stockId -> priceChanges
 }
 
+export type PriceChangeStatus = 'pending' | 'no_data' | 'value';
+
 export interface PriceChangeByPeriod {
   day5: number | null;
   day30: number | null;
   day90: number | null;
   day365: number | null;
+  day5Status: PriceChangeStatus;
+  day30Status: PriceChangeStatus;
+  day90Status: PriceChangeStatus;
+  day365Status: PriceChangeStatus;
 }
 
 export interface CreatePostInput {

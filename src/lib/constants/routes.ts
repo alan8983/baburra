@@ -28,6 +28,7 @@ export const ROUTES = {
   BOOKMARKS: '/bookmarks',
   SETTINGS: '/settings',
   ONBOARDING: '/onboarding',
+  WELCOME: '/welcome',
 } as const;
 
 // API 路由
@@ -89,6 +90,9 @@ export const API_ROUTES = {
 
   // Import
   IMPORT_BATCH: '/api/import/batch',
+
+  // AB Testing
+  AB_EVENTS: '/api/ab/events',
 } as const;
 
 // 導航項目

@@ -6,13 +6,13 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { getAiUsage } from '@/infrastructure/repositories/ai-usage.repository';
-import { internalError } from '@/lib/api/error';
+import { unauthorizedError, internalError } from '@/lib/api/error';
 
 export async function GET() {
   try {
     const userId = await getCurrentUserId();
     if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return unauthorizedError();
     }
 
     const usage = await getAiUsage(userId);

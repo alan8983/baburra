@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { isBookmarked, removeBookmark } from '@/infrastructure/repositories';
-import { internalError } from '@/lib/api/error';
+import { unauthorizedError, internalError } from '@/lib/api/error';
 
 export async function GET(
   _request: NextRequest,
@@ -12,7 +12,7 @@ export async function GET(
 ) {
   try {
     const userId = await getCurrentUserId();
-    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!userId) return unauthorizedError();
     const { postId } = await params;
     const bookmarked = await isBookmarked(userId, postId);
     return NextResponse.json({ isBookmarked: bookmarked });
@@ -27,7 +27,7 @@ export async function DELETE(
 ) {
   try {
     const userId = await getCurrentUserId();
-    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!userId) return unauthorizedError();
     const { postId } = await params;
     await removeBookmark(userId, postId);
     return new NextResponse(null, { status: 204 });

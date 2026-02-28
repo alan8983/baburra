@@ -13,6 +13,11 @@ const eslintConfig = defineConfig([
     'build/**',
     'next-env.d.ts',
   ]),
+  // Allow console in E2E tests (Playwright diagnostic logs)
+  {
+    files: ['tests/e2e/**/*.{ts,tsx}'],
+    rules: { 'no-console': 'off' },
+  },
 ]);
 
 export default eslintConfig;

@@ -10,12 +10,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ROUTES } from '@/lib/constants';
 import { formatDate } from '@/lib/utils/date';
+import { useColorPalette } from '@/lib/colors/color-palette-context';
 import { useStocks } from '@/hooks';
 import { EmptyState } from '@/components/shared/empty-state';
 
 export default function StocksPage() {
   const router = useRouter();
   const t = useTranslations('stocks');
+  const { colors } = useColorPalette();
   const [searchQuery, setSearchQuery] = useState('');
   const { data, isLoading, error } = useStocks({ search: searchQuery || undefined });
 
@@ -95,11 +97,13 @@ export default function StocksPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">{t('stats.returnRate30d')}</span>
                     <Badge
-                      variant={
-                        stock.returnRate != null && stock.returnRate >= 0 ? 'default' : 'secondary'
-                      }
+                      variant="default"
                       className={
-                        stock.returnRate != null && stock.returnRate >= 0 ? 'bg-green-600' : ''
+                        stock.returnRate != null
+                          ? stock.returnRate >= 0
+                            ? colors.bullish.bgDark
+                            : colors.bearish.bgDark
+                          : ''
                       }
                     >
                       {stock.returnRate != null

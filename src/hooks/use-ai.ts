@@ -4,6 +4,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { API_ROUTES } from '@/lib/constants/routes';
+import { throwIfNotOk } from '@/lib/api/fetch-error';
 import type { Sentiment } from '@/domain/models/post';
 import type { DraftAiArguments } from '@/domain/models/draft';
 
@@ -92,7 +93,7 @@ export function useAiUsage() {
     queryKey: ['ai-usage'],
     queryFn: async () => {
       const res = await fetch(API_ROUTES.AI_USAGE);
-      if (!res.ok) throw new Error('Failed to fetch AI usage');
+      await throwIfNotOk(res);
       return res.json();
     },
     staleTime: 30 * 1000, // 30 seconds
@@ -115,11 +116,7 @@ export function useAnalyzeSentiment() {
         body: JSON.stringify({ content }),
       });
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to analyze sentiment');
-      }
-
+      await throwIfNotOk(res);
       return res.json();
     },
     onSuccess: () => {
@@ -144,11 +141,7 @@ export function useExtractArguments() {
         body: JSON.stringify(input),
       });
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to extract arguments');
-      }
-
+      await throwIfNotOk(res);
       return res.json();
     },
     onSuccess: () => {
@@ -173,11 +166,7 @@ export function useIdentifyTickers() {
         body: JSON.stringify({ content }),
       });
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to identify tickers');
-      }
-
+      await throwIfNotOk(res);
       return res.json();
     },
     onSuccess: () => {
@@ -196,7 +185,7 @@ export function useArgumentCategories() {
     queryKey: ['argument-categories'],
     queryFn: async () => {
       const res = await fetch(API_ROUTES.ARGUMENT_CATEGORIES);
-      if (!res.ok) throw new Error('Failed to fetch argument categories');
+      await throwIfNotOk(res);
       return res.json();
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -233,11 +222,7 @@ export function useExtractDraftArguments() {
         body: JSON.stringify(input),
       });
 
-      if (!res.ok) {
-        const error = await res.json();
-        throw new Error(error.error || 'Failed to extract arguments');
-      }
-
+      await throwIfNotOk(res);
       return res.json();
     },
     onSuccess: () => {
@@ -326,7 +311,7 @@ export function usePostArguments(postId: string) {
     queryKey: ['post-arguments', postId],
     queryFn: async () => {
       const res = await fetch(API_ROUTES.POST_ARGUMENTS(postId));
-      if (!res.ok) throw new Error('Failed to fetch post arguments');
+      await throwIfNotOk(res);
       return res.json();
     },
     enabled: !!postId,
@@ -340,12 +325,7 @@ export function useStockArguments(ticker: string) {
     queryKey: ['stock-arguments', ticker],
     queryFn: async () => {
       const res = await fetch(API_ROUTES.STOCK_ARGUMENTS(ticker));
-      if (!res.ok) {
-        if (res.status === 404) {
-          throw new Error('Stock not found');
-        }
-        throw new Error('Failed to fetch stock arguments');
-      }
+      await throwIfNotOk(res);
       return res.json();
     },
     enabled: !!ticker,

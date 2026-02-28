@@ -6,24 +6,18 @@
 import { NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { markOnboardingCompleted } from '@/infrastructure/repositories/profile.repository';
+import { unauthorizedError, internalError } from '@/lib/api/error';
 
 export async function POST() {
   try {
     const userId = await getCurrentUserId();
     if (!userId) {
-      return NextResponse.json(
-        { error: { code: 'UNAUTHORIZED', message: 'Please log in' } },
-        { status: 401 }
-      );
+      return unauthorizedError();
     }
 
     await markOnboardingCompleted(userId);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('POST /api/profile/onboarding error:', error);
-    return NextResponse.json(
-      { error: { code: 'INTERNAL_ERROR', message: 'Internal server error' } },
-      { status: 500 }
-    );
+    return internalError(error, 'Failed to complete onboarding');
   }
 }

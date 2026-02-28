@@ -106,7 +106,8 @@
     "quotaDisplay": "AI 配額: {remaining}/{limit}",
     "weeklyRemaining": "本週剩餘 AI 分析次數",
     "nextWeek": "下週",
-    "otherCategory": "其他"
+    "otherCategory": "其他",
+    "underDevelopment": "開發中"
   },
   "chart": {
     "intervals": {
@@ -123,6 +124,10 @@
       "1Y": "1年",
       "5Y": "5年"
     }
+  },
+  "priceChange": {
+    "pending": "期間尚未到期",
+    "noData": "無股價資料"
   },
   "errors": {
     "generic": "發生錯誤，請稍後再試",

@@ -11,6 +11,7 @@
     "bearish": "Bearish",
     "stronglyBearish": "Strongly Bearish"
   },
+  "newCount": "{count} new",
   "loading": "Loading...",
   "empty": {
     "noPosts": "No posts yet",

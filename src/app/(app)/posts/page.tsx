@@ -23,7 +23,10 @@ import { sentimentKey } from '@/lib/utils/sentiment';
 import { useColorPalette } from '@/lib/colors/color-palette-context';
 import { formatDateTime } from '@/lib/utils/date';
 import { usePosts, useDeletePost } from '@/hooks';
+import { PriceChangeBadge } from '@/components/shared/price-change-badge';
+import { useSeenPosts } from '@/hooks/use-seen-posts';
 import { EmptyState } from '@/components/shared/empty-state';
+import { cn } from '@/lib/utils';
 
 export default function PostsPage() {
   const router = useRouter();
@@ -37,6 +40,9 @@ export default function PostsPage() {
   const { data, isLoading, error } = usePosts({
     search: searchQuery || undefined,
   });
+
+  const allPostIds = useMemo(() => (data?.data ?? []).map((p) => p.id), [data?.data]);
+  const { isNew, markSeen, newCount } = useSeenPosts(allPostIds);
 
   const filteredPosts = useMemo(() => {
     const posts = data?.data ?? [];
@@ -72,7 +78,14 @@ export default function PostsPage() {
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight">{t('title')}</h1>
+          {newCount > 0 && (
+            <Badge variant="default" className="text-xs">
+              {t('newCount', { count: newCount })}
+            </Badge>
+          )}
+        </div>
         <p className="text-muted-foreground">{t('description')}</p>
       </div>
 
@@ -117,12 +130,25 @@ export default function PostsPage() {
         <div className="space-y-4">
           {filteredPosts.map((post) => {
             const priceByStockId = post.priceChanges ?? {};
+            const postIsNew = isNew(post.id);
             return (
               <Card
                 key={post.id}
-                className="hover:bg-muted/50 cursor-pointer transition-colors"
-                onClick={() => router.push(ROUTES.POST_DETAIL(post.id))}
+                className={cn(
+                  'relative cursor-pointer transition-colors',
+                  postIsNew
+                    ? 'border-l-primary bg-primary/5 hover:bg-primary/10 border-l-3'
+                    : 'hover:bg-muted/50'
+                )}
+                onClick={() => {
+                  markSeen(post.id);
+                  router.push(ROUTES.POST_DETAIL(post.id));
+                }}
               >
+                {/* New post indicator dot */}
+                {postIsNew && (
+                  <span className="bg-primary absolute -top-1 -left-1 z-10 h-2.5 w-2.5 animate-pulse rounded-full" />
+                )}
                 <CardContent className="pt-4">
                   <div className="flex items-start gap-4">
                     <Avatar className="h-10 w-10 shrink-0">
@@ -151,33 +177,25 @@ export default function PostsPage() {
                           const c = priceByStockId[stock.id];
                           const best =
                             c?.day5 != null
-                              ? { label: '5d', value: c.day5 }
+                              ? { label: '5d', value: c.day5, status: c.day5Status }
                               : c?.day30 != null
-                                ? { label: '30d', value: c.day30 }
+                                ? { label: '30d', value: c.day30, status: c.day30Status }
                                 : c?.day90 != null
-                                  ? { label: '90d', value: c.day90 }
+                                  ? { label: '90d', value: c.day90, status: c.day90Status }
                                   : c?.day365 != null
-                                    ? { label: '1y', value: c.day365 }
+                                    ? { label: '1y', value: c.day365, status: c.day365Status }
                                     : null;
                           return (
                             <div key={stock.ticker} className="flex items-center gap-1 text-sm">
                               <Badge variant="outline">{stock.ticker}</Badge>
                               {best ? (
-                                <>
-                                  <span className="text-muted-foreground text-xs">
-                                    {best.label}
-                                  </span>
-                                  <span
-                                    className={
-                                      best.value >= 0 ? colors.bullish.text : colors.bearish.text
-                                    }
-                                  >
-                                    {best.value >= 0 ? '+' : ''}
-                                    {best.value.toFixed(1)}%
-                                  </span>
-                                </>
+                                <PriceChangeBadge
+                                  value={best.value}
+                                  status={best.status}
+                                  label={best.label}
+                                />
                               ) : (
-                                <span className="text-muted-foreground">—</span>
+                                <PriceChangeBadge value={null} status={c?.day5Status} label="" />
                               )}
                             </div>
                           );

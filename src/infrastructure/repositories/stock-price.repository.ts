@@ -39,15 +39,16 @@ function todayStr(): string {
   return toYYYYMMDD(new Date());
 }
 
-/** Resolve ticker → stock_id. Returns null if stock not in DB. */
-async function resolveStockId(ticker: string): Promise<string | null> {
+/** Resolve ticker → stock record. Returns null if stock not in DB. */
+async function resolveStock(ticker: string): Promise<{ id: string; market: string } | null> {
   const supabase = createAdminClient();
   const { data } = await supabase
     .from('stocks')
-    .select('id')
+    .select('id, market')
     .eq('ticker', ticker.toUpperCase())
     .single();
-  return data?.id ?? null;
+  if (!data) return null;
+  return { id: data.id as string, market: (data.market as string) ?? 'US' };
 }
 
 /** Read cached prices from stock_prices for the date range. */
@@ -76,7 +77,8 @@ async function readCachedPrices(
  * Check if cached data is valid:
  * - Empty cache is always invalid
  * - If earliest cached row is >7 days after requested start, range not covered
- * - If endDate >= today, today's row must exist and fetched_at < 1hr ago
+ * - If endDate >= today, the most recent cached row must be ≤4 days old
+ *   (covers weekends + holiday buffer) and fetched_at < 1hr ago
  * - If endDate < today (pure historical), any cached data is valid
  */
 function isCacheValid(cached: DbStockPriceRow[], startDate: string, endDate: string): boolean {
@@ -91,10 +93,17 @@ function isCacheValid(cached: DbStockPriceRow[], startDate: string, endDate: str
   const today = todayStr();
 
   if (endDate >= today) {
-    const todayRow = cached.find((r) => r.date === today);
-    if (!todayRow) return false;
-    const fetchedAt = new Date(todayRow.fetched_at).getTime();
-    if (Date.now() - fetchedAt > CACHE_TTL_MS) return false;
+    // Use the most recent cached row (not today's row which may not exist on weekends/holidays)
+    const latestRow = cached[cached.length - 1];
+    const latestDate = new Date(latestRow.date).getTime();
+    const nowMs = Date.now();
+    const daysSinceLatest = (nowMs - latestDate) / (24 * 60 * 60 * 1000);
+
+    // If the most recent data is >4 days old, cache is stale (covers weekends + 1 holiday buffer)
+    if (daysSinceLatest > 4) return false;
+
+    const fetchedAt = new Date(latestRow.fetched_at).getTime();
+    if (nowMs - fetchedAt > CACHE_TTL_MS) return false;
   }
 
   return true;
@@ -220,8 +229,10 @@ export async function getStockPrices(
   const startStr = toYYYYMMDD(start);
   const endStr = toYYYYMMDD(end);
 
-  // Step 1: Resolve stock_id
-  const stockId = await resolveStockId(ticker);
+  // Step 1: Resolve stock_id + market
+  const stock = await resolveStock(ticker);
+  const stockId = stock?.id ?? null;
+  const market = stock?.market;
 
   // Step 2: Try Supabase cache
   let staleCached: DbStockPriceRow[] = [];
@@ -233,14 +244,23 @@ export async function getStockPrices(
     staleCached = cached;
   }
 
-  // Step 3: Fetch from Tiingo
+  // Step 3: Fetch from Tiingo (auto-selects equities or crypto endpoint)
   try {
     const tiingoRows = await fetchTiingoPrices(ticker, {
       startDate: startStr,
       endDate: endStr,
+      market,
     });
 
     const { candles, volumes, rowsForCache } = transformTiingoRows(tiingoRows);
+
+    // Step 3a: Tiingo returned empty (e.g. 404 for crypto/unknown ticker) — fall back to stale cache
+    if (candles.length === 0 && staleCached.length > 0) {
+      console.warn(
+        `[getStockPrices] Tiingo returned empty for ${ticker}, serving stale cache (${staleCached.length} rows)`
+      );
+      return dbRowsToChartData(staleCached);
+    }
 
     // Step 4: Write to Supabase cache (fire-and-forget)
     if (stockId && rowsForCache.length > 0) {

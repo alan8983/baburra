@@ -18,12 +18,15 @@ export interface AuthState {
 }
 
 export interface UseAuthReturn extends AuthState {
+  isAnonymous: boolean;
   signUp: (email: string, password: string, displayName?: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
+  convertAnonymousToEmail: (email: string, password: string, displayName?: string) => Promise<void>;
+  convertAnonymousToGoogle: () => Promise<void>;
 }
 
 export function useAuth(): UseAuthReturn {
@@ -278,14 +281,78 @@ export function useAuth(): UseAuthReturn {
     [supabase]
   );
 
+  // 匿名帳號轉換為 email/password
+  const convertAnonymousToEmail = useCallback(
+    async (email: string, password: string, displayName?: string) => {
+      setState((prev) => ({ ...prev, loading: true, error: null }));
+
+      try {
+        const { data, error } = await supabase.auth.updateUser({
+          email,
+          password,
+          data: {
+            display_name: displayName,
+          },
+        });
+
+        if (error) throw error;
+
+        setState({
+          user: data.user,
+          session: null,
+          loading: false,
+          error: null,
+        });
+
+        // 需要 email 驗證時重導向到登入頁
+        if (data.user && !data.user.email_confirmed_at) {
+          router.push(`${ROUTES.LOGIN}?message=請檢查您的電子郵件以完成註冊`);
+        } else {
+          router.push(ROUTES.INPUT);
+        }
+      } catch (error) {
+        setState((prev) => ({
+          ...prev,
+          loading: false,
+          error: error as AuthError,
+        }));
+        throw error;
+      }
+    },
+    [supabase, router]
+  );
+
+  // 匿名帳號連結 Google OAuth
+  const convertAnonymousToGoogle = useCallback(async () => {
+    try {
+      const { error } = await supabase.auth.linkIdentity({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}${ROUTES.AUTH_CALLBACK}?from=welcome`,
+        },
+      });
+
+      if (error) {
+        setState((prev) => ({ ...prev, error: error as AuthError }));
+        throw error;
+      }
+    } catch (error) {
+      setState((prev) => ({ ...prev, error: error as AuthError }));
+      throw error;
+    }
+  }, [supabase]);
+
   return {
     ...state,
+    isAnonymous: state.user?.is_anonymous === true,
     signUp,
     signIn,
     signInWithGoogle,
     signOut,
     resetPassword,
     updatePassword,
+    convertAnonymousToEmail,
+    convertAnonymousToGoogle,
   };
 }
 

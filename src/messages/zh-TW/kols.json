@@ -59,7 +59,8 @@
         "neutral": "中立文章不納入報酬率計算",
         "perStock": "每篇文章對應的每個標的分別計算"
       },
-      "loadFailed": "無法載入報酬率資料"
+      "loadFailed": "無法載入報酬率資料",
+      "pending": "待計算"
     },
     "about": {
       "title": "關於 {name}",

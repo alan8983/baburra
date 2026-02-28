@@ -59,7 +59,8 @@
         "neutral": "Neutral posts are not included in return rate calculation",
         "perStock": "Each post's return is calculated separately for each stock"
       },
-      "loadFailed": "Failed to load return rate data"
+      "loadFailed": "Failed to load return rate data",
+      "pending": "Pending"
     },
     "about": {
       "title": "About {name}",

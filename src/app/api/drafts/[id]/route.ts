@@ -5,16 +5,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { getDraftById, updateDraft, deleteDraft } from '@/infrastructure/repositories';
-import type { UpdateDraftInput } from '@/domain/models';
-import { internalError } from '@/lib/api/error';
+import { unauthorizedError, notFoundError, internalError } from '@/lib/api/error';
+import { updateDraftSchema, parseBody } from '@/lib/api/validation';
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const userId = await getCurrentUserId();
-    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!userId) return unauthorizedError();
     const { id } = await params;
     const draft = await getDraftById(id, userId);
-    if (!draft) return NextResponse.json({ error: 'Draft not found' }, { status: 404 });
+    if (!draft) return notFoundError('Draft');
     return NextResponse.json(draft);
   } catch (err) {
     return internalError(err, 'Failed to fetch draft');
@@ -24,11 +24,12 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const userId = await getCurrentUserId();
-    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!userId) return unauthorizedError();
     const { id } = await params;
-    const body = (await request.json()) as UpdateDraftInput;
-    const draft = await updateDraft(id, userId, body);
-    if (!draft) return NextResponse.json({ error: 'Draft not found' }, { status: 404 });
+    const parsed = await parseBody(request, updateDraftSchema);
+    if ('error' in parsed) return parsed.error;
+    const draft = await updateDraft(id, userId, parsed.data);
+    if (!draft) return notFoundError('Draft');
     return NextResponse.json(draft);
   } catch (err) {
     return internalError(err, 'Failed to update draft');
@@ -41,7 +42,7 @@ export async function DELETE(
 ) {
   try {
     const userId = await getCurrentUserId();
-    if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!userId) return unauthorizedError();
     const { id } = await params;
     await deleteDraft(id, userId);
     return new NextResponse(null, { status: 204 });

@@ -228,9 +228,10 @@ export default function DashboardPage() {
                   const sentimentColor = colors.sentimentBadgeColors[post.sentiment];
 
                   return (
-                    <div
+                    <Link
                       key={post.id}
-                      className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0"
+                      href={ROUTES.POST_DETAIL(post.id)}
+                      className="hover:bg-muted flex items-center justify-between rounded-lg border-b px-2 py-3 transition-colors last:border-0"
                     >
                       <div className="space-y-1">
                         <p className="text-sm font-medium">{post.kol.name}</p>
@@ -256,7 +257,7 @@ export default function DashboardPage() {
                           </span>
                         )}
                       </div>
-                    </div>
+                    </Link>
                   );
                 })}
               </div>
@@ -276,9 +277,10 @@ export default function DashboardPage() {
             ) : (
               <div className="space-y-4">
                 {topKols.map((kol, i) => (
-                  <div
-                    key={`${kol.name}-${i}`}
-                    className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0"
+                  <Link
+                    key={kol.id}
+                    href={ROUTES.KOL_DETAIL(kol.id)}
+                    className="hover:bg-muted flex items-center justify-between rounded-lg border-b px-2 py-3 transition-colors last:border-0"
                   >
                     <div className="flex items-center gap-3">
                       <span className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium">
@@ -299,7 +301,7 @@ export default function DashboardPage() {
                         <p className="text-muted-foreground text-xs">{t('topKols.lastPost')}</p>
                       </div>
                     )}
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
