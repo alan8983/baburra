@@ -151,7 +151,7 @@ export class TwitterExtractor extends SocialMediaExtractor {
 
     try {
       const tweetId = BigInt(match[1]);
-      const timestampMs = Number((tweetId >> 22n) + 1288834974657n);
+      const timestampMs = Number((tweetId >> BigInt(22)) + BigInt(1288834974657));
       const date = new Date(timestampMs);
       if (isNaN(date.getTime())) return null;
       return date;

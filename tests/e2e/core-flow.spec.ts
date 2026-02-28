@@ -72,11 +72,13 @@ test.describe('草稿編輯與發布流程', () => {
 
   test('透過 API 建立草稿 → 編輯 → 發布', async ({ page, request }) => {
     // Step 1: 透過 API 建立草稿（純 CRUD，不經過 AI，< 1 秒）
+    // 包含所有必填欄位：content, sentiment, stockNameInputs, postedAt
     const createRes = await request.post('/api/drafts', {
       data: {
         content: TEST_CONTENT,
         sentiment: 1,
         stockNameInputs: [`${TEST_STOCK_TICKER} (Apple Inc.)`],
+        postedAt: new Date().toISOString(),
       },
     });
     expect(createRes.ok()).toBeTruthy();
@@ -87,73 +89,47 @@ test.describe('草稿編輯與發布流程', () => {
     // Step 2: 導航到草稿編輯頁
     await page.goto(`/drafts/${testDraftId}`);
     await page.waitForLoadState('networkidle');
-    await expect(page.locator('text=編輯草稿')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('heading', { name: '編輯草稿' })).toBeVisible({ timeout: 15000 });
 
     // Step 3: 選擇 KOL
     const kolSelectorButton = page
       .locator('button')
       .filter({ hasText: /搜尋或選擇 KOL|KOL/ })
       .first();
+    await expect(kolSelectorButton).toBeVisible({ timeout: 5000 });
+    await kolSelectorButton.click();
+    await page.waitForTimeout(800);
 
-    if (await kolSelectorButton.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await kolSelectorButton.click();
-      await page.waitForTimeout(800);
+    const kolSearchInput = page.locator('input[placeholder*="搜尋 KOL"]');
+    await expect(kolSearchInput).toBeVisible({ timeout: 3000 });
+    await kolSearchInput.fill(TEST_KOL_NAME);
+    await page.waitForTimeout(800);
 
-      const kolSearchInput = page.locator('input[placeholder*="搜尋 KOL"]');
-      if (await kolSearchInput.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await kolSearchInput.fill(TEST_KOL_NAME);
-        await page.waitForTimeout(800);
-
-        const kolOption = page
-          .locator('[role="option"]')
-          .filter({ hasText: TEST_KOL_NAME })
-          .first();
-        if (await kolOption.isVisible({ timeout: 3000 }).catch(() => false)) {
-          await kolOption.click();
-        }
-      }
-    }
-
-    // Step 4: 選擇股票
-    const stockSelectorButton = page
-      .locator('button')
-      .filter({ hasText: /搜尋或選擇標的|標的/ })
+    const kolOption = page
+      .locator('[role="option"]')
+      .filter({ hasText: TEST_KOL_NAME })
       .first();
+    await expect(kolOption).toBeVisible({ timeout: 3000 });
+    await kolOption.click();
 
-    if (await stockSelectorButton.isVisible({ timeout: 5000 }).catch(() => false)) {
-      await stockSelectorButton.click();
-      await page.waitForTimeout(800);
+    // Step 4: 驗證股票已預選（透過 API 帶入的 stockNameInputs）
+    await expect(page.locator(`text=${TEST_STOCK_TICKER}`).first()).toBeVisible({ timeout: 5000 });
 
-      const stockSearchInput = page.locator('input[placeholder*="搜尋"]').first();
-      if (await stockSearchInput.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await stockSearchInput.fill(TEST_STOCK_TICKER);
-        await page.waitForTimeout(800);
-
-        const stockOption = page
-          .locator('[role="option"]')
-          .filter({ hasText: TEST_STOCK_TICKER })
-          .first();
-        if (await stockOption.isVisible({ timeout: 3000 }).catch(() => false)) {
-          await stockOption.click();
-        }
-      }
-    }
-
-    // Step 5: 設定情緒為「看多」
-    const sentimentButton = page.locator('button:has-text("看多")');
-    if (await sentimentButton.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await sentimentButton.click();
-    }
+    // Step 5: 驗證情緒已預選（透過 API 帶入的 sentiment=1 看多）
+    // sentiment 已在 API 建立時設定，無需再手動選擇
 
     // Step 6: 點擊「發布」按鈕
     const publishButton = page.locator('button:has-text("發布")').first();
     await expect(publishButton).toBeVisible({ timeout: 10000 });
     await publishButton.click();
 
-    // Step 7: 確認發布
-    await expect(page.locator('text=確認發布')).toBeVisible({ timeout: 5000 });
-    const confirmButton = page.locator('button:has-text("確認發布")');
-    await expect(confirmButton).toBeVisible();
+    // Step 7: 勾選免責聲明 checkbox 並確認發布
+    const disclaimerCheckbox = page.getByRole('checkbox');
+    await expect(disclaimerCheckbox).toBeVisible({ timeout: 5000 });
+    await disclaimerCheckbox.check();
+
+    const confirmButton = page.getByRole('button', { name: '確認發布' });
+    await expect(confirmButton).toBeEnabled({ timeout: 3000 });
     await confirmButton.click();
 
     // Step 8: 等待導航到文章詳情頁
