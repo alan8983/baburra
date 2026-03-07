@@ -1,0 +1,151 @@
+{
+  "nav": {
+    "features": "Features",
+    "pricing": "Pricing",
+    "faq": "FAQ",
+    "login": "Log In",
+    "freeTrial": "Free Trial",
+    "goToDashboard": "Go to Dashboard"
+  },
+  "hero": {
+    "title": "Track Investment KOLs, Verify Performance with Data",
+    "subtitle": "Baburra helps you record KOL investment opinions, automatically backtest returns, and find out who's worth following.",
+    "cta": "Start Free",
+    "ctaSecondary": "Learn More"
+  },
+  "painPoints": {
+    "title": "Sound familiar?",
+    "items": {
+      "tooMany": {
+        "title": "Too many KOLs, no idea who's accurate",
+        "description": "Social media is flooded with investment advice, but there's no objective data to evaluate whose opinions are actually valuable."
+      },
+      "tooTiring": {
+        "title": "Manual tracking is exhausting",
+        "description": "Recording KOL predictions daily and comparing stock prices takes enormous time with low efficiency."
+      },
+      "noMetrics": {
+        "title": "Can't quantify performance",
+        "description": "Judging KOL accuracy by impression alone is unreliable. You need systematic win rate calculations."
+      }
+    }
+  },
+  "features": {
+    "title": "Core Features",
+    "subtitle": "All-in-one platform for tracking and verifying KOL investment opinions",
+    "items": {
+      "kolTracking": {
+        "title": "KOL Tracking",
+        "description": "Follow multiple investment KOLs and centrally manage their opinions and prediction records."
+      },
+      "aiSentiment": {
+        "title": "AI Sentiment Analysis",
+        "description": "AI automatically analyzes bullish/bearish sentiment in KOL posts, saving you manual interpretation."
+      },
+      "klineBacktest": {
+        "title": "K-Line Chart Backtesting",
+        "description": "Mark predictions on K-line charts to visually show the relationship between prediction timing and price movements."
+      },
+      "winRate": {
+        "title": "Win Rate Calculation",
+        "description": "Automatically calculate each KOL's prediction accuracy across different time periods (5 days, 30 days, 90 days, 1 year)."
+      },
+      "multiPlatform": {
+        "title": "Multi-Platform Import",
+        "description": "Import KOL investment posts from YouTube, Twitter, and other platforms."
+      },
+      "argumentExtraction": {
+        "title": "Argument Extraction",
+        "description": "AI automatically extracts key investment arguments and target prices from KOL posts."
+      }
+    }
+  },
+  "howItWorks": {
+    "title": "Get Started in 3 Steps",
+    "subtitle": "Simple, fast, and easy to use",
+    "steps": {
+      "import": {
+        "step": "1",
+        "title": "Import KOLs",
+        "description": "Paste a KOL's social media link or add manually to start tracking their investment opinions."
+      },
+      "analyze": {
+        "step": "2",
+        "title": "AI Auto-Analysis",
+        "description": "The system automatically scrapes posts, analyzes sentiment, and identifies target stocks and arguments."
+      },
+      "review": {
+        "step": "3",
+        "title": "Review Backtest Results",
+        "description": "Easily evaluate each KOL's investment track record through K-line charts and win rate statistics."
+      }
+    }
+  },
+  "pricing": {
+    "title": "Plans & Pricing",
+    "subtitle": "Choose the plan that fits you",
+    "currency": "$",
+    "period": "/mo",
+    "free": {
+      "name": "Free",
+      "price": "0",
+      "description": "Perfect for investors just getting started",
+      "features": {
+        "kolFollows": "Follow 10 KOLs",
+        "aiAnalyses": "20 AI analyses/month",
+        "basicCharts": "Basic K-line charts",
+        "winRate": "Win rate calculation"
+      },
+      "cta": "Get Started Free"
+    },
+    "pro": {
+      "name": "Pro",
+      "price": "9.99",
+      "description": "For advanced investors and professionals",
+      "badge": "Recommended",
+      "features": {
+        "kolFollows": "Follow 50 KOLs",
+        "aiAnalyses": "Unlimited AI analyses",
+        "advancedCharts": "Advanced chart analysis",
+        "argumentExtraction": "Argument extraction",
+        "prioritySupport": "Priority support"
+      },
+      "cta": "Upgrade to Pro"
+    }
+  },
+  "faq": {
+    "title": "Frequently Asked Questions",
+    "items": {
+      "whatIs": {
+        "q": "What is Baburra?",
+        "a": "Baburra is an investment opinion backtesting tool that helps retail investors track KOL (Key Opinion Leader) predictions and verify their accuracy with historical data."
+      },
+      "platforms": {
+        "q": "Which platforms are supported?",
+        "a": "Currently supports YouTube and Twitter KOL tracking, with more platforms coming soon. You can also manually input any KOL's investment opinions."
+      },
+      "freeLimits": {
+        "q": "What are the Free plan limits?",
+        "a": "The Free plan lets you follow up to 10 KOLs with 20 AI analyses per month. Basic K-line charts and win rate calculations are fully free."
+      },
+      "upgrade": {
+        "q": "How do I upgrade to Pro?",
+        "a": "The Pro plan is coming soon. Once available, upgrading will give you more KOL tracking slots and unlimited AI analyses."
+      },
+      "dataSecurity": {
+        "q": "Is my data secure?",
+        "a": "Yes, we use industry-standard encryption to protect your data. All data is stored on secure cloud servers with regular backups."
+      }
+    }
+  },
+  "footerCta": {
+    "title": "Ready to verify your investment instincts?",
+    "subtitle": "Start free, no credit card required.",
+    "cta": "Sign Up Now"
+  },
+  "footer": {
+    "copyright": "© {year} Baburra. All rights reserved.",
+    "privacy": "Privacy Policy",
+    "terms": "Terms of Service"
+  }
+}

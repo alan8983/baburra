@@ -1,0 +1,151 @@
+{
+  "nav": {
+    "features": "功能",
+    "pricing": "方案",
+    "faq": "常見問題",
+    "login": "登入",
+    "freeTrial": "免費試用",
+    "goToDashboard": "前往 Dashboard"
+  },
+  "hero": {
+    "title": "追蹤投資大神，用數據驗證績效",
+    "subtitle": "Baburra 幫你記錄 KOL 的投資觀點，自動回測報酬率，讓你知道誰值得追蹤。",
+    "cta": "免費試用",
+    "ctaSecondary": "了解更多"
+  },
+  "painPoints": {
+    "title": "你是否也有這些困擾？",
+    "items": {
+      "tooMany": {
+        "title": "KOL 太多，不知道誰準",
+        "description": "社群上充斥各種投資建議，但缺乏客觀數據來評估誰的觀點真正有價值。"
+      },
+      "tooTiring": {
+        "title": "手動追蹤太累",
+        "description": "每天記錄 KOL 的預測、對比股價變化，花費大量時間卻效率低落。"
+      },
+      "noMetrics": {
+        "title": "無法量化績效",
+        "description": "光靠印象判斷 KOL 的準確度不可靠，需要系統化的勝率計算。"
+      }
+    }
+  },
+  "features": {
+    "title": "核心功能",
+    "subtitle": "一站式 KOL 投資觀點追蹤與驗證平台",
+    "items": {
+      "kolTracking": {
+        "title": "KOL 追蹤",
+        "description": "追蹤多位投資 KOL，集中管理他們的投資觀點與預測記錄。"
+      },
+      "aiSentiment": {
+        "title": "AI 情緒分析",
+        "description": "透過 AI 自動分析 KOL 發文的看多看空情緒，省去人工判讀。"
+      },
+      "klineBacktest": {
+        "title": "K 線圖回測",
+        "description": "將預測標記在 K 線圖上，直觀呈現預測時間點與股價走勢的關係。"
+      },
+      "winRate": {
+        "title": "勝率計算",
+        "description": "自動計算每位 KOL 在不同時間維度（5天、30天、90天、1年）的預測準確率。"
+      },
+      "multiPlatform": {
+        "title": "多平台匯入",
+        "description": "支援從 YouTube、Twitter 等平台匯入 KOL 的投資相關發文。"
+      },
+      "argumentExtraction": {
+        "title": "論點萃取",
+        "description": "AI 自動擷取 KOL 發文中的關鍵投資論點與目標價位。"
+      }
+    }
+  },
+  "howItWorks": {
+    "title": "三步開始",
+    "subtitle": "簡單快速，立即上手",
+    "steps": {
+      "import": {
+        "step": "1",
+        "title": "匯入 KOL",
+        "description": "貼上 KOL 的社群連結或手動新增，開始追蹤他們的投資觀點。"
+      },
+      "analyze": {
+        "step": "2",
+        "title": "AI 自動分析",
+        "description": "系統自動擷取發文、分析情緒、辨識標的股票與論點。"
+      },
+      "review": {
+        "step": "3",
+        "title": "查看回測結果",
+        "description": "透過 K 線圖和勝率統計，輕鬆評估每位 KOL 的投資實力。"
+      }
+    }
+  },
+  "pricing": {
+    "title": "方案與定價",
+    "subtitle": "選擇適合你的方案",
+    "currency": "$",
+    "period": "/月",
+    "free": {
+      "name": "Free",
+      "price": "0",
+      "description": "適合剛開始追蹤的投資者",
+      "features": {
+        "kolFollows": "追蹤 10 位 KOL",
+        "aiAnalyses": "每月 20 次 AI 分析",
+        "basicCharts": "基本 K 線圖",
+        "winRate": "勝率計算"
+      },
+      "cta": "免費開始"
+    },
+    "pro": {
+      "name": "Pro",
+      "price": "9.99",
+      "description": "適合進階投資者與專業用戶",
+      "badge": "推薦",
+      "features": {
+        "kolFollows": "追蹤 50 位 KOL",
+        "aiAnalyses": "無限 AI 分析",
+        "advancedCharts": "進階圖表分析",
+        "argumentExtraction": "論點萃取",
+        "prioritySupport": "優先支援"
+      },
+      "cta": "升級 Pro"
+    }
+  },
+  "faq": {
+    "title": "常見問題",
+    "items": {
+      "whatIs": {
+        "q": "什麼是 Baburra？",
+        "a": "Baburra 是一個投資觀點回測工具，幫助散戶投資者追蹤 KOL（意見領袖）的投資預測，並用歷史數據驗證他們的準確度。"
+      },
+      "platforms": {
+        "q": "支援哪些平台的 KOL？",
+        "a": "目前支援 YouTube 和 Twitter 的 KOL 追蹤，未來將陸續支援更多平台。你也可以手動輸入任何 KOL 的投資觀點。"
+      },
+      "freeLimits": {
+        "q": "免費方案有什麼限制？",
+        "a": "免費方案可追蹤最多 10 位 KOL，每月有 20 次 AI 分析額度。基本的 K 線圖和勝率計算功能完全免費使用。"
+      },
+      "upgrade": {
+        "q": "如何升級到 Pro？",
+        "a": "目前 Pro 方案即將推出，敬請期待。升級後將享有更多 KOL 追蹤數量和無限 AI 分析。"
+      },
+      "dataSecurity": {
+        "q": "我的資料安全嗎？",
+        "a": "是的，我們使用業界標準的加密技術保護你的資料。所有資料儲存在安全的雲端伺服器上，並定期備份。"
+      }
+    }
+  },
+  "footerCta": {
+    "title": "準備好驗證你的投資直覺了嗎？",
+    "subtitle": "免費開始，不需信用卡。",
+    "cta": "立即註冊"
+  },
+  "footer": {
+    "copyright": "© {year} Baburra. All rights reserved.",
+    "privacy": "隱私權政策",
+    "terms": "服務條款"
+  }
+}
