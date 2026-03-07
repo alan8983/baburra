@@ -19,6 +19,7 @@ import {
 import { LocaleSwitcher } from '@/components/layout/locale-switcher';
 import { useAuth } from '@/hooks/use-auth';
 import { useProfile, useUpdateProfile } from '@/hooks/use-profile';
+import { useStalePostCount, useReanalyzeBatch } from '@/hooks/use-reanalyze';
 import { createClient } from '@/infrastructure/supabase/client';
 import type { ColorPalette } from '@/domain/models/user';
 
@@ -33,6 +34,66 @@ const TIMEZONE_OPTION_KEYS = [
   { value: 'Europe/London', key: 'london' },
   { value: 'UTC', key: 'utc' },
 ] as const;
+
+function AiModelSection() {
+  const t = useTranslations('settings');
+  const { data: staleData, isLoading } = useStalePostCount();
+  const reanalyzeBatch = useReanalyzeBatch();
+
+  const handleReanalyzeAll = async () => {
+    if (!staleData?.postIds?.length) return;
+
+    // Process in batches of 10 (batch endpoint max)
+    for (let i = 0; i < staleData.postIds.length; i += 10) {
+      const batch = staleData.postIds.slice(i, i + 10);
+      await reanalyzeBatch.mutateAsync(batch);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t('aiModel.title')}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isLoading ? (
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center justify-between">
+              <p className="text-muted-foreground text-sm">{t('aiModel.currentVersion')}</p>
+              <p className="font-mono text-sm font-medium">{staleData?.currentModel}</p>
+            </div>
+
+            {staleData && staleData.count > 0 ? (
+              <>
+                <p className="text-sm">{t('aiModel.staleCount', { count: staleData.count })}</p>
+                <Button
+                  onClick={handleReanalyzeAll}
+                  disabled={reanalyzeBatch.isPending}
+                  className="w-full"
+                >
+                  {reanalyzeBatch.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {t('aiModel.reanalyzeAll')}
+                    </>
+                  ) : (
+                    t('aiModel.reanalyzeAll')
+                  )}
+                </Button>
+              </>
+            ) : (
+              <p className="text-muted-foreground text-sm">{t('aiModel.noStale')}</p>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function SettingsPage() {
   const t = useTranslations('settings');
@@ -268,6 +329,9 @@ export default function SettingsPage() {
           </Button>
         </CardContent>
       </Card>
+
+      {/* AI Model Management Section */}
+      <AiModelSection />
 
       {/* Subscription Section */}
       <Card>

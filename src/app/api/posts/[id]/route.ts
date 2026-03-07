@@ -8,6 +8,7 @@ import { getPostById, updatePost, deletePost } from '@/infrastructure/repositori
 import { enrichPostsWithPriceChanges } from '@/lib/api/enrich-price-changes';
 import { unauthorizedError, notFoundError, internalError } from '@/lib/api/error';
 import { updatePostSchema, parseBody } from '@/lib/api/validation';
+import { getAiModelVersion } from '@/infrastructure/api/gemini.client';
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -15,7 +16,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
     const post = await getPostById(id);
     if (!post) return notFoundError('Post');
     await enrichPostsWithPriceChanges([post]);
-    return NextResponse.json(post);
+    return NextResponse.json({ ...post, currentAiModel: getAiModelVersion() });
   } catch (err) {
     return internalError(err, 'Failed to fetch post');
   }

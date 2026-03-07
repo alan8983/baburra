@@ -37,6 +37,7 @@ export interface Post {
   images: string[];
   sentiment: Sentiment;
   sentimentAiGenerated: boolean;
+  aiModelVersion: string | null;
   postedAt: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -87,6 +88,7 @@ export interface CreatePostInput {
   sentiment: Sentiment;
   stockSentiments?: Record<string, Sentiment>; // stockId -> per-stock sentiment
   sentimentAiGenerated?: boolean;
+  aiModelVersion?: string;
   postedAt: Date;
   draftAiArguments?: DraftAiArguments[];
 }

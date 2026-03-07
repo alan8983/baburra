@@ -17,6 +17,8 @@ import {
   Sparkles,
   LogOut,
   Import,
+  Search,
+  Rss,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -43,6 +45,8 @@ const iconMap = {
   Bookmark,
   Settings,
   Import,
+  Search,
+  Rss,
 };
 
 // Navigation items will be translated in component
@@ -56,8 +60,10 @@ const navItems: Array<{
   { key: 'dashboard', href: ROUTES.DASHBOARD, icon: 'LayoutDashboard' },
   { key: 'quickInput', href: ROUTES.INPUT, icon: 'PenLine' },
   { key: 'import', href: ROUTES.IMPORT, icon: 'Import', showNewWhenNotOnboarded: true },
+  { key: 'scrape', href: ROUTES.SCRAPE, icon: 'Search' },
   { key: 'drafts', href: ROUTES.DRAFTS, icon: 'FileText', showBadge: true },
   { key: 'bookmarks', href: ROUTES.BOOKMARKS, icon: 'Bookmark' },
+  { key: 'subscriptions', href: ROUTES.SUBSCRIPTIONS, icon: 'Rss' },
 ];
 
 const resourceItems: Array<{

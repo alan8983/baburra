@@ -28,7 +28,8 @@
     },
     "stats": {
       "postCount": "Posts:",
-      "overallReturnRate": "Overall Return Rate: {percent}%"
+      "overallReturnRate": "Overall Return Rate: {percent}%",
+      "followers": "{count} users tracking"
     },
     "postsByStock": {
       "title": "Posts Grouped by Stock",
@@ -77,6 +78,7 @@
     "errors": {
       "loadFailed": "Failed to load KOL or KOL not found",
       "noPriceData": "No price data available"
-    }
+    },
+    "scrapeInProgress": "Still analyzing... {processed}/{total} posts processed. Results will update automatically."
   }
 }

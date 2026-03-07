@@ -51,6 +51,18 @@
     "importKol": "匯入 KOL 文章",
     "addPost": "手動新增文章"
   },
+  "insights": {
+    "trendingStocks": {
+      "title": "本週熱門標的",
+      "noData": "暫無熱門標的",
+      "postCount": "{count} 篇文章"
+    },
+    "popularKols": {
+      "title": "最多人追蹤的 KOL",
+      "noData": "暫無追蹤資料",
+      "followerCount": "{count} 人追蹤"
+    }
+  },
   "errors": {
     "loadError": "載入資料時發生錯誤：{error}",
     "unknownError": "未知錯誤"

@@ -51,6 +51,18 @@
     "importKol": "Import KOL Posts",
     "addPost": "Add Post Manually"
   },
+  "insights": {
+    "trendingStocks": {
+      "title": "Trending Stocks This Week",
+      "noData": "No trending stocks yet",
+      "postCount": "{count} posts"
+    },
+    "popularKols": {
+      "title": "Most Followed KOLs",
+      "noData": "No followed KOLs yet",
+      "followerCount": "{count} followers"
+    }
+  },
   "errors": {
     "loadError": "Error loading data: {error}",
     "unknownError": "Unknown error"

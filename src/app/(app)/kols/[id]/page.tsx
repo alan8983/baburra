@@ -5,7 +5,17 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ArrowLeft, Clock, ExternalLink, HelpCircle, Loader2, User } from 'lucide-react';
+import {
+  ArrowLeft,
+  Clock,
+  ExternalLink,
+  HelpCircle,
+  Loader2,
+  RefreshCw,
+  User,
+  Users,
+} from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -20,8 +30,17 @@ import { sentimentKey } from '@/lib/utils/sentiment';
 import { PriceChangeBadge } from '@/components/shared/price-change-badge';
 import { useStockPricesForChart } from '@/hooks/use-stock-prices';
 import type { LineChartMarker } from '@/components/charts';
-import { useKol, useKolPosts } from '@/hooks';
+import {
+  useKol,
+  useKolPosts,
+  useKolSources,
+  useActiveScrapeForKol,
+  useReanalyzeBatch,
+  useKolFollowerCount,
+} from '@/hooks';
+import { SubscriptionToggle } from '@/components/kol/subscription-toggle';
 import { formatReturnRate, getReturnRateColorClass } from '@/domain/calculators';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const SentimentLineChart = dynamic(
   () =>
@@ -314,9 +333,14 @@ function KolStockSection({ stock }: { stock: StockGroup }) {
 
 export default function KolDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const t = useTranslations('kols');
+  const tPosts = useTranslations('posts');
   const { id } = use(params);
   const { data: kol, isLoading: kolLoading, error: kolError } = useKol(id);
   const { data: postsData, isLoading: postsLoading } = useKolPosts(id);
+  const { data: kolSources } = useKolSources(id);
+  const activeScrape = useActiveScrapeForKol(id);
+  const reanalyzeBatch = useReanalyzeBatch();
+  const { data: followerData } = useKolFollowerCount(id);
 
   // Group posts by stock, capturing all price-change periods
   const postsByStock = useMemo<StockGroup[]>(() => {
@@ -354,6 +378,14 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
     }
     return Array.from(map.values());
   }, [postsData?.data]);
+
+  const stalePosts = useMemo(() => {
+    const currentModel = postsData?.currentAiModel;
+    if (!currentModel || !postsData?.data) return [];
+    return postsData.data.filter(
+      (p) => p.aiModelVersion == null || p.aiModelVersion !== currentModel
+    );
+  }, [postsData]);
 
   if (kolError || (!kolLoading && !kol)) {
     return (
@@ -418,6 +450,12 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
                       })
                     : '—'}
                 </Badge>
+                {followerData && followerData.followerCount > 0 && (
+                  <Badge variant="secondary">
+                    <Users className="mr-1 h-3 w-3" />
+                    {t('detail.stats.followers', { count: followerData.followerCount })}
+                  </Badge>
+                )}
               </div>
               {Object.entries(kol.socialLinks).length > 0 && (
                 <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
@@ -435,10 +473,71 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
                   ))}
                 </div>
               )}
+              {kolSources && kolSources.length > 0 && (
+                <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+                  {kolSources.map((source) => (
+                    <SubscriptionToggle
+                      key={source.id}
+                      kolId={id}
+                      sourceId={source.id}
+                      isSubscribed={source.isSubscribed}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Scrape in-progress banner */}
+      {activeScrape && (
+        <Alert>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <AlertDescription>
+            {t('detail.scrapeInProgress', {
+              processed: activeScrape.processedUrls ?? 0,
+              total: activeScrape.totalUrls ?? 0,
+            })}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Batch re-analyze banner */}
+      {stalePosts.length > 0 && (
+        <Alert>
+          <RefreshCw className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between">
+            <span>{tPosts('detail.reanalyze.bannerLegacy')}</span>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={reanalyzeBatch.isPending}
+              onClick={() => {
+                const ids = stalePosts.slice(0, 10).map((p) => p.id);
+                reanalyzeBatch.mutate(ids, {
+                  onSuccess: (result) => {
+                    toast.success(
+                      tPosts('detail.reanalyze.batchProgress', {
+                        done: result.success,
+                        total: ids.length,
+                      })
+                    );
+                  },
+                  onError: () => toast.error(tPosts('detail.reanalyze.failed')),
+                });
+              }}
+            >
+              {reanalyzeBatch.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              {tPosts('detail.reanalyze.batchButton', { count: stalePosts.length })}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Per-stock sections */}
       {postsLoading ? (

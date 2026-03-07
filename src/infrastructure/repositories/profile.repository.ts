@@ -7,6 +7,18 @@ import type { UpdateProfileInput, ColorPalette } from '@/domain/models/user';
 
 const DEFAULT_TIMEZONE = 'Asia/Taipei';
 
+export type UserTier = 'free' | 'paid';
+
+export async function getUserTier(userId: string): Promise<UserTier> {
+  const supabase = createAdminClient();
+  if (!supabase) return 'free';
+
+  const { data, error } = await supabase.from('profiles').select('tier').eq('id', userId).single();
+
+  if (error) return 'free';
+  return (data?.tier as UserTier) || 'free';
+}
+
 /**
  * 取得用戶的時區設定
  */

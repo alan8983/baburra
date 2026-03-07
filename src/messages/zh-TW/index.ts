@@ -13,6 +13,8 @@ import bookmarks from './bookmarks.json';
 import importMessages from './import.json';
 import onboarding from './onboarding.json';
 import welcome from './welcome.json';
+import scrape from './scrape.json';
+import subscriptions from './subscriptions.json';
 
 const zhTWMessages = {
   common,
@@ -29,6 +31,8 @@ const zhTWMessages = {
   import: importMessages,
   onboarding,
   welcome,
+  scrape,
+  subscriptions,
 };
 
 export default zhTWMessages;

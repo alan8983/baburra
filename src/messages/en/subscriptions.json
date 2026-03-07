@@ -1,0 +1,24 @@
+{
+  "title": "Subscriptions",
+  "description": "KOL sources you're following for automatic monitoring",
+  "loading": "Loading subscriptions...",
+  "follow": "Follow",
+  "following": "Following",
+  "unfollow": "Unfollow",
+  "monitoring": "Monitoring",
+  "monitoringOff": "Monitoring off",
+  "lastScraped": "Last scraped: {date}",
+  "neverScraped": "Not yet scraped",
+  "empty": {
+    "title": "No subscriptions yet",
+    "description": "Follow KOL sources to automatically monitor new posts",
+    "action": "Scrape a KOL"
+  },
+  "errors": {
+    "loadFailed": "Failed to load subscriptions",
+    "subscribeFailed": "Failed to follow",
+    "unsubscribeFailed": "Failed to unfollow",
+    "tierLimitFree": "Free plan limit reached ({current}/{limit} KOLs). Upgrade to follow more.",
+    "tierLimitPaid": "Subscription limit reached ({current}/{limit} KOLs)."
+  }
+}

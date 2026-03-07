@@ -29,6 +29,8 @@ export const ROUTES = {
   SETTINGS: '/settings',
   ONBOARDING: '/onboarding',
   WELCOME: '/welcome',
+  SCRAPE: '/scrape',
+  SUBSCRIPTIONS: '/subscriptions',
 } as const;
 
 // API 路由
@@ -52,6 +54,9 @@ export const API_ROUTES = {
   POST_DETAIL: (id: string) => `/api/posts/${id}`,
   POST_CHECK_DUPLICATE: '/api/posts/check-duplicate',
   POST_ARGUMENTS: (id: string) => `/api/posts/${id}/arguments`,
+  POST_REANALYZE: (id: string) => `/api/posts/${id}/reanalyze`,
+  POST_REANALYZE_BATCH: '/api/posts/reanalyze-batch',
+  POST_STALE_COUNT: '/api/posts/stale-count',
 
   // Drafts
   DRAFTS: '/api/drafts',
@@ -91,8 +96,27 @@ export const API_ROUTES = {
   // Import
   IMPORT_BATCH: '/api/import/batch',
 
+  // Scrape
+  SCRAPE_PROFILE: '/api/scrape/profile',
+  SCRAPE_JOB: (id: string) => `/api/scrape/jobs/${id}`,
+  SCRAPE_JOBS: '/api/scrape/jobs',
+
+  // Subscriptions
+  SUBSCRIPTIONS: '/api/subscriptions',
+  SUBSCRIPTION_DELETE: (sourceId: string) => `/api/subscriptions/${sourceId}`,
+  KOL_SOURCES: (kolId: string) => `/api/kols/${kolId}/sources`,
+
+  // Cron
+  CRON_PROCESS_JOBS: '/api/cron/process-jobs',
+  CRON_MONITOR: '/api/cron/monitor',
+
   // AB Testing
   AB_EVENTS: '/api/ab/events',
+
+  // Insights (Community)
+  INSIGHTS_TRENDING_STOCKS: '/api/insights/trending-stocks',
+  INSIGHTS_POPULAR_KOLS: '/api/insights/popular-kols',
+  KOL_FOLLOWERS_COUNT: (id: string) => `/api/kols/${id}/followers-count`,
 } as const;
 
 // 導航項目
@@ -100,6 +124,7 @@ export const NAV_ITEMS = [
   { label: 'Dashboard', href: ROUTES.DASHBOARD, icon: 'LayoutDashboard' },
   { label: '快速輸入', href: ROUTES.INPUT, icon: 'PenLine' },
   { label: '匯入 KOL', href: ROUTES.IMPORT, icon: 'Import' },
+  { label: '擷取 KOL', href: ROUTES.SCRAPE, icon: 'Search' },
   { label: '草稿', href: ROUTES.DRAFTS, icon: 'FileText', showBadge: true },
   { label: 'KOL 列表', href: ROUTES.KOLS, icon: 'Users' },
   { label: '投資標的', href: ROUTES.STOCKS, icon: 'TrendingUp' },

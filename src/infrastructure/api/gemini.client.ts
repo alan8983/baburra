@@ -33,8 +33,13 @@ export interface GeminiGenerateOptions {
 }
 
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
-const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
+const DEFAULT_MODEL = process.env.AI_SENTIMENT_MODEL || 'gemini-2.5-flash-lite';
 const DEFAULT_TIMEOUT_MS = 30_000;
+
+/** Return the currently configured AI model name (for version tracking). */
+export function getAiModelVersion(): string {
+  return DEFAULT_MODEL;
+}
 
 function getApiKey(): string {
   const apiKey = process.env.GEMINI_API_KEY;

@@ -1,0 +1,45 @@
+{
+  "title": "Scrape KOL Profile",
+  "description": "Enter a KOL channel URL to auto-scrape their profile and start tracking",
+  "form": {
+    "urlLabel": "KOL Channel URL",
+    "urlPlaceholder": "Paste a YouTube channel URL",
+    "supportedPlatforms": "Supports: YouTube channels",
+    "submit": "Start Scraping",
+    "submitting": "Scraping...",
+    "invalidUrl": "Please enter a valid YouTube channel URL",
+    "platformYouTube": "YouTube"
+  },
+  "progress": {
+    "title": "Scraping KOL Profile",
+    "statusQueued": "Queued",
+    "statusProcessing": "Processing",
+    "statusCompleted": "Completed",
+    "statusFailed": "Failed",
+    "processed": "{processed} / {total} processed",
+    "detailedCounts": "{processed}/{total} analyzed \u2022 {imported} imported \u2022 {duplicates} duplicates \u2022 {errors} errors",
+    "eta": "~{minutes} min remaining",
+    "earlyNudge": "First results ready! You can start exploring while we process the rest.",
+    "viewKolEarly": "View {kolName}'s profile \u2192",
+    "completeToast": "Scrape complete! {count} posts imported for {kolName}",
+    "viewKol": "View KOL",
+    "scrapeAnother": "Scrape Another",
+    "errorMessage": "Scrape failed: {error}",
+    "stats": {
+      "videosFound": "{count} videos found",
+      "postsCreated": "{count} posts created",
+      "duplicates": "{count} duplicates",
+      "errors": "{count} errors"
+    }
+  },
+  "jobs": {
+    "title": "Recent Jobs",
+    "empty": "No scrape jobs yet"
+  },
+  "errors": {
+    "scrapeFailed": "Scrape failed, please try again",
+    "jobNotFound": "Scrape job not found",
+    "rateLimited": "Daily scrape limit reached ({used}/{limit}). Try again tomorrow.",
+    "rateLimitedTitle": "Rate Limit Exceeded"
+  }
+}

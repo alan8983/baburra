@@ -31,6 +31,7 @@ import {
   extractArguments,
   extractAtHandles,
 } from '@/domain/services/ai.service';
+import { getAiModelVersion } from '@/infrastructure/api/gemini.client';
 import type { Sentiment, SourcePlatform } from '@/domain/models/post';
 import type { DraftAiArguments } from '@/domain/models/draft';
 
@@ -72,7 +73,7 @@ export interface ImportBatchResult {
 
 // ── KOL Cache ──
 
-type KolCacheEntry = { kolId: string; kolCreated: boolean };
+export type KolCacheEntry = { kolId: string; kolCreated: boolean };
 
 // ── Main Pipeline ──
 
@@ -160,12 +161,13 @@ export async function executeBatchImport(
 
 // ── Per-URL Processing ──
 
-async function processUrl(
+export async function processUrl(
   url: string,
   userId: string,
   timezone: string,
   quotaExempt: boolean,
-  kolCache: Map<string, KolCacheEntry>
+  kolCache: Map<string, KolCacheEntry>,
+  knownKolId?: string
 ): Promise<ImportUrlResult> {
   // 1. Duplicate check
   const existing = await findPostBySourceUrl(url);
@@ -209,30 +211,39 @@ async function processUrl(
       return { url, status: 'error', error: 'no_tickers_identified' };
     }
 
-    // 6. Auto-detect KOL: extractor > AI > @handle > "Unknown"
-    const detectedKolName =
-      fetchResult.kolName ||
-      analysis.kolName ||
-      extractAtHandles(fetchResult.content)[0] ||
-      'Unknown';
-
-    const normalizedName = detectedKolName.trim().toLowerCase();
-    let kolEntry = kolCache.get(normalizedName);
+    // 6. Resolve KOL: use knownKolId if provided, otherwise auto-detect
     let kolCreated = false;
+    let kolId: string;
+    let detectedKolName: string;
 
-    if (!kolEntry) {
-      const existingKol = await findKolByName(detectedKolName);
-      if (existingKol) {
-        kolEntry = { kolId: existingKol.id, kolCreated: false };
-      } else {
-        const newKol = await createKol({ name: detectedKolName });
-        kolEntry = { kolId: newKol.id, kolCreated: true };
+    if (knownKolId) {
+      kolId = knownKolId;
+      detectedKolName = fetchResult.kolName || 'Unknown';
+      kolCreated = false;
+    } else {
+      detectedKolName =
+        fetchResult.kolName ||
+        analysis.kolName ||
+        extractAtHandles(fetchResult.content)[0] ||
+        'Unknown';
+
+      const normalizedName = detectedKolName.trim().toLowerCase();
+      let kolEntry = kolCache.get(normalizedName);
+
+      if (!kolEntry) {
+        const existingKol = await findKolByName(detectedKolName);
+        if (existingKol) {
+          kolEntry = { kolId: existingKol.id, kolCreated: false };
+        } else {
+          const newKol = await createKol({ name: detectedKolName });
+          kolEntry = { kolId: newKol.id, kolCreated: true };
+        }
+        kolCache.set(normalizedName, kolEntry);
       }
-      kolCache.set(normalizedName, kolEntry);
-    }
 
-    kolCreated = kolEntry.kolCreated;
-    const kolId = kolEntry.kolId;
+      kolCreated = kolEntry.kolCreated;
+      kolId = kolEntry.kolId;
+    }
 
     // 7. Find or create stocks for identified tickers
     const stockIds: string[] = [];
@@ -309,6 +320,7 @@ async function processUrl(
         images: fetchResult.images,
         sentiment: analysis.sentiment,
         sentimentAiGenerated: true,
+        aiModelVersion: getAiModelVersion(),
         stockSentiments: Object.keys(stockSentiments).length > 0 ? stockSentiments : undefined,
         postedAt: analysis.postedAt
           ? new Date(analysis.postedAt)

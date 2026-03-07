@@ -90,6 +90,12 @@ export const addBookmarkSchema = z.object({
   postId: uuid,
 });
 
+// ─── Subscription schema ─────────────────────────────────────────
+
+export const subscribeSchema = z.object({
+  kolSourceId: uuid,
+});
+
 // ─── Quick input schema ───────────────────────────────────────────
 
 export const quickInputSchema = z.object({

@@ -23,7 +23,29 @@ export const APP_CONFIG = {
   MAX_IMAGE_SIZE_MB: 5,
   MAX_IMAGES_PER_POST: 10,
   ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+  // Scrape rate limiting
+  SCRAPE_DAILY_LIMIT: 3,
+
+  // Subscription tier limits
+  SUBSCRIPTION_LIMITS: {
+    free: 10,
+    paid: 50,
+  },
 } as const;
+
+// AI rate limiting for concurrent Gemini calls during scrape
+export const AI_RATE_LIMIT = {
+  maxConcurrentAnalysis: 10,
+  cooldownMs: 1000,
+} as const;
+
+// Scrape caps per platform (max posts to store)
+export const SCRAPE_CAPS: Record<string, number> = {
+  youtube: 200,
+  twitter: 500,
+  instagram: 500,
+  facebook: 500,
+};
 
 // 情緒值對應
 export const SENTIMENT_CONFIG = {

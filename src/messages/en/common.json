@@ -12,6 +12,8 @@
     "allPosts": "All Posts",
     "bookmarks": "Bookmarks",
     "import": "Import KOL",
+    "scrape": "Scrape KOL",
+    "subscriptions": "Subscriptions",
     "settings": "Settings"
   },
   "actions": {

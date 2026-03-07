@@ -6,8 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { TrendingUp, Users, FileText, Newspaper, BarChart3 } from 'lucide-react';
 import { LocaleSwitcher } from '@/components/layout/locale-switcher';
 import { useDashboard } from '@/hooks/use-dashboard';
+import { useTrendingStocks, usePopularKols } from '@/hooks';
 import { useColorPalette } from '@/lib/colors/color-palette-context';
 import { EmptyState } from '@/components/shared/empty-state';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ROUTES } from '@/lib/constants';
 
 // 格式化數字（千分位）- 使用動態語系
@@ -46,6 +48,8 @@ export default function DashboardPage() {
   const locale = useLocale();
   const { colors } = useColorPalette();
   const { data, isLoading, error } = useDashboard();
+  const { data: trendingStocks } = useTrendingStocks(7, 5);
+  const { data: popularKols } = usePopularKols(5);
 
   // Helper to get sentiment label
   const getSentimentLabel = (sentiment: number) => {
@@ -301,6 +305,81 @@ export default function DashboardPage() {
                         <p className="text-muted-foreground text-xs">{t('topKols.lastPost')}</p>
                       </div>
                     )}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Community Insights */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Trending Stocks This Week */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('insights.trendingStocks.title')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!trendingStocks || trendingStocks.length === 0 ? (
+              <p className="text-muted-foreground py-4 text-center">
+                {t('insights.trendingStocks.noData')}
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {trendingStocks.map((stock) => (
+                  <Link
+                    key={stock.stockId}
+                    href={ROUTES.STOCK_DETAIL(stock.ticker)}
+                    className="hover:bg-muted flex items-center justify-between rounded-lg border-b px-2 py-3 transition-colors last:border-0"
+                  >
+                    <div className="flex items-center gap-3">
+                      <TrendingUp className="text-muted-foreground h-4 w-4" />
+                      <div>
+                        <p className="text-sm font-medium">{stock.ticker}</p>
+                        <p className="text-muted-foreground text-xs">{stock.name}</p>
+                      </div>
+                    </div>
+                    <span className="text-muted-foreground text-xs">
+                      {t('insights.trendingStocks.postCount', { count: stock.postCount })}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Most Followed KOLs */}
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('insights.popularKols.title')}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {!popularKols || popularKols.length === 0 ? (
+              <p className="text-muted-foreground py-4 text-center">
+                {t('insights.popularKols.noData')}
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {popularKols.map((kol) => (
+                  <Link
+                    key={kol.kolId}
+                    href={ROUTES.KOL_DETAIL(kol.kolId)}
+                    className="hover:bg-muted flex items-center justify-between rounded-lg border-b px-2 py-3 transition-colors last:border-0"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={kol.avatarUrl || undefined} />
+                        <AvatarFallback>
+                          <Users className="h-4 w-4" />
+                        </AvatarFallback>
+                      </Avatar>
+                      <p className="text-sm font-medium">{kol.name}</p>
+                    </div>
+                    <span className="text-muted-foreground text-xs">
+                      {t('insights.popularKols.followerCount', { count: kol.followerCount })}
+                    </span>
                   </Link>
                 ))}
               </div>

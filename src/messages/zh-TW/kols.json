@@ -28,7 +28,8 @@
     },
     "stats": {
       "postCount": "文章數:",
-      "overallReturnRate": "總體報酬率: {percent}%"
+      "overallReturnRate": "總體報酬率: {percent}%",
+      "followers": "{count} 人追蹤"
     },
     "postsByStock": {
       "title": "依標的分組的文章",
@@ -77,6 +78,7 @@
     "errors": {
       "loadFailed": "無法載入 KOL 或找不到該 KOL",
       "noPriceData": "無可用的價格資料"
-    }
+    },
+    "scrapeInProgress": "分析中... 已處理 {processed}/{total} 篇文章，結果將自動更新。"
   }
 }

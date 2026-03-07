@@ -12,6 +12,8 @@
     "allPosts": "所有文章",
     "bookmarks": "書籤",
     "import": "匯入 KOL",
+    "scrape": "擷取 KOL",
+    "subscriptions": "訂閱管理",
     "settings": "設定"
   },
   "actions": {

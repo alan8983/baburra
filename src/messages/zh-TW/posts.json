@@ -43,7 +43,17 @@
     "deleteConfirmYes": "刪除",
     "deleteConfirmNo": "取消",
     "deleteSuccess": "文章已刪除",
-    "deleteFailed": "刪除失敗"
+    "deleteFailed": "刪除失敗",
+    "reanalyze": {
+      "banner": "此文章使用 {model} 分析。使用最新 AI 重新分析？",
+      "bannerLegacy": "此文章使用舊版 AI 模型分析。重新分析以獲得更好的結果？",
+      "button": "重新分析",
+      "success": "重新分析完成",
+      "failed": "重新分析失敗",
+      "batchButton": "重新分析 {count} 篇文章",
+      "batchProgress": "已重新分析 {done}/{total} 篇文章",
+      "quotaExceeded": "批次重新分析時 AI 配額已用完"
+    }
   },
   "new": {
     "backToEdit": "返回編輯",

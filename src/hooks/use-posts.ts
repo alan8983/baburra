@@ -53,10 +53,12 @@ export function usePosts(params?: {
 }
 
 // 取得單一 Post 詳情
+export type PostDetailResponse = PostWithPriceChanges & { currentAiModel?: string };
+
 export function usePost(id: string) {
   return useQuery({
     queryKey: postKeys.detail(id),
-    queryFn: async (): Promise<PostWithPriceChanges> => {
+    queryFn: async (): Promise<PostDetailResponse> => {
       const res = await fetch(API_ROUTES.POST_DETAIL(id));
       await throwIfNotOk(res);
       return res.json();

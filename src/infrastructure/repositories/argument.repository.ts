@@ -191,6 +191,72 @@ export async function createPostArguments(
 }
 
 /**
+ * 替換文章的所有論點（先刪後建）
+ */
+export async function replacePostArguments(
+  postId: string,
+  args: {
+    stockId: string;
+    categoryCode: string;
+    originalText: string;
+    summary: string;
+    sentiment: number;
+    confidence: number;
+  }[]
+): Promise<void> {
+  const supabase = createAdminClient();
+
+  // Delete existing arguments for this post
+  const { error: deleteError } = await supabase
+    .from('post_arguments')
+    .delete()
+    .eq('post_id', postId);
+
+  if (deleteError) {
+    throw new Error(`Failed to delete post arguments: ${deleteError.message}`);
+  }
+
+  if (args.length === 0) return;
+
+  // Resolve category codes to category IDs
+  const uniqueCodes = [...new Set(args.map((a) => a.categoryCode))];
+  const { data: categories, error: catError } = await supabase
+    .from('argument_categories')
+    .select('id, code')
+    .in('code', uniqueCodes);
+
+  if (catError) {
+    throw new Error(`Failed to resolve argument categories: ${catError.message}`);
+  }
+
+  const codeToId = new Map<string, string>();
+  for (const cat of categories || []) {
+    codeToId.set(cat.code as string, cat.id as string);
+  }
+
+  // Filter out args with unresolved categories and insert
+  const inserts = args
+    .filter((a) => codeToId.has(a.categoryCode))
+    .map((a) => ({
+      post_id: postId,
+      stock_id: a.stockId,
+      category_id: codeToId.get(a.categoryCode)!,
+      original_text: a.originalText,
+      summary: a.summary,
+      sentiment: a.sentiment,
+      confidence: a.confidence,
+    }));
+
+  if (inserts.length === 0) return;
+
+  const { error: insertError } = await supabase.from('post_arguments').insert(inserts);
+
+  if (insertError) {
+    throw new Error(`Failed to insert post arguments: ${insertError.message}`);
+  }
+}
+
+/**
  * 取得文章的所有論點
  */
 export async function getPostArguments(postId: string): Promise<PostArgumentWithCategory[]> {

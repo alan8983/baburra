@@ -1,0 +1,24 @@
+{
+  "title": "訂閱管理",
+  "description": "您追蹤的 KOL 來源，系統將自動監控新文章",
+  "loading": "載入訂閱中...",
+  "follow": "追蹤",
+  "following": "已追蹤",
+  "unfollow": "取消追蹤",
+  "monitoring": "監控中",
+  "monitoringOff": "未監控",
+  "lastScraped": "上次擷取: {date}",
+  "neverScraped": "尚未擷取",
+  "empty": {
+    "title": "尚無訂閱",
+    "description": "追蹤 KOL 來源以自動監控新文章",
+    "action": "擷取 KOL"
+  },
+  "errors": {
+    "loadFailed": "載入訂閱失敗",
+    "subscribeFailed": "追蹤失敗",
+    "unsubscribeFailed": "取消追蹤失敗",
+    "tierLimitFree": "免費方案已達上限 ({current}/{limit} 位 KOL)，升級後可追蹤更多。",
+    "tierLimitPaid": "已達追蹤上限 ({current}/{limit} 位 KOL)。"
+  }
+}

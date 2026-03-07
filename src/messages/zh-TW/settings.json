@@ -55,6 +55,13 @@
     "asian": "亞洲風格（紅色 = 上漲）",
     "american": "美式風格（綠色 = 上漲）"
   },
+  "aiModel": {
+    "title": "AI 模型管理",
+    "currentVersion": "目前模型版本",
+    "staleCount": "{count} 篇文章使用舊版模型",
+    "reanalyzeAll": "重新分析全部",
+    "noStale": "所有文章皆為最新版本分析"
+  },
   "dangerZone": {
     "title": "危險區域",
     "description": "這些操作無法復原，請謹慎操作",

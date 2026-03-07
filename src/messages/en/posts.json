@@ -43,7 +43,17 @@
     "deleteConfirmYes": "Delete",
     "deleteConfirmNo": "Cancel",
     "deleteSuccess": "Post deleted",
-    "deleteFailed": "Delete failed"
+    "deleteFailed": "Delete failed",
+    "reanalyze": {
+      "banner": "This post was analyzed with {model}. Re-analyze with latest AI?",
+      "bannerLegacy": "This post was analyzed with an older AI model. Re-analyze for improved results?",
+      "button": "Re-analyze",
+      "success": "Re-analysis complete",
+      "failed": "Re-analysis failed",
+      "batchButton": "Re-analyze {count} posts",
+      "batchProgress": "{done}/{total} posts re-analyzed",
+      "quotaExceeded": "AI quota exceeded during batch re-analysis"
+    }
   },
   "new": {
     "backToEdit": "Back to Edit",

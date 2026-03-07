@@ -55,6 +55,13 @@
     "asian": "Asian (Red = Up)",
     "american": "American (Green = Up)"
   },
+  "aiModel": {
+    "title": "AI Model Management",
+    "currentVersion": "Current model version",
+    "staleCount": "{count} posts analyzed with older model",
+    "reanalyzeAll": "Re-analyze all",
+    "noStale": "All posts analyzed with latest model"
+  },
   "dangerZone": {
     "title": "Danger Zone",
     "description": "These actions cannot be undone, please proceed with caution",

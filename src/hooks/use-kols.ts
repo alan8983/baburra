@@ -66,7 +66,11 @@ export function useKol(id: string) {
 export function useKolPosts(id: string, params?: { page?: number; limit?: number }) {
   return useQuery({
     queryKey: [...kolKeys.posts(id), params ?? {}],
-    queryFn: async (): Promise<{ data: PostWithPriceChanges[]; total: number }> => {
+    queryFn: async (): Promise<{
+      data: PostWithPriceChanges[];
+      total: number;
+      currentAiModel?: string;
+    }> => {
       const searchParams = new URLSearchParams();
       if (params?.page) searchParams.set('page', params.page.toString());
       if (params?.limit) searchParams.set('limit', params.limit.toString());

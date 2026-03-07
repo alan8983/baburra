@@ -6,7 +6,16 @@ import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ArrowLeft, Bookmark, BookmarkCheck, ExternalLink, Trash2, User } from 'lucide-react';
+import {
+  ArrowLeft,
+  Bookmark,
+  BookmarkCheck,
+  ExternalLink,
+  Loader2,
+  RefreshCw,
+  Trash2,
+  User,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,7 +36,14 @@ import {
   getStartDateForRange,
 } from '@/components/charts';
 import type { LineChartMarker, CandleInterval, TimeRange } from '@/components/charts';
-import { usePost, useBookmarkStatus, useToggleBookmark, useDeletePost } from '@/hooks';
+import {
+  usePost,
+  useBookmarkStatus,
+  useToggleBookmark,
+  useDeletePost,
+  useReanalyze,
+} from '@/hooks';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ArgumentPlaceholder } from '@/components/ai/argument-placeholder';
 
 const CandlestickChart = dynamic(
@@ -229,8 +245,11 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   const { data: bookmarkData } = useBookmarkStatus(id);
   const toggleBookmark = useToggleBookmark(id);
   const deletePost = useDeletePost();
+  const reanalyze = useReanalyze(id);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const isBookmarked = bookmarkData?.isBookmarked ?? false;
+  const isModelStale =
+    post && (post.aiModelVersion == null || post.aiModelVersion !== post.currentAiModel);
 
   if (error || (!isLoading && !post)) {
     return (
@@ -331,6 +350,38 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
           </Button>
         </div>
       </div>
+
+      {/* Re-analyze banner */}
+      {isModelStale && (
+        <Alert>
+          <RefreshCw className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between">
+            <span>
+              {post.aiModelVersion
+                ? t('detail.reanalyze.banner', { model: post.aiModelVersion })
+                : t('detail.reanalyze.bannerLegacy')}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={reanalyze.isPending}
+              onClick={() =>
+                reanalyze.mutate(undefined, {
+                  onSuccess: () => toast.success(t('detail.reanalyze.success')),
+                  onError: () => toast.error(t('detail.reanalyze.failed')),
+                })
+              }
+            >
+              {reanalyze.isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              {t('detail.reanalyze.button')}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Shared Heading */}
       <div className="space-y-3">

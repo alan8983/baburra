@@ -7,3 +7,4 @@ export * from './post';
 export * from './draft';
 export * from './user';
 export * from './bookmark';
+export * from './kol-source';

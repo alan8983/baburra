@@ -21,6 +21,7 @@ type DbPost = {
   images: string[];
   sentiment: number;
   sentiment_ai_generated: boolean;
+  ai_model_version: string | null;
   posted_at: string;
   created_at: string;
   updated_at: string;
@@ -50,6 +51,7 @@ function mapDbToPost(row: DbPost): Post {
     images: Array.isArray(row.images) ? row.images : [],
     sentiment: row.sentiment as Post['sentiment'],
     sentimentAiGenerated: row.sentiment_ai_generated ?? false,
+    aiModelVersion: row.ai_model_version ?? null,
     postedAt: new Date(row.posted_at),
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
@@ -234,6 +236,7 @@ export async function createPost(input: CreatePostInput, createdBy: string | nul
     p_created_by: createdBy,
     p_stocks: stocksParam,
     p_arguments: argumentsParam,
+    p_ai_model_version: input.aiModelVersion ?? null,
   });
 
   if (rpcError) throw new Error(rpcError.message);
@@ -282,6 +285,41 @@ export async function updatePost(
   return p ? { ...p } : null;
 }
 
+export async function updatePostAiAnalysis(
+  id: string,
+  input: {
+    sentiment: number;
+    aiModelVersion: string;
+    stockSentiments?: Record<string, number>;
+  }
+): Promise<Post | null> {
+  const supabase = createAdminClient();
+  const { data: row, error } = await supabase
+    .from('posts')
+    .update({
+      sentiment: input.sentiment,
+      sentiment_ai_generated: true,
+      ai_model_version: input.aiModelVersion,
+    })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  if (!row) return null;
+
+  if (input.stockSentiments) {
+    for (const [stockId, sentiment] of Object.entries(input.stockSentiments)) {
+      await supabase
+        .from('post_stocks')
+        .update({ sentiment })
+        .eq('post_id', id)
+        .eq('stock_id', stockId);
+    }
+  }
+
+  return mapDbToPost(row as DbPost);
+}
+
 export async function deletePost(id: string, userId: string): Promise<boolean> {
   const supabase = createAdminClient();
   // Verify ownership before deleting
@@ -296,6 +334,26 @@ export async function deletePost(id: string, userId: string): Promise<boolean> {
   const { error } = await supabase.from('posts').delete().eq('id', id);
   if (error) throw new Error(error.message);
   return true;
+}
+
+export async function findPostsByModelVersion(
+  excludeVersion: string,
+  limit: number = 100
+): Promise<{ id: string; aiModelVersion: string | null }[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('posts')
+    .select('id, ai_model_version')
+    .or(`ai_model_version.is.null,ai_model_version.neq.${excludeVersion}`)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) throw new Error(error.message);
+
+  return (data || []).map((row) => ({
+    id: row.id as string,
+    aiModelVersion: (row.ai_model_version as string) ?? null,
+  }));
 }
 
 export async function findPostBySourceUrl(sourceUrl: string): Promise<PostWithRelations | null> {

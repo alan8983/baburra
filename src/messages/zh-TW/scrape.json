@@ -1,0 +1,45 @@
+{
+  "title": "擷取 KOL 資料",
+  "description": "輸入 KOL 的頻道 URL，系統自動擷取個人資料並建立追蹤",
+  "form": {
+    "urlLabel": "KOL 頻道 URL",
+    "urlPlaceholder": "貼上 YouTube 頻道 URL",
+    "supportedPlatforms": "支援: YouTube 頻道",
+    "submit": "開始擷取",
+    "submitting": "擷取中...",
+    "invalidUrl": "請輸入有效的 YouTube 頻道 URL",
+    "platformYouTube": "YouTube"
+  },
+  "progress": {
+    "title": "正在擷取 KOL 資料",
+    "statusQueued": "排隊中",
+    "statusProcessing": "處理中",
+    "statusCompleted": "完成",
+    "statusFailed": "失敗",
+    "processed": "已處理 {processed} / {total}",
+    "detailedCounts": "{processed}/{total} 已分析 \u2022 {imported} 已匯入 \u2022 {duplicates} 重複 \u2022 {errors} 錯誤",
+    "eta": "預計還需 ~{minutes} 分鐘",
+    "earlyNudge": "初步結果已就緒！您可以先瀏覽，剩餘的正在處理中。",
+    "viewKolEarly": "查看 {kolName} 的資料 \u2192",
+    "completeToast": "擷取完成！已為 {kolName} 匯入 {count} 篇文章",
+    "viewKol": "查看 KOL",
+    "scrapeAnother": "擷取其他 KOL",
+    "errorMessage": "擷取失敗: {error}",
+    "stats": {
+      "videosFound": "找到 {count} 部影片",
+      "postsCreated": "已建立 {count} 篇文章",
+      "duplicates": "{count} 個重複",
+      "errors": "{count} 個錯誤"
+    }
+  },
+  "jobs": {
+    "title": "最近的任務",
+    "empty": "尚無擷取任務"
+  },
+  "errors": {
+    "scrapeFailed": "擷取失敗，請稍後再試",
+    "jobNotFound": "找不到擷取任務",
+    "rateLimited": "已達每日擷取上限 ({used}/{limit})，請明天再試。",
+    "rateLimitedTitle": "超出速率限制"
+  }
+}

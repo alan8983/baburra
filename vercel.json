@@ -1,6 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npm run build",
+  "crons": [
+    { "path": "/api/cron/process-jobs", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/monitor-subscriptions", "schedule": "0 */6 * * *" }
+  ],
   "headers": [
     {
       "source": "/(.*)",
