@@ -280,7 +280,7 @@ export default function PostsPage() {
             icon={<Newspaper className="h-12 w-12" />}
             title={t('empty.noPosts')}
             description={t('empty.description')}
-            primaryAction={{ label: t('empty.importKol'), href: ROUTES.IMPORT }}
+            primaryAction={{ label: t('empty.importKol'), href: ROUTES.INPUT }}
             secondaryAction={{ label: t('empty.addPost'), href: ROUTES.INPUT }}
           />
         ))}

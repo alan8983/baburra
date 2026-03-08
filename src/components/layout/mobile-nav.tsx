@@ -12,7 +12,6 @@ import {
   Newspaper,
   Settings,
   LogOut,
-  Import,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -35,7 +34,6 @@ const iconMap = {
   TrendingUp,
   Newspaper,
   Settings,
-  Import,
 };
 
 const allNavItems: Array<{
@@ -46,7 +44,6 @@ const allNavItems: Array<{
 }> = [
   { key: 'dashboard', href: ROUTES.DASHBOARD, icon: 'LayoutDashboard' },
   { key: 'quickInput', href: ROUTES.INPUT, icon: 'PenLine' },
-  { key: 'import', href: ROUTES.IMPORT, icon: 'Import' },
   { key: 'drafts', href: ROUTES.DRAFTS, icon: 'FileText', showBadge: true },
   { key: 'kolList', href: ROUTES.KOLS, icon: 'Users' },
   { key: 'stocks', href: ROUTES.STOCKS, icon: 'TrendingUp' },
