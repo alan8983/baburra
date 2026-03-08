@@ -134,7 +134,7 @@ export default function DashboardPage() {
           icon={<BarChart3 className="h-12 w-12" />}
           title={t('empty.title')}
           description={t('empty.description')}
-          primaryAction={{ label: t('empty.importKol'), href: ROUTES.IMPORT }}
+          primaryAction={{ label: t('empty.importKol'), href: ROUTES.INPUT }}
           secondaryAction={{ label: t('empty.addPost'), href: ROUTES.INPUT }}
         />
       </div>

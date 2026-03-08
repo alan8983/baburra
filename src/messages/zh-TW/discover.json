@@ -1,0 +1,27 @@
+{
+  "title": "探索",
+  "description": "發掘社群熱門標的與人氣 KOL",
+  "trendingStocks": {
+    "title": "趨勢標的 Top 10",
+    "description": "近 7 天最多文章提及的投資標的",
+    "rank": "排名",
+    "ticker": "代號",
+    "name": "名稱",
+    "postCount": "文章數",
+    "posts": "{count} 篇文章",
+    "noData": "目前沒有趨勢標的資料"
+  },
+  "popularKols": {
+    "title": "熱門 KOL Top 10",
+    "description": "最多人追蹤的 KOL",
+    "followerCount": "{count} 位追蹤者",
+    "noData": "目前沒有熱門 KOL 資料"
+  },
+  "communityActivity": {
+    "title": "社群活躍度",
+    "description": "本週社群統計",
+    "postsThisWeek": "本週文章數",
+    "totalKols": "追蹤中 KOL",
+    "totalStocks": "追蹤中標的"
+  }
+}

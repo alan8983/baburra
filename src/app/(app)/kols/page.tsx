@@ -138,7 +138,7 @@ export default function KolsPage() {
             icon={<Users className="h-12 w-12" />}
             title={t('empty.noKols')}
             description={t('empty.description')}
-            primaryAction={{ label: t('empty.importKol'), href: ROUTES.IMPORT }}
+            primaryAction={{ label: t('empty.importKol'), href: ROUTES.INPUT }}
           />
         ))}
     </div>

@@ -16,7 +16,6 @@ import {
   ChevronRight,
   Sparkles,
   LogOut,
-  Import,
   Search,
   Rss,
 } from 'lucide-react';
@@ -44,7 +43,6 @@ const iconMap = {
   Newspaper,
   Bookmark,
   Settings,
-  Import,
   Search,
   Rss,
 };
@@ -58,8 +56,7 @@ const navItems: Array<{
   showNewWhenNotOnboarded?: boolean;
 }> = [
   { key: 'dashboard', href: ROUTES.DASHBOARD, icon: 'LayoutDashboard' },
-  { key: 'quickInput', href: ROUTES.INPUT, icon: 'PenLine' },
-  { key: 'import', href: ROUTES.IMPORT, icon: 'Import', showNewWhenNotOnboarded: true },
+  { key: 'quickInput', href: ROUTES.INPUT, icon: 'PenLine', showNewWhenNotOnboarded: true },
   { key: 'scrape', href: ROUTES.SCRAPE, icon: 'Search' },
   { key: 'drafts', href: ROUTES.DRAFTS, icon: 'FileText', showBadge: true },
   { key: 'bookmarks', href: ROUTES.BOOKMARKS, icon: 'Bookmark' },

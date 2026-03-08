@@ -1,6 +1,27 @@
 {
-  "title": "快速輸入",
-  "description": "貼上 KOL 的投資觀點文章，AI 自動識別 KOL、標的與情緒",
+  "title": "新增追蹤",
+  "description": "貼上文章內容或網址，AI 自動分析並建立追蹤記錄",
+  "wizard": {
+    "input": "輸入",
+    "processing": "處理中",
+    "review": "審閱結果",
+    "complete": "完成",
+    "inputTitle": "選擇輸入方式",
+    "inputDescription": "貼上文章內容或網址，系統自動分析投資觀點",
+    "processingTitle": "AI 分析中",
+    "processingDescription": "正在處理您的內容，請稍候...",
+    "reviewTitle": "審閱結果",
+    "reviewDescription": "以下是分析結果，您可以查看詳情",
+    "completeTitle": "匯入完成！",
+    "completeDescription": "您的內容已成功處理",
+    "summary": "已建立 {count} 篇文章",
+    "summaryDraft": "已建立 1 份草稿",
+    "viewDraft": "查看草稿",
+    "viewPosts": "查看文章",
+    "importMore": "繼續匯入",
+    "tabText": "貼上文字",
+    "tabUrls": "貼上網址"
+  },
   "inputCard": {
     "placeholder": "貼上文章內容或 Twitter / X / YouTube 網址..."
   },

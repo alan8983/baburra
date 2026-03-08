@@ -1,6 +1,27 @@
 {
-  "title": "Quick Input",
-  "description": "Paste KOL investment opinion articles, AI auto-identifies KOL, tickers and sentiment",
+  "title": "Add Tracking",
+  "description": "Paste article content or URLs, AI auto-analyzes and creates tracking records",
+  "wizard": {
+    "input": "Input",
+    "processing": "Processing",
+    "review": "Review",
+    "complete": "Complete",
+    "inputTitle": "Choose Input Method",
+    "inputDescription": "Paste article content or URLs for automatic investment analysis",
+    "processingTitle": "AI Analyzing",
+    "processingDescription": "Processing your content, please wait...",
+    "reviewTitle": "Review Results",
+    "reviewDescription": "Here are the analysis results",
+    "completeTitle": "Import Complete!",
+    "completeDescription": "Your content has been processed successfully",
+    "summary": "{count} post(s) created",
+    "summaryDraft": "1 draft created",
+    "viewDraft": "View Draft",
+    "viewPosts": "View Posts",
+    "importMore": "Import More",
+    "tabText": "Paste Text",
+    "tabUrls": "Paste URLs"
+  },
   "inputCard": {
     "placeholder": "Paste article content or a Twitter / X / YouTube URL..."
   },

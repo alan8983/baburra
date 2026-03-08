@@ -1,0 +1,27 @@
+{
+  "title": "Discover",
+  "description": "Explore trending stocks and popular KOLs in the community",
+  "trendingStocks": {
+    "title": "Trending Stocks Top 10",
+    "description": "Most mentioned stocks in the past 7 days",
+    "rank": "Rank",
+    "ticker": "Ticker",
+    "name": "Name",
+    "postCount": "Posts",
+    "posts": "{count} posts",
+    "noData": "No trending stocks data available"
+  },
+  "popularKols": {
+    "title": "Popular KOLs Top 10",
+    "description": "Most followed KOLs",
+    "followerCount": "{count} followers",
+    "noData": "No popular KOLs data available"
+  },
+  "communityActivity": {
+    "title": "Community Activity",
+    "description": "Weekly community stats",
+    "postsThisWeek": "Posts This Week",
+    "totalKols": "KOLs Tracked",
+    "totalStocks": "Stocks Tracked"
+  }
+}
