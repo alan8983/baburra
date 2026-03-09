@@ -57,6 +57,8 @@ export const API_ROUTES = {
   POST_REANALYZE: (id: string) => `/api/posts/${id}/reanalyze`,
   POST_REANALYZE_BATCH: '/api/posts/reanalyze-batch',
   POST_STALE_COUNT: '/api/posts/stale-count',
+  POST_UNREAD_COUNT: '/api/posts/unread-count',
+  POST_MARK_READ: '/api/posts/mark-read',
 
   // Drafts
   DRAFTS: '/api/drafts',

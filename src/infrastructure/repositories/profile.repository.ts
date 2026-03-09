@@ -183,3 +183,43 @@ export async function markOnboardingImportUsed(userId: string): Promise<void> {
     throw new Error(`Failed to mark onboarding import as used: ${error.message}`);
   }
 }
+
+/**
+ * 取得用戶最後查看文章的時間
+ */
+export async function getPostsLastViewedAt(userId: string): Promise<Date | null> {
+  const supabase = createAdminClient();
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('posts_last_viewed_at')
+    .eq('id', userId)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    throw new Error(`Failed to get posts_last_viewed_at: ${error.message}`);
+  }
+
+  return data.posts_last_viewed_at ? new Date(data.posts_last_viewed_at as string) : null;
+}
+
+/**
+ * 更新用戶最後查看文章的時間為現在
+ */
+export async function updatePostsLastViewedAt(userId: string): Promise<void> {
+  const supabase = createAdminClient();
+  if (!supabase) {
+    throw new Error('Missing Supabase admin credentials');
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({ posts_last_viewed_at: new Date().toISOString() })
+    .eq('id', userId);
+
+  if (error) {
+    throw new Error(`Failed to update posts_last_viewed_at: ${error.message}`);
+  }
+}

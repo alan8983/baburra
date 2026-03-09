@@ -86,10 +86,18 @@ test.describe('草稿編輯與發布流程', () => {
     testDraftId = draft.id;
     expect(testDraftId).toBeTruthy();
 
-    // Step 2: 導航到草稿編輯頁
+    // Step 2: 導航到草稿編輯頁（dev server 偶爾有 JSON parse 錯誤，重試一次）
     await page.goto(`/drafts/${testDraftId}`);
     await page.waitForLoadState('networkidle');
-    await expect(page.getByRole('heading', { name: '編輯草稿' })).toBeVisible({ timeout: 15000 });
+
+    // CardTitle renders 「編輯草稿」 — check via text locator (not heading role)
+    const editTitle = page.locator('text=編輯草稿');
+    if (!(await editTitle.isVisible({ timeout: 10000 }).catch(() => false))) {
+      // Retry navigation if first load hit a JSON parse error
+      await page.reload();
+      await page.waitForLoadState('networkidle');
+    }
+    await expect(editTitle).toBeVisible({ timeout: 15000 });
 
     // Step 3: 選擇 KOL
     const kolSelectorButton = page

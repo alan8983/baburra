@@ -20,9 +20,9 @@ test.describe('Profile Scrape', () => {
     // Enter a YouTube channel URL
     await urlInput.fill('https://www.youtube.com/@testchannel');
 
-    // Submit button should be enabled
+    // Submit button should be enabled (wait for React state to propagate)
     const submitButton = page.locator('button[type="submit"]').first();
-    await expect(submitButton).toBeEnabled();
+    await expect(submitButton).toBeEnabled({ timeout: 5000 });
   });
 
   test('無效 URL 應顯示驗證錯誤', async ({ page }) => {

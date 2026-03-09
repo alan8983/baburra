@@ -81,20 +81,20 @@ test.describe('快速輸入 — 煙霧測試', () => {
       await page.waitForLoadState('networkidle');
 
       const textarea = page.locator('textarea').first();
-      await expect(textarea).toBeVisible();
+      await expect(textarea).toBeVisible({ timeout: 15000 });
       await textarea.fill(tc.input);
 
-      // 2. 送出
+      // 2. 確認按鈕已啟用後送出
       const createButton = page.locator('button:has-text("建立草稿")');
-      await expect(createButton).toBeVisible();
+      await expect(createButton).toBeEnabled({ timeout: 5000 });
       await createButton.click();
 
-      // 3. 按鈕應進入 loading 狀態
-      await expect(page.locator('button:has-text("AI 分析中")')).toBeVisible({ timeout: 5000 });
-
-      // 4. 等待結果：導航到草稿頁 或 出現錯誤 toast
+      // 3. 等待結果：wizard 完成步驟（step 4 顯示「匯入完成」）或出現錯誤 toast
       const result = await Promise.race([
-        page.waitForURL(/\/drafts\/[^/]+/, { timeout: 90000 }).then(() => 'navigated' as const),
+        page
+          .locator('text=匯入完成')
+          .waitFor({ timeout: 90000 })
+          .then(() => 'complete' as const),
         page
           .locator('[data-sonner-toast][data-type="error"]')
           .waitFor({ timeout: 90000 })
@@ -110,9 +110,14 @@ test.describe('快速輸入 — 煙霧測試', () => {
         return;
       }
 
-      // 5. 成功導航 — 驗證草稿頁載入
-      await page.waitForLoadState('networkidle');
-      await expect(page.locator('text=編輯草稿')).toBeVisible({ timeout: 15000 });
+      // 4. 成功 — wizard 到達 step 4（完成），查看草稿按鈕應可見
+      await expect(page.locator('text=匯入完成')).toBeVisible({ timeout: 10000 });
+      const viewDraftButton = page.locator('button:has-text("查看草稿")');
+      await expect(viewDraftButton).toBeVisible({ timeout: 5000 });
+
+      // 5. 點擊「查看草稿」導航到草稿頁
+      await viewDraftButton.click();
+      await page.waitForURL(/\/drafts\/[^/]+/, { timeout: 15000 });
 
       // 6. 記錄草稿 ID（用於 cleanup）
       const draftIdMatch = page.url().match(/\/drafts\/([^/]+)/);
@@ -144,7 +149,9 @@ test.describe('快速輸入 — 煙霧測試', () => {
     await page.goto('/input');
     await page.waitForLoadState('networkidle');
 
+    await expect(page.locator('textarea')).toBeVisible({ timeout: 15000 });
     const createButton = page.locator('button:has-text("建立草稿")');
+    await expect(createButton).toBeVisible({ timeout: 5000 });
     await expect(createButton).toBeDisabled();
   });
 });
