@@ -221,11 +221,13 @@ function SentimentLineLegend() {
   const t = useTranslations('common');
   const { colors } = useColorPalette();
   const levels: { sentiment: Sentiment; color: string }[] = [
+    { sentiment: 3, color: colors.sentimentMarkerHex[3] },
     { sentiment: 2, color: colors.sentimentMarkerHex[2] },
     { sentiment: 1, color: colors.sentimentMarkerHex[1] },
     { sentiment: 0, color: colors.sentimentMarkerHex[0] },
     { sentiment: -1, color: colors.sentimentMarkerHex[-1] },
     { sentiment: -2, color: colors.sentimentMarkerHex[-2] },
+    { sentiment: -3, color: colors.sentimentMarkerHex[-3] },
   ];
 
   return (

@@ -24,11 +24,13 @@ export function errorResponse(
 // ─── Shared validators ────────────────────────────────────────────
 
 const sentimentValue = z.union([
+  z.literal(-3),
   z.literal(-2),
   z.literal(-1),
   z.literal(0),
   z.literal(1),
   z.literal(2),
+  z.literal(3),
 ]);
 const uuid = z.string().uuid();
 

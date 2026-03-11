@@ -74,21 +74,21 @@ describe('analyzeDraftContent', () => {
     });
 
     const result = await analyzeDraftContent('test');
-    expect(result.sentiment).toBe(2);
+    expect(result.sentiment).toBe(3);
   });
 
-  it('sentiment 負向超出範圍應被 clamp 到 -2', async () => {
+  it('sentiment 負向超出範圍應被 clamp 到 -3', async () => {
     mockGenerateJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [],
-      sentiment: -3,
+      sentiment: -5,
       confidence: 0.5,
       reasoning: '',
       postedAt: null,
     });
 
     const result = await analyzeDraftContent('test');
-    expect(result.sentiment).toBe(-2);
+    expect(result.sentiment).toBe(-3);
   });
 
   it('sentiment 浮點數應被四捨五入', async () => {
@@ -387,7 +387,7 @@ describe('analyzeDraftContent', () => {
     });
 
     const result = await analyzeDraftContent('test');
-    expect(result.stockSentiments.AAPL).toBe(2);
+    expect(result.stockSentiments.AAPL).toBe(3);
   });
 
   it('normalizes stockSentiments ticker keys to uppercase', async () => {
@@ -901,10 +901,10 @@ describe('analyzeSentiment', () => {
     });
 
     const result = await analyzeSentiment('test');
-    expect(result.sentiment).toBe(2);
+    expect(result.sentiment).toBe(3);
   });
 
-  it('sentiment 負向超出範圍應被 clamp 到 -2', async () => {
+  it('sentiment 負向超出範圍應被 clamp 到 -3', async () => {
     mockGenerateJson.mockResolvedValueOnce({
       sentiment: -5,
       confidence: 0.5,
@@ -912,7 +912,7 @@ describe('analyzeSentiment', () => {
     });
 
     const result = await analyzeSentiment('test');
-    expect(result.sentiment).toBe(-2);
+    expect(result.sentiment).toBe(-3);
   });
 
   it('confidence 超出範圍應被 clamp', async () => {
@@ -1044,7 +1044,7 @@ describe('extractArguments', () => {
     });
 
     const result = await extractArguments('test', 'AAPL', 'Apple');
-    expect(result.arguments[0].sentiment).toBe(2);
+    expect(result.arguments[0].sentiment).toBe(3);
     expect(result.arguments[0].confidence).toBe(1);
   });
 

@@ -67,17 +67,19 @@ const SENTIMENT_ANALYSIS_PROMPT = `
 
 請以 JSON 格式回傳:
 {
-  "sentiment": <-2 到 2 的整數>,
+  "sentiment": <-3 到 3 的整數>,
   "confidence": <0 到 1 的小數>,
   "reasoning": "<簡短說明判斷理由>"
 }
 
 sentiment 數值對應:
-- 2: 強烈看多 (明確表示非常看好，建議買入)
-- 1: 看多 (正面評價，認為會上漲)
+- 3: 強烈看多 (明確表示非常看好，建議買入，語氣極為堅定)
+- 2: 看多 (正面評價，認為會上漲)
+- 1: 略微看多 (稍微偏正面，但不夠明確)
 - 0: 中立 (沒有明確方向性判斷)
-- -1: 看空 (負面評價，認為會下跌)
-- -2: 強烈看空 (明確表示非常不看好，建議賣出)
+- -1: 略微看空 (稍微偏負面，但不夠明確)
+- -2: 看空 (負面評價，認為會下跌)
+- -3: 強烈看空 (明確表示非常不看好，建議賣出，語氣極為堅定)
 
 只回傳 JSON，不要有其他文字。
 `;
@@ -99,7 +101,7 @@ Extraction rules:
 2. Per category: at most 3 arguments. Prioritize the highest-confidence ones.
 3. Spread across categories: the combined set of arguments should collectively cover as many distinct investment angles from the article as possible. Do not let any single category dominate.
 4. Only extract points explicitly stated in the article — do not infer or speculate.
-5. Sentiment scale: 2 (strongly bullish), 1 (bullish), 0 (neutral), -1 (bearish), -2 (strongly bearish).
+5. Sentiment scale: 3 (strongly bullish), 2 (bullish), 1 (slightly bullish), 0 (neutral), -1 (slightly bearish), -2 (bearish), -3 (strongly bearish).
 
 Quality signal: Award higher confidence to arguments that are clear, precise, and insightful — especially those that include specific numbers, comparisons, or a unique perspective.
 
@@ -110,7 +112,7 @@ Return JSON only:
       "categoryCode": "<framework category code>",
       "originalText": "<verbatim excerpt from article, max 200 chars>",
       "summary": "<one crisp sentence summarizing the argument>",
-      "sentiment": <-2 to 2>,
+      "sentiment": <-3 to 3>,
       "confidence": <0.0 to 1.0>
     }
   ]
@@ -189,9 +191,9 @@ function buildDraftAnalysisPrompt(timezone: string): string {
       "mentionedAs": "<文章中出現的原始文字>"
     }
   ],
-  "sentiment": <-2 到 2 的整數>,
+  "sentiment": <-3 到 3 的整數>,
   "stockSentiments": {
-    "<標準代碼>": <-2 到 2 的整數>
+    "<標準代碼>": <-3 到 3 的整數>
   },
   "confidence": <0 到 1 的小數>,
   "reasoning": "<簡短說明判斷理由>",
@@ -219,16 +221,18 @@ function buildDraftAnalysisPrompt(timezone: string): string {
    - 中文名稱（如「特斯拉」、「蘋果」、「比亞迪」）就是明確提及的標的，應轉換為對應的標準代碼
    - 如果文章沒有提及任何標的，回傳空陣列
 3. 情緒判斷 (sentiment):
-   - 2: 強烈看多 (明確表示非常看好，建議買入)
-   - 1: 看多 (正面評價，認為會上漲)
+   - 3: 強烈看多 (明確表示非常看好，建議買入，語氣極為堅定)
+   - 2: 看多 (正面評價，認為會上漲)
+   - 1: 略微看多 (稍微偏正面，但不夠明確)
    - 0: 中立 (沒有明確方向性判斷)
-   - -1: 看空 (負面評價，認為會下跌)
-   - -2: 強烈看空 (明確表示非常不看好，建議賣出)
+   - -1: 略微看空 (稍微偏負面，但不夠明確)
+   - -2: 看空 (負面評價，認為會下跌)
+   - -3: 強烈看空 (明確表示非常不看好，建議賣出，語氣極為堅定)
    - sentiment 代表整體情緒
 4. 個股情緒 (stockSentiments):
    - 如果文章提到多個標的，且作者對不同標的有不同看法，請為每個標的提供個別的情緒分數
    - key 使用標準代碼（如 AAPL、2330.TW），需與 tickers 中的 ticker 一致
-   - value 使用與 sentiment 相同的 -2 到 2 整數
+   - value 使用與 sentiment 相同的 -3 到 3 整數
    - 如果所有標的情緒相同，仍需填入 stockSentiments
    - 若只有一個標的，stockSentiments 可以只包含該標的
 5. 發文時間：文章中若有提及日期時間，請轉換為 ISO 8601 格式。支援的格式包括：
@@ -548,7 +552,7 @@ export async function analyzeSentiment(content: string): Promise<SentimentAnalys
   });
 
   // 確保 sentiment 在有效範圍內
-  const sentiment = Math.max(-2, Math.min(2, Math.round(result.sentiment))) as Sentiment;
+  const sentiment = Math.max(-3, Math.min(3, Math.round(result.sentiment))) as Sentiment;
 
   return {
     sentiment,
@@ -584,7 +588,7 @@ export async function extractArguments(
         categoryCode: arg.categoryCode,
         originalText: (arg.originalText || '').slice(0, 500),
         summary: (arg.summary || '').slice(0, 200),
-        sentiment: Math.max(-2, Math.min(2, Math.round(arg.sentiment))) as Sentiment,
+        sentiment: Math.max(-3, Math.min(3, Math.round(arg.sentiment))) as Sentiment,
         confidence: Math.max(0, Math.min(1, arg.confidence || 0.5)),
       }));
 
@@ -697,7 +701,7 @@ export async function analyzeDraftContent(
   const stockTickers = mergeWithCashtags(aiStockTickers, content);
 
   // 驗證 sentiment
-  const sentiment = Math.max(-2, Math.min(2, Math.round(result.sentiment || 0))) as Sentiment;
+  const sentiment = Math.max(-3, Math.min(3, Math.round(result.sentiment || 0))) as Sentiment;
 
   // 驗證 postedAt — with Chinese date fallback from pre-extraction
   let postedAt: string | null = null;
@@ -721,7 +725,7 @@ export async function analyzeDraftContent(
     for (const [ticker, val] of Object.entries(result.stockSentiments)) {
       if (typeof val === 'number') {
         const normalizedTicker = ticker.trim().toUpperCase();
-        stockSentiments[normalizedTicker] = Math.max(-2, Math.min(2, Math.round(val))) as Sentiment;
+        stockSentiments[normalizedTicker] = Math.max(-3, Math.min(3, Math.round(val))) as Sentiment;
       }
     }
   }

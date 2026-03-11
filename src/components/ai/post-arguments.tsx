@@ -49,10 +49,12 @@ interface PostArgumentsProps {
 // =====================
 
 function getSentimentBorderColor(sentiment: Sentiment, colors: FinancialColors): string {
-  if (sentiment >= 2) return colors.bullish.textStrong.replace('text-', 'border-l-');
+  if (sentiment >= 3) return colors.bullish.textStrong.replace('text-', 'border-l-');
+  if (sentiment >= 2) return colors.bullish.text.replace('text-', 'border-l-');
   if (sentiment >= 1) return colors.bullish.textLight.replace('text-', 'border-l-');
   if (sentiment === 0) return 'border-l-gray-300';
   if (sentiment >= -1) return colors.bearish.textLight.replace('text-', 'border-l-');
+  if (sentiment >= -2) return colors.bearish.text.replace('text-', 'border-l-');
   return colors.bearish.textStrong.replace('text-', 'border-l-');
 }
 

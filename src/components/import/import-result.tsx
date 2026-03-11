@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ROUTES } from '@/lib/constants';
 import { SENTIMENT_COLORS } from '@/domain/models/post';
+import { sentimentKey } from '@/lib/utils/sentiment';
 import type { ImportBatchResult } from '@/hooks/use-import';
 interface ImportResultProps {
   result: ImportBatchResult;
@@ -122,9 +123,7 @@ export function ImportResult({ result, onImportMore, onProceed, proceedLabel }: 
                       <span
                         className={`rounded px-1.5 py-0.5 text-xs font-medium ${SENTIMENT_COLORS[urlResult.sentiment]}`}
                       >
-                        {tCommon(
-                          `sentiment.${['stronglyBearish', 'bearish', 'neutral', 'bullish', 'stronglyBullish'][urlResult.sentiment + 2]}`
-                        )}
+                        {tCommon(`sentiment.${sentimentKey(urlResult.sentiment)}`)}
                       </span>
                     )}
 

@@ -45,7 +45,7 @@ export interface FinancialColors {
     hex: string;
   };
 
-  // Pre-built records keyed by Sentiment (-2..2)
+  // Pre-built records keyed by Sentiment (-3..3)
   sentimentBadgeColors: Record<Sentiment, string>;
   sentimentMarkerHex: Record<number, string>;
 
@@ -76,9 +76,12 @@ const GREEN = {
   hoverBorderStrong: 'hover:bg-green-50 hover:text-green-700 hover:border-green-300',
   sentimentBadge: 'text-green-600 bg-green-100',
   sentimentBadgeStrong: 'text-green-600 bg-green-100',
+  sentimentBadgeExtreme: 'text-green-700 bg-green-200',
   sentimentBadgeLight: 'text-green-500 bg-green-50',
+  sentimentBadgeMild: 'text-green-400 bg-green-50',
   hex: '#22c55e',
   hexDark: '#166534',
+  hexExtreme: '#14532d',
   rgba50: 'rgba(34, 197, 94, 0.5)',
 };
 
@@ -94,9 +97,12 @@ const RED = {
   hoverBorderStrong: 'hover:bg-red-50 hover:text-red-700 hover:border-red-300',
   sentimentBadge: 'text-red-600 bg-red-100',
   sentimentBadgeStrong: 'text-red-600 bg-red-100',
+  sentimentBadgeExtreme: 'text-red-700 bg-red-200',
   sentimentBadgeLight: 'text-red-500 bg-red-50',
+  sentimentBadgeMild: 'text-red-400 bg-red-50',
   hex: '#ef4444',
   hexDark: '#991b1b',
+  hexExtreme: '#7f1d1d',
   rgba50: 'rgba(239, 68, 68, 0.5)',
 };
 
@@ -149,19 +155,23 @@ export function getFinancialColors(palette: ColorPalette): FinancialColors {
     neutral: NEUTRAL,
 
     sentimentBadgeColors: {
+      [-3]: bear.sentimentBadgeExtreme,
       [-2]: bear.sentimentBadgeStrong,
-      [-1]: bear.sentimentBadgeLight,
+      [-1]: bear.sentimentBadgeMild,
       [0]: NEUTRAL.bgBadge,
-      [1]: bull.sentimentBadgeLight,
+      [1]: bull.sentimentBadgeMild,
       [2]: bull.sentimentBadgeStrong,
+      [3]: bull.sentimentBadgeExtreme,
     } as Record<Sentiment, string>,
 
     sentimentMarkerHex: {
+      3: bull.hexExtreme,
       2: bull.hexDark,
       1: bull.hex,
       0: '#eab308', // Hold — stays orange-yellow
       [-1]: bear.hex,
       [-2]: bear.hexDark,
+      [-3]: bear.hexExtreme,
     },
 
     candlestick: {

@@ -229,7 +229,7 @@ KOL 發言的記錄，核心業務實體。
 | kol_id           | UUID      | ❌   | null              | FK → kols                                 |
 | stock_ticker     | string    | ❌   | null              | FK → stocks                               |
 | content          | string    | ✅   | -                 | 原始文本內容                              |
-| sentiment        | string    | ❌   | null              | 情緒：'Bullish' \| 'Bearish' \| 'Neutral' |
+| sentiment        | integer   | ❌   | null              | 情緒：-3(強烈看空) ~ +3(強烈看多)，7 級制 |
 | posted_at        | timestamp | ❌   | null              | KOL 發文時間                              |
 | created_at       | timestamp | ✅   | NOW()             | 建檔時間                                  |
 | status           | string    | ✅   | 'Draft'           | 狀態：'Draft' \| 'Published'              |
@@ -237,7 +237,7 @@ KOL 發言的記錄，核心業務實體。
 
 **約束**：
 
-- `sentiment` 只能是 `'Bullish'`、`'Bearish'`、`'Neutral'` 或 `null`
+- `sentiment` 為整數，範圍 -3 ~ +3（-3: 強烈看空, -2: 看空, -1: 略微看空, 0: 中立, +1: 略微看多, +2: 看多, +3: 強烈看多）或 `null`
 - `status` 只能是 `'Draft'` 或 `'Published'`
 - `Published` 狀態的 Post 必須有 `kol_id` 和 `stock_ticker`
 - `posted_at` 不能晚於 `created_at`
@@ -246,7 +246,8 @@ KOL 發言的記錄，核心業務實體。
 **TypeScript 類型**：
 
 ```typescript
-type Sentiment = 'Bullish' | 'Bearish' | 'Neutral';
+// 7-point sentiment scale: -3 (強烈看空) to +3 (強烈看多)
+type Sentiment = -3 | -2 | -1 | 0 | 1 | 2 | 3;
 type PostStatus = 'Draft' | 'Published';
 
 interface AIAnalysisResult {

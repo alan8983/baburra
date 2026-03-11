@@ -47,12 +47,16 @@
   "sentiment": {
     "stronglyBearish": "強烈看空",
     "bearish": "看空",
+    "slightlyBearish": "略微看空",
     "neutral": "中立",
+    "slightlyBullish": "略微看多",
     "bullish": "看多",
     "stronglyBullish": "強烈看多",
     "stronglyBearishShort": "強空",
     "bearishShort": "看空",
+    "slightlyBearishShort": "略空",
     "neutralShort": "中立",
+    "slightlyBullishShort": "略多",
     "bullishShort": "看多",
     "stronglyBullishShort": "強多",
     "notSet": "未設定"

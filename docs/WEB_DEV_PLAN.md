@@ -226,7 +226,7 @@ CREATE TABLE posts (
   images TEXT[] DEFAULT '{}',              -- Supabase Storage URLs
 
   -- 情緒分析
-  sentiment INTEGER NOT NULL,              -- -2(強烈看空) ~ +2(強烈看多)
+  sentiment INTEGER NOT NULL,              -- -3(強烈看空) ~ +3(強烈看多)
   sentiment_ai_generated BOOLEAN DEFAULT FALSE,
 
   -- 時間
@@ -750,7 +750,7 @@ CREATE TABLE edit_suggestions (
 - 完整的文章輸入流程
 - 草稿自動儲存
 - 重複 URL 檢測
-- 情緒選擇（5 級制）
+- 情緒選擇（7 級制）
 - 圖片上傳
 - 發布前免責聲明 (內容合法性、投資風險、用戶責任)
 
@@ -907,11 +907,13 @@ CREATE TABLE edit_suggestions (
 ```typescript
 // 情緒對應
 const SENTIMENT_MAP = {
-  2: 'strong_bullish',   // 強烈看多
-  1: 'bullish',          // 看多
-  0: 'neutral',          // 中立
-  -1: 'bearish',         // 看空
-  -2: 'strong_bearish',  // 強烈看空
+  3: 'strong_bullish',    // 強烈看多
+  2: 'bullish',           // 看多
+  1: 'slightly_bullish',  // 略微看多
+  0: 'neutral',           // 中立
+  -1: 'slightly_bearish', // 略微看空
+  -2: 'bearish',          // 看空
+  -3: 'strong_bearish',   // 強烈看空
 };
 
 // 勝率判定
@@ -982,7 +984,7 @@ CREATE TABLE post_arguments (
   -- AI 提取內容
   original_text TEXT,                  -- 原文摘錄
   summary TEXT,                        -- AI 摘要
-  sentiment INTEGER NOT NULL,          -- -2 ~ +2 (此論點的情緒強度)
+  sentiment INTEGER NOT NULL,          -- -3 ~ +3 (此論點的情緒強度)
   confidence DECIMAL(3,2),             -- AI 信心度 0~1
 
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -1063,17 +1065,19 @@ const SENTIMENT_ANALYSIS_PROMPT = `
 
 請以 JSON 格式回傳:
 {
-  "sentiment": <-2 到 2 的整數>,
+  "sentiment": <-3 到 3 的整數>,
   "confidence": <0 到 1 的小數>,
   "reasoning": "<簡短說明判斷理由>"
 }
 
 sentiment 數值對應:
-- 2: 強烈看多 (明確表示非常看好，建議買入)
-- 1: 看多 (正面評價，認為會上漲)
+- 3: 強烈看多 (明確表示非常看好，建議買入)
+- 2: 看多 (正面評價，認為會上漲)
+- 1: 略微看多 (略微正面，傾向看好)
 - 0: 中立 (沒有明確方向性判斷)
-- -1: 看空 (負面評價，認為會下跌)
-- -2: 強烈看空 (明確表示非常不看好，建議賣出)
+- -1: 略微看空 (略微負面，傾向看淡)
+- -2: 看空 (負面評價，認為會下跌)
+- -3: 強烈看空 (明確表示非常不看好，建議賣出)
 `;
 ```
 
@@ -1099,7 +1103,7 @@ const ARGUMENT_EXTRACTION_PROMPT = `
       "category_code": "<框架類別代碼>",
       "original_text": "<原文摘錄 (最多 200 字)>",
       "summary": "<論點摘要 (一句話)>",
-      "sentiment": <-2 到 2，此論點的看多/看空程度>,
+      "sentiment": <-3 到 3，此論點的看多/看空程度>,
       "confidence": <0 到 1>
     }
   ]
