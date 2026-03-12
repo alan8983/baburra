@@ -44,7 +44,10 @@ export async function POST(request: NextRequest) {
       return badRequestError(err.message, 'UNSUPPORTED_PLATFORM');
     }
     if (err instanceof Error && err.message.includes('YOUTUBE_DATA_API_KEY')) {
-      return internalError(err, 'YouTube API configuration error');
+      return errorResponse(503, 'API_KEY_MISSING', 'YouTube Data API key is not configured');
+    }
+    if (err instanceof Error && err.message.includes('TWITTERAPI_IO_KEY')) {
+      return errorResponse(503, 'API_KEY_MISSING', 'Twitter API key is not configured');
     }
     return internalError(err, 'Failed to initiate profile scrape');
   }

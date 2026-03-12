@@ -42,17 +42,27 @@ export const scrapeKeys = {
 
 // ── Hooks ──
 
+interface InitiateScrapeResponse {
+  jobId: string;
+  kolId: string;
+  kolName: string;
+  sourceId: string;
+  totalUrls: number;
+  status: string;
+}
+
 export function useInitiateScrape() {
   const queryClient = useQueryClient();
-  return useMutation<ScrapeJob, Error, ScrapeJobInput>({
+  return useMutation<{ id: string; jobId: string }, Error, ScrapeJobInput>({
     mutationFn: async (input) => {
       const res = await fetch(API_ROUTES.SCRAPE_PROFILE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(input),
+        body: JSON.stringify({ profileUrl: input.url }),
       });
       await throwIfNotOk(res);
-      return res.json();
+      const data: InitiateScrapeResponse = await res.json();
+      return { id: data.jobId, jobId: data.jobId };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: scrapeKeys.jobs() });
@@ -66,7 +76,19 @@ export function useScrapeJob(jobId: string | null) {
     queryFn: async (): Promise<ScrapeJob> => {
       const res = await fetch(API_ROUTES.SCRAPE_JOB(jobId!));
       await throwIfNotOk(res);
-      return res.json();
+      const job: ScrapeJob = await res.json();
+
+      // Drive processing forward: if job has remaining URLs, trigger next batch
+      if (job.status === 'processing' || job.status === 'queued') {
+        const hasRemaining =
+          job.totalUrls != null && job.processedUrls != null && job.processedUrls < job.totalUrls;
+        if (hasRemaining) {
+          // Fire-and-forget: continue processing in the background
+          fetch(API_ROUTES.SCRAPE_JOB_CONTINUE(jobId!), { method: 'POST' }).catch(() => {});
+        }
+      }
+
+      return job;
     },
     enabled: !!jobId,
     staleTime: 0,

@@ -1,11 +1,11 @@
 /**
  * Profile Scrape Service — orchestrates KOL profile scraping
  *
- * Connects ProfileExtractors (YouTube channels) to the import pipeline.
+ * Connects ProfileExtractors (YouTube channels, Twitter/X profiles) to the import pipeline.
  * Manages scrape jobs: initial discovery, batch processing, and monitoring.
  */
 
-import { youtubeChannelExtractor } from '@/infrastructure/extractors';
+import { youtubeChannelExtractor, twitterProfileExtractor } from '@/infrastructure/extractors';
 import type { ProfileExtractor } from '@/infrastructure/extractors';
 import {
   findKolByName,
@@ -55,7 +55,7 @@ export interface IncrementalCheckResult {
 
 // ── Profile Extractor Registry ──
 
-const profileExtractors: ProfileExtractor[] = [youtubeChannelExtractor];
+const profileExtractors: ProfileExtractor[] = [youtubeChannelExtractor, twitterProfileExtractor];
 
 function getProfileExtractor(url: string): ProfileExtractor | null {
   return profileExtractors.find((e) => e.isValidProfileUrl(url)) ?? null;
@@ -104,17 +104,23 @@ export async function initiateProfileScrape(
     profile.postUrls
   );
 
-  // 7. Process first batch immediately
-  const initialProgress = await processJobBatch(job.id, 5);
-
+  // 7. Return immediately — batch processing is driven by the /continue endpoint
+  // which the frontend triggers during polling. This avoids Vercel function timeouts.
   return {
     jobId: job.id,
     kolId: kol.id,
     kolName: kol.name,
     sourceId: source.id,
     totalUrls: profile.postUrls.length,
-    status: initialProgress.status,
-    initialProgress,
+    status: 'queued',
+    initialProgress: {
+      processedUrls: 0,
+      totalUrls: profile.postUrls.length,
+      importedCount: 0,
+      duplicateCount: 0,
+      errorCount: 0,
+      status: 'queued',
+    },
   };
 }
 
