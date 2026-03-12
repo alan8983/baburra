@@ -82,6 +82,10 @@ Uses **next-intl**. Default locale is `zh-TW` (Traditional Chinese), also suppor
 
 This applies regardless of environment — Cloud environment or local worktree.
 
+## Previewing Production
+
+**IMPORTANT:** When previewing the production build (both Cloud environment and local), read credentials from **`.env.local`** so that the preview can connect to real services and produce meaningful results.
+
 ## Key Conventions
 
 - Path alias: `@/` maps to `src/`
