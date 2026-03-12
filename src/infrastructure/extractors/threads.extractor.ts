@@ -20,10 +20,7 @@ export class ThreadsExtractor extends SocialMediaExtractor {
 
   async extract(url: string, config?: ExtractorConfig): Promise<UrlFetchResult> {
     if (!this.isValidUrl(url)) {
-      throw {
-        code: 'INVALID_URL',
-        message: `Invalid Threads URL: ${url}`,
-      } as ExtractorError;
+      throw new ExtractorError('INVALID_URL', `Invalid Threads URL: ${url}`);
     }
 
     const timeout = config?.timeout || 10000;
@@ -43,11 +40,11 @@ export class ThreadsExtractor extends SocialMediaExtractor {
       }
     }
 
-    throw {
-      code: 'FETCH_FAILED',
-      message: `Failed to fetch Threads content after ${retryAttempts} attempts`,
-      originalError: lastError,
-    } as ExtractorError;
+    throw new ExtractorError(
+      'FETCH_FAILED',
+      `Failed to fetch Threads content after ${retryAttempts} attempts`,
+      lastError
+    );
   }
 
   private async fetchWithTimeout(
@@ -89,11 +86,7 @@ export class ThreadsExtractor extends SocialMediaExtractor {
       return this.parseHtml(html, cleanUrl);
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        throw {
-          code: 'NETWORK_ERROR',
-          message: `Request timeout after ${timeout}ms`,
-          originalError: error,
-        } as ExtractorError;
+        throw new ExtractorError('NETWORK_ERROR', `Request timeout after ${timeout}ms`, error);
       }
       throw error;
     } finally {
@@ -234,12 +227,8 @@ export class ThreadsExtractor extends SocialMediaExtractor {
         kolAvatarUrl,
       };
     } catch (error) {
-      if ((error as ExtractorError).code) throw error;
-      throw {
-        code: 'PARSE_FAILED',
-        message: 'Failed to parse Threads content',
-        originalError: error as Error,
-      } as ExtractorError;
+      if (error instanceof ExtractorError) throw error;
+      throw new ExtractorError('PARSE_FAILED', 'Failed to parse Threads content', error as Error);
     }
   }
 

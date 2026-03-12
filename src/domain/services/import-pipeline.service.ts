@@ -87,40 +87,31 @@ export async function executeBatchImport(
   const onboardingAlreadyUsed = await checkOnboardingImportUsed(userId);
   const isOnboardingExempt = !onboardingAlreadyUsed;
 
-  // Step 2: Process each URL (KOL resolved per-URL via auto-detection)
-  const urlResults: ImportUrlResult[] = [];
-  let quotaExhausted = false;
+  // Step 2: Process all URLs in parallel for speed
+  // Each processUrl handles its own quota consumption and error recovery
   const kolCache = new Map<string, KolCacheEntry>();
 
-  for (let i = 0; i < input.urls.length; i++) {
-    const url = input.urls[i];
+  const settled = await Promise.allSettled(
+    input.urls.map((url) => processUrl(url, userId, timezone, isOnboardingExempt, kolCache))
+  );
 
-    // If quota was exhausted in a previous URL, skip remaining
-    if (quotaExhausted) {
-      urlResults.push({
-        url,
-        status: 'error',
-        error: 'AI quota exceeded — skipped',
-      });
-      continue;
+  const urlResults: ImportUrlResult[] = settled.map((result, i) => {
+    if (result.status === 'fulfilled') {
+      return result.value;
     }
-
-    try {
-      const result = await processUrl(url, userId, timezone, isOnboardingExempt, kolCache);
-      urlResults.push(result);
-
-      // Check if quota exhaustion occurred
-      if (result.status === 'error' && result.error?.includes('quota')) {
-        quotaExhausted = true;
-      }
-    } catch (error) {
-      urlResults.push({
-        url,
-        status: 'error',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
-    }
-  }
+    return {
+      url: input.urls[i],
+      status: 'error' as const,
+      error:
+        result.reason instanceof Error
+          ? result.reason.message
+          : typeof result.reason === 'object' &&
+              result.reason !== null &&
+              'message' in result.reason
+            ? String((result.reason as { message: unknown }).message)
+            : 'Unknown error',
+    };
+  });
 
   // Step 3: Mark onboarding import used (if this was the first import)
   if (isOnboardingExempt && urlResults.some((r) => r.status === 'success')) {

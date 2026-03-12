@@ -198,7 +198,7 @@ describe('executeBatchImport', () => {
     expect(result.onboardingQuotaUsed).toBe(false);
   });
 
-  it('returns quota exceeded error and skips remaining URLs', async () => {
+  it('returns quota exceeded error for all URLs when quota is exhausted', async () => {
     setupSuccessfulImport();
     mocks.consumeAiQuota.mockRejectedValue({ code: 'AI_QUOTA_EXCEEDED' });
 
@@ -207,10 +207,11 @@ describe('executeBatchImport', () => {
       USER_ID
     );
 
+    // With parallel processing, both URLs independently hit quota exceeded
     expect(result.urlResults[0].status).toBe('error');
     expect(result.urlResults[0].error).toContain('quota');
     expect(result.urlResults[1].status).toBe('error');
-    expect(result.urlResults[1].error).toContain('skipped');
+    expect(result.urlResults[1].error).toContain('quota');
     expect(result.totalError).toBe(2);
   });
 
@@ -315,16 +316,19 @@ describe('executeBatchImport', () => {
     expect(result.kols[0].kolCreated).toBe(true);
   });
 
-  it('caches KOL lookups across URLs (same KOL name)', async () => {
+  it('resolves same KOL for URLs with same KOL name (parallel processing)', async () => {
     setupSuccessfulImport();
 
-    await executeBatchImport(
+    const result = await executeBatchImport(
       { urls: ['https://x.com/a/status/1', 'https://x.com/a/status/2'] },
       USER_ID
     );
 
-    // Should only look up KOL once due to cache
-    expect(mocks.findKolByName).toHaveBeenCalledTimes(1);
+    // With parallel processing, both URLs may look up KOL concurrently
+    // but should still resolve to the same KOL in the final results
+    expect(mocks.findKolByName).toHaveBeenCalledWith('TraderJoe');
+    expect(result.kols).toHaveLength(1);
+    expect(result.kols[0].postCount).toBe(2);
   });
 
   // ── Stock handling ──

@@ -153,16 +153,22 @@ describe('TwitterExtractor', () => {
       expect(result.content).not.toContain('pic.twitter.com');
     });
 
-    it('should retry on network failure', async () => {
-      const response = buildOEmbedResponse({
-        tweetText: 'Retry test content is long enough for testing the retry mechanism',
-      });
+    it('should fall back to syndication API when oEmbed fails', async () => {
+      const syndicationResponse = {
+        text: 'Syndication fallback content is long enough for testing the mechanism',
+        user: { name: 'TestUser', screen_name: 'testuser' },
+        created_at: 'Mon Jan 15 10:30:00 +0000 2026',
+        id_str: '123',
+        mediaDetails: [],
+      };
       const mockFn = vi
         .fn()
-        .mockRejectedValueOnce(new Error('Network error'))
+        // oEmbed call fails
+        .mockRejectedValueOnce(new Error('oEmbed API down'))
+        // Syndication call succeeds
         .mockImplementationOnce(() =>
           Promise.resolve(
-            new Response(JSON.stringify(response), {
+            new Response(JSON.stringify(syndicationResponse), {
               status: 200,
               headers: { 'Content-Type': 'application/json' },
             })
@@ -171,11 +177,13 @@ describe('TwitterExtractor', () => {
       vi.stubGlobal('fetch', mockFn);
 
       const result = await twitterExtractor.extract('https://x.com/user/status/123', {
-        retryAttempts: 2,
+        retryAttempts: 1,
         timeout: 10000,
       });
 
       expect(result.sourcePlatform).toBe('twitter');
+      expect(result.content).toContain('Syndication fallback');
+      expect(result.kolName).toBe('TestUser');
       expect(mockFn).toHaveBeenCalledTimes(2);
     });
 

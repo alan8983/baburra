@@ -3,8 +3,8 @@
  * Main entry point for the extractors module
  */
 
-export type { UrlFetchResult, ExtractorConfig, ExtractorError } from './types';
-export { SocialMediaExtractor } from './types';
+export type { UrlFetchResult, ExtractorConfig, ExtractorErrorCode } from './types';
+export { SocialMediaExtractor, ExtractorError } from './types';
 
 export { extractorFactory, ExtractorFactory, twitterExtractor, youtubeExtractor } from './factory';
 

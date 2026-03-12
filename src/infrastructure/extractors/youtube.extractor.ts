@@ -41,10 +41,7 @@ export class YouTubeExtractor extends SocialMediaExtractor {
 
   async extract(url: string, config?: ExtractorConfig): Promise<UrlFetchResult> {
     if (!this.isValidUrl(url)) {
-      throw {
-        code: 'INVALID_URL',
-        message: `Invalid YouTube URL: ${url}`,
-      } as ExtractorError;
+      throw new ExtractorError('INVALID_URL', `Invalid YouTube URL: ${url}`);
     }
 
     const timeout = config?.timeout || 10000;
@@ -64,11 +61,11 @@ export class YouTubeExtractor extends SocialMediaExtractor {
       }
     }
 
-    throw {
-      code: 'FETCH_FAILED',
-      message: `Failed to fetch YouTube content after ${retryAttempts} attempts`,
-      originalError: lastError,
-    } as ExtractorError;
+    throw new ExtractorError(
+      'FETCH_FAILED',
+      `Failed to fetch YouTube content after ${retryAttempts} attempts`,
+      lastError
+    );
   }
 
   private extractVideoId(url: string): string | null {
@@ -86,33 +83,38 @@ export class YouTubeExtractor extends SocialMediaExtractor {
   private async fetchContent(url: string, timeout: number): Promise<UrlFetchResult> {
     const videoId = this.extractVideoId(url);
     if (!videoId) {
-      throw {
-        code: 'INVALID_URL',
-        message: `Could not extract video ID from URL: ${url}`,
-      } as ExtractorError;
+      throw new ExtractorError('INVALID_URL', `Could not extract video ID from URL: ${url}`);
     }
 
-    // 1. Fetch oEmbed metadata + publish date in parallel
-    const [metadata, publishDate] = await Promise.all([
+    // 1. Fetch oEmbed metadata + publish date + page HTML in parallel
+    const [metadata, pageData] = await Promise.all([
       this.fetchOEmbed(url, timeout),
-      this.fetchPublishDate(videoId, timeout),
+      this.fetchPageData(videoId, timeout),
     ]);
 
-    // 2. Fetch transcript
-    let transcriptText: string;
+    // 2. Fetch transcript (with fallback to description)
+    let content: string;
     try {
       const transcript = await YoutubeTranscript.fetchTranscript(videoId);
-      transcriptText = transcript.map((segment) => segment.text).join(' ');
-    } catch (error) {
-      throw {
-        code: 'FETCH_FAILED',
-        message: `Transcript unavailable for video ${videoId}. This video may not have captions enabled.`,
-        originalError: error as Error,
-      } as ExtractorError;
+      content = transcript.map((segment) => segment.text).join(' ');
+    } catch {
+      // Fallback: use video title + description when transcript is unavailable
+      const fallbackParts: string[] = [];
+      if (metadata.title) fallbackParts.push(metadata.title);
+      if (pageData.description) fallbackParts.push(pageData.description);
+
+      if (fallbackParts.length === 0) {
+        throw new ExtractorError(
+          'FETCH_FAILED',
+          `No transcript or description available for video ${videoId}.`
+        );
+      }
+
+      content = fallbackParts.join('\n\n');
     }
 
     // 3. Sanitize and validate
-    let content = this.sanitizeText(transcriptText);
+    content = this.sanitizeText(content);
     if (content.length > 10000) {
       content = content.slice(0, 10000);
     }
@@ -124,17 +126,20 @@ export class YouTubeExtractor extends SocialMediaExtractor {
       sourcePlatform: 'youtube',
       title: metadata.title || null,
       images: metadata.thumbnail_url ? [metadata.thumbnail_url] : [],
-      postedAt: publishDate,
+      postedAt: pageData.publishDate,
       kolName: metadata.author_name || null,
       kolAvatarUrl: null,
     };
   }
 
   /**
-   * Fetch the YouTube video page HTML and extract the publish date from meta tags.
-   * Returns an ISO 8601 date string or null if extraction fails.
+   * Fetch the YouTube video page HTML and extract publish date + description.
+   * Description is used as fallback content when transcript is unavailable.
    */
-  private async fetchPublishDate(videoId: string, timeout: number): Promise<string | null> {
+  private async fetchPageData(
+    videoId: string,
+    timeout: number
+  ): Promise<{ publishDate: string | null; description: string | null }> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
@@ -147,29 +152,60 @@ export class YouTubeExtractor extends SocialMediaExtractor {
         },
       });
 
-      if (!response.ok) return null;
+      if (!response.ok) return { publishDate: null, description: null };
 
       const html = await response.text();
 
-      // Try <meta itemprop="datePublished" content="YYYY-MM-DD">
+      // Extract publish date
+      let publishDate: string | null = null;
       const metaMatch = html.match(/<meta\s+itemprop="datePublished"\s+content="([^"]+)"/);
-      if (metaMatch) return metaMatch[1];
+      if (metaMatch) {
+        publishDate = metaMatch[1];
+      } else {
+        const jsonLdMatch = html.match(/"datePublished"\s*:\s*"([^"]+)"/);
+        if (jsonLdMatch) {
+          publishDate = jsonLdMatch[1];
+        } else {
+          const uploadMatch = html.match(/"uploadDate"\s*:\s*"([^"]+)"/);
+          if (uploadMatch) publishDate = uploadMatch[1];
+        }
+      }
 
-      // Try JSON-LD "datePublished"
-      const jsonLdMatch = html.match(/"datePublished"\s*:\s*"([^"]+)"/);
-      if (jsonLdMatch) return jsonLdMatch[1];
+      // Extract description (for fallback when transcript unavailable)
+      let description: string | null = null;
+      const descMatch = html.match(/<meta\s+name="description"\s+content="([^"]*?)"/);
+      if (descMatch && descMatch[1]) {
+        description = this.decodeHtmlEntities(descMatch[1]);
+      }
+      if (!description) {
+        const shortDescMatch = html.match(/"shortDescription"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        if (shortDescMatch && shortDescMatch[1]) {
+          description = shortDescMatch[1]
+            .replace(/\\n/g, '\n')
+            .replace(/\\"/g, '"')
+            .replace(/\\\\/g, '\\');
+        }
+      }
 
-      // Try "uploadDate" from JSON-LD
-      const uploadMatch = html.match(/"uploadDate"\s*:\s*"([^"]+)"/);
-      if (uploadMatch) return uploadMatch[1];
-
-      return null;
+      return { publishDate, description };
     } catch {
-      // Non-critical — fall back to null silently
-      return null;
+      return { publishDate: null, description: null };
     } finally {
       clearTimeout(timeoutId);
     }
+  }
+
+  private decodeHtmlEntities(text: string): string {
+    const entities: { [key: string]: string } = {
+      '&amp;': '&',
+      '&lt;': '<',
+      '&gt;': '>',
+      '&quot;': '"',
+      '&#39;': "'",
+      '&apos;': "'",
+      '&nbsp;': ' ',
+    };
+    return text.replace(/&[#\w]+;/g, (entity) => entities[entity] || entity);
   }
 
   private async fetchOEmbed(url: string, timeout: number): Promise<YouTubeOEmbedResponse> {
@@ -191,11 +227,7 @@ export class YouTubeExtractor extends SocialMediaExtractor {
       return (await response.json()) as YouTubeOEmbedResponse;
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        throw {
-          code: 'NETWORK_ERROR',
-          message: `Request timeout after ${timeout}ms`,
-          originalError: error,
-        } as ExtractorError;
+        throw new ExtractorError('NETWORK_ERROR', `Request timeout after ${timeout}ms`, error);
       }
       throw error;
     } finally {

@@ -1,7 +1,10 @@
 /**
  * Twitter/X Content Extractor
  *
- * Extracts post content from Twitter/X URLs using the free oEmbed API.
+ * Extracts post content from Twitter/X URLs using multiple strategies:
+ * 1. oEmbed API (publish.twitter.com) — fast but increasingly unreliable
+ * 2. Syndication API (syndication.twitter.com) — more reliable fallback
+ *
  * Supports various Twitter/X URL formats:
  * - https://twitter.com/{username}/status/{id}
  * - https://x.com/{username}/status/{id}
@@ -22,6 +25,22 @@ interface TwitterOEmbedResponse {
   version: string;
 }
 
+/** Shape of the Twitter Syndication API response */
+interface TwitterSyndicationResponse {
+  text: string;
+  user: {
+    name: string;
+    screen_name: string;
+    profile_image_url_https?: string;
+  };
+  created_at: string;
+  id_str: string;
+  mediaDetails?: Array<{
+    media_url_https: string;
+    type: string;
+  }>;
+}
+
 export class TwitterExtractor extends SocialMediaExtractor {
   platform: UrlFetchResult['sourcePlatform'] = 'twitter';
 
@@ -36,34 +55,32 @@ export class TwitterExtractor extends SocialMediaExtractor {
 
   async extract(url: string, config?: ExtractorConfig): Promise<UrlFetchResult> {
     if (!this.isValidUrl(url)) {
-      throw {
-        code: 'INVALID_URL',
-        message: `Invalid Twitter/X URL: ${url}`,
-      } as ExtractorError;
+      throw new ExtractorError('INVALID_URL', `Invalid Twitter/X URL: ${url}`);
     }
 
     const timeout = config?.timeout || 10000;
-    const retryAttempts = config?.retryAttempts || 3;
 
-    let lastError: Error | undefined;
+    // Strategy 1: Try oEmbed API (fast path)
+    try {
+      return await this.fetchOEmbed(url, timeout);
+    } catch {
+      // oEmbed failed — try syndication fallback
+    }
 
-    for (let attempt = 0; attempt < retryAttempts; attempt++) {
+    // Strategy 2: Try Syndication API (more reliable)
+    const tweetId = this.extractTweetId(url);
+    if (tweetId) {
       try {
-        const result = await this.fetchOEmbed(url, timeout);
-        return result;
-      } catch (error) {
-        lastError = error as Error;
-        if (attempt < retryAttempts - 1) {
-          await this.sleep(Math.pow(2, attempt) * 1000);
-        }
+        return await this.fetchSyndication(tweetId, url, timeout);
+      } catch {
+        // Syndication also failed
       }
     }
 
-    throw {
-      code: 'FETCH_FAILED',
-      message: `Failed to fetch Twitter content after ${retryAttempts} attempts`,
-      originalError: lastError,
-    } as ExtractorError;
+    throw new ExtractorError(
+      'FETCH_FAILED',
+      `Failed to fetch Twitter content. The tweet may be deleted, private, or the API is unavailable.`
+    );
   }
 
   private async fetchOEmbed(url: string, timeout: number): Promise<UrlFetchResult> {
@@ -86,11 +103,73 @@ export class TwitterExtractor extends SocialMediaExtractor {
       return this.parseOEmbedResponse(data, url);
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        throw {
-          code: 'NETWORK_ERROR',
-          message: `Request timeout after ${timeout}ms`,
-          originalError: error,
-        } as ExtractorError;
+        throw new ExtractorError('NETWORK_ERROR', `Request timeout after ${timeout}ms`, error);
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  private extractTweetId(url: string): string | null {
+    const match = url.match(/\/status\/(\d+)/);
+    return match ? match[1] : null;
+  }
+
+  /**
+   * Fallback: Fetch tweet data via the syndication API.
+   * This endpoint is more reliable than oEmbed for many tweets.
+   */
+  private async fetchSyndication(
+    tweetId: string,
+    originalUrl: string,
+    timeout: number
+  ): Promise<UrlFetchResult> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    try {
+      const syndicationUrl = `https://cdn.syndication.twimg.com/tweet-result?id=${tweetId}&token=0`;
+
+      const response = await fetch(syndicationUrl, {
+        signal: controller.signal,
+        headers: { Accept: 'application/json' },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Syndication API HTTP ${response.status}`);
+      }
+
+      const data: TwitterSyndicationResponse = await response.json();
+
+      let content = data.text || '';
+      // Remove t.co links
+      content = content.replace(/https?:\/\/t\.co\/\w+/g, '').trim();
+      content = this.sanitizeText(content);
+      this.validateContent(content);
+
+      const postedAt = data.created_at ? new Date(data.created_at) : null;
+      const images = (data.mediaDetails || [])
+        .filter((m) => m.type === 'photo')
+        .map((m) => m.media_url_https);
+
+      return {
+        content,
+        sourceUrl: originalUrl,
+        sourcePlatform: 'twitter',
+        title: null,
+        images,
+        postedAt: postedAt && !isNaN(postedAt.getTime()) ? postedAt.toISOString() : null,
+        kolName: data.user?.name || null,
+        kolAvatarUrl: data.user?.profile_image_url_https || null,
+      };
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new ExtractorError(
+          'NETWORK_ERROR',
+          `Syndication request timeout after ${timeout}ms`,
+          error
+        );
       }
       throw error;
     } finally {
@@ -132,12 +211,12 @@ export class TwitterExtractor extends SocialMediaExtractor {
         kolAvatarUrl: null,
       };
     } catch (error) {
-      if ((error as ExtractorError).code) throw error;
-      throw {
-        code: 'PARSE_FAILED',
-        message: 'Failed to parse Twitter oEmbed response',
-        originalError: error as Error,
-      } as ExtractorError;
+      if (error instanceof ExtractorError) throw error;
+      throw new ExtractorError(
+        'PARSE_FAILED',
+        'Failed to parse Twitter oEmbed response',
+        error as Error
+      );
     }
   }
 
