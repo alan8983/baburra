@@ -47,11 +47,13 @@ export const SCRAPE_CAPS: Record<string, number> = {
   facebook: 500,
 };
 
-// 情緒值對應
+// 情緒值對應 (-3 ~ +3, 7-point scale)
 export const SENTIMENT_CONFIG = {
-  STRONG_BEARISH: -2,
-  BEARISH: -1,
+  EXTREME_BEARISH: -3,
+  BEARISH: -2,
+  SLIGHTLY_BEARISH: -1,
   NEUTRAL: 0,
-  BULLISH: 1,
-  STRONG_BULLISH: 2,
+  SLIGHTLY_BULLISH: 1,
+  BULLISH: 2,
+  EXTREME_BULLISH: 3,
 } as const;

@@ -47,12 +47,16 @@
   "sentiment": {
     "stronglyBearish": "Strongly Bearish",
     "bearish": "Bearish",
+    "slightlyBearish": "Slightly Bearish",
     "neutral": "Neutral",
+    "slightlyBullish": "Slightly Bullish",
     "bullish": "Bullish",
     "stronglyBullish": "Strongly Bullish",
     "stronglyBearishShort": "Strong Bear",
     "bearishShort": "Bearish",
+    "slightlyBearishShort": "Slight Bear",
     "neutralShort": "Neutral",
+    "slightlyBullishShort": "Slight Bull",
     "bullishShort": "Bullish",
     "stronglyBullishShort": "Strong Bull",
     "notSet": "Not Set"

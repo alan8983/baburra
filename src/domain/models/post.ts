@@ -2,7 +2,7 @@
 
 import type { DraftAiArguments } from './draft';
 
-export type Sentiment = -2 | -1 | 0 | 1 | 2;
+export type Sentiment = -3 | -2 | -1 | 0 | 1 | 2 | 3;
 export type SourcePlatform =
   | 'twitter'
   | 'facebook'
@@ -12,19 +12,23 @@ export type SourcePlatform =
   | 'manual';
 
 export const SENTIMENT_LABELS: Record<Sentiment, string> = {
-  [-2]: '強烈看空',
-  [-1]: '看空',
+  [-3]: '強烈看空',
+  [-2]: '看空',
+  [-1]: '略微看空',
   [0]: '中立',
-  [1]: '看多',
-  [2]: '強烈看多',
+  [1]: '略微看多',
+  [2]: '看多',
+  [3]: '強烈看多',
 };
 
 export const SENTIMENT_COLORS: Record<Sentiment, string> = {
+  [-3]: 'text-red-700 bg-red-200',
   [-2]: 'text-red-600 bg-red-100',
-  [-1]: 'text-red-500 bg-red-50',
+  [-1]: 'text-red-400 bg-red-50',
   [0]: 'text-gray-500 bg-gray-100',
-  [1]: 'text-green-500 bg-green-50',
+  [1]: 'text-green-400 bg-green-50',
   [2]: 'text-green-600 bg-green-100',
+  [3]: 'text-green-700 bg-green-200',
 };
 
 export interface Post {

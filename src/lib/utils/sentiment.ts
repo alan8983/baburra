@@ -4,11 +4,13 @@
  */
 export function sentimentKey(sentiment: number): string {
   const keys: Record<number, string> = {
-    [-2]: 'stronglyBearish',
-    [-1]: 'bearish',
+    [-3]: 'stronglyBearish',
+    [-2]: 'bearish',
+    [-1]: 'slightlyBearish',
     [0]: 'neutral',
-    [1]: 'bullish',
-    [2]: 'stronglyBullish',
+    [1]: 'slightlyBullish',
+    [2]: 'bullish',
+    [3]: 'stronglyBullish',
   };
   return keys[sentiment] ?? 'neutral';
 }

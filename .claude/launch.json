@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "next-dev",
-      "runtimeExecutable": "C:\\nvm4w\\nodejs\\node.exe",
+      "runtimeExecutable": "C:\nvm4w\nodejs\node.exe",
       "runtimeArgs": ["node_modules/next/dist/bin/next", "dev", "--webpack"],
       "port": 3000
     }

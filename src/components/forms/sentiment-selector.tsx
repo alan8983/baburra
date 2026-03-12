@@ -25,7 +25,7 @@ function useSentimentOptions(): SentimentOption[] {
 
   return [
     {
-      value: -2,
+      value: -3 as Sentiment,
       label: t('sentiment.stronglyBearish'),
       shortLabel: t('sentiment.stronglyBearishShort'),
       color: colors.bearish.textStrong,
@@ -34,7 +34,7 @@ function useSentimentOptions(): SentimentOption[] {
       icon: <TrendingDown className="h-4 w-4" />,
     },
     {
-      value: -1,
+      value: -2 as Sentiment,
       label: t('sentiment.bearish'),
       shortLabel: t('sentiment.bearishShort'),
       color: colors.bearish.text,
@@ -43,7 +43,16 @@ function useSentimentOptions(): SentimentOption[] {
       icon: <TrendingDown className="h-4 w-4" />,
     },
     {
-      value: 0,
+      value: -1 as Sentiment,
+      label: t('sentiment.slightlyBearish'),
+      shortLabel: t('sentiment.slightlyBearishShort'),
+      color: colors.bearish.textLight,
+      bgColor: colors.bearish.bgBadgeLight,
+      hoverColor: colors.bearish.hoverBorder,
+      icon: <TrendingDown className="h-4 w-4" />,
+    },
+    {
+      value: 0 as Sentiment,
       label: t('sentiment.neutral'),
       shortLabel: t('sentiment.neutralShort'),
       color: 'text-gray-600',
@@ -52,7 +61,16 @@ function useSentimentOptions(): SentimentOption[] {
       icon: <Minus className="h-4 w-4" />,
     },
     {
-      value: 1,
+      value: 1 as Sentiment,
+      label: t('sentiment.slightlyBullish'),
+      shortLabel: t('sentiment.slightlyBullishShort'),
+      color: colors.bullish.textLight,
+      bgColor: colors.bullish.bgBadgeLight,
+      hoverColor: colors.bullish.hoverBorder,
+      icon: <TrendingUp className="h-4 w-4" />,
+    },
+    {
+      value: 2 as Sentiment,
       label: t('sentiment.bullish'),
       shortLabel: t('sentiment.bullishShort'),
       color: colors.bullish.text,
@@ -61,7 +79,7 @@ function useSentimentOptions(): SentimentOption[] {
       icon: <TrendingUp className="h-4 w-4" />,
     },
     {
-      value: 2,
+      value: 3 as Sentiment,
       label: t('sentiment.stronglyBullish'),
       shortLabel: t('sentiment.stronglyBullishShort'),
       color: colors.bullish.textStrong,
