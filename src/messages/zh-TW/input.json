@@ -30,7 +30,7 @@
     "analyzing": "AI 分析中..."
   },
   "tips": {
-    "hint": "支援貼上文字或 Twitter / X / YouTube 網址，AI 會自動識別 KOL、標的與情緒"
+    "hint": "支援貼上文字或 Twitter / X / YouTube 網址，AI 會自動識別 KOL、標的與情緒。支援市場：美股、台股、港股、加密貨幣"
   },
   "loadingOverlay": {
     "title": "AI 正在分析您的內容",

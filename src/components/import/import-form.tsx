@@ -135,6 +135,7 @@ export function ImportForm({ onSubmit, isLoading }: ImportFormProps) {
             <p className="text-muted-foreground text-xs">
               {t('form.supportedPlatforms')} &middot; {t('form.maxUrls', { max: MAX_URLS })}
             </p>
+            <p className="text-muted-foreground text-xs">{t('form.supportedMarkets')}</p>
           </div>
 
           {/* Onboarding badge */}
