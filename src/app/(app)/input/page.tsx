@@ -1,24 +1,26 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { ArrowRight, Loader2, CheckCircle2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent } from '@/components/ui/card';
 import { ROUTES } from '@/lib/constants';
 import { useQuickInput } from '@/hooks';
 import { useImportBatch, type ImportBatchResult } from '@/hooks/use-import';
 import { AnalysisLoadingOverlay } from '@/components/loading/analysis-loading-overlay';
-import { ImportForm } from '@/components/import/import-form';
 import { ImportResult } from '@/components/import/import-result';
 import { ImportLoadingOverlay } from '@/components/import/import-loading-overlay';
 import { InputWizardStepper, type WizardStep } from '@/components/input/input-wizard-stepper';
+import { DetectedUrls } from '@/components/input/detected-urls';
+import { parseInputContent } from '@/lib/utils/parse-input-content';
 import { toast } from 'sonner';
 
 type InputMethod = 'text' | 'urls';
+
+const MAX_URLS = 5;
 
 interface WizardState {
   step: WizardStep;
@@ -45,6 +47,8 @@ export default function InputPage() {
   const quickInput = useQuickInput();
   const importBatch = useImportBatch();
 
+  const parsed = useMemo(() => parseInputContent(content), [content]);
+
   const handleTextSubmit = useCallback(async () => {
     if (!content.trim()) return;
     setWizard((prev) => ({ ...prev, method: 'text', step: 2 }));
@@ -56,7 +60,6 @@ export default function InputPage() {
           description: t('warnings.noTickersIdentifiedHint'),
         });
       }
-      // Text analysis is fast — skip to review (step 3) then auto-advance to complete
       setWizard((prev) => ({
         ...prev,
         draftId: result.draft.id,
@@ -66,7 +69,6 @@ export default function InputPage() {
       toast.error(t('errors.createDraftFailed'), {
         description: error instanceof Error ? error.message : t('errors.tryAgain'),
       });
-      // Go back to step 1 on error
       setWizard(INITIAL_STATE);
     }
   }, [content, quickInput, t]);
@@ -76,7 +78,7 @@ export default function InputPage() {
       setWizard((prev) => ({ ...prev, method: 'urls', step: 2 }));
       try {
         const result = await importBatch.mutateAsync({ urls });
-        // Show review step with results
+        setContent('');
         setWizard((prev) => ({
           ...prev,
           importResult: result,
@@ -90,6 +92,14 @@ export default function InputPage() {
     [importBatch]
   );
 
+  const handleSubmit = useCallback(() => {
+    if (parsed.mode === 'urls') {
+      handleImportSubmit(parsed.urls);
+    } else if (parsed.mode === 'text') {
+      handleTextSubmit();
+    }
+  }, [parsed, handleImportSubmit, handleTextSubmit]);
+
   const handleAdvanceToComplete = useCallback(() => {
     setWizard((prev) => ({ ...prev, step: 4 }));
   }, []);
@@ -99,6 +109,11 @@ export default function InputPage() {
     setWizard(INITIAL_STATE);
   }, []);
 
+  const isPending = quickInput.isPending || importBatch.isPending;
+  const tooManyUrls = parsed.mode === 'urls' && parsed.urls.length > MAX_URLS;
+  const canSubmit =
+    parsed.mode !== 'empty' && !isPending && !tooManyUrls && !parsed.hasUnsupportedUrls;
+
   return (
     <div className="flex min-h-[calc(100vh-8rem)] flex-col items-center px-4 pt-8">
       <div className="w-full max-w-2xl space-y-8">
@@ -107,15 +122,40 @@ export default function InputPage() {
 
         {/* Step 1: Input */}
         {wizard.step === 1 && (
-          <StepInput
-            content={content}
-            onContentChange={setContent}
-            onTextSubmit={handleTextSubmit}
-            onImportSubmit={handleImportSubmit}
-            isTextPending={quickInput.isPending}
-            isImportPending={importBatch.isPending}
-            t={t}
-          />
+          <div className="space-y-6">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
+              <p className="text-muted-foreground mt-1 text-sm">{t('description')}</p>
+            </div>
+
+            <div className="space-y-3">
+              <Textarea
+                placeholder={t('inputCard.placeholder')}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                className="min-h-[200px] resize-none"
+              />
+
+              <DetectedUrls parsed={parsed} />
+
+              <div className="flex items-center justify-between">
+                <p className="text-muted-foreground text-xs">{t('tips.hint')}</p>
+                <Button onClick={handleSubmit} disabled={!canSubmit} size="lg">
+                  {isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      {t('actions.analyzing')}
+                    </>
+                  ) : (
+                    <>
+                      {parsed.mode === 'urls' ? t('actions.importPosts') : t('actions.createDraft')}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Step 2: Processing — shown via overlays, this is a transition state */}
@@ -193,71 +233,6 @@ export default function InputPage() {
       {/* Loading overlays */}
       <AnalysisLoadingOverlay isVisible={wizard.step === 2 && wizard.method === 'text'} />
       <ImportLoadingOverlay isVisible={wizard.step === 2 && wizard.method === 'urls'} />
-    </div>
-  );
-}
-
-function StepInput({
-  content,
-  onContentChange,
-  onTextSubmit,
-  onImportSubmit,
-  isTextPending,
-  isImportPending,
-  t,
-}: {
-  content: string;
-  onContentChange: (value: string) => void;
-  onTextSubmit: () => void;
-  onImportSubmit: (urls: string[]) => void;
-  isTextPending: boolean;
-  isImportPending: boolean;
-  t: ReturnType<typeof useTranslations<'input'>>;
-}) {
-  return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-        <p className="text-muted-foreground mt-1 text-sm">{t('description')}</p>
-      </div>
-
-      <Tabs defaultValue="text" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="text">{t('wizard.tabText')}</TabsTrigger>
-          <TabsTrigger value="urls">{t('wizard.tabUrls')}</TabsTrigger>
-        </TabsList>
-
-        {/* Plain Text Tab */}
-        <TabsContent value="text" className="mt-4 space-y-3">
-          <Textarea
-            placeholder={t('inputCard.placeholder')}
-            value={content}
-            onChange={(e) => onContentChange(e.target.value)}
-            className="min-h-[200px] resize-none"
-          />
-          <div className="flex items-center justify-between">
-            <p className="text-muted-foreground text-xs">{t('tips.hint')}</p>
-            <Button onClick={onTextSubmit} disabled={!content.trim() || isTextPending} size="lg">
-              {isTextPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t('actions.analyzing')}
-                </>
-              ) : (
-                <>
-                  {t('actions.createDraft')}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </>
-              )}
-            </Button>
-          </div>
-        </TabsContent>
-
-        {/* URL Import Tab */}
-        <TabsContent value="urls" className="mt-4">
-          <ImportForm onSubmit={onImportSubmit} isLoading={isImportPending} />
-        </TabsContent>
-      </Tabs>
     </div>
   );
 }
