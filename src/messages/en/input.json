@@ -18,19 +18,24 @@
     "summaryDraft": "1 draft created",
     "viewDraft": "View Draft",
     "viewPosts": "View Posts",
-    "importMore": "Import More",
-    "tabText": "Paste Text",
-    "tabUrls": "Paste URLs"
+    "importMore": "Import More"
   },
   "inputCard": {
-    "placeholder": "Paste article content or a Twitter / X / YouTube URL..."
+    "placeholder": "Paste article content or URLs (separate multiple URLs with semicolons or new lines)..."
   },
   "actions": {
     "createDraft": "Create Draft",
+    "importPosts": "Import Posts",
     "analyzing": "Analyzing..."
   },
   "tips": {
     "hint": "Supports text or Twitter / X / YouTube URLs — AI will auto-identify KOL, tickers and sentiment"
+  },
+  "detection": {
+    "modeUrls": "Detected URLs — will import as published posts",
+    "modeText": "Text detected — will create as draft for review",
+    "unsupportedUrl": "Some URLs are from unsupported platforms (only Twitter/X and YouTube are supported)",
+    "tooManyUrls": "Maximum {max} URLs per import"
   },
   "loadingOverlay": {
     "title": "AI is analyzing your content",
