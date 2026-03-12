@@ -73,6 +73,15 @@ Uses **next-intl**. Default locale is `zh-TW` (Traditional Chinese), also suppor
 - When committing, push to the current branch with `-u` flag if it has no upstream yet.
 - When creating a new branch, always branch from `main` unless the user says otherwise.
 
+## Mandatory Documentation Updates
+
+**IMPORTANT:** Whenever any adjustment is made to this project (feature changes, bug fixes, scope changes, reprioritization, etc.), **always update both of these files**:
+
+1. **`docs/WEB_DEV_PLAN.md`** — Web Dev Plan
+2. **`docs/BACKLOG.md`** — Backlog
+
+This applies regardless of environment — Cloud environment or local worktree.
+
 ## Key Conventions
 
 - Path alias: `@/` maps to `src/`
