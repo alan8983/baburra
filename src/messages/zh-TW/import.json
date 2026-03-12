@@ -8,6 +8,7 @@
     "removeUrl": "移除",
     "maxUrls": "最多 {max} 則 URL",
     "supportedPlatforms": "支援: Twitter/X 推文、YouTube 影片",
+    "supportedMarkets": "支援市場行情：美股、台股、港股、加密貨幣",
     "onboardingHint": "首次匯入免消耗 AI 配額！",
     "submit": "開始匯入",
     "submitting": "匯入中..."

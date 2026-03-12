@@ -29,7 +29,7 @@
     "analyzing": "Analyzing..."
   },
   "tips": {
-    "hint": "Supports text or Twitter / X / YouTube URLs — AI will auto-identify KOL, tickers and sentiment"
+    "hint": "Supports text or Twitter / X / YouTube URLs — AI will auto-identify KOL, tickers and sentiment. Supported markets: US, Taiwan, Hong Kong, Crypto"
   },
   "detection": {
     "modeUrls": "Detected URLs — will import as published posts",
