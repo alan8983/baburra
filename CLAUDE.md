@@ -82,9 +82,57 @@ Uses **next-intl**. Default locale is `zh-TW` (Traditional Chinese), also suppor
 
 This applies regardless of environment — Cloud environment or local worktree.
 
-## Previewing Production
+## Environment Setup
 
-**IMPORTANT:** When previewing the production build (both Cloud environment and local), read credentials from **`.env.local`** so that the preview can connect to real services and produce meaningful results.
+**IMPORTANT:** `.env*` is gitignored, so `.env.local` is **NOT** available in new worktrees or Cloud environments by default. You must set it up manually.
+
+### Local Worktrees
+
+When working in a local worktree (e.g., `.claude/worktrees/<name>/`), copy `.env.local` from the main repo root:
+
+```bash
+cp /c/Cursor_Master/investment-idea-monitor/.env.local .env.local
+```
+
+### Cloud Environments
+
+In Cloud (remote) environments, `.env.local` does not exist. The preferred setup is:
+1. **Pre-configured:** The user sets environment variables in the Claude Code web UI (claude.ai/code → Environment Settings). If these are set, create `.env.local` from them at session start.
+2. **Fallback:** If env vars are not pre-configured, ask the user to provide the required values, then create `.env.local` from `.env.example` and fill them in.
+
+### Required Variables
+
+See `.env.example` for the full list. At minimum you need:
+- `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase connection
+- `SUPABASE_SERVICE_ROLE_KEY` — Server-side Supabase (bypasses RLS)
+- `GEMINI_API_KEY` — AI sentiment analysis
+- `TIINGO_API_TOKEN` — Stock price data
+- `DEV_USER_ID` — Bypass auth in development
+
+### Previewing
+
+When previewing the production build (both Cloud and local), ensure `.env.local` exists with real credentials so the preview can connect to services and produce meaningful results.
+
+## Dev Server (Preview Tool)
+
+The Claude Preview tool uses `.claude/launch.json` to start the dev server. On Windows, `npm` cannot be spawned directly — use `node` with the Next.js binary instead:
+
+```json
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "next-dev",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["node_modules/next/dist/bin/next", "dev", "--webpack"],
+      "port": 3000,
+      "autoPort": true
+    }
+  ]
+}
+```
+
+**In worktrees:** `node_modules` is NOT shared. Run `npm install` in the worktree before starting the dev server.
 
 ## Key Conventions
 
