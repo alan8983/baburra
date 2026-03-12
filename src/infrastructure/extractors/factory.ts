@@ -33,10 +33,10 @@ export class ExtractorFactory {
       }
     }
 
-    throw {
-      code: 'INVALID_URL',
-      message: `No extractor found for URL: ${url}. Supported platforms: ${Array.from(this.extractors.keys()).join(', ')}`,
-    } as ExtractorError;
+    throw new ExtractorError(
+      'INVALID_URL',
+      `No extractor found for URL: ${url}. Supported platforms: ${Array.from(this.extractors.keys()).join(', ')}`
+    );
   }
 
   getSupportedPlatforms(): string[] {

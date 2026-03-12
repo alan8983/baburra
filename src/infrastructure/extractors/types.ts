@@ -22,16 +22,24 @@ export interface ExtractorConfig {
   retryAttempts?: number; // Number of retry attempts (default: 3)
 }
 
-export interface ExtractorError {
-  code:
-    | 'INVALID_URL'
-    | 'FETCH_FAILED'
-    | 'PARSE_FAILED'
-    | 'CONTENT_TOO_SHORT'
-    | 'CONTENT_TOO_LONG'
-    | 'NETWORK_ERROR';
-  message: string;
+export type ExtractorErrorCode =
+  | 'INVALID_URL'
+  | 'FETCH_FAILED'
+  | 'PARSE_FAILED'
+  | 'CONTENT_TOO_SHORT'
+  | 'CONTENT_TOO_LONG'
+  | 'NETWORK_ERROR';
+
+export class ExtractorError extends Error {
+  code: ExtractorErrorCode;
   originalError?: Error;
+
+  constructor(code: ExtractorErrorCode, message: string, originalError?: Error) {
+    super(message);
+    this.name = 'ExtractorError';
+    this.code = code;
+    this.originalError = originalError;
+  }
 }
 
 export abstract class SocialMediaExtractor {
@@ -52,16 +60,16 @@ export abstract class SocialMediaExtractor {
    */
   protected validateContent(content: string): void {
     if (content.length < 10) {
-      throw {
-        code: 'CONTENT_TOO_SHORT',
-        message: `Content too short: ${content.length} characters (minimum 10)`,
-      } as ExtractorError;
+      throw new ExtractorError(
+        'CONTENT_TOO_SHORT',
+        `Content too short: ${content.length} characters (minimum 10)`
+      );
     }
     if (content.length > 10000) {
-      throw {
-        code: 'CONTENT_TOO_LONG',
-        message: `Content too long: ${content.length} characters (maximum 10,000)`,
-      } as ExtractorError;
+      throw new ExtractorError(
+        'CONTENT_TOO_LONG',
+        `Content too long: ${content.length} characters (maximum 10,000)`
+      );
     }
   }
 

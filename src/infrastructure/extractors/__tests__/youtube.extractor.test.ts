@@ -214,8 +214,30 @@ describe('YouTubeExtractor', () => {
       expect(result.sourcePlatform).toBe('youtube');
     });
 
-    it('should throw FETCH_FAILED when transcript is unavailable', async () => {
-      vi.stubGlobal('fetch', mockOEmbedFetch(buildYouTubeOEmbedResponse()));
+    it('should fall back to title when transcript is unavailable', async () => {
+      vi.stubGlobal(
+        'fetch',
+        mockOEmbedFetch(buildYouTubeOEmbedResponse({ title: 'Why AAPL Will Moon This Quarter' }))
+      );
+      vi.mocked(YoutubeTranscript.fetchTranscript).mockRejectedValue(
+        new Error('Could not get transcripts')
+      );
+
+      const result = await youtubeExtractor.extract('https://www.youtube.com/watch?v=dQw4w9WgXcQ', {
+        retryAttempts: 1,
+      });
+
+      expect(result.sourcePlatform).toBe('youtube');
+      expect(result.content).toContain('AAPL Will Moon');
+    });
+
+    it('should throw FETCH_FAILED when transcript and description are both unavailable', async () => {
+      // oEmbed with no title, page HTML with no description
+      const emptyOEmbed = {
+        ...buildYouTubeOEmbedResponse(),
+        title: '', // explicitly empty (bypasses || default)
+      };
+      vi.stubGlobal('fetch', mockOEmbedFetch(emptyOEmbed));
       vi.mocked(YoutubeTranscript.fetchTranscript).mockRejectedValue(
         new Error('Could not get transcripts')
       );

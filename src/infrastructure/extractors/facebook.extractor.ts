@@ -27,10 +27,7 @@ export class FacebookExtractor extends SocialMediaExtractor {
 
   async extract(url: string, config?: ExtractorConfig): Promise<UrlFetchResult> {
     if (!this.isValidUrl(url)) {
-      throw {
-        code: 'INVALID_URL',
-        message: `Invalid Facebook URL: ${url}`,
-      } as ExtractorError;
+      throw new ExtractorError('INVALID_URL', `Invalid Facebook URL: ${url}`);
     }
 
     const timeout = config?.timeout || 10000;
@@ -50,11 +47,11 @@ export class FacebookExtractor extends SocialMediaExtractor {
       }
     }
 
-    throw {
-      code: 'FETCH_FAILED',
-      message: `Failed to fetch Facebook content after ${retryAttempts} attempts`,
-      originalError: lastError,
-    } as ExtractorError;
+    throw new ExtractorError(
+      'FETCH_FAILED',
+      `Failed to fetch Facebook content after ${retryAttempts} attempts`,
+      lastError
+    );
   }
 
   private async fetchWithTimeout(
@@ -94,11 +91,7 @@ export class FacebookExtractor extends SocialMediaExtractor {
       return this.parseHtml(html, url);
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        throw {
-          code: 'NETWORK_ERROR',
-          message: `Request timeout after ${timeout}ms`,
-          originalError: error,
-        } as ExtractorError;
+        throw new ExtractorError('NETWORK_ERROR', `Request timeout after ${timeout}ms`, error);
       }
       throw error;
     } finally {
@@ -187,12 +180,8 @@ export class FacebookExtractor extends SocialMediaExtractor {
         kolAvatarUrl,
       };
     } catch (error) {
-      if ((error as ExtractorError).code) throw error;
-      throw {
-        code: 'PARSE_FAILED',
-        message: 'Failed to parse Facebook content',
-        originalError: error as Error,
-      } as ExtractorError;
+      if (error instanceof ExtractorError) throw error;
+      throw new ExtractorError('PARSE_FAILED', 'Failed to parse Facebook content', error as Error);
     }
   }
 

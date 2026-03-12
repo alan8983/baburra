@@ -2,7 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
-import { extractorFactory, type ExtractorError } from '@/infrastructure/extractors';
+import { extractorFactory, ExtractorError } from '@/infrastructure/extractors';
 import { unauthorizedError, errorResponse, internalError } from '@/lib/api/error';
 
 /** Block requests to private/internal IP ranges to prevent SSRF */
@@ -52,9 +52,8 @@ export async function POST(request: NextRequest) {
       const result = await extractorFactory.extractFromUrl(url);
       return NextResponse.json({ data: result });
     } catch (err) {
-      const extractorErr = err as ExtractorError;
-      if (extractorErr.code) {
-        return errorResponse(400, extractorErr.code, extractorErr.message);
+      if (err instanceof ExtractorError) {
+        return errorResponse(400, err.code, err.message);
       }
       throw err;
     }
