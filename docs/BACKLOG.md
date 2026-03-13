@@ -413,7 +413,7 @@
 
 1. ✅ **AI 情緒分析** - Gemini API 整合，自動判斷文章看多/看空 (-3~+3，7 級制)
 2. ✅ **AI Ticker 識別** - 從文章自動辨識股票代碼 (US/TW/HK/Crypto)
-3. 🔄 **AI 論點提取** - 依 7 大分析框架類別提取投資論點 (後端完成，前端 UI 暫以 ArgumentPlaceholder 取代，待重新啟用)
+3. ✅ **AI 論點提取** - 依 7 大分析框架類別提取投資論點 (Phase 8-QA: 結構化輸出 + 事實/觀點分類 + 類別消歧提示詞 + 多輪驗證)
 4. ✅ **AI 配額管理** - 使用次數追蹤與 `ai-quota-badge.tsx` 顯示
 5. ✅ **DB 原子操作** - create_post_atomic() + refund_ai_quota() + ai_quota 非負 CHECK (migration 013-015, 018)
 
@@ -436,6 +436,7 @@
 16. ✅ **KOL 歸屬論點** - Stock Arguments Tab 顯示 KOL 頭像與名稱，論點來源可溯
 17. ✅ **論點 per-user 隔離** - 移除全域 stock_argument_summary 表，改為 real-time 計算；RLS 收緊 (migration 012)
 18. ✅ **AI 論點擷取上限調整** - 每篇文章最多 5 則論點 (原 10)，降低 token 消耗與雜訊
+19. ✅ **AI 論點品質提升 (Phase 8-QA)** - Gemini 結構化輸出 (responseSchema)、事實/觀點/混合分類 (statementType)、類別消歧提示詞、多輪驗證、UI 事實/觀點徽章
 
 ### A/B 測試與預註冊體驗
 

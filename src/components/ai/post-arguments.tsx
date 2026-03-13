@@ -31,6 +31,7 @@ export interface ArgumentItem {
   summary: string | null;
   sentiment: Sentiment;
   confidence: number | null;
+  statementType: string | null;
 }
 
 export interface TickerArgumentGroup {
@@ -194,6 +195,11 @@ function ArgumentCard({ argument }: { argument: ArgumentItem }) {
       <div className="mb-1.5 flex items-center gap-1.5">
         <span className="text-sm">{icon}</span>
         <span className="text-muted-foreground text-xs font-medium">{argument.categoryName}</span>
+        {argument.statementType && argument.statementType !== 'mixed' && (
+          <Badge variant="outline" className="text-muted-foreground text-[10px] font-normal">
+            {argument.statementType === 'fact' ? t('ai.fact') : t('ai.opinion')}
+          </Badge>
+        )}
       </div>
 
       {/* Summary */}
