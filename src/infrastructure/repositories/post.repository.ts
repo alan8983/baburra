@@ -215,6 +215,7 @@ export async function createPost(input: CreatePostInput, createdBy: string | nul
           summary: arg.summary,
           sentiment: arg.sentiment,
           confidence: arg.confidence,
+          statement_type: arg.statementType ?? 'mixed',
         })),
       }));
   }

@@ -268,6 +268,7 @@ export interface StockArgumentSummary {
         summary: string | null;
         sentiment: number;
         confidence: number | null;
+        statementType: string | null;
         createdAt: string;
         kol: {
           id: string;
@@ -293,6 +294,7 @@ export interface PostArgumentResponse {
   summary: string | null;
   sentiment: number;
   confidence: number | null;
+  statementType: string | null;
   createdAt: string;
   category: {
     id: string;

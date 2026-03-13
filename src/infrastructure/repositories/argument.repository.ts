@@ -29,6 +29,7 @@ export interface PostArgument {
   summary: string | null;
   sentiment: Sentiment;
   confidence: number | null;
+  statementType: string | null;
   createdAt: Date;
 }
 
@@ -64,6 +65,7 @@ export interface CreatePostArgumentInput {
   summary?: string;
   sentiment: Sentiment;
   confidence?: number;
+  statementType?: string;
 }
 
 // =====================
@@ -147,6 +149,7 @@ export async function createPostArgument(input: CreatePostArgumentInput): Promis
       summary: input.summary,
       sentiment: input.sentiment,
       confidence: input.confidence,
+      statement_type: input.statementType,
     })
     .select()
     .single();
@@ -179,6 +182,7 @@ export async function createPostArguments(
         summary: input.summary,
         sentiment: input.sentiment,
         confidence: input.confidence,
+        statement_type: input.statementType,
       }))
     )
     .select();
@@ -202,6 +206,7 @@ export async function replacePostArguments(
     summary: string;
     sentiment: number;
     confidence: number;
+    statementType?: string;
   }[]
 ): Promise<void> {
   const supabase = createAdminClient();
@@ -245,6 +250,7 @@ export async function replacePostArguments(
       summary: a.summary,
       sentiment: a.sentiment,
       confidence: a.confidence,
+      statement_type: a.statementType,
     }));
 
   if (inserts.length === 0) return;
@@ -398,6 +404,7 @@ function mapPostArgument(row: any): PostArgument {
     summary: row.summary,
     sentiment: row.sentiment as Sentiment,
     confidence: row.confidence,
+    statementType: row.statement_type ?? null,
     createdAt: new Date(row.created_at),
   };
 }

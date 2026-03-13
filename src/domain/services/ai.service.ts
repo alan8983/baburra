@@ -2,7 +2,7 @@
  * AI Service - 情緒分析與論點提取
  */
 
-import { generateJson } from '@/infrastructure/api/gemini.client';
+import { generateJson, generateStructuredJson } from '@/infrastructure/api/gemini.client';
 import type { Sentiment } from '@/domain/models/post';
 
 // =====================
@@ -33,12 +33,15 @@ export interface ArgumentCategory {
   description: string;
 }
 
+export type StatementType = 'fact' | 'opinion' | 'mixed';
+
 export interface ExtractedArgument {
   categoryCode: string;
   originalText: string;
   summary: string;
   sentiment: Sentiment;
   confidence: number;
+  statementType: StatementType;
 }
 
 export interface ArgumentExtractionResult {
@@ -84,6 +87,50 @@ sentiment 數值對應:
 只回傳 JSON，不要有其他文字。
 `;
 
+// =====================
+// Structured Output Schema for Argument Extraction
+// =====================
+
+const ARGUMENT_RESPONSE_SCHEMA = {
+  type: 'OBJECT',
+  properties: {
+    arguments: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          categoryCode: {
+            type: 'STRING',
+            enum: [
+              'FINANCIALS',
+              'MOMENTUM',
+              'VALUATION',
+              'MARKET_SIZE',
+              'MOAT',
+              'OPERATIONAL_QUALITY',
+              'CATALYST',
+            ],
+          },
+          originalText: { type: 'STRING' },
+          summary: { type: 'STRING' },
+          sentiment: { type: 'INTEGER' },
+          confidence: { type: 'NUMBER' },
+          statementType: { type: 'STRING', enum: ['fact', 'opinion', 'mixed'] },
+        },
+        required: [
+          'categoryCode',
+          'originalText',
+          'summary',
+          'sentiment',
+          'confidence',
+          'statementType',
+        ],
+      },
+    },
+  },
+  required: ['arguments'],
+};
+
 const ARGUMENT_EXTRACTION_PROMPT = `
 You are a professional investment analyst. Analyze the article below and extract the most important arguments the author makes about the specified stock, mapped to the provided analysis framework.
 
@@ -93,30 +140,27 @@ Article:
 Stock:
 {ticker} - {stockName}
 
-Analysis Framework Categories:
+Analysis Framework Categories (with disambiguation):
 {frameworkCategories}
 
 Extraction rules:
 1. Extract 1–5 arguments. Never return more than 5.
 2. Per category: at most 3 arguments. Prioritize the highest-confidence ones.
-3. Spread across categories: the combined set of arguments should collectively cover as many distinct investment angles from the article as possible. Do not let any single category dominate.
+3. Spread across categories: the combined set should cover as many distinct investment angles as possible. Do not let any single category dominate.
 4. Only extract points explicitly stated in the article — do not infer or speculate.
-5. Sentiment scale: 3 (strongly bullish), 2 (bullish), 1 (slightly bullish), 0 (neutral), -1 (slightly bearish), -2 (bearish), -3 (strongly bearish).
+5. Deduplication: if two arguments express the same core thesis (e.g., "revenue is growing fast" and "top-line acceleration"), keep only the stronger one.
+6. Sentiment scale: 3 (strongly bullish), 2 (bullish), 1 (slightly bullish), 0 (neutral), -1 (slightly bearish), -2 (bearish), -3 (strongly bearish).
 
-Quality signal: Award higher confidence to arguments that are clear, precise, and insightful — especially those that include specific numbers, comparisons, or a unique perspective.
+Statement type classification — for each argument, classify as:
+- "fact": Based on verifiable data — financial metrics, prices, dates, percentages, reported numbers. Example: "Revenue grew 40% YoY to $5.2B"
+- "opinion": Subjective assessment, prediction, or recommendation without specific data. Example: "I think this stock will outperform the market"
+- "mixed": Contains both factual data and subjective interpretation. Example: "Revenue grew 40% YoY, which I think is unsustainable"
 
-Return JSON only:
-{
-  "arguments": [
-    {
-      "categoryCode": "<framework category code>",
-      "originalText": "<verbatim excerpt from article, max 200 chars>",
-      "summary": "<one crisp sentence summarizing the argument>",
-      "sentiment": <-3 to 3>,
-      "confidence": <0.0 to 1.0>
-    }
-  ]
-}
+Confidence calibration:
+- 0.9–1.0: Specific numbers + clear comparison or unique insight
+- 0.7–0.89: Clear claim with some supporting data
+- 0.5–0.69: General statement without specific backing
+- Below 0.5: Vague or tangential point
 `;
 
 function buildRevisionPrompt(
@@ -141,10 +185,7 @@ Please revise: select at most 5 arguments total, with at most 3 per category. Ke
 
 Quality signal: arguments with specific numbers, comparisons, or unique insight deserve higher confidence scores.
 
-Return JSON only, same format as before:
-{
-  "arguments": [...]
-}`;
+Keep the statementType field for each argument: "fact" (verifiable data), "opinion" (subjective), or "mixed" (both).`;
 }
 
 /**
@@ -296,17 +337,20 @@ const FRAMEWORK_CATEGORIES: ArgumentCategory[] = [
   {
     code: 'FINANCIALS',
     name: '財務體質',
-    description: '公司的成長率、利潤率等財報內部資訊',
+    description:
+      '公司的成長率、利潤率等財報內部資訊。注意：僅限公司內部財務指標（營收成長、毛利率、EPS），不含估值倍數（PE、EV/EBITDA 歸 VALUATION）',
   },
   {
     code: 'MOMENTUM',
     name: '動能類',
-    description: '價格的成長與交易量，技術分析相關',
+    description:
+      '價格的成長與交易量，技術分析相關。注意：僅限價格走勢與成交量模式，不含基本面成長數據（歸 FINANCIALS）',
   },
   {
     code: 'VALUATION',
     name: '估值',
-    description: '股價與交易乘數（如 PE 倍數、EV/EBITDA 倍數等）',
+    description:
+      '股價與交易乘數（如 PE 倍數、EV/EBITDA 倍數、PEG 等）。注意：僅限市場賦予的估值倍數，不含內部財務指標（歸 FINANCIALS）',
   },
   // 質化
   {
@@ -322,7 +366,8 @@ const FRAMEWORK_CATEGORIES: ArgumentCategory[] = [
   {
     code: 'OPERATIONAL_QUALITY',
     name: '營運品質',
-    description: '與同業比較的利潤率，從護城河或商業模式出發',
+    description:
+      '與同業比較的利潤率，從護城河或商業模式出發。注意：重點在「為何 A 公司利潤率優於 B 公司」的比較分析，不含單一公司的絕對財務指標（歸 FINANCIALS）',
   },
   // 催化劑
   {
@@ -569,6 +614,69 @@ export async function analyzeSentiment(content: string): Promise<SentimentAnalys
   };
 }
 
+const VALID_STATEMENT_TYPES: StatementType[] = ['fact', 'opinion', 'mixed'];
+
+/**
+ * Validate and clamp raw extracted arguments
+ */
+function validateAndClamp(raw: ExtractedArgument[]): ExtractedArgument[] {
+  return (raw || [])
+    .filter((arg) => FRAMEWORK_CATEGORIES.some((cat) => cat.code === arg.categoryCode))
+    .map((arg) => ({
+      categoryCode: arg.categoryCode,
+      originalText: (arg.originalText || '').slice(0, 500),
+      summary: (arg.summary || '').slice(0, 200),
+      sentiment: Math.max(-3, Math.min(3, Math.round(arg.sentiment))) as Sentiment,
+      confidence: Math.max(0, Math.min(1, arg.confidence || 0.5)),
+      statementType: VALID_STATEMENT_TYPES.includes(arg.statementType)
+        ? arg.statementType
+        : 'mixed',
+    }));
+}
+
+/**
+ * Verification pass — cross-check category assignments, duplicates, and statementType accuracy
+ */
+async function verifyArguments(
+  args: ExtractedArgument[],
+  content: string,
+  ticker: string,
+  stockName: string
+): Promise<ExtractedArgument[]> {
+  const argsJson = JSON.stringify(args, null, 2);
+  const prompt = `You are reviewing AI-extracted investment arguments for quality. Verify and refine the following arguments extracted from an article about ${ticker} (${stockName}).
+
+Original article (for reference):
+${content}
+
+Extracted arguments to verify:
+${argsJson}
+
+Verification checklist:
+1. Category correctness: Verify each argument is in the right category. Common mistakes:
+   - PE/EV multiples should be VALUATION, not FINANCIALS
+   - Revenue/margin growth should be FINANCIALS, not VALUATION
+   - Price action should be MOMENTUM, not FINANCIALS
+   - Peer comparison of margins should be OPERATIONAL_QUALITY, not FINANCIALS
+   Fix any miscategorized arguments.
+2. Duplicates: If two arguments express the same thesis, remove the weaker one.
+3. Statement type: Verify each statementType is accurate:
+   - "fact" must contain verifiable data (numbers, dates, reported metrics)
+   - "opinion" must be purely subjective with no specific data
+   - "mixed" contains both data and interpretation
+   Relabel any that are wrong.
+
+Return the refined arguments. Keep all fields unchanged unless a correction is needed.`;
+
+  const result = await generateStructuredJson<ArgumentExtractionResult>(
+    prompt,
+    ARGUMENT_RESPONSE_SCHEMA,
+    { temperature: 0.3, maxOutputTokens: 1024 }
+  );
+
+  return validateAndClamp(result.arguments);
+}
+
 /**
  * 提取文章論點
  */
@@ -589,30 +697,35 @@ export async function extractArguments(
 
   const genOptions = { temperature: 0.3, maxOutputTokens: 2048 };
 
-  const validateAndClamp = (raw: ExtractedArgument[]): ExtractedArgument[] =>
-    (raw || [])
-      .filter((arg) => FRAMEWORK_CATEGORIES.some((cat) => cat.code === arg.categoryCode))
-      .map((arg) => ({
-        categoryCode: arg.categoryCode,
-        originalText: (arg.originalText || '').slice(0, 500),
-        summary: (arg.summary || '').slice(0, 200),
-        sentiment: Math.max(-3, Math.min(3, Math.round(arg.sentiment))) as Sentiment,
-        confidence: Math.max(0, Math.min(1, arg.confidence || 0.5)),
-      }));
-
-  // Round 1: initial extraction
-  const result = await generateJson<ArgumentExtractionResult>(prompt, genOptions);
+  // Round 1: initial extraction with structured output
+  const result = await generateStructuredJson<ArgumentExtractionResult>(
+    prompt,
+    ARGUMENT_RESPONSE_SCHEMA,
+    genOptions
+  );
   let validated = validateAndClamp(result.arguments);
 
-  // Round 2: if too many, send mediocre feedback and ask Gemini to revise
+  // Round 2: if too many, send feedback and ask Gemini to revise
   if (validated.length > 5) {
     const revisionPrompt = buildRevisionPrompt(content, ticker, stockName, validated);
-    const revised = await generateJson<ArgumentExtractionResult>(revisionPrompt, genOptions);
+    const revised = await generateStructuredJson<ArgumentExtractionResult>(
+      revisionPrompt,
+      ARGUMENT_RESPONSE_SCHEMA,
+      genOptions
+    );
     validated = validateAndClamp(revised.arguments);
   }
 
   // Hard caps: max 3 per category, max 5 total
-  return { arguments: applyHardCaps(validated) };
+  let final = applyHardCaps(validated);
+
+  // Round 3: verification pass for 2+ arguments
+  if (final.length >= 2) {
+    final = await verifyArguments(final, content, ticker, stockName);
+    final = applyHardCaps(final);
+  }
+
+  return { arguments: final };
 }
 
 /**

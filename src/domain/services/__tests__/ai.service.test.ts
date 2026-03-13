@@ -1,12 +1,14 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 
 // Must use vi.hoisted so the variable is available when vi.mock factory runs (hoisted)
-const { mockGenerateJson } = vi.hoisted(() => ({
+const { mockGenerateJson, mockGenerateStructuredJson } = vi.hoisted(() => ({
   mockGenerateJson: vi.fn(),
+  mockGenerateStructuredJson: vi.fn(),
 }));
 
 vi.mock('@/infrastructure/api/gemini.client', () => ({
   generateJson: mockGenerateJson,
+  generateStructuredJson: mockGenerateStructuredJson,
 }));
 
 import {
@@ -26,6 +28,7 @@ import {
 
 beforeEach(() => {
   mockGenerateJson.mockReset();
+  mockGenerateStructuredJson.mockReset();
 });
 
 // =====================
@@ -944,50 +947,57 @@ describe('analyzeSentiment', () => {
 
 describe('extractArguments', () => {
   it('有效的論點應完整通過', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
-      arguments: [
-        {
-          categoryCode: 'FINANCIALS',
-          originalText: '公司營收成長 30%',
-          summary: '營收強勁成長',
-          sentiment: 1,
-          confidence: 0.8,
-        },
-        {
-          categoryCode: 'CATALYST',
-          originalText: '即將公布財報',
-          summary: '財報催化劑',
-          sentiment: 1,
-          confidence: 0.7,
-        },
-      ],
-    });
+    const args = [
+      {
+        categoryCode: 'FINANCIALS',
+        originalText: '公司營收成長 30%',
+        summary: '營收強勁成長',
+        sentiment: 1,
+        confidence: 0.8,
+        statementType: 'fact',
+      },
+      {
+        categoryCode: 'CATALYST',
+        originalText: '即將公布財報',
+        summary: '財報催化劑',
+        sentiment: 1,
+        confidence: 0.7,
+        statementType: 'opinion',
+      },
+    ];
+    // Round 1: extraction, Round 3: verification (2+ args)
+    mockGenerateStructuredJson.mockResolvedValueOnce({ arguments: args });
+    mockGenerateStructuredJson.mockResolvedValueOnce({ arguments: args });
 
     const result = await extractArguments('test content', 'AAPL', 'Apple Inc.');
     expect(result.arguments).toHaveLength(2);
     expect(result.arguments[0].categoryCode).toBe('FINANCIALS');
+    expect(result.arguments[0].statementType).toBe('fact');
     expect(result.arguments[1].categoryCode).toBe('CATALYST');
+    expect(result.arguments[1].statementType).toBe('opinion');
   });
 
   it('無效的 categoryCode 應被過濾', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
-      arguments: [
-        {
-          categoryCode: 'INVALID_CATEGORY',
-          originalText: 'some text',
-          summary: 'summary',
-          sentiment: 1,
-          confidence: 0.8,
-        },
-        {
-          categoryCode: 'MOAT',
-          originalText: '護城河很強',
-          summary: '強大護城河',
-          sentiment: 1,
-          confidence: 0.9,
-        },
-      ],
-    });
+    const args = [
+      {
+        categoryCode: 'INVALID_CATEGORY',
+        originalText: 'some text',
+        summary: 'summary',
+        sentiment: 1,
+        confidence: 0.8,
+        statementType: 'fact',
+      },
+      {
+        categoryCode: 'MOAT',
+        originalText: '護城河很強',
+        summary: '強大護城河',
+        sentiment: 1,
+        confidence: 0.9,
+        statementType: 'opinion',
+      },
+    ];
+    // Only 1 valid arg after filtering → no verification pass
+    mockGenerateStructuredJson.mockResolvedValueOnce({ arguments: args });
 
     const result = await extractArguments('test', 'AAPL', 'Apple');
     expect(result.arguments).toHaveLength(1);
@@ -996,7 +1006,7 @@ describe('extractArguments', () => {
 
   it('originalText 超過 500 字元應被截斷', async () => {
     const longText = 'A'.repeat(600);
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       arguments: [
         {
           categoryCode: 'FINANCIALS',
@@ -1004,6 +1014,7 @@ describe('extractArguments', () => {
           summary: 'summary',
           sentiment: 1,
           confidence: 0.8,
+          statementType: 'mixed',
         },
       ],
     });
@@ -1014,7 +1025,7 @@ describe('extractArguments', () => {
 
   it('summary 超過 200 字元應被截斷', async () => {
     const longSummary = 'B'.repeat(300);
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       arguments: [
         {
           categoryCode: 'FINANCIALS',
@@ -1022,6 +1033,7 @@ describe('extractArguments', () => {
           summary: longSummary,
           sentiment: 1,
           confidence: 0.8,
+          statementType: 'mixed',
         },
       ],
     });
@@ -1031,7 +1043,7 @@ describe('extractArguments', () => {
   });
 
   it('sentiment 和 confidence 應被 clamp', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       arguments: [
         {
           categoryCode: 'FINANCIALS',
@@ -1039,6 +1051,7 @@ describe('extractArguments', () => {
           summary: 'summary',
           sentiment: 5,
           confidence: 1.5,
+          statementType: 'fact',
         },
       ],
     });
@@ -1049,20 +1062,21 @@ describe('extractArguments', () => {
   });
 
   it('arguments 為 undefined 時應回傳空陣列', async () => {
-    mockGenerateJson.mockResolvedValueOnce({ arguments: undefined });
+    mockGenerateStructuredJson.mockResolvedValueOnce({ arguments: undefined });
 
     const result = await extractArguments('test', 'AAPL', 'Apple');
     expect(result.arguments).toEqual([]);
   });
 
   it('confidence 未提供時應預設為 0.5', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       arguments: [
         {
           categoryCode: 'FINANCIALS',
           originalText: 'text',
           summary: 'summary',
           sentiment: 1,
+          statementType: 'mixed',
         },
       ],
     });
@@ -1071,27 +1085,50 @@ describe('extractArguments', () => {
     expect(result.arguments[0].confidence).toBe(0.5);
   });
 
-  it('5 arguments or fewer — does NOT trigger a second Gemini call', async () => {
+  it('invalid statementType should default to mixed', async () => {
+    mockGenerateStructuredJson.mockResolvedValueOnce({
+      arguments: [
+        {
+          categoryCode: 'FINANCIALS',
+          originalText: 'text',
+          summary: 'summary',
+          sentiment: 1,
+          confidence: 0.8,
+          statementType: 'invalid_type',
+        },
+      ],
+    });
+
+    const result = await extractArguments('test', 'AAPL', 'Apple');
+    expect(result.arguments[0].statementType).toBe('mixed');
+  });
+
+  it('5 arguments or fewer — does NOT trigger revision, but triggers verification for 2+', async () => {
     const fiveArgs = Array.from({ length: 5 }, (_, i) => ({
       categoryCode: 'FINANCIALS',
       originalText: `text ${i}`,
       summary: `summary ${i}`,
       sentiment: 1,
       confidence: 0.8,
+      statementType: 'mixed' as const,
     }));
-    mockGenerateJson.mockResolvedValueOnce({ arguments: fiveArgs });
+    // Round 1: extraction, Round 3: verification (5 >= 2)
+    mockGenerateStructuredJson.mockResolvedValueOnce({ arguments: fiveArgs });
+    mockGenerateStructuredJson.mockResolvedValueOnce({ arguments: fiveArgs });
 
     await extractArguments('article', 'AAPL', 'Apple');
-    expect(mockGenerateJson).toHaveBeenCalledTimes(1);
+    // 2 calls: extraction + verification (no revision since <= 5)
+    expect(mockGenerateStructuredJson).toHaveBeenCalledTimes(2);
   });
 
-  it('more than 5 arguments — triggers a second (revision) Gemini call', async () => {
+  it('more than 5 arguments — triggers revision then verification', async () => {
     const eightArgs = Array.from({ length: 8 }, (_, i) => ({
       categoryCode: i < 4 ? 'FINANCIALS' : 'MOMENTUM',
       originalText: `text ${i}`,
       summary: `summary ${i}`,
       sentiment: 1,
       confidence: 0.8,
+      statementType: 'mixed' as const,
     }));
     const revisedArgs = [
       {
@@ -1100,13 +1137,15 @@ describe('extractArguments', () => {
         summary: 'rev sum',
         sentiment: 1,
         confidence: 0.9,
+        statementType: 'fact' as const,
       },
     ];
-    mockGenerateJson.mockResolvedValueOnce({ arguments: eightArgs });
-    mockGenerateJson.mockResolvedValueOnce({ arguments: revisedArgs });
+    // Round 1: extraction (8 args), Round 2: revision (1 arg), no verification (< 2)
+    mockGenerateStructuredJson.mockResolvedValueOnce({ arguments: eightArgs });
+    mockGenerateStructuredJson.mockResolvedValueOnce({ arguments: revisedArgs });
 
     const result = await extractArguments('article', 'AAPL', 'Apple');
-    expect(mockGenerateJson).toHaveBeenCalledTimes(2);
+    expect(mockGenerateStructuredJson).toHaveBeenCalledTimes(2);
     expect(result.arguments).toHaveLength(1);
     expect(result.arguments[0].summary).toBe('rev sum');
   });
@@ -1118,6 +1157,7 @@ describe('extractArguments', () => {
       summary: `s${i}`,
       sentiment: 0,
       confidence: 0.8,
+      statementType: 'mixed' as const,
     }));
     // revision returns 11 — still capped at 5
     const elevenArgs = Array.from({ length: 11 }, (_, i) => ({
@@ -1126,9 +1166,14 @@ describe('extractArguments', () => {
       summary: `s${i}`,
       sentiment: 0,
       confidence: 0.5 + i * 0.04,
+      statementType: 'mixed' as const,
     }));
-    mockGenerateJson.mockResolvedValueOnce({ arguments: eightArgs });
-    mockGenerateJson.mockResolvedValueOnce({ arguments: elevenArgs });
+    // Round 1: extraction (8), Round 2: revision (11→capped to 5), Round 3: verification (5 >= 2)
+    mockGenerateStructuredJson.mockResolvedValueOnce({ arguments: eightArgs });
+    mockGenerateStructuredJson.mockResolvedValueOnce({ arguments: elevenArgs });
+    mockGenerateStructuredJson.mockResolvedValueOnce({
+      arguments: elevenArgs.slice(0, 5),
+    });
 
     const result = await extractArguments('article', 'AAPL', 'Apple');
     expect(result.arguments.length).toBeLessThanOrEqual(5);
@@ -1146,6 +1191,7 @@ describe('applyHardCaps', () => {
     summary: 'sum',
     sentiment: 1 as const,
     confidence,
+    statementType: 'mixed' as const,
   });
 
   it('caps each category at 3, keeping highest confidence', () => {

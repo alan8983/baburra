@@ -109,6 +109,8 @@
     "noArguments": "No arguments extracted",
     "argumentCount": "{count} arguments",
     "confidencePercent": "Confidence: {percent}%",
+    "fact": "Fact",
+    "opinion": "Opinion",
     "quotaDisplay": "AI Quota: {remaining}/{limit}",
     "weeklyRemaining": "Weekly remaining AI analyses",
     "nextWeek": "Next week",
