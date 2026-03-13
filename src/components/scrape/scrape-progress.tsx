@@ -2,15 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Loader2, CheckCircle2, XCircle, Clock } from 'lucide-react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { Loader2, XCircle, Clock, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ROUTES } from '@/lib/constants';
-import { useScrapeJob } from '@/hooks/use-scrape';
+import { useScrapeJob, useScrapeJobs } from '@/hooks/use-scrape';
 
 interface ScrapeProgressProps {
   jobId: string;
@@ -25,16 +24,40 @@ const statusVariantMap = {
   permanently_failed: 'destructive',
 } as const;
 
-const EARLY_VALUE_THRESHOLD = 5;
-
 export function ScrapeProgress({ jobId, onReset }: ScrapeProgressProps) {
   const t = useTranslations('scrape');
+  const router = useRouter();
   const { data: job, isLoading } = useScrapeJob(jobId);
+  const { data: allJobs } = useScrapeJobs();
   const prevStatusRef = useRef<string | undefined>(undefined);
-  const [startTimestamp] = useState(Date.now());
-  const toastShownRef = useRef(false as boolean);
+  const toastShownRef = useRef(false);
+  const redirectedRef = useRef(false);
+  const [etaMinutes, setEtaMinutes] = useState(0);
 
-  // Completion toast notification
+  // ETA calculation — track start time and update ETA in effects
+  const startTimestampRef = useRef(0);
+  useEffect(() => {
+    if (startTimestampRef.current === 0) {
+      startTimestampRef.current = Date.now();
+    }
+  }, []);
+
+  const processed = job?.processedUrls ?? 0;
+  const total = job?.totalUrls ?? 0;
+
+  useEffect(() => {
+    if (processed <= 0 || startTimestampRef.current === 0) return;
+    const elapsedMs = Date.now() - startTimestampRef.current;
+    const avgMsPerUrl = elapsedMs / processed;
+    const remaining = total - processed;
+    if (remaining > 0) {
+      setEtaMinutes(Math.ceil((avgMsPerUrl * remaining) / 60_000));
+    } else {
+      setEtaMinutes(0);
+    }
+  }, [processed, total]);
+
+  // Completion: toast + localStorage + auto-redirect
   useEffect(() => {
     const prevStatus = prevStatusRef.current;
     prevStatusRef.current = job?.status;
@@ -47,7 +70,7 @@ export function ScrapeProgress({ jobId, onReset }: ScrapeProgressProps) {
       const imported = job.importedCount ?? job.stats?.postsCreated ?? 0;
       toast.success(t('progress.completeToast', { kolName, count: imported }));
 
-      // Store completion in localStorage for cross-page notification
+      // Store completion in localStorage for notification bell
       try {
         localStorage.setItem(
           `scrape_completed_${jobId}`,
@@ -56,8 +79,14 @@ export function ScrapeProgress({ jobId, onReset }: ScrapeProgressProps) {
       } catch {
         // localStorage unavailable
       }
+
+      // Auto-redirect to KOL detail page
+      if (job.kolId && !redirectedRef.current) {
+        redirectedRef.current = true;
+        router.push(ROUTES.KOL_DETAIL(job.kolId));
+      }
     }
-  }, [job, jobId, t]);
+  }, [job, jobId, t, router]);
 
   if (isLoading || !job) {
     return (
@@ -70,22 +99,22 @@ export function ScrapeProgress({ jobId, onReset }: ScrapeProgressProps) {
   }
 
   const isActive = job.status === 'queued' || job.status === 'processing';
-  const processed = job.processedUrls ?? 0;
-  const total = job.totalUrls ?? 0;
   const imported = job.importedCount ?? job.stats?.postsCreated ?? 0;
   const duplicates = job.duplicateCount ?? job.stats?.duplicates ?? 0;
   const errors = job.errorCount ?? job.stats?.errors ?? 0;
   const progressPercent = total > 0 ? Math.round((processed / total) * 100) : 0;
-
-  // Calculate ETA
-  const elapsedMs = Date.now() - startTimestamp;
-  const avgMsPerUrl = processed > 0 ? elapsedMs / processed : 0;
   const remainingUrls = total - processed;
-  const etaMs = avgMsPerUrl * remainingUrls;
-  const etaMinutes = Math.ceil(etaMs / 60_000);
 
-  // Early value: show nudge after first batch processed
-  const showEarlyNudge = isActive && processed >= EARLY_VALUE_THRESHOLD && !!job.kolId;
+  // Queue position: count user's own active jobs created before this one
+  const queuePosition =
+    job.status === 'queued' && allJobs
+      ? allJobs.filter(
+          (j) =>
+            (j.status === 'queued' || j.status === 'processing') &&
+            j.createdAt < job.createdAt &&
+            j.id !== job.id
+        ).length + 1
+      : null;
 
   const statusKey =
     job.status === 'permanently_failed'
@@ -101,6 +130,16 @@ export function ScrapeProgress({ jobId, onReset }: ScrapeProgressProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Queue position */}
+        {queuePosition !== null && queuePosition > 1 && (
+          <div className="bg-muted flex items-center gap-2 rounded-md p-3">
+            <Users className="text-muted-foreground h-4 w-4" />
+            <span className="text-muted-foreground text-sm">
+              {t('queue.position', { position: queuePosition })}
+            </span>
+          </div>
+        )}
+
         {/* Progress bar */}
         {isActive && (
           <div className="space-y-2">
@@ -133,58 +172,6 @@ export function ScrapeProgress({ jobId, onReset }: ScrapeProgressProps) {
                 )}
               </div>
             )}
-          </div>
-        )}
-
-        {/* Early value nudge */}
-        {showEarlyNudge && (
-          <Alert>
-            <AlertDescription className="flex items-center justify-between">
-              <span>{t('progress.earlyNudge')}</span>
-              <Button asChild size="sm" variant="outline">
-                <Link href={ROUTES.KOL_DETAIL(job.kolId!)}>
-                  {t('progress.viewKolEarly', { kolName: job.kolName ?? 'KOL' })}
-                </Link>
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Completed state */}
-        {job.status === 'completed' && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-green-600">
-              <CheckCircle2 className="h-5 w-5" />
-              <span className="font-medium">{t('progress.statusCompleted')}</span>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {total > 0 && (
-                <Badge variant="secondary">
-                  {t('progress.stats.videosFound', { count: total })}
-                </Badge>
-              )}
-              <Badge>{t('progress.stats.postsCreated', { count: imported })}</Badge>
-              {duplicates > 0 && (
-                <Badge variant="outline">
-                  {t('progress.stats.duplicates', { count: duplicates })}
-                </Badge>
-              )}
-              {errors > 0 && (
-                <Badge variant="destructive">{t('progress.stats.errors', { count: errors })}</Badge>
-              )}
-            </div>
-
-            <div className="flex gap-2">
-              {job.kolId && (
-                <Button asChild>
-                  <Link href={ROUTES.KOL_DETAIL(job.kolId)}>{t('progress.viewKol')}</Link>
-                </Button>
-              )}
-              <Button variant="outline" onClick={onReset}>
-                {t('progress.scrapeAnother')}
-              </Button>
-            </div>
           </div>
         )}
 

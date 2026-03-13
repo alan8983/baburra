@@ -147,14 +147,19 @@ export class TwitterProfileExtractor extends ProfileExtractor {
 
     const username = this.parseUsername(url)!;
     const userInfo = await this.fetchUserProfile(username, apiKey);
-    const postUrls = await this.fetchTweetUrls(username, apiKey, 20);
+    const tweetData = await this.fetchTweets(username, apiKey, 20);
 
     return {
       kolName: userInfo.name,
       kolAvatarUrl: userInfo.profilePicture || null,
       platformId: userInfo.userName,
       platformUrl: `https://x.com/${userInfo.userName}`,
-      postUrls,
+      postUrls: tweetData.map((t) => t.url),
+      discoveredUrls: tweetData.map((t) => ({
+        url: t.url,
+        title: t.text.length > 100 ? t.text.slice(0, 97) + '...' : t.text,
+        publishedAt: t.createdAt,
+      })),
     };
   }
 
@@ -186,12 +191,12 @@ export class TwitterProfileExtractor extends ProfileExtractor {
     return data.data;
   }
 
-  private async fetchTweetUrls(
+  private async fetchTweets(
     username: string,
     apiKey: string,
     maxTweets: number
-  ): Promise<string[]> {
-    const urls: string[] = [];
+  ): Promise<Array<{ url: string; text: string; createdAt: string }>> {
+    const tweets: Array<{ url: string; text: string; createdAt: string }> = [];
     let cursor: string | undefined;
     const maxPages = Math.ceil(maxTweets / 20);
 
@@ -215,17 +220,20 @@ export class TwitterProfileExtractor extends ProfileExtractor {
         // Filter out retweets
         if (tweet.type === 'retweet') continue;
 
-        const tweetUrl = tweet.url || `https://x.com/${username}/status/${tweet.id}`;
-        urls.push(tweetUrl);
+        tweets.push({
+          url: tweet.url || `https://x.com/${username}/status/${tweet.id}`,
+          text: tweet.text,
+          createdAt: tweet.createdAt,
+        });
 
-        if (urls.length >= maxTweets) break;
+        if (tweets.length >= maxTweets) break;
       }
 
-      if (!data.has_next_page || urls.length >= maxTweets) break;
+      if (!data.has_next_page || tweets.length >= maxTweets) break;
       cursor = data.next_cursor;
     }
 
-    return urls;
+    return tweets;
   }
 }
 

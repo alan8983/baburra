@@ -2,13 +2,12 @@
 
 import { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { Youtube, Twitter, Loader2 } from 'lucide-react';
+import { Youtube, Twitter } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { useInitiateScrape } from '@/hooks/use-scrape';
 
 const YOUTUBE_CHANNEL_PATTERN = /^https?:\/\/(www\.)?youtube\.com\/(channel\/|c\/|@)[\w.-]+/;
 const TWITTER_PROFILE_PATTERN = /^https?:\/\/(www\.)?(twitter|x)\.com\/[\w]+\/?$/;
@@ -21,32 +20,24 @@ function detectPlatform(url: string): 'youtube' | 'twitter' | null {
 }
 
 interface ProfileScrapeFormProps {
-  onJobCreated: (jobId: string) => void;
+  onJobCreated: (url: string) => void;
 }
 
 export function ProfileScrapeForm({ onJobCreated }: ProfileScrapeFormProps) {
   const t = useTranslations('scrape');
   const [url, setUrl] = useState('');
-  const initiateScrape = useInitiateScrape();
 
   const platform = useMemo(() => detectPlatform(url), [url]);
   const isValidUrl = useMemo(() => {
     return url.trim() ? platform !== null : null;
   }, [url, platform]);
 
-  const canSubmit = isValidUrl === true && !initiateScrape.isPending;
+  const canSubmit = isValidUrl === true;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
-    initiateScrape.mutate(
-      { url: url.trim() },
-      {
-        onSuccess: (data) => {
-          onJobCreated(data.id);
-        },
-      }
-    );
+    onJobCreated(url.trim());
   };
 
   return (
@@ -68,7 +59,6 @@ export function ProfileScrapeForm({ onJobCreated }: ProfileScrapeFormProps) {
                 placeholder={t('form.urlPlaceholder')}
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                disabled={initiateScrape.isPending}
                 className={isValidUrl === false ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
             </div>
@@ -88,19 +78,8 @@ export function ProfileScrapeForm({ onJobCreated }: ProfileScrapeFormProps) {
             </div>
           </div>
 
-          {initiateScrape.isError && (
-            <p className="text-sm text-red-500">{t('errors.scrapeFailed')}</p>
-          )}
-
           <Button type="submit" disabled={!canSubmit} className="w-full">
-            {initiateScrape.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {t('form.submitting')}
-              </>
-            ) : (
-              t('form.submit')
-            )}
+            {t('form.submit')}
           </Button>
         </form>
       </CardContent>

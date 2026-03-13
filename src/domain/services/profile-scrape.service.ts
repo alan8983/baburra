@@ -6,7 +6,7 @@
  */
 
 import { youtubeChannelExtractor, twitterProfileExtractor } from '@/infrastructure/extractors';
-import type { ProfileExtractor } from '@/infrastructure/extractors';
+import type { ProfileExtractor, DiscoveredUrl } from '@/infrastructure/extractors';
 import {
   findKolByName,
   createKol,
@@ -48,6 +48,16 @@ export interface BatchProgress {
   status: string;
 }
 
+export interface DiscoverResult {
+  kolName: string;
+  kolAvatarUrl: string | null;
+  platform: string;
+  platformId: string;
+  platformUrl: string;
+  discoveredUrls: DiscoveredUrl[];
+  totalCount: number;
+}
+
 export interface IncrementalCheckResult {
   newUrlsFound: number;
   jobId: string | null;
@@ -63,9 +73,29 @@ function getProfileExtractor(url: string): ProfileExtractor | null {
 
 // ── Public Functions ──
 
+export async function discoverProfileUrls(profileUrl: string): Promise<DiscoverResult> {
+  const extractor = getProfileExtractor(profileUrl);
+  if (!extractor) {
+    throw new Error(`Unsupported profile URL: ${profileUrl}`);
+  }
+
+  const profile = await extractor.extractProfile(profileUrl);
+
+  return {
+    kolName: profile.kolName,
+    kolAvatarUrl: profile.kolAvatarUrl,
+    platform: extractor.platform,
+    platformId: profile.platformId,
+    platformUrl: profile.platformUrl,
+    discoveredUrls: profile.discoveredUrls ?? profile.postUrls.map((url) => ({ url })),
+    totalCount: profile.postUrls.length,
+  };
+}
+
 export async function initiateProfileScrape(
   profileUrl: string,
-  userId: string
+  userId: string,
+  selectedUrls?: string[]
 ): Promise<InitiateScrapeResult> {
   // 1. Detect platform
   const extractor = getProfileExtractor(profileUrl);
@@ -96,12 +126,13 @@ export async function initiateProfileScrape(
   // 5. Update scrape status
   await updateScrapeStatus(source.id, 'scraping');
 
-  // 6. Create scrape job
+  // 6. Create scrape job (use selectedUrls if provided, otherwise all discovered URLs)
+  const urlsToScrape = selectedUrls ?? profile.postUrls;
   const job = await createScrapeJob(
     source.id,
     'initial_scrape' as ScrapeJobType,
     userId,
-    profile.postUrls
+    urlsToScrape
   );
 
   // 7. Return immediately — batch processing is driven by the /continue endpoint
@@ -111,7 +142,7 @@ export async function initiateProfileScrape(
     kolId: kol.id,
     kolName: kol.name,
     sourceId: source.id,
-    totalUrls: profile.postUrls.length,
+    totalUrls: urlsToScrape.length,
     status: 'queued',
     initialProgress: {
       processedUrls: 0,

@@ -99,6 +99,7 @@ export const API_ROUTES = {
   IMPORT_BATCH: '/api/import/batch',
 
   // Scrape
+  SCRAPE_DISCOVER: '/api/scrape/discover',
   SCRAPE_PROFILE: '/api/scrape/profile',
   SCRAPE_JOB: (id: string) => `/api/scrape/jobs/${id}`,
   SCRAPE_JOB_CONTINUE: (id: string) => `/api/scrape/jobs/${id}/continue`,

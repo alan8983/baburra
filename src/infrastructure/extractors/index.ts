@@ -11,7 +11,7 @@ export { extractorFactory, ExtractorFactory, twitterExtractor, youtubeExtractor 
 export { TwitterExtractor } from './twitter.extractor';
 export { YouTubeExtractor } from './youtube.extractor';
 
-export type { ProfileExtractResult } from './profile-extractor';
+export type { ProfileExtractResult, DiscoveredUrl } from './profile-extractor';
 export { ProfileExtractor } from './profile-extractor';
 export { YouTubeChannelExtractor, youtubeChannelExtractor } from './youtube-channel.extractor';
 export { TwitterProfileExtractor, twitterProfileExtractor } from './twitter-profile.extractor';

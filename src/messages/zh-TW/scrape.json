@@ -5,10 +5,31 @@
     "urlLabel": "KOL 頻道 URL",
     "urlPlaceholder": "貼上 YouTube 頻道 URL",
     "supportedPlatforms": "支援: YouTube 頻道",
-    "submit": "開始擷取",
-    "submitting": "擷取中...",
+    "submit": "探索內容",
+    "submitting": "探索中...",
     "invalidUrl": "請輸入有效的 YouTube 頻道 URL",
     "platformYouTube": "YouTube"
+  },
+  "flowChart": {
+    "step1": "輸入 URL",
+    "step2": "探索與選擇",
+    "step3": "處理中",
+    "step4": "匯入",
+    "step5": "完成"
+  },
+  "discover": {
+    "title": "探索到的內容",
+    "found": "找到 {count} 個項目",
+    "selected": "已選擇 {count} 個",
+    "selectAll": "全選",
+    "deselectAll": "取消全選",
+    "confirm": "開始擷取",
+    "back": "返回",
+    "loading": "正在探索內容..."
+  },
+  "queue": {
+    "position": "您的佇列位置: 第 {position} 位",
+    "estimatedWait": "預計等待: ~{minutes} 分鐘"
   },
   "progress": {
     "title": "正在擷取 KOL 資料",
@@ -35,6 +56,13 @@
   "jobs": {
     "title": "最近的任務",
     "empty": "尚無擷取任務"
+  },
+  "notifications": {
+    "title": "通知",
+    "empty": "沒有通知",
+    "scrapeComplete": "已為 {kolName} 匯入 {count} 篇文章",
+    "dismiss": "關閉",
+    "dismissAll": "清除全部"
   },
   "errors": {
     "scrapeFailed": "擷取失敗，請稍後再試",
