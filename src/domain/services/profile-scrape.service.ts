@@ -45,6 +45,7 @@ export interface BatchProgress {
   importedCount: number;
   duplicateCount: number;
   errorCount: number;
+  filteredCount: number;
   status: string;
 }
 
@@ -150,6 +151,7 @@ export async function initiateProfileScrape(
       importedCount: 0,
       duplicateCount: 0,
       errorCount: 0,
+      filteredCount: 0,
       status: 'queued',
     },
   };
@@ -174,6 +176,7 @@ export async function processJobBatch(
       importedCount: job.importedCount,
       duplicateCount: job.duplicateCount,
       errorCount: job.errorCount,
+      filteredCount: job.filteredCount,
       status: job.status,
     };
   }
@@ -197,6 +200,7 @@ export async function processJobBatch(
   let importedCount = job.importedCount;
   let duplicateCount = job.duplicateCount;
   let errorCount = job.errorCount;
+  let filteredCount = job.filteredCount;
   let processedUrls = job.processedUrls;
   const kolCache = new Map<string, KolCacheEntry>();
 
@@ -221,6 +225,11 @@ export async function processJobBatch(
           importedCount++;
         } else if (result.value.status === 'duplicate') {
           duplicateCount++;
+        } else if (
+          result.value.status === 'error' &&
+          result.value.error === 'no_tickers_identified'
+        ) {
+          filteredCount++;
         } else {
           errorCount++;
         }
@@ -236,6 +245,7 @@ export async function processJobBatch(
       importedCount,
       duplicateCount,
       errorCount,
+      filteredCount,
     });
 
     // Check timeout again after batch completes
@@ -248,7 +258,13 @@ export async function processJobBatch(
   const status = processedUrls >= job.totalUrls ? 'completed' : 'processing';
 
   if (status === 'completed') {
-    await completeScrapeJob(jobId, { processedUrls, importedCount, duplicateCount, errorCount });
+    await completeScrapeJob(jobId, {
+      processedUrls,
+      importedCount,
+      duplicateCount,
+      errorCount,
+      filteredCount,
+    });
     await updateScrapeStatus(source.id, 'completed', importedCount);
   }
 
@@ -258,6 +274,7 @@ export async function processJobBatch(
     importedCount,
     duplicateCount,
     errorCount,
+    filteredCount,
     status,
   };
 }
@@ -277,14 +294,14 @@ export async function checkForNewContent(sourceId: string): Promise<IncrementalC
   // Extract latest post URLs
   const profile = await extractor.extractProfile(source.platformUrl);
 
-  // Filter to URLs that don't already exist
-  const newUrls: string[] = [];
-  for (const url of profile.postUrls) {
-    const existing = await findPostBySourceUrl(url);
-    if (!existing) {
-      newUrls.push(url);
-    }
-  }
+  // Filter to URLs that don't already exist (parallel for speed)
+  const existChecks = await Promise.all(
+    profile.postUrls.map(async (url) => ({
+      url,
+      exists: !!(await findPostBySourceUrl(url)),
+    }))
+  );
+  const newUrls = existChecks.filter((c) => !c.exists).map((c) => c.url);
 
   // Update monitoring timestamps
   const nextCheckAt = new Date();
