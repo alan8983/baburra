@@ -73,6 +73,37 @@ Uses **next-intl**. Default locale is `zh-TW` (Traditional Chinese), also suppor
 - When committing, push to the current branch with `-u` flag if it has no upstream yet.
 - When creating a new branch, always branch from `main` unless the user says otherwise.
 
+## Development Workflow (OpenSpec)
+
+This project uses **OpenSpec** for specification-driven development. **All non-trivial changes** (new features, significant refactors, multi-file bug fixes) MUST go through the OpenSpec workflow. Trivial changes (typo fixes, single-line config changes) can skip this.
+
+### Workflow
+
+1. **`/opsx:propose <change-name>`** — Create a change with proposal, design, and task checklist in `openspec/changes/<change-name>/`
+2. **`/opsx:apply <change-name>`** — Implement tasks from the checklist, marking each complete
+3. **`/opsx:archive <change-name>`** — Archive the completed change to `openspec/changes/archive/`
+
+Use **`/opsx:explore <topic>`** for investigation/research without creating artifacts.
+
+### Rules
+
+- **Propose before coding.** Do not start implementation without a proposed change, unless the user explicitly says to skip it.
+- **One change at a time** is preferred. Only work on parallel changes if the user requests it.
+- **Tasks drive implementation.** Follow the task checklist in `tasks.md` — do not add scope beyond what's specified without asking.
+- **Specs are the contract.** If implementation drifts from the spec, update the spec first, then the code.
+- Artifacts live in `openspec/changes/<change-name>/` — do not manually create or edit these files outside of OpenSpec commands.
+- Archive completed changes promptly to keep the workspace clean.
+
+### Directory Structure
+
+```
+openspec/
+├── specs/              # Project-level specs (shared across changes)
+├── changes/
+│   ├── <change-name>/  # Active change (proposal.md, design.md, tasks.md)
+│   └── archive/        # Completed changes
+```
+
 ## Mandatory Documentation Updates
 
 **IMPORTANT:** Whenever any adjustment is made to this project (feature changes, bug fixes, scope changes, reprioritization, etc.), **always update both of these files**:
