@@ -452,6 +452,7 @@
 26. ✅ **安全機制** - Git Pre-commit Hook 防止 API Keys 洩露
 27. ✅ **Hook 測試套件** - 5 hooks + 1 repository 單元測試 (use-ai, use-drafts, use-kols, use-posts, use-quick-input, ai-usage.repository)
 28. ✅ **測試工具** - query-wrapper.tsx — React Query provider wrapper for hook testing
+29. ✅ **OpenSpec (SDD 框架)** - 規格驅動開發框架 (propose/apply/verify/archive)，支援 Claude Code + Cursor + GitHub Copilot
 
 ---
 
