@@ -66,6 +66,7 @@
 | 已讀追蹤 Hook | 2026-03-01 | use-seen-posts.ts — localStorage 追蹤最近 500 則已讀文章 |
 | Hook 測試套件 | 2026-03-01 | 5 hooks + 1 repository 單元測試 (use-ai, use-drafts, use-kols, use-posts, use-quick-input, ai-usage.repository) |
 | 論點 UI 暫時停用 | 2026-03-01 | PostArguments/StockArgumentsTab 替換為 ArgumentPlaceholder (功能開發中提示)，待重新啟用 |
+| OpenSpec (SDD 框架) | 2026-03-13 | 規格驅動開發框架 — propose/apply/verify/archive 工作流，支援 Claude Code + Cursor + GitHub Copilot |
 
 ### 開發時程
 
