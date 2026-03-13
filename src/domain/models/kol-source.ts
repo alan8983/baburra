@@ -43,6 +43,7 @@ export interface ScrapeJob {
   importedCount: number;
   duplicateCount: number;
   errorCount: number;
+  filteredCount: number;
   discoveredUrls: string[];
   retryCount: number;
   errorMessage: string | null;
