@@ -10,7 +10,7 @@
  * - https://www.youtube.com/c/ChannelName
  */
 
-import { ProfileExtractor, ProfileExtractResult } from './profile-extractor';
+import { ProfileExtractor, ProfileExtractResult, DiscoveredUrl } from './profile-extractor';
 
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
 
@@ -39,6 +39,20 @@ interface YouTubeSearchItem {
 interface YouTubeSearchResponse {
   items?: YouTubeSearchItem[];
   nextPageToken?: string;
+}
+
+interface YouTubeVideoSnippet {
+  title: string;
+  publishedAt: string;
+}
+
+interface YouTubeVideoItem {
+  id: string;
+  snippet: YouTubeVideoSnippet;
+}
+
+interface YouTubeVideosResponse {
+  items?: YouTubeVideoItem[];
 }
 
 type UrlType = 'handle' | 'channelId' | 'customName';
@@ -75,7 +89,9 @@ export class YouTubeChannelExtractor extends ProfileExtractor {
       channel.snippet.thumbnails?.default?.url ??
       null;
 
-    const postUrls = await this.fetchVideoUrls(channel.id, apiKey);
+    const videoIds = await this.fetchVideoIds(channel.id, apiKey);
+    const postUrls = videoIds.map((id) => `https://www.youtube.com/watch?v=${id}`);
+    const discoveredUrls = await this.fetchVideoSnippets(videoIds, apiKey);
 
     const platformUrl = `https://www.youtube.com/channel/${channel.id}`;
 
@@ -85,6 +101,7 @@ export class YouTubeChannelExtractor extends ProfileExtractor {
       platformId: channel.id,
       platformUrl,
       postUrls,
+      discoveredUrls,
     };
   }
 
@@ -145,9 +162,8 @@ export class YouTubeChannelExtractor extends ProfileExtractor {
     return data.items[0];
   }
 
-  private async fetchVideoUrls(channelId: string, apiKey: string): Promise<string[]> {
-    const urls: string[] = [];
-    let pageToken: string | undefined;
+  private async fetchVideoIds(channelId: string, apiKey: string): Promise<string[]> {
+    const ids: string[] = [];
 
     // Fetch up to 50 videos (single page)
     const params = new URLSearchParams({
@@ -159,10 +175,6 @@ export class YouTubeChannelExtractor extends ProfileExtractor {
       key: apiKey,
     });
 
-    if (pageToken) {
-      params.set('pageToken', pageToken);
-    }
-
     const response = await fetch(`${YOUTUBE_API_BASE}/search?${params}`);
 
     if (!response.ok) {
@@ -173,11 +185,45 @@ export class YouTubeChannelExtractor extends ProfileExtractor {
 
     for (const item of data.items ?? []) {
       if (item.id?.videoId) {
-        urls.push(`https://www.youtube.com/watch?v=${item.id.videoId}`);
+        ids.push(item.id.videoId);
       }
     }
 
-    return urls;
+    return ids;
+  }
+
+  private async fetchVideoSnippets(videoIds: string[], apiKey: string): Promise<DiscoveredUrl[]> {
+    if (videoIds.length === 0) return [];
+
+    // YouTube API accepts up to 50 IDs per request
+    const params = new URLSearchParams({
+      id: videoIds.join(','),
+      part: 'snippet',
+      key: apiKey,
+    });
+
+    const response = await fetch(`${YOUTUBE_API_BASE}/videos?${params}`);
+
+    if (!response.ok) {
+      // Fallback: return URLs without metadata if snippet fetch fails
+      return videoIds.map((id) => ({ url: `https://www.youtube.com/watch?v=${id}` }));
+    }
+
+    const data = (await response.json()) as YouTubeVideosResponse;
+
+    const snippetMap = new Map<string, YouTubeVideoSnippet>();
+    for (const item of data.items ?? []) {
+      snippetMap.set(item.id, item.snippet);
+    }
+
+    return videoIds.map((id) => {
+      const snippet = snippetMap.get(id);
+      return {
+        url: `https://www.youtube.com/watch?v=${id}`,
+        title: snippet?.title,
+        publishedAt: snippet?.publishedAt,
+      };
+    });
   }
 }
 

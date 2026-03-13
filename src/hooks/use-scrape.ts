@@ -6,8 +6,19 @@ import { throwIfNotOk } from '@/lib/api/fetch-error';
 
 // ── Types ──
 
+export interface DiscoverProfileResult {
+  kolName: string;
+  kolAvatarUrl: string | null;
+  platform: string;
+  platformId: string;
+  platformUrl: string;
+  discoveredUrls: Array<{ url: string; title?: string; publishedAt?: string }>;
+  totalCount: number;
+}
+
 export interface ScrapeJobInput {
   url: string;
+  selectedUrls?: string[];
 }
 
 export interface ScrapeJob {
@@ -42,6 +53,20 @@ export const scrapeKeys = {
 
 // ── Hooks ──
 
+export function useDiscoverProfile() {
+  return useMutation<DiscoverProfileResult, Error, { url: string }>({
+    mutationFn: async (input) => {
+      const res = await fetch(API_ROUTES.SCRAPE_DISCOVER, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileUrl: input.url }),
+      });
+      await throwIfNotOk(res);
+      return res.json();
+    },
+  });
+}
+
 interface InitiateScrapeResponse {
   jobId: string;
   kolId: string;
@@ -58,7 +83,10 @@ export function useInitiateScrape() {
       const res = await fetch(API_ROUTES.SCRAPE_PROFILE, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profileUrl: input.url }),
+        body: JSON.stringify({
+          profileUrl: input.url,
+          ...(input.selectedUrls && { selectedUrls: input.selectedUrls }),
+        }),
       });
       await throwIfNotOk(res);
       const data: InitiateScrapeResponse = await res.json();

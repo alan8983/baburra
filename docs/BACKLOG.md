@@ -354,9 +354,9 @@
 - [ ] 作為一個 [用戶]，我想要 [貼上 KOL 的 YouTube 頻道 URL，系統自動爬取該頻道最近 50 部影片並匯入]，以便 [一次取得大量歷史觀點而不需逐一輸入]。
   - _Tags: User Story-v0.2.0, Step 7.4, Phase 12b_
   - ⏳ **待實現** - YouTubeChannelExtractor + profile-scrape.service + scrape_jobs 背景佇列
-- [ ] 作為一個 [用戶]，我想要 [在爬取過程中看到即時進度 (已處理/總數)]，以便 [了解系統正在處理且預估等待時間]。
+- [x] 作為一個 [用戶]，我想要 [在爬取過程中看到即時進度 (已處理/總數)]，以便 [了解系統正在處理且預估等待時間]。
   - _Tags: User Story-v0.2.0, Step 7.4, Phase 12b_
-  - ⏳ **待實現** - scrape-progress 元件 + React Query polling + /api/scrape/jobs/[id]
+  - ✅ **已實現** - 5 步驟流程圖 + scrape-progress (佇列位置、進度條、ETA) + URL 探索選擇 + 自動跳轉 + 通知鈴
 - [ ] 作為一個 [用戶]，我想要 [訂閱 KOL 的頻道，系統每天自動檢查並匯入新影片]，以便 [不用手動回來重新爬取]。
   - _Tags: User Story-v0.2.0, Step 7.4, Phase 12b_
   - ⏳ **待實現** - kol_subscriptions 表 + subscription-toggle + Vercel Cron 每日監控
