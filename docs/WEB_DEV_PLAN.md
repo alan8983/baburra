@@ -70,7 +70,9 @@
 | PriceChangeBadge 元件 | 2026-03-01 | 可複用漲跌幅 badge |
 | 已讀追蹤 Hook | 2026-03-01 | use-seen-posts.ts |
 | Hook 測試套件 | 2026-03-01 | 5 hooks + 1 repository 單元測試 |
+| 論點 UI 暫時停用 | 2026-03-01 | ArgumentPlaceholder 替換，待重新啟用 |
 | OpenSpec (SDD 框架) | 2026-03-13 | 規格驅動開發框架 |
+| YouTube 日期修正 | 2026-03-14 | YouTube Data API v3 取得原始發布日期 |
 
 ### 開發時程
 

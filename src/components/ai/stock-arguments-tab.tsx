@@ -293,9 +293,7 @@ function ArgumentItem({ argument, locale }: ArgumentItemProps) {
             <span className="text-muted-foreground text-xs font-medium">{argument.kol.name}</span>
             {argument.statementType && argument.statementType !== 'mixed' && (
               <Badge variant="outline" className="text-muted-foreground text-[10px] font-normal">
-                {argument.statementType === 'fact'
-                  ? tCommon('ai.fact')
-                  : tCommon('ai.opinion')}
+                {argument.statementType === 'fact' ? tCommon('ai.fact') : tCommon('ai.opinion')}
               </Badge>
             )}
           </div>
