@@ -14,6 +14,7 @@ type DbScrapeJob = {
   imported_count: number;
   duplicate_count: number;
   error_count: number;
+  filtered_count: number;
   discovered_urls: string[];
   retry_count: number;
   error_message: string | null;
@@ -35,6 +36,7 @@ function mapDbToScrapeJob(row: DbScrapeJob): ScrapeJob {
     importedCount: row.imported_count,
     duplicateCount: row.duplicate_count,
     errorCount: row.error_count,
+    filteredCount: row.filtered_count ?? 0,
     discoveredUrls: row.discovered_urls ?? [],
     retryCount: row.retry_count ?? 0,
     errorMessage: row.error_message,
@@ -133,6 +135,7 @@ export async function updateScrapeJobProgress(
     importedCount?: number;
     duplicateCount?: number;
     errorCount?: number;
+    filteredCount?: number;
   }
 ): Promise<void> {
   const supabase = createAdminClient();
@@ -142,6 +145,7 @@ export async function updateScrapeJobProgress(
   if (stats.importedCount !== undefined) updates.imported_count = stats.importedCount;
   if (stats.duplicateCount !== undefined) updates.duplicate_count = stats.duplicateCount;
   if (stats.errorCount !== undefined) updates.error_count = stats.errorCount;
+  if (stats.filteredCount !== undefined) updates.filtered_count = stats.filteredCount;
 
   const { error } = await supabase.from('scrape_jobs').update(updates).eq('id', jobId);
 
@@ -155,6 +159,7 @@ export async function completeScrapeJob(
     importedCount?: number;
     duplicateCount?: number;
     errorCount?: number;
+    filteredCount?: number;
   }
 ): Promise<void> {
   const supabase = createAdminClient();
@@ -169,6 +174,7 @@ export async function completeScrapeJob(
     if (stats.importedCount !== undefined) updates.imported_count = stats.importedCount;
     if (stats.duplicateCount !== undefined) updates.duplicate_count = stats.duplicateCount;
     if (stats.errorCount !== undefined) updates.error_count = stats.errorCount;
+    if (stats.filteredCount !== undefined) updates.filtered_count = stats.filteredCount;
   }
 
   const { error } = await supabase.from('scrape_jobs').update(updates).eq('id', jobId);

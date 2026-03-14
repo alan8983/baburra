@@ -57,6 +57,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
           summary: string;
           sentiment: Sentiment;
           confidence: number;
+          statementType?: string;
         }[] = [];
 
         for (let i = 0; i < results.length; i++) {
@@ -70,6 +71,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
                 summary: arg.summary,
                 sentiment: arg.sentiment,
                 confidence: arg.confidence,
+                statementType: arg.statementType,
               });
             }
           }

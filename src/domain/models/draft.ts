@@ -8,6 +8,7 @@ export interface DraftAiArgument {
   summary: string;
   sentiment: Sentiment;
   confidence: number;
+  statementType?: 'fact' | 'opinion' | 'mixed';
 }
 
 export interface DraftAiArguments {

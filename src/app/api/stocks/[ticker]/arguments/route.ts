@@ -71,6 +71,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 summary: a.summary,
                 sentiment: a.sentiment,
                 confidence: a.confidence,
+                statementType: a.statementType,
                 createdAt: a.createdAt.toISOString(),
                 kol: {
                   id: a.kol.id,

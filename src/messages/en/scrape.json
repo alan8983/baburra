@@ -5,10 +5,31 @@
     "urlLabel": "KOL Channel URL",
     "urlPlaceholder": "Paste a YouTube channel URL",
     "supportedPlatforms": "Supports: YouTube channels",
-    "submit": "Start Scraping",
-    "submitting": "Scraping...",
+    "submit": "Discover Content",
+    "submitting": "Discovering...",
     "invalidUrl": "Please enter a valid YouTube channel URL",
     "platformYouTube": "YouTube"
+  },
+  "flowChart": {
+    "step1": "Input URL",
+    "step2": "Discover & Select",
+    "step3": "Processing",
+    "step4": "Import",
+    "step5": "Complete"
+  },
+  "discover": {
+    "title": "Discovered Content",
+    "found": "{count} items found",
+    "selected": "{count} selected",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All",
+    "confirm": "Start Scraping",
+    "back": "Back",
+    "loading": "Discovering content..."
+  },
+  "queue": {
+    "position": "Position #{position} in your queue",
+    "estimatedWait": "Estimated wait: ~{minutes} min"
   },
   "progress": {
     "title": "Scraping KOL Profile",
@@ -35,6 +56,13 @@
   "jobs": {
     "title": "Recent Jobs",
     "empty": "No scrape jobs yet"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No notifications",
+    "scrapeComplete": "{count} posts imported for {kolName}",
+    "dismiss": "Dismiss",
+    "dismissAll": "Clear all"
   },
   "errors": {
     "scrapeFailed": "Scrape failed, please try again",

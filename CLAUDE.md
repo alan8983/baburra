@@ -73,18 +73,122 @@ Uses **next-intl**. Default locale is `zh-TW` (Traditional Chinese), also suppor
 - When committing, push to the current branch with `-u` flag if it has no upstream yet.
 - When creating a new branch, always branch from `main` unless the user says otherwise.
 
-## Mandatory Documentation Updates
+## Development Workflow (OpenSpec)
 
-**IMPORTANT:** Whenever any adjustment is made to this project (feature changes, bug fixes, scope changes, reprioritization, etc.), **always update both of these files**:
+This project uses **OpenSpec** for specification-driven development. **All non-trivial changes** (new features, significant refactors, multi-file bug fixes) MUST go through the OpenSpec workflow. Trivial changes (typo fixes, single-line config changes) can skip this.
 
-1. **`docs/WEB_DEV_PLAN.md`** — Web Dev Plan
-2. **`docs/BACKLOG.md`** — Backlog
+### Workflow
 
-This applies regardless of environment — Cloud environment or local worktree.
+1. **`/opsx:propose <change-name>`** — Create a change with proposal, design, and task checklist in `openspec/changes/<change-name>/`
+2. **`/opsx:apply <change-name>`** — Implement tasks from the checklist, marking each complete
+3. **`/opsx:archive <change-name>`** — Archive the completed change to `openspec/changes/archive/`
 
-## Previewing Production
+Use **`/opsx:explore <topic>`** for investigation/research without creating artifacts.
 
-**IMPORTANT:** When previewing the production build (both Cloud environment and local), read credentials from **`.env.local`** so that the preview can connect to real services and produce meaningful results.
+### Session Workflow
+
+```
+Session start:
+  1. Check active OpenSpec changes: ls openspec/changes/
+  2. If continuing work → /opsx:apply <change>
+  3. If new non-trivial work → /opsx:propose <change>
+  4. Only skip OpenSpec for trivial fixes (typos, single-line config)
+
+Session end:
+  1. Archive completed changes → /opsx:archive <change>
+  2. Update WEB_DEV_PLAN.md phase status (if a phase changed)
+  3. Check off completed BACKLOG.md items (if a user story completed)
+```
+
+### Rules
+
+- **Propose before coding.** Do not start implementation without a proposed change, unless the user explicitly says to skip it.
+- **One change at a time** is preferred. Only work on parallel changes if the user requests it.
+- **Tasks drive implementation.** Follow the task checklist in `tasks.md` — do not add scope beyond what's specified without asking.
+- **Specs are the contract.** If implementation drifts from the spec, update the spec first, then the code.
+- Artifacts live in `openspec/changes/<change-name>/` — do not manually create or edit these files outside of OpenSpec commands.
+- Archive completed changes promptly to keep the workspace clean.
+
+### Directory Structure
+
+```
+openspec/
+├── specs/              # Project-level living specs (data models, API contracts, AI pipeline)
+├── changes/
+│   ├── <change-name>/  # Active change (proposal.md, design.md, tasks.md)
+│   └── archive/        # Completed changes (searchable history)
+```
+
+## Documentation Updates
+
+### When to update docs
+
+| Event | Update |
+| --- | --- |
+| **Phase completed** or status changed | `docs/WEB_DEV_PLAN.md` — update phase status table |
+| **User Story completed** | `docs/BACKLOG.md` — check off the story |
+| **DB schema changed** | `openspec/specs/data-models.md` — update table/migration list |
+| **API endpoint added/changed** | `openspec/specs/api-contracts.md` — update endpoint table |
+| **AI pipeline changed** | `openspec/specs/ai-pipeline.md` — update pipeline docs |
+| **OpenSpec change completed** | Run `/opsx:archive <change-name>` |
+
+### What NOT to do
+
+- Do NOT update `WEB_DEV_PLAN.md` on every commit — only on phase-level status changes.
+- Do NOT duplicate implementation details in `WEB_DEV_PLAN.md` — that belongs in OpenSpec changes or specs.
+- `WEB_DEV_PLAN.md` is a **slim roadmap** (~200 lines). Keep it that way.
+
+## Environment Setup
+
+**IMPORTANT:** `.env*` is gitignored, so `.env.local` is **NOT** available in new worktrees or Cloud environments by default. You must set it up manually.
+
+### Local Worktrees
+
+When working in a local worktree (e.g., `.claude/worktrees/<name>/`), copy `.env.local` from the main repo root:
+
+```bash
+cp /c/Cursor_Master/investment-idea-monitor/.env.local .env.local
+```
+
+### Cloud Environments
+
+In Cloud (remote) environments, `.env.local` does not exist. The preferred setup is:
+1. **Pre-configured:** The user sets environment variables in the Claude Code web UI (claude.ai/code → Environment Settings). If these are set, create `.env.local` from them at session start.
+2. **Fallback:** If env vars are not pre-configured, ask the user to provide the required values, then create `.env.local` from `.env.example` and fill them in.
+
+### Required Variables
+
+See `.env.example` for the full list. At minimum you need:
+- `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase connection
+- `SUPABASE_SERVICE_ROLE_KEY` — Server-side Supabase (bypasses RLS)
+- `GEMINI_API_KEY` — AI sentiment analysis
+- `TIINGO_API_TOKEN` — Stock price data
+- `DEV_USER_ID` — Bypass auth in development
+
+### Previewing
+
+When previewing the production build (both Cloud and local), ensure `.env.local` exists with real credentials so the preview can connect to services and produce meaningful results.
+
+## Dev Server (Preview Tool)
+
+The Claude Preview tool uses `.claude/launch.json` to start the dev server. On Windows, `npm` cannot be spawned directly — use `node` with the Next.js binary instead:
+
+```json
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "next-dev",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["node_modules/next/dist/bin/next", "dev", "--webpack"],
+      "port": 3000,
+      "autoPort": true
+    }
+  ]
+}
+```
+
+**In worktrees:** `node_modules` is NOT shared. Run `npm install` in the worktree before starting the dev server.
 
 ## Key Conventions
 

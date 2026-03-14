@@ -80,6 +80,7 @@ export async function GET(request: NextRequest) {
             importedCount: job.importedCount,
             duplicateCount: job.duplicateCount,
             errorCount: job.errorCount,
+            filteredCount: job.filteredCount,
             status: 'failed',
           },
         });

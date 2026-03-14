@@ -6,12 +6,19 @@
  * - ProfileExtractor: discovers post URLs from a profile/channel URL
  */
 
+export interface DiscoveredUrl {
+  url: string;
+  title?: string;
+  publishedAt?: string;
+}
+
 export interface ProfileExtractResult {
   kolName: string;
   kolAvatarUrl: string | null;
   platformId: string;
   platformUrl: string;
   postUrls: string[];
+  discoveredUrls?: DiscoveredUrl[];
 }
 
 export abstract class ProfileExtractor {

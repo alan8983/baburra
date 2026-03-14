@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, Menu, Search, User, LogOut } from 'lucide-react';
+import { Menu, Search, User, LogOut } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useUIStore } from '@/stores';
 import { ROUTES } from '@/lib/constants';
 import { useAuth } from '@/hooks/use-auth';
+import { NotificationBell } from '@/components/layout/notification-bell';
 import Link from 'next/link';
 
 export function Header() {
@@ -51,13 +52,7 @@ export function Header() {
       {/* Right section */}
       <div className="flex items-center gap-2">
         {/* Notifications */}
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          <span className="bg-destructive text-destructive-foreground absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-medium">
-            2
-          </span>
-          <span className="sr-only">Notifications</span>
-        </Button>
+        <NotificationBell />
 
         {/* User menu */}
         {user && !loading ? (

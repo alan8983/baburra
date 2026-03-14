@@ -355,9 +355,9 @@
 - [ ] 作為一個 [用戶]，我想要 [貼上 KOL 的 YouTube 頻道 URL，系統自動爬取該頻道最近 50 部影片並匯入]，以便 [一次取得大量歷史觀點而不需逐一輸入]。
   - _Tags: User Story-v0.2.0, Step 7.4, Phase 12b_
   - ⏳ **待實現** - YouTubeChannelExtractor + profile-scrape.service + scrape_jobs 背景佇列
-- [ ] 作為一個 [用戶]，我想要 [在爬取過程中看到即時進度 (已處理/總數)]，以便 [了解系統正在處理且預估等待時間]。
+- [x] 作為一個 [用戶]，我想要 [在爬取過程中看到即時進度 (已處理/總數)]，以便 [了解系統正在處理且預估等待時間]。
   - _Tags: User Story-v0.2.0, Step 7.4, Phase 12b_
-  - ⏳ **待實現** - scrape-progress 元件 + React Query polling + /api/scrape/jobs/[id]
+  - ✅ **已實現** - 5 步驟流程圖 + scrape-progress (佇列位置、進度條、ETA) + URL 探索選擇 + 自動跳轉 + 通知鈴
 - [ ] 作為一個 [用戶]，我想要 [訂閱 KOL 的頻道，系統每天自動檢查並匯入新影片]，以便 [不用手動回來重新爬取]。
   - _Tags: User Story-v0.2.0, Step 7.4, Phase 12b_
   - ⏳ **待實現** - kol_subscriptions 表 + subscription-toggle + Vercel Cron 每日監控
@@ -414,7 +414,7 @@
 
 1. ✅ **AI 情緒分析** - Gemini API 整合，自動判斷文章看多/看空 (-3~+3，7 級制)
 2. ✅ **AI Ticker 識別** - 從文章自動辨識股票代碼 (US/TW/HK/Crypto)
-3. 🔄 **AI 論點提取** - 依 7 大分析框架類別提取投資論點 (後端完成，前端 UI 暫以 ArgumentPlaceholder 取代，待重新啟用)
+3. ✅ **AI 論點提取** - 依 7 大分析框架類別提取投資論點 (Phase 8-QA: 結構化輸出 + 事實/觀點分類 + 類別消歧提示詞 + 多輪驗證)
 4. ✅ **AI 配額管理** - 使用次數追蹤與 `ai-quota-badge.tsx` 顯示
 5. ✅ **DB 原子操作** - create_post_atomic() + refund_ai_quota() + ai_quota 非負 CHECK (migration 013-015, 018)
 
@@ -437,6 +437,7 @@
 16. ✅ **KOL 歸屬論點** - Stock Arguments Tab 顯示 KOL 頭像與名稱，論點來源可溯
 17. ✅ **論點 per-user 隔離** - 移除全域 stock_argument_summary 表，改為 real-time 計算；RLS 收緊 (migration 012)
 18. ✅ **AI 論點擷取上限調整** - 每篇文章最多 5 則論點 (原 10)，降低 token 消耗與雜訊
+19. ✅ **AI 論點品質提升 (Phase 8-QA)** - Gemini 結構化輸出 (responseSchema)、事實/觀點/混合分類 (statementType)、類別消歧提示詞、多輪驗證、UI 事實/觀點徽章
 
 ### A/B 測試與預註冊體驗
 
@@ -453,6 +454,8 @@
 26. ✅ **安全機制** - Git Pre-commit Hook 防止 API Keys 洩露
 27. ✅ **Hook 測試套件** - 5 hooks + 1 repository 單元測試 (use-ai, use-drafts, use-kols, use-posts, use-quick-input, ai-usage.repository)
 28. ✅ **測試工具** - query-wrapper.tsx — React Query provider wrapper for hook testing
+29. ✅ **OpenSpec (SDD 框架)** - 規格驅動開發框架 (propose/apply/verify/archive)，支援 Claude Code + Cursor + GitHub Copilot
+30. ✅ **開發流程整合 (OpenSpec 工作流)** - WEB_DEV_PLAN 精簡為路線圖；openspec/specs/ 共享技術規格 (data-models, api-contracts, ai-pipeline)；CLAUDE.md 工作流規則更新；已完成變更歸檔
 
 ---
 

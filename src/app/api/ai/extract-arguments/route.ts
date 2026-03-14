@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
             summary: arg.summary,
             sentiment: arg.sentiment,
             confidence: arg.confidence,
+            statementType: arg.statementType,
           },
         ]);
 

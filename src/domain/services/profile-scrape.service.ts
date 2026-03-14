@@ -6,7 +6,7 @@
  */
 
 import { youtubeChannelExtractor, twitterProfileExtractor } from '@/infrastructure/extractors';
-import type { ProfileExtractor } from '@/infrastructure/extractors';
+import type { ProfileExtractor, DiscoveredUrl } from '@/infrastructure/extractors';
 import {
   findKolByName,
   createKol,
@@ -45,7 +45,18 @@ export interface BatchProgress {
   importedCount: number;
   duplicateCount: number;
   errorCount: number;
+  filteredCount: number;
   status: string;
+}
+
+export interface DiscoverResult {
+  kolName: string;
+  kolAvatarUrl: string | null;
+  platform: string;
+  platformId: string;
+  platformUrl: string;
+  discoveredUrls: DiscoveredUrl[];
+  totalCount: number;
 }
 
 export interface IncrementalCheckResult {
@@ -63,9 +74,29 @@ function getProfileExtractor(url: string): ProfileExtractor | null {
 
 // ── Public Functions ──
 
+export async function discoverProfileUrls(profileUrl: string): Promise<DiscoverResult> {
+  const extractor = getProfileExtractor(profileUrl);
+  if (!extractor) {
+    throw new Error(`Unsupported profile URL: ${profileUrl}`);
+  }
+
+  const profile = await extractor.extractProfile(profileUrl);
+
+  return {
+    kolName: profile.kolName,
+    kolAvatarUrl: profile.kolAvatarUrl,
+    platform: extractor.platform,
+    platformId: profile.platformId,
+    platformUrl: profile.platformUrl,
+    discoveredUrls: profile.discoveredUrls ?? profile.postUrls.map((url) => ({ url })),
+    totalCount: profile.postUrls.length,
+  };
+}
+
 export async function initiateProfileScrape(
   profileUrl: string,
-  userId: string
+  userId: string,
+  selectedUrls?: string[]
 ): Promise<InitiateScrapeResult> {
   // 1. Detect platform
   const extractor = getProfileExtractor(profileUrl);
@@ -96,12 +127,13 @@ export async function initiateProfileScrape(
   // 5. Update scrape status
   await updateScrapeStatus(source.id, 'scraping');
 
-  // 6. Create scrape job
+  // 6. Create scrape job (use selectedUrls if provided, otherwise all discovered URLs)
+  const urlsToScrape = selectedUrls ?? profile.postUrls;
   const job = await createScrapeJob(
     source.id,
     'initial_scrape' as ScrapeJobType,
     userId,
-    profile.postUrls
+    urlsToScrape
   );
 
   // 7. Return immediately — batch processing is driven by the /continue endpoint
@@ -111,7 +143,7 @@ export async function initiateProfileScrape(
     kolId: kol.id,
     kolName: kol.name,
     sourceId: source.id,
-    totalUrls: profile.postUrls.length,
+    totalUrls: urlsToScrape.length,
     status: 'queued',
     initialProgress: {
       processedUrls: 0,
@@ -119,6 +151,7 @@ export async function initiateProfileScrape(
       importedCount: 0,
       duplicateCount: 0,
       errorCount: 0,
+      filteredCount: 0,
       status: 'queued',
     },
   };
@@ -143,6 +176,7 @@ export async function processJobBatch(
       importedCount: job.importedCount,
       duplicateCount: job.duplicateCount,
       errorCount: job.errorCount,
+      filteredCount: job.filteredCount,
       status: job.status,
     };
   }
@@ -166,6 +200,7 @@ export async function processJobBatch(
   let importedCount = job.importedCount;
   let duplicateCount = job.duplicateCount;
   let errorCount = job.errorCount;
+  let filteredCount = job.filteredCount;
   let processedUrls = job.processedUrls;
   const kolCache = new Map<string, KolCacheEntry>();
 
@@ -190,6 +225,11 @@ export async function processJobBatch(
           importedCount++;
         } else if (result.value.status === 'duplicate') {
           duplicateCount++;
+        } else if (
+          result.value.status === 'error' &&
+          result.value.error === 'no_tickers_identified'
+        ) {
+          filteredCount++;
         } else {
           errorCount++;
         }
@@ -205,6 +245,7 @@ export async function processJobBatch(
       importedCount,
       duplicateCount,
       errorCount,
+      filteredCount,
     });
 
     // Check timeout again after batch completes
@@ -217,7 +258,13 @@ export async function processJobBatch(
   const status = processedUrls >= job.totalUrls ? 'completed' : 'processing';
 
   if (status === 'completed') {
-    await completeScrapeJob(jobId, { processedUrls, importedCount, duplicateCount, errorCount });
+    await completeScrapeJob(jobId, {
+      processedUrls,
+      importedCount,
+      duplicateCount,
+      errorCount,
+      filteredCount,
+    });
     await updateScrapeStatus(source.id, 'completed', importedCount);
   }
 
@@ -227,6 +274,7 @@ export async function processJobBatch(
     importedCount,
     duplicateCount,
     errorCount,
+    filteredCount,
     status,
   };
 }
@@ -246,14 +294,14 @@ export async function checkForNewContent(sourceId: string): Promise<IncrementalC
   // Extract latest post URLs
   const profile = await extractor.extractProfile(source.platformUrl);
 
-  // Filter to URLs that don't already exist
-  const newUrls: string[] = [];
-  for (const url of profile.postUrls) {
-    const existing = await findPostBySourceUrl(url);
-    if (!existing) {
-      newUrls.push(url);
-    }
-  }
+  // Filter to URLs that don't already exist (parallel for speed)
+  const existChecks = await Promise.all(
+    profile.postUrls.map(async (url) => ({
+      url,
+      exists: !!(await findPostBySourceUrl(url)),
+    }))
+  );
+  const newUrls = existChecks.filter((c) => !c.exists).map((c) => c.url);
 
   // Update monitoring timestamps
   const nextCheckAt = new Date();

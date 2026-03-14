@@ -18,6 +18,7 @@ import { APP_CONFIG } from '@/lib/constants/config';
 
 const scrapeProfileSchema = z.object({
   profileUrl: z.string().url('Must be a valid URL'),
+  selectedUrls: z.array(z.string().url()).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -37,7 +38,11 @@ export async function POST(request: NextRequest) {
     const parsed = await parseBody(request, scrapeProfileSchema);
     if ('error' in parsed) return parsed.error;
 
-    const result = await initiateProfileScrape(parsed.data.profileUrl, userId);
+    const result = await initiateProfileScrape(
+      parsed.data.profileUrl,
+      userId,
+      parsed.data.selectedUrls
+    );
     return NextResponse.json(result);
   } catch (err) {
     if (err instanceof Error && err.message.includes('Unsupported profile URL')) {

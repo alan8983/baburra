@@ -47,6 +47,11 @@ vi.mock('@/infrastructure/extractors', () => ({
     isValidProfileUrl: vi.fn(),
     extractProfile: vi.fn(),
   },
+  twitterProfileExtractor: {
+    platform: 'twitter',
+    isValidProfileUrl: vi.fn(),
+    extractProfile: vi.fn(),
+  },
 }));
 
 import { processJobBatch } from '../profile-scrape.service';
