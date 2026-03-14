@@ -85,6 +85,21 @@ This project uses **OpenSpec** for specification-driven development. **All non-t
 
 Use **`/opsx:explore <topic>`** for investigation/research without creating artifacts.
 
+### Session Workflow
+
+```
+Session start:
+  1. Check active OpenSpec changes: ls openspec/changes/
+  2. If continuing work → /opsx:apply <change>
+  3. If new non-trivial work → /opsx:propose <change>
+  4. Only skip OpenSpec for trivial fixes (typos, single-line config)
+
+Session end:
+  1. Archive completed changes → /opsx:archive <change>
+  2. Update WEB_DEV_PLAN.md phase status (if a phase changed)
+  3. Check off completed BACKLOG.md items (if a user story completed)
+```
+
 ### Rules
 
 - **Propose before coding.** Do not start implementation without a proposed change, unless the user explicitly says to skip it.
@@ -98,20 +113,30 @@ Use **`/opsx:explore <topic>`** for investigation/research without creating arti
 
 ```
 openspec/
-├── specs/              # Project-level specs (shared across changes)
+├── specs/              # Project-level living specs (data models, API contracts, AI pipeline)
 ├── changes/
 │   ├── <change-name>/  # Active change (proposal.md, design.md, tasks.md)
-│   └── archive/        # Completed changes
+│   └── archive/        # Completed changes (searchable history)
 ```
 
-## Mandatory Documentation Updates
+## Documentation Updates
 
-**IMPORTANT:** Whenever any adjustment is made to this project (feature changes, bug fixes, scope changes, reprioritization, etc.), **always update both of these files**:
+### When to update docs
 
-1. **`docs/WEB_DEV_PLAN.md`** — Web Dev Plan
-2. **`docs/BACKLOG.md`** — Backlog
+| Event | Update |
+| --- | --- |
+| **Phase completed** or status changed | `docs/WEB_DEV_PLAN.md` — update phase status table |
+| **User Story completed** | `docs/BACKLOG.md` — check off the story |
+| **DB schema changed** | `openspec/specs/data-models.md` — update table/migration list |
+| **API endpoint added/changed** | `openspec/specs/api-contracts.md` — update endpoint table |
+| **AI pipeline changed** | `openspec/specs/ai-pipeline.md` — update pipeline docs |
+| **OpenSpec change completed** | Run `/opsx:archive <change-name>` |
 
-This applies regardless of environment — Cloud environment or local worktree.
+### What NOT to do
+
+- Do NOT update `WEB_DEV_PLAN.md` on every commit — only on phase-level status changes.
+- Do NOT duplicate implementation details in `WEB_DEV_PLAN.md` — that belongs in OpenSpec changes or specs.
+- `WEB_DEV_PLAN.md` is a **slim roadmap** (~200 lines). Keep it that way.
 
 ## Environment Setup
 

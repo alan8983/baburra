@@ -3,7 +3,7 @@
 > 本文件由 `User Story Mapping Framework_v20251207.csv` 自動生成，作為開發待辦清單。
 > 已於 2026-02-19 更新為 Next.js Web 版本的實作狀態。
 >
-> **最後更新**: 2026-03-08
+> **最後更新**: 2026-03-14
 
 ---
 
@@ -454,6 +454,7 @@
 27. ✅ **Hook 測試套件** - 5 hooks + 1 repository 單元測試 (use-ai, use-drafts, use-kols, use-posts, use-quick-input, ai-usage.repository)
 28. ✅ **測試工具** - query-wrapper.tsx — React Query provider wrapper for hook testing
 29. ✅ **OpenSpec (SDD 框架)** - 規格驅動開發框架 (propose/apply/verify/archive)，支援 Claude Code + Cursor + GitHub Copilot
+30. ✅ **開發流程整合 (OpenSpec 工作流)** - WEB_DEV_PLAN 精簡為路線圖；openspec/specs/ 共享技術規格 (data-models, api-contracts, ai-pipeline)；CLAUDE.md 工作流規則更新；已完成變更歸檔
 
 ---
 
