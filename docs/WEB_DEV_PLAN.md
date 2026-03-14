@@ -2,14 +2,14 @@
 
 > **版本**: v0.2.0-dev
 > **建立日期**: 2026-02-01
-> **最後更新**: 2026-03-08
+> **最後更新**: 2026-03-14
 > **目標**: 產品開發計畫
 
 ---
 
 ## 零、開發進度總覽
 
-> **最後更新**: 2026-03-08
+> **最後更新**: 2026-03-14
 
 #### v0.1.0 (MVP) — 全部完成
 
@@ -66,6 +66,7 @@
 | 已讀追蹤 Hook | 2026-03-01 | use-seen-posts.ts — localStorage 追蹤最近 500 則已讀文章 |
 | Hook 測試套件 | 2026-03-01 | 5 hooks + 1 repository 單元測試 (use-ai, use-drafts, use-kols, use-posts, use-quick-input, ai-usage.repository) |
 | 論點 UI 暫時停用 | 2026-03-01 | PostArguments/StockArgumentsTab 替換為 ArgumentPlaceholder (功能開發中提示)，待重新啟用 |
+| YouTube 日期修正 | 2026-03-14 | 改用 YouTube Data API v3 取得影片原始發布日期，修正先前顯示爬取日期 + 時間鎖定 8:00 AM 問題 |
 
 ### 開發時程
 

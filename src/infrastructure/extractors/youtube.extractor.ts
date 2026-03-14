@@ -26,6 +26,17 @@ interface YouTubeOEmbedResponse {
   height: number;
 }
 
+const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
+
+/** Shape of the YouTube Data API v3 videos.list response */
+interface YouTubeVideosApiResponse {
+  items?: Array<{
+    snippet: {
+      publishedAt: string;
+    };
+  }>;
+}
+
 export class YouTubeExtractor extends SocialMediaExtractor {
   platform: UrlFetchResult['sourcePlatform'] = 'youtube';
 
@@ -86,10 +97,13 @@ export class YouTubeExtractor extends SocialMediaExtractor {
       throw new ExtractorError('INVALID_URL', `Could not extract video ID from URL: ${url}`);
     }
 
+    const apiKey = process.env.YOUTUBE_DATA_API_KEY;
+
     // 1. Fetch oEmbed metadata + publish date + page HTML in parallel
-    const [metadata, pageData] = await Promise.all([
+    const [metadata, pageData, apiPublishDate] = await Promise.all([
       this.fetchOEmbed(url, timeout),
       this.fetchPageData(videoId, timeout),
+      apiKey ? this.fetchPublishDate(videoId, apiKey, timeout) : Promise.resolve(null),
     ]);
 
     // 2. Fetch transcript (with fallback to description)
@@ -126,7 +140,7 @@ export class YouTubeExtractor extends SocialMediaExtractor {
       sourcePlatform: 'youtube',
       title: metadata.title || null,
       images: metadata.thumbnail_url ? [metadata.thumbnail_url] : [],
-      postedAt: pageData.publishDate,
+      postedAt: apiPublishDate ?? pageData.publishDate,
       kolName: metadata.author_name || null,
       kolAvatarUrl: null,
     };
@@ -231,6 +245,36 @@ export class YouTubeExtractor extends SocialMediaExtractor {
         throw new ExtractorError('NETWORK_ERROR', `Request timeout after ${timeout}ms`, error);
       }
       throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  /**
+   * Fetch the video's publish date via YouTube Data API v3.
+   * Returns a full ISO 8601 timestamp (e.g. "2024-01-15T14:30:00Z") or null on failure.
+   */
+  private async fetchPublishDate(
+    videoId: string,
+    apiKey: string,
+    timeout: number
+  ): Promise<string | null> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    try {
+      const url = `${YOUTUBE_API_BASE}/videos?id=${encodeURIComponent(videoId)}&part=snippet&key=${apiKey}`;
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: { Accept: 'application/json' },
+      });
+
+      if (!response.ok) return null;
+
+      const data = (await response.json()) as YouTubeVideosApiResponse;
+      return data.items?.[0]?.snippet?.publishedAt ?? null;
+    } catch {
+      return null;
     } finally {
       clearTimeout(timeoutId);
     }

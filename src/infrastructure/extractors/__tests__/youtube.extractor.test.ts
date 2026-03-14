@@ -44,15 +44,32 @@ function buildVideoPageHtml(datePublished?: string) {
   return `<html><head><meta itemprop="datePublished" content="${datePublished}"></head><body></body></html>`;
 }
 
-/** Create a mock fetch that returns oEmbed JSON for oembed URLs and HTML for video page URLs */
+/** Build a mock YouTube Data API v3 videos.list response */
+function buildVideosApiResponse(publishedAt?: string) {
+  if (!publishedAt) return { items: [] };
+  return {
+    items: [{ snippet: { publishedAt } }],
+  };
+}
+
+/** Create a mock fetch that routes by URL to oEmbed, page HTML, or YouTube Data API */
 function mockOEmbedFetch(
   response: ReturnType<typeof buildYouTubeOEmbedResponse>,
-  datePublished?: string
+  datePublished?: string,
+  apiPublishedAt?: string
 ) {
   return vi.fn().mockImplementation((url: string) => {
     if (typeof url === 'string' && url.includes('/oembed')) {
       return Promise.resolve(
         new Response(JSON.stringify(response), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+    }
+    if (typeof url === 'string' && url.includes('googleapis.com/youtube/v3/videos')) {
+      return Promise.resolve(
+        new Response(JSON.stringify(buildVideosApiResponse(apiPublishedAt)), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         })
@@ -125,6 +142,7 @@ describe('YouTubeExtractor', () => {
   describe('extract', () => {
     afterEach(() => {
       vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
       vi.mocked(YoutubeTranscript.fetchTranscript).mockReset();
     });
 
@@ -304,8 +322,12 @@ describe('YouTubeExtractor', () => {
       });
     });
 
-    it('should extract postedAt from video page and set kolAvatarUrl to null', async () => {
-      vi.stubGlobal('fetch', mockOEmbedFetch(buildYouTubeOEmbedResponse(), '2025-06-15'));
+    it('should use YouTube Data API publishedAt when API key is set', async () => {
+      vi.stubGlobal(
+        'fetch',
+        mockOEmbedFetch(buildYouTubeOEmbedResponse(), '2025-06-15', '2025-06-15T10:30:00Z')
+      );
+      vi.stubEnv('YOUTUBE_DATA_API_KEY', 'test-api-key');
       vi.mocked(YoutubeTranscript.fetchTranscript).mockResolvedValue(
         buildTranscript(['Testing date extraction for posted at and avatar URL values'])
       );
@@ -314,12 +336,44 @@ describe('YouTubeExtractor', () => {
         retryAttempts: 1,
       });
 
-      expect(result.postedAt).toBe('2025-06-15');
+      expect(result.postedAt).toBe('2025-06-15T10:30:00Z');
       expect(result.kolAvatarUrl).toBeNull();
     });
 
-    it('should return null postedAt when video page has no date', async () => {
+    it('should fall back to HTML date when API key is not set', async () => {
+      vi.stubGlobal('fetch', mockOEmbedFetch(buildYouTubeOEmbedResponse(), '2025-06-15'));
+      delete process.env.YOUTUBE_DATA_API_KEY;
+      vi.mocked(YoutubeTranscript.fetchTranscript).mockResolvedValue(
+        buildTranscript(['Testing HTML date fallback when no API key is available'])
+      );
+
+      const result = await youtubeExtractor.extract('https://www.youtube.com/watch?v=dQw4w9WgXcQ', {
+        retryAttempts: 1,
+      });
+
+      expect(result.postedAt).toBe('2025-06-15');
+    });
+
+    it('should fall back to HTML date when API call returns no items', async () => {
+      vi.stubGlobal(
+        'fetch',
+        mockOEmbedFetch(buildYouTubeOEmbedResponse(), '2025-06-15', undefined)
+      );
+      vi.stubEnv('YOUTUBE_DATA_API_KEY', 'test-api-key');
+      vi.mocked(YoutubeTranscript.fetchTranscript).mockResolvedValue(
+        buildTranscript(['Testing fallback when API returns no items for the video'])
+      );
+
+      const result = await youtubeExtractor.extract('https://www.youtube.com/watch?v=dQw4w9WgXcQ', {
+        retryAttempts: 1,
+      });
+
+      expect(result.postedAt).toBe('2025-06-15');
+    });
+
+    it('should return null postedAt when both API and HTML have no date', async () => {
       vi.stubGlobal('fetch', mockOEmbedFetch(buildYouTubeOEmbedResponse()));
+      delete process.env.YOUTUBE_DATA_API_KEY;
       vi.mocked(YoutubeTranscript.fetchTranscript).mockResolvedValue(
         buildTranscript(['Testing null fields for posted at when no date is available'])
       );
