@@ -2,12 +2,23 @@
 
 import { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { ArrowLeft, Youtube, Twitter, Loader2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  Youtube,
+  Twitter,
+  Loader2,
+  Captions,
+  CaptionsOff,
+  Sparkles,
+} from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useAiUsage } from '@/hooks/use-ai';
 import type { DiscoveredUrl } from '@/infrastructure/extractors';
 
 interface UrlDiscoveryListProps {
@@ -30,6 +41,8 @@ export function UrlDiscoveryList({
   isSubmitting,
 }: UrlDiscoveryListProps) {
   const t = useTranslations('scrape.discover');
+  const tCommon = useTranslations('common');
+  const { data: usage } = useAiUsage();
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(discoveredUrls.map((u) => u.url))
   );
@@ -56,6 +69,16 @@ export function UrlDiscoveryList({
     });
   };
 
+  // Calculate total estimated credits for selected URLs
+  const totalEstimatedCredits = useMemo(() => {
+    return discoveredUrls
+      .filter((item) => selected.has(item.url))
+      .reduce((sum, item) => sum + (item.estimatedCreditCost ?? 1), 0);
+  }, [discoveredUrls, selected]);
+
+  const remainingBalance = usage?.balance ?? usage?.remaining ?? 0;
+  const insufficientCredits = totalEstimatedCredits > remainingBalance;
+
   const PlatformIcon = platform === 'youtube' ? Youtube : Twitter;
   const platformColor = platform === 'youtube' ? 'text-red-500' : 'text-sky-500';
 
@@ -74,6 +97,13 @@ export function UrlDiscoveryList({
       }
     };
   }, []);
+
+  const formatDuration = (seconds?: number) => {
+    if (!seconds) return null;
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   return (
     <Card>
@@ -109,6 +139,10 @@ export function UrlDiscoveryList({
           <div className="divide-y">
             {discoveredUrls.map((item) => {
               const date = formatDate(item.publishedAt);
+              const duration = formatDuration(item.durationSeconds);
+              const creditCost = item.estimatedCreditCost ?? 1;
+              const hasCaptions = item.captionAvailable;
+
               return (
                 <label
                   key={item.url}
@@ -122,13 +156,69 @@ export function UrlDiscoveryList({
                   />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm">{item.title || item.url}</p>
-                    {date && <p className="text-muted-foreground text-xs">{date}</p>}
+                    <div className="text-muted-foreground flex items-center gap-2 text-xs">
+                      {date && <span>{date}</span>}
+                      {duration && <span>{duration}</span>}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    {/* Caption status icon (YouTube only) */}
+                    {platform === 'youtube' && hasCaptions !== undefined && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span>
+                              {hasCaptions ? (
+                                <Captions className="h-3.5 w-3.5 text-green-500" />
+                              ) : (
+                                <CaptionsOff className="h-3.5 w-3.5 text-amber-500" />
+                              )}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {hasCaptions ? t('captionAvailable') : t('captionUnavailable')}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
+                    {/* Credit cost badge */}
+                    <Badge
+                      variant="outline"
+                      className={`text-xs ${creditCost > 2 ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-gray-200 bg-gray-50 text-gray-600'}`}
+                    >
+                      {creditCost}
+                      <Sparkles className="ml-0.5 h-2.5 w-2.5" />
+                    </Badge>
                   </div>
                 </label>
               );
             })}
           </div>
         </ScrollArea>
+
+        {/* Credit estimation footer */}
+        <div className="bg-muted/30 rounded-md border px-3 py-2.5 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">{t('estimatedCredits')}</span>
+            <span className="font-medium">
+              {totalEstimatedCredits} <Sparkles className="mb-0.5 inline h-3 w-3" />
+            </span>
+          </div>
+          {usage && (
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">{t('remainingBalance')}</span>
+              <span className={`font-medium ${insufficientCredits ? 'text-red-600' : ''}`}>
+                {remainingBalance} / {usage.weeklyLimit}
+              </span>
+            </div>
+          )}
+          {insufficientCredits && (
+            <p className="mt-1 text-xs text-red-600">{t('insufficientCredits')}</p>
+          )}
+          {platform === 'youtube' && (
+            <p className="text-muted-foreground mt-1 text-xs">{t('creditNote')}</p>
+          )}
+        </div>
 
         {/* Actions */}
         <div className="flex gap-2">
@@ -139,7 +229,7 @@ export function UrlDiscoveryList({
           <Button
             className="flex-1"
             onClick={() => onConfirm(Array.from(selected))}
-            disabled={selected.size === 0 || isSubmitting}
+            disabled={selected.size === 0 || isSubmitting || insufficientCredits}
           >
             {isSubmitting ? (
               <>
@@ -147,7 +237,14 @@ export function UrlDiscoveryList({
                 {t('confirm')}
               </>
             ) : (
-              t('confirm')
+              <>
+                {t('confirm')}
+                {totalEstimatedCredits > 0 && (
+                  <span className="ml-1 opacity-70">
+                    ({totalEstimatedCredits} {tCommon('ai.credits')})
+                  </span>
+                )}
+              </>
             )}
           </Button>
         </div>

@@ -5,8 +5,13 @@
  * Manages scrape jobs: initial discovery, batch processing, and monitoring.
  */
 
-import { youtubeChannelExtractor, twitterProfileExtractor } from '@/infrastructure/extractors';
+import {
+  youtubeChannelExtractor,
+  twitterProfileExtractor,
+  youtubeExtractor,
+} from '@/infrastructure/extractors';
 import type { ProfileExtractor, DiscoveredUrl } from '@/infrastructure/extractors';
+import { CREDIT_COSTS } from '@/domain/models/user';
 import {
   findKolByName,
   createKol,
@@ -81,6 +86,39 @@ export async function discoverProfileUrls(profileUrl: string): Promise<DiscoverR
   }
 
   const profile = await extractor.extractProfile(profileUrl);
+  let discoveredUrls: DiscoveredUrl[] =
+    profile.discoveredUrls ?? profile.postUrls.map((url) => ({ url }));
+
+  // Enrich URLs with credit cost estimates
+  if (extractor.platform === 'youtube') {
+    // Check caption availability for each YouTube URL (parallel, with concurrency limit)
+    const enriched = await Promise.all(
+      discoveredUrls.map(async (item) => {
+        try {
+          const availability = await youtubeExtractor.checkCaptionAvailability(item.url);
+          return {
+            ...item,
+            captionAvailable: availability.hasCaptions,
+            durationSeconds: availability.estimatedDurationSeconds ?? undefined,
+            estimatedCreditCost: availability.estimatedCreditCost,
+          };
+        } catch {
+          // On error, assume caption available (cheaper default)
+          return {
+            ...item,
+            estimatedCreditCost: CREDIT_COSTS.youtube_caption_analysis,
+          };
+        }
+      })
+    );
+    discoveredUrls = enriched;
+  } else {
+    // Non-YouTube URLs: always 1 credit (text_analysis)
+    discoveredUrls = discoveredUrls.map((item) => ({
+      ...item,
+      estimatedCreditCost: CREDIT_COSTS.text_analysis,
+    }));
+  }
 
   return {
     kolName: profile.kolName,
@@ -88,7 +126,7 @@ export async function discoverProfileUrls(profileUrl: string): Promise<DiscoverR
     platform: extractor.platform,
     platformId: profile.platformId,
     platformUrl: profile.platformUrl,
-    discoveredUrls: profile.discoveredUrls ?? profile.postUrls.map((url) => ({ url })),
+    discoveredUrls,
     totalCount: profile.postUrls.length,
   };
 }

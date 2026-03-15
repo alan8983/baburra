@@ -86,7 +86,7 @@
     "resetInDays": "Reset in {days} days"
   },
   "ai": {
-    "quota": "AI Quota",
+    "quota": "AI Credits",
     "quotaThisWeek": "This week",
     "quotaLoading": "Loading...",
     "suggestion": "AI Suggestion",
@@ -96,7 +96,7 @@
     "analyzeResult": "AI Analysis Result",
     "confidence": "Confidence",
     "aiGenerated": "(AI Analysis)",
-    "quotaLabel": "AI Quota: ",
+    "quotaLabel": "AI Credits: ",
     "identifyTickers": "AI Identify Tickers",
     "identifyingTickers": "AI is identifying tickers...",
     "tickersFound": "AI identified {count} investment targets",
@@ -111,9 +111,10 @@
     "confidencePercent": "Confidence: {percent}%",
     "fact": "Fact",
     "opinion": "Opinion",
-    "quotaDisplay": "AI Quota: {remaining}/{limit}",
-    "weeklyRemaining": "Weekly remaining AI analyses",
+    "quotaDisplay": "AI Credits: {remaining}/{limit}",
+    "weeklyRemaining": "Weekly remaining AI credits",
     "nextWeek": "Next week",
+    "credits": "credits",
     "otherCategory": "Other",
     "underDevelopment": "Under Development",
     "argumentComingSoon": "Argument analysis is under development. This feature will automatically extract and categorize investment arguments from posts."

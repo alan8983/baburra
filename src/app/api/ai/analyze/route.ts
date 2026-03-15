@@ -1,12 +1,15 @@
 /**
- * AI 情緒分析 API
+ * AI 情緒分析 API (Re-roll analysis)
  * POST /api/ai/analyze
+ *
+ * Costs 3 credits (CREDIT_COSTS.reroll_analysis)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { analyzeSentiment } from '@/domain/services/ai.service';
-import { consumeAiQuota } from '@/infrastructure/repositories/ai-usage.repository';
+import { consumeCredits } from '@/infrastructure/repositories/ai-usage.repository';
+import { CREDIT_COSTS } from '@/domain/models/user';
 import { unauthorizedError, internalError, errorResponse } from '@/lib/api/error';
 import { aiContentSchema, parseBody } from '@/lib/api/validation';
 
@@ -19,21 +22,21 @@ export async function POST(request: NextRequest) {
     const parsed = await parseBody(request, aiContentSchema);
     if ('error' in parsed) return parsed.error;
 
-    // 原子性消耗配額（先扣再用，避免 race condition）
-    let usage;
+    // Consume credits for re-roll analysis (3 credits)
+    let creditInfo;
     try {
-      usage = await consumeAiQuota(userId);
+      creditInfo = await consumeCredits(userId, CREDIT_COSTS.reroll_analysis, 'reroll_analysis');
     } catch (quotaErr) {
       if (
         quotaErr &&
         typeof quotaErr === 'object' &&
         'code' in quotaErr &&
-        (quotaErr as { code: string }).code === 'AI_QUOTA_EXCEEDED'
+        (quotaErr as { code: string }).code === 'INSUFFICIENT_CREDITS'
       ) {
         return errorResponse(
           429,
-          'AI_QUOTA_EXCEEDED',
-          'AI quota exceeded. Please wait until next week.'
+          'INSUFFICIENT_CREDITS',
+          'Insufficient credits. Please wait until next week or upgrade your plan.'
         );
       }
       throw quotaErr;
@@ -45,9 +48,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ...result,
       usage: {
-        remaining: usage.remaining,
-        weeklyLimit: usage.weeklyLimit,
-        resetAt: usage.resetAt?.toISOString(),
+        remaining: creditInfo.balance,
+        weeklyLimit: creditInfo.weeklyLimit,
+        resetAt: creditInfo.resetAt?.toISOString(),
       },
     });
   } catch (error) {

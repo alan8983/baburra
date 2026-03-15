@@ -311,7 +311,7 @@ function DraftEditForm({ draft, id }: DraftEditFormProps) {
     try {
       const result = await fetchUrl.mutateAsync(sourceUrl);
       setFetchResult({
-        content: result.content,
+        content: result.content ?? '',
         images: result.images || [],
         postedAt: result.postedAt ? new Date(result.postedAt) : null,
         kolName: result.kolName,

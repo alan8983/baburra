@@ -14,8 +14,7 @@
     "step1": "輸入 URL",
     "step2": "探索與選擇",
     "step3": "處理中",
-    "step4": "匯入",
-    "step5": "完成"
+    "step4": "完成"
   },
   "discover": {
     "title": "探索到的內容",
@@ -25,7 +24,13 @@
     "deselectAll": "取消全選",
     "confirm": "開始擷取",
     "back": "返回",
-    "loading": "正在探索內容..."
+    "loading": "正在探索內容...",
+    "captionAvailable": "有字幕",
+    "captionUnavailable": "無字幕 (需要 AI 轉錄)",
+    "estimatedCredits": "預估消耗點數",
+    "remainingBalance": "剩餘點數",
+    "insufficientCredits": "點數不足，請減少選取項目或升級方案",
+    "creditNote": "1分鐘無字幕YouTube影片 = 7點"
   },
   "queue": {
     "position": "您的佇列位置: 第 {position} 位",

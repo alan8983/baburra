@@ -1,13 +1,13 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
-import { Link2, ListChecks, Cog, Download, CheckCircle2 } from 'lucide-react';
+import { Link2, ListChecks, Cog, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export type ScrapeStep = 1 | 2 | 3 | 4 | 5;
+export type ScrapeStep = 1 | 2 | 3 | 4;
 
-const STEP_ICONS = [Link2, ListChecks, Cog, Download, CheckCircle2] as const;
-const STEP_KEYS = ['step1', 'step2', 'step3', 'step4', 'step5'] as const;
+const STEP_ICONS = [Link2, ListChecks, Cog, CheckCircle2] as const;
+const STEP_KEYS = ['step1', 'step2', 'step3', 'step4'] as const;
 
 interface ScrapeFlowChartProps {
   currentStep: ScrapeStep;

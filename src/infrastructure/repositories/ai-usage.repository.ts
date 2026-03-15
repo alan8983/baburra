@@ -1,31 +1,54 @@
 /**
- * AI 使用配額 Repository
+ * Credit System Repository (formerly AI Usage Quota)
+ *
+ * Provides credit-based usage tracking with variable costs per operation.
+ * Tiers: free (850/wk), pro (4200/wk), max (21000/wk)
  */
 
 import { createAdminClient } from '@/infrastructure/supabase/admin';
+import { CREDIT_LIMITS } from '@/domain/models/user';
+import type { SubscriptionTier } from '@/domain/models/user';
 
-// 配額設定
-const FREE_TIER_WEEKLY_LIMIT = 15;
-const PREMIUM_TIER_WEEKLY_LIMIT = 100;
+// ── Credit Info (new interface) ──
+
+export interface CreditInfo {
+  balance: number;
+  weeklyLimit: number;
+  resetAt: Date | null;
+  subscriptionTier: SubscriptionTier;
+}
+
+// ── Backward-compatible alias ──
 
 export interface AiUsageInfo {
   usageCount: number;
   weeklyLimit: number;
   remaining: number;
   resetAt: Date | null;
-  subscriptionTier: 'free' | 'premium';
+  subscriptionTier: SubscriptionTier;
 }
 
+function creditInfoToAiUsageInfo(info: CreditInfo): AiUsageInfo {
+  return {
+    usageCount: info.weeklyLimit - info.balance,
+    weeklyLimit: info.weeklyLimit,
+    remaining: info.balance,
+    resetAt: info.resetAt,
+    subscriptionTier: info.subscriptionTier,
+  };
+}
+
+// ── Core Functions ──
+
 /**
- * 取得用戶的 AI 使用配額資訊
+ * Get current credit balance and tier info.
  */
-export async function getAiUsage(userId: string): Promise<AiUsageInfo> {
+export async function getCreditInfo(userId: string): Promise<CreditInfo> {
   const supabase = createAdminClient();
   if (!supabase) {
     return {
-      usageCount: 0,
-      weeklyLimit: FREE_TIER_WEEKLY_LIMIT,
-      remaining: FREE_TIER_WEEKLY_LIMIT,
+      balance: CREDIT_LIMITS.free,
+      weeklyLimit: CREDIT_LIMITS.free,
       resetAt: null,
       subscriptionTier: 'free',
     };
@@ -33,121 +56,126 @@ export async function getAiUsage(userId: string): Promise<AiUsageInfo> {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('ai_usage_count, ai_usage_reset_at, subscription_tier')
+    .select('credit_balance, credit_reset_at, subscription_tier')
     .eq('id', userId)
     .single();
 
   if (error) {
-    // 如果用戶不存在，返回預設值
     if (error.code === 'PGRST116') {
       return {
-        usageCount: 0,
-        weeklyLimit: FREE_TIER_WEEKLY_LIMIT,
-        remaining: FREE_TIER_WEEKLY_LIMIT,
+        balance: CREDIT_LIMITS.free,
+        weeklyLimit: CREDIT_LIMITS.free,
         resetAt: null,
         subscriptionTier: 'free',
       };
     }
-    throw new Error(`Failed to get AI usage: ${error.message}`);
+    throw new Error(`Failed to get credit info: ${error.message}`);
   }
 
-  const subscriptionTier = (data.subscription_tier || 'free') as 'free' | 'premium';
-  const weeklyLimit =
-    subscriptionTier === 'premium' ? PREMIUM_TIER_WEEKLY_LIMIT : FREE_TIER_WEEKLY_LIMIT;
-  const usageCount = data.ai_usage_count || 0;
+  const tier = (data.subscription_tier || 'free') as SubscriptionTier;
+  const weeklyLimit = CREDIT_LIMITS[tier] ?? CREDIT_LIMITS.free;
+  let balance = data.credit_balance ?? weeklyLimit;
 
-  // 檢查是否需要重置配額
-  const resetAt = data.ai_usage_reset_at ? new Date(data.ai_usage_reset_at) : null;
-  const now = new Date();
-
-  // 如果已過重置時間，配額應該已重置
-  const effectiveUsageCount = resetAt && now >= resetAt ? 0 : usageCount;
+  // If past reset time, balance should be full
+  const resetAt = data.credit_reset_at ? new Date(data.credit_reset_at) : null;
+  if (resetAt && new Date() >= resetAt) {
+    balance = weeklyLimit;
+  }
 
   return {
-    usageCount: effectiveUsageCount,
+    balance,
     weeklyLimit,
-    remaining: Math.max(0, weeklyLimit - effectiveUsageCount),
     resetAt,
-    subscriptionTier,
-  };
-}
-
-/**
- * 原子性地檢查並消耗一次 AI 配額（使用 DB-level row lock 防止 race condition）。
- * 依賴 PostgreSQL RPC `consume_ai_quota`（migration 007）。
- */
-export async function consumeAiQuota(userId: string): Promise<AiUsageInfo> {
-  const supabase = createAdminClient();
-  if (!supabase) {
-    throw new Error('Missing Supabase admin credentials');
-  }
-
-  // Atomic RPC: SELECT ... FOR UPDATE + check + increment in a single transaction
-  // Function returns JSONB to avoid PostgREST "cannot get array length of a scalar" issue
-  const { data, error: rpcError } = await supabase.rpc('consume_ai_quota', {
-    p_user_id: userId,
-  });
-
-  // If RPC raised AI_QUOTA_EXCEEDED, surface it with structured error
-  if (rpcError?.message?.includes('AI_QUOTA_EXCEEDED')) {
-    const usage = await getAiUsage(userId);
-    throw Object.assign(new Error('AI quota exceeded'), { code: 'AI_QUOTA_EXCEEDED', usage });
-  }
-
-  // Any other RPC error (function missing, connection issue, etc.) is a hard failure
-  if (rpcError) {
-    throw new Error(
-      `consume_ai_quota RPC failed: ${rpcError.message}. ` +
-        'Ensure migration 007_atomic_ai_quota.sql has been applied.'
-    );
-  }
-
-  // Parse result — supports both JSONB (scalar) and TABLE (array) return types
-  const row = typeof data === 'object' && data !== null && !Array.isArray(data) ? data : null;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const parsed: Record<string, any> = row ?? (Array.isArray(data) ? data[0] : null);
-  if (!parsed) {
-    throw new Error('consume_ai_quota RPC returned no data');
-  }
-
-  const tier = (parsed.subscription_tier || 'free') as 'free' | 'premium';
-  const limit = tier === 'premium' ? PREMIUM_TIER_WEEKLY_LIMIT : FREE_TIER_WEEKLY_LIMIT;
-  return {
-    usageCount: parsed.ai_usage_count,
-    weeklyLimit: limit,
-    remaining: Math.max(0, limit - parsed.ai_usage_count),
-    resetAt: parsed.ai_usage_reset_at ? new Date(parsed.ai_usage_reset_at) : null,
     subscriptionTier: tier,
   };
 }
 
 /**
- * Refund a single AI quota usage (e.g., when post creation fails after quota was consumed).
- * Uses a DB-level RPC with row lock to prevent race conditions.
+ * Atomically consume credits for an operation.
+ * Uses DB-level row lock to prevent race conditions.
  */
-export async function refundAiQuota(userId: string): Promise<void> {
+export async function consumeCredits(
+  userId: string,
+  amount: number,
+  operation: string = 'unknown'
+): Promise<CreditInfo> {
   const supabase = createAdminClient();
   if (!supabase) {
     throw new Error('Missing Supabase admin credentials');
   }
 
-  const { error } = await supabase.rpc('refund_ai_quota', {
+  const { data, error: rpcError } = await supabase.rpc('consume_credits', {
     p_user_id: userId,
+    p_amount: amount,
+    p_operation: operation,
+  });
+
+  if (rpcError?.message?.includes('INSUFFICIENT_CREDITS')) {
+    const info = await getCreditInfo(userId);
+    throw Object.assign(new Error('Insufficient credits'), {
+      code: 'INSUFFICIENT_CREDITS',
+      usage: creditInfoToAiUsageInfo(info),
+      creditInfo: info,
+    });
+  }
+
+  if (rpcError) {
+    throw new Error(
+      `consume_credits RPC failed: ${rpcError.message}. ` +
+        'Ensure migration 029_credit_system.sql has been applied.'
+    );
+  }
+
+  const parsed = typeof data === 'object' && data !== null ? data : null;
+  if (!parsed) {
+    throw new Error('consume_credits RPC returned no data');
+  }
+
+  const tier = (parsed.subscription_tier || 'free') as SubscriptionTier;
+  return {
+    balance: parsed.credit_balance,
+    weeklyLimit: parsed.weekly_limit ?? CREDIT_LIMITS[tier] ?? CREDIT_LIMITS.free,
+    resetAt: parsed.credit_reset_at ? new Date(parsed.credit_reset_at) : null,
+    subscriptionTier: tier,
+  };
+}
+
+/**
+ * Refund credits (e.g., when an operation fails after credits were consumed).
+ */
+export async function refundCredits(userId: string, amount: number): Promise<void> {
+  const supabase = createAdminClient();
+  if (!supabase) {
+    throw new Error('Missing Supabase admin credentials');
+  }
+
+  const { error } = await supabase.rpc('refund_credits', {
+    p_user_id: userId,
+    p_amount: amount,
   });
 
   if (error) {
-    throw new Error(`refund_ai_quota RPC failed: ${error.message}`);
+    throw new Error(`refund_credits RPC failed: ${error.message}`);
   }
 }
 
 /**
- * 重置用戶的 AI 配額（管理員功能）
+ * Reset user credits to full (admin function).
  */
-export async function resetAiQuota(userId: string): Promise<void> {
+export async function resetCredits(userId: string): Promise<void> {
   const supabase = createAdminClient();
   if (!supabase) {
     throw new Error('Missing Supabase admin credentials');
   }
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('subscription_tier')
+    .eq('id', userId)
+    .single();
+
+  const tier = (profile?.subscription_tier || 'free') as SubscriptionTier;
+  const weeklyLimit = CREDIT_LIMITS[tier] ?? CREDIT_LIMITS.free;
 
   const nextWeek = new Date();
   nextWeek.setDate(nextWeek.getDate() + 7);
@@ -156,12 +184,38 @@ export async function resetAiQuota(userId: string): Promise<void> {
   const { error } = await supabase
     .from('profiles')
     .update({
-      ai_usage_count: 0,
-      ai_usage_reset_at: nextWeek.toISOString(),
+      credit_balance: weeklyLimit,
+      credit_reset_at: nextWeek.toISOString(),
     })
     .eq('id', userId);
 
   if (error) {
-    throw new Error(`Failed to reset AI quota: ${error.message}`);
+    throw new Error(`Failed to reset credits: ${error.message}`);
   }
+}
+
+// ── Backward-compatible aliases ──
+// These wrap the new credit functions to match the old API shape.
+// Existing callers (API routes, import pipeline) can continue using these.
+
+export async function getAiUsage(userId: string): Promise<AiUsageInfo> {
+  const info = await getCreditInfo(userId);
+  return creditInfoToAiUsageInfo(info);
+}
+
+/**
+ * Consume 1 credit (backward-compatible with old flat quota system).
+ * For variable-cost operations, use consumeCredits() directly.
+ */
+export async function consumeAiQuota(userId: string): Promise<AiUsageInfo> {
+  const info = await consumeCredits(userId, 1, 'legacy_single');
+  return creditInfoToAiUsageInfo(info);
+}
+
+export async function refundAiQuota(userId: string): Promise<void> {
+  return refundCredits(userId, 1);
+}
+
+export async function resetAiQuota(userId: string): Promise<void> {
+  return resetCredits(userId);
 }

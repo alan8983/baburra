@@ -10,6 +10,10 @@ export interface DiscoveredUrl {
   url: string;
   title?: string;
   publishedAt?: string;
+  // Credit estimation fields (populated for YouTube URLs)
+  captionAvailable?: boolean;
+  durationSeconds?: number;
+  estimatedCreditCost?: number;
 }
 
 export interface ProfileExtractResult {

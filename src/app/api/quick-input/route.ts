@@ -40,10 +40,11 @@ export async function POST(request: NextRequest) {
       await consumeAiQuota(userId);
     } catch (quotaErr) {
       if (
-        quotaErr &&
-        typeof quotaErr === 'object' &&
-        'code' in quotaErr &&
-        (quotaErr as { code: string }).code === 'AI_QUOTA_EXCEEDED'
+        (quotaErr &&
+          typeof quotaErr === 'object' &&
+          'code' in quotaErr &&
+          (quotaErr as { code: string }).code === 'AI_QUOTA_EXCEEDED') ||
+        (quotaErr as { code: string }).code === 'INSUFFICIENT_CREDITS'
       ) {
         return errorResponse(429, 'AI_QUOTA_EXCEEDED', 'AI quota exceeded');
       }
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
     if (inputIsUrl && supportedPlatform) {
       try {
         const fetchResult = await extractorFactory.extractFromUrl(content);
-        textContent = fetchResult.content;
+        textContent = fetchResult.content ?? '';
         sourceUrl = fetchResult.sourceUrl;
         images = fetchResult.images || [];
         fetchedKolName = fetchResult.kolName || null;

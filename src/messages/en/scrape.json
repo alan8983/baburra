@@ -14,8 +14,7 @@
     "step1": "Input URL",
     "step2": "Discover & Select",
     "step3": "Processing",
-    "step4": "Import",
-    "step5": "Complete"
+    "step4": "Complete"
   },
   "discover": {
     "title": "Discovered Content",
@@ -25,7 +24,13 @@
     "deselectAll": "Deselect All",
     "confirm": "Start Scraping",
     "back": "Back",
-    "loading": "Discovering content..."
+    "loading": "Discovering content...",
+    "captionAvailable": "Captions available",
+    "captionUnavailable": "No captions (AI transcription required)",
+    "estimatedCredits": "Estimated credits",
+    "remainingBalance": "Remaining balance",
+    "insufficientCredits": "Insufficient credits. Reduce selection or upgrade your plan.",
+    "creditNote": "1 min captionless YouTube video = 7 credits"
   },
   "queue": {
     "position": "Position #{position} in your queue",

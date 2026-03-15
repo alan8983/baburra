@@ -25,7 +25,7 @@ function stateToStep(state: ScrapeState): ScrapeStep {
     case 'processing':
       return 3;
     case 'redirecting':
-      return 5;
+      return 4;
   }
 }
 

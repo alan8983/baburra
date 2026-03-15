@@ -34,7 +34,10 @@ export interface GeminiGenerateOptions {
 
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 const DEFAULT_MODEL = process.env.AI_SENTIMENT_MODEL || 'gemini-2.5-flash-lite';
+const TRANSCRIPTION_MODEL = 'gemini-2.5-flash';
 const DEFAULT_TIMEOUT_MS = 30_000;
+const TRANSCRIPTION_TIMEOUT_MS = 120_000;
+const MAX_VIDEO_DURATION_SECONDS = 45 * 60; // 45 minutes
 
 /** Return the currently configured AI model name (for version tracking). */
 export function getAiModelVersion(): string {
@@ -221,5 +224,97 @@ export async function generateJson<T>(
     return JSON.parse(cleanedText) as T;
   } catch {
     throw new Error(`Failed to parse Gemini response as JSON: ${cleanedText.slice(0, 200)}...`);
+  }
+}
+
+/**
+ * Transcribe a YouTube video using Gemini multimodal (video + audio understanding).
+ * Uses gemini-2.5-flash (not flash-lite) for better audio quality.
+ * Videos >45 minutes are rejected.
+ *
+ * @param youtubeUrl - Full YouTube video URL
+ * @param durationSeconds - Optional video duration for validation
+ * @returns Transcript text in the video's original language
+ */
+export async function geminiTranscribeVideo(
+  youtubeUrl: string,
+  durationSeconds?: number
+): Promise<string> {
+  if (durationSeconds && durationSeconds > MAX_VIDEO_DURATION_SECONDS) {
+    throw new Error(
+      `Video too long (${Math.ceil(durationSeconds / 60)} min). Maximum is 45 minutes.`
+    );
+  }
+
+  const apiKey = getApiKey();
+  const url = `${GEMINI_BASE}/models/${TRANSCRIPTION_MODEL}:generateContent`;
+
+  const requestBody = {
+    contents: [
+      {
+        parts: [
+          {
+            text: 'Transcribe the spoken content of this video in its original language. Output only the transcript text, no timestamps or speaker labels.',
+          },
+          {
+            file_data: {
+              mime_type: 'video/youtube',
+              file_uri: youtubeUrl,
+            },
+          },
+        ],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.1,
+      maxOutputTokens: 8192,
+    },
+  };
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), TRANSCRIPTION_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+      body: JSON.stringify(requestBody),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(
+        `Gemini transcription API error ${res.status}: ${errorText || res.statusText}`
+      );
+    }
+
+    const data = (await res.json()) as GeminiResponse;
+
+    if (!data.candidates || data.candidates.length === 0) {
+      throw new Error('Gemini transcription returned no candidates');
+    }
+
+    const candidate = data.candidates[0];
+    if (!candidate.content?.parts || candidate.content.parts.length === 0) {
+      throw new Error('Gemini transcription returned empty content');
+    }
+
+    const transcript = candidate.content.parts.map((p) => p.text).join('');
+    if (!transcript.trim()) {
+      throw new Error('Gemini transcription returned empty transcript');
+    }
+
+    return transcript;
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(`Gemini transcription timed out after ${TRANSCRIPTION_TIMEOUT_MS / 1000}s`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
