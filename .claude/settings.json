@@ -1,4 +1,17 @@
 {
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -d node_modules ] || npm install"
+          }
+        ]
+      }
+    ]
+  },
   "permissions": {
     "allow": [
       "WebFetch(domain:ai.google.dev)",
