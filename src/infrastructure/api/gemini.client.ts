@@ -36,7 +36,7 @@ const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 const DEFAULT_MODEL = process.env.AI_SENTIMENT_MODEL || 'gemini-2.5-flash-lite';
 const TRANSCRIPTION_MODEL = 'gemini-2.5-flash';
 const DEFAULT_TIMEOUT_MS = 30_000;
-const TRANSCRIPTION_TIMEOUT_MS = 120_000;
+const TRANSCRIPTION_TIMEOUT_MS = 180_000;
 const MAX_VIDEO_DURATION_SECONDS = 45 * 60; // 45 minutes
 
 /** Return the currently configured AI model name (for version tracking). */

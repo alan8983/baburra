@@ -30,7 +30,14 @@
     "estimatedCredits": "預估消耗點數",
     "remainingBalance": "剩餘點數",
     "insufficientCredits": "點數不足，請減少選取項目或升級方案",
-    "creditNote": "1分鐘無字幕YouTube影片 = 7點"
+    "creditNote": "1分鐘無字幕YouTube影片 = 7點",
+    "filterAll": "全部",
+    "filterLongVideo": "長影片",
+    "filterShort": "短影片",
+    "filterLiveStream": "直播",
+    "contentTypeLongVideo": "影片",
+    "contentTypeShort": "短影片",
+    "contentTypeLiveStream": "直播"
   },
   "queue": {
     "position": "您的佇列位置: 第 {position} 位",
@@ -50,7 +57,15 @@
     "completeToast": "擷取完成！已為 {kolName} 匯入 {count} 篇文章",
     "viewKol": "查看 KOL",
     "scrapeAnother": "擷取其他 KOL",
+    "startOver": "重新開始",
+    "cancel": "取消",
     "errorMessage": "擷取失敗: {error}",
+    "summaryTitle": "擷取完成",
+    "summaryImported": "{count} 已匯入",
+    "summaryErrors": "{count} 錯誤",
+    "summaryFiltered": "{count} 已過濾 (未識別標的)",
+    "summaryDuplicates": "{count} 重複",
+    "noCreditsConsumed": "未匯入任何文章 — 未消耗點數。",
     "stats": {
       "videosFound": "找到 {count} 部影片",
       "postsCreated": "已建立 {count} 篇文章",
@@ -60,7 +75,9 @@
   },
   "jobs": {
     "title": "最近的任務",
-    "empty": "尚無擷取任務"
+    "empty": "尚無擷取任務",
+    "importedCount": "{count} 已匯入",
+    "errorCount": "{count} 錯誤"
   },
   "notifications": {
     "title": "通知",

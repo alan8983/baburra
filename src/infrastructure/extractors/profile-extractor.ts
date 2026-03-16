@@ -6,10 +6,13 @@
  * - ProfileExtractor: discovers post URLs from a profile/channel URL
  */
 
+export type ContentType = 'long_video' | 'short' | 'live_stream';
+
 export interface DiscoveredUrl {
   url: string;
   title?: string;
   publishedAt?: string;
+  contentType?: ContentType;
   // Credit estimation fields (populated for YouTube URLs)
   captionAvailable?: boolean;
   durationSeconds?: number;

@@ -103,15 +103,28 @@ export async function getScrapeJobsByUser(
 ): Promise<ScrapeJob[]> {
   const supabase = createAdminClient();
 
+  // Join kol_sources → kols to get KOL name for display
   const { data: rows, error } = await supabase
     .from('scrape_jobs')
-    .select('*')
+    .select('*, kol_sources(kol_id, kols(id, name))')
     .eq('triggered_by', userId)
     .order('created_at', { ascending: false })
     .limit(limit);
 
   if (error) throw new Error(error.message);
-  return (rows as DbScrapeJob[]).map(mapDbToScrapeJob);
+
+  type JoinedRow = DbScrapeJob & {
+    kol_sources?: { kol_id: string; kols?: { id: string; name: string } | null } | null;
+  };
+
+  return (rows as JoinedRow[]).map((row) => {
+    const job = mapDbToScrapeJob(row as DbScrapeJob);
+    if (row.kol_sources?.kols) {
+      job.kolId = row.kol_sources.kols.id;
+      job.kolName = row.kol_sources.kols.name;
+    }
+    return job;
+  });
 }
 
 export async function getQueuedScrapeJobs(limit: number = 10): Promise<ScrapeJob[]> {
