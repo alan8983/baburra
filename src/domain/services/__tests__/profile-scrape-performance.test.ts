@@ -74,6 +74,7 @@ function makeJob(overrides: Record<string, unknown> = {}) {
     importedCount: 0,
     duplicateCount: 0,
     errorCount: 0,
+    filteredCount: 0,
     discoveredUrls: Array.from({ length: 50 }, (_, i) => `https://youtube.com/watch?v=vid${i}`),
     retryCount: 0,
     errorMessage: null,

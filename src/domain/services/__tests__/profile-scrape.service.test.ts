@@ -212,6 +212,7 @@ describe('initiateProfileScrape', () => {
         importedCount: 0,
         duplicateCount: 0,
         errorCount: 0,
+        filteredCount: 0,
         status: 'queued',
       },
     });

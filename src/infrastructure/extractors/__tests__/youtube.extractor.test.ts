@@ -232,7 +232,7 @@ describe('YouTubeExtractor', () => {
       expect(result.sourcePlatform).toBe('youtube');
     });
 
-    it('should fall back to title when transcript is unavailable', async () => {
+    it('should return null content when transcript is unavailable (for Gemini transcription)', async () => {
       vi.stubGlobal(
         'fetch',
         mockOEmbedFetch(buildYouTubeOEmbedResponse({ title: 'Why AAPL Will Moon This Quarter' }))
@@ -246,10 +246,11 @@ describe('YouTubeExtractor', () => {
       });
 
       expect(result.sourcePlatform).toBe('youtube');
-      expect(result.content).toContain('AAPL Will Moon');
+      expect(result.content).toBeNull();
+      expect(result.captionSource).toBe('none');
     });
 
-    it('should throw FETCH_FAILED when transcript and description are both unavailable', async () => {
+    it('should return null content when transcript and title are both unavailable', async () => {
       // oEmbed with no title, page HTML with no description
       const emptyOEmbed = {
         ...buildYouTubeOEmbedResponse(),
@@ -260,13 +261,12 @@ describe('YouTubeExtractor', () => {
         new Error('Could not get transcripts')
       );
 
-      await expect(
-        youtubeExtractor.extract('https://www.youtube.com/watch?v=dQw4w9WgXcQ', {
-          retryAttempts: 1,
-        })
-      ).rejects.toMatchObject({
-        code: 'FETCH_FAILED',
+      const result = await youtubeExtractor.extract('https://www.youtube.com/watch?v=dQw4w9WgXcQ', {
+        retryAttempts: 1,
       });
+
+      expect(result.content).toBeNull();
+      expect(result.captionSource).toBe('none');
     });
 
     it('should retry on network failure', async () => {
