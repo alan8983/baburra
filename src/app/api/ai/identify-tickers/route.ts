@@ -25,10 +25,11 @@ export async function POST(request: NextRequest) {
       usage = await consumeAiQuota(userId);
     } catch (quotaErr) {
       if (
-        quotaErr &&
-        typeof quotaErr === 'object' &&
-        'code' in quotaErr &&
-        (quotaErr as { code: string }).code === 'AI_QUOTA_EXCEEDED'
+        (quotaErr &&
+          typeof quotaErr === 'object' &&
+          'code' in quotaErr &&
+          (quotaErr as { code: string }).code === 'AI_QUOTA_EXCEEDED') ||
+        (quotaErr as { code: string }).code === 'INSUFFICIENT_CREDITS'
       ) {
         return errorResponse(
           429,

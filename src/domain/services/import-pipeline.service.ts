@@ -18,9 +18,12 @@ import {
   createPost,
   getStockByTicker,
   createStock,
-  consumeAiQuota,
 } from '@/infrastructure/repositories';
-import { refundAiQuota } from '@/infrastructure/repositories/ai-usage.repository';
+import { consumeCredits, refundCredits } from '@/infrastructure/repositories/ai-usage.repository';
+import {
+  findTranscriptByUrl,
+  saveTranscript,
+} from '@/infrastructure/repositories/transcript.repository';
 import {
   checkOnboardingImportUsed,
   markOnboardingImportUsed,
@@ -31,9 +34,12 @@ import {
   extractArguments,
   extractAtHandles,
 } from '@/domain/services/ai.service';
-import { getAiModelVersion } from '@/infrastructure/api/gemini.client';
+import { getAiModelVersion, geminiTranscribeVideo } from '@/infrastructure/api/gemini.client';
+import { CREDIT_COSTS } from '@/domain/models/user';
 import type { Sentiment, SourcePlatform } from '@/domain/models/post';
 import type { DraftAiArguments } from '@/domain/models/draft';
+
+const MAX_VIDEO_DURATION_SECONDS = 45 * 60; // 45 minutes
 
 // ── Types ──
 
@@ -166,37 +172,124 @@ export async function processUrl(
     return { url, status: 'duplicate', postId: existing.id };
   }
 
-  // 2. Consume AI quota (unless exempt)
-  if (!quotaExempt) {
-    try {
-      await consumeAiQuota(userId);
-    } catch (quotaErr) {
-      if (
-        quotaErr &&
-        typeof quotaErr === 'object' &&
-        'code' in quotaErr &&
-        (quotaErr as { code: string }).code === 'AI_QUOTA_EXCEEDED'
-      ) {
-        return { url, status: 'error', error: 'AI quota exceeded' };
-      }
-      throw quotaErr;
-    }
-  }
+  // 2. Extract content from URL first (needed to determine credit cost)
+  const fetchResult = await extractorFactory.extractFromUrl(url);
 
-  // Steps 3-9 are wrapped in try/catch to refund quota on failure
+  // 3. Determine credit cost and handle YouTube transcription
+  let contentForAnalysis: string;
+  let creditsConsumed = 0;
+
+  // Steps 3-9 are wrapped in try/catch to refund credits on failure
   try {
-    // 3. Extract content from URL
-    const fetchResult = await extractorFactory.extractFromUrl(url);
+    if (fetchResult.content === null && fetchResult.sourcePlatform === 'youtube') {
+      // YouTube video with no captions — need Gemini transcription
+      const durationSeconds = fetchResult.durationSeconds;
+
+      // Reject videos >45 minutes
+      if (durationSeconds && durationSeconds > MAX_VIDEO_DURATION_SECONDS) {
+        return {
+          url,
+          status: 'error',
+          error: `Video too long (${Math.ceil(durationSeconds / 60)} min). Maximum is 45 minutes.`,
+        };
+      }
+
+      // Check transcript cache first
+      const cachedTranscript = await findTranscriptByUrl(fetchResult.sourceUrl);
+      if (cachedTranscript) {
+        contentForAnalysis = cachedTranscript.content;
+      } else {
+        // Calculate credit cost for transcription
+        const minutes = Math.ceil((durationSeconds || 60) / 60); // Default 1 min if unknown
+        const transcriptionCost = minutes * CREDIT_COSTS.video_transcription_per_min;
+
+        // Consume credits for transcription (unless exempt)
+        if (!quotaExempt) {
+          try {
+            await consumeCredits(userId, transcriptionCost, 'video_transcription');
+            creditsConsumed += transcriptionCost;
+          } catch (quotaErr) {
+            if (
+              quotaErr &&
+              typeof quotaErr === 'object' &&
+              'code' in quotaErr &&
+              (quotaErr as { code: string }).code === 'INSUFFICIENT_CREDITS'
+            ) {
+              return { url, status: 'error', error: 'Insufficient credits' };
+            }
+            throw quotaErr;
+          }
+        }
+
+        // Transcribe via Gemini
+        const transcriptText = await geminiTranscribeVideo(
+          fetchResult.sourceUrl,
+          durationSeconds ?? undefined
+        );
+        contentForAnalysis = transcriptText;
+
+        // Save to transcript cache
+        await saveTranscript({
+          sourceUrl: fetchResult.sourceUrl,
+          content: transcriptText,
+          source: 'gemini',
+          durationSeconds: durationSeconds ?? undefined,
+        }).catch((err) => console.error('Failed to cache transcript:', err));
+      }
+    } else if (fetchResult.content !== null) {
+      contentForAnalysis = fetchResult.content;
+
+      // Determine credit cost based on platform
+      const creditCost =
+        fetchResult.sourcePlatform === 'youtube'
+          ? CREDIT_COSTS.youtube_caption_analysis
+          : CREDIT_COSTS.text_analysis;
+
+      // Consume credits (unless exempt)
+      if (!quotaExempt) {
+        try {
+          await consumeCredits(
+            userId,
+            creditCost,
+            fetchResult.sourcePlatform === 'youtube' ? 'youtube_caption_analysis' : 'text_analysis'
+          );
+          creditsConsumed += creditCost;
+        } catch (quotaErr) {
+          if (
+            quotaErr &&
+            typeof quotaErr === 'object' &&
+            'code' in quotaErr &&
+            (quotaErr as { code: string }).code === 'INSUFFICIENT_CREDITS'
+          ) {
+            return { url, status: 'error', error: 'Insufficient credits' };
+          }
+          throw quotaErr;
+        }
+      }
+
+      // Save YouTube captions to transcript cache for future use
+      if (fetchResult.sourcePlatform === 'youtube' && fetchResult.captionSource === 'caption') {
+        await saveTranscript({
+          sourceUrl: fetchResult.sourceUrl,
+          content: fetchResult.content,
+          source: 'caption',
+          durationSeconds: fetchResult.durationSeconds ?? undefined,
+        }).catch((err) => console.error('Failed to cache caption transcript:', err));
+      }
+    } else {
+      // Non-YouTube content with null content (shouldn't happen, but handle gracefully)
+      return { url, status: 'error', error: 'No content available' };
+    }
 
     // 4. AI analysis (sentiment + ticker identification in one call)
-    const analysis = await analyzeDraftContent(fetchResult.content, timezone);
+    const analysis = await analyzeDraftContent(contentForAnalysis, timezone);
 
     // 5. Zero-ticker rejection — skip post creation if no stocks identified
     if (analysis.stockTickers.length === 0) {
-      // Refund quota since no post will be created
-      if (!quotaExempt) {
-        await refundAiQuota(userId).catch((err) =>
-          console.error('Quota refund failed (zero tickers):', err)
+      // Refund credits since no post will be created
+      if (!quotaExempt && creditsConsumed > 0) {
+        await refundCredits(userId, creditsConsumed).catch((err) =>
+          console.error('Credit refund failed (zero tickers):', err)
         );
       }
       return { url, status: 'error', error: 'no_tickers_identified' };
@@ -215,7 +308,7 @@ export async function processUrl(
       detectedKolName =
         fetchResult.kolName ||
         analysis.kolName ||
-        extractAtHandles(fetchResult.content)[0] ||
+        extractAtHandles(contentForAnalysis)[0] ||
         'Unknown';
 
       const normalizedName = detectedKolName.trim().toLowerCase();
@@ -277,7 +370,7 @@ export async function processUrl(
       try {
         const results = await Promise.allSettled(
           analysis.stockTickers.map((ticker) =>
-            extractArguments(fetchResult.content, ticker.ticker, ticker.name)
+            extractArguments(contentForAnalysis, ticker.ticker, ticker.name)
           )
         );
         const argumentResults: DraftAiArguments[] = [];
@@ -299,29 +392,42 @@ export async function processUrl(
       }
     }
 
-    // 9. Create post (atomic via RPC)
-    const post = await createPost(
-      {
-        kolId,
-        stockIds,
-        content: fetchResult.content,
-        sourceUrl: fetchResult.sourceUrl,
-        sourcePlatform: fetchResult.sourcePlatform as SourcePlatform,
-        title: fetchResult.title || undefined,
-        images: fetchResult.images,
-        sentiment: analysis.sentiment,
-        sentimentAiGenerated: true,
-        aiModelVersion: getAiModelVersion(),
-        stockSentiments: Object.keys(stockSentiments).length > 0 ? stockSentiments : undefined,
-        postedAt: analysis.postedAt
-          ? new Date(analysis.postedAt)
-          : fetchResult.postedAt
-            ? new Date(fetchResult.postedAt)
-            : new Date(),
-        draftAiArguments,
-      },
-      userId
-    );
+    // 9. Create post (atomic via RPC) — catch duplicate key from concurrent inserts
+    let post;
+    try {
+      post = await createPost(
+        {
+          kolId,
+          stockIds,
+          content: contentForAnalysis,
+          sourceUrl: fetchResult.sourceUrl,
+          sourcePlatform: fetchResult.sourcePlatform as SourcePlatform,
+          title: fetchResult.title || undefined,
+          images: fetchResult.images,
+          sentiment: analysis.sentiment,
+          sentimentAiGenerated: true,
+          aiModelVersion: getAiModelVersion(),
+          stockSentiments: Object.keys(stockSentiments).length > 0 ? stockSentiments : undefined,
+          postedAt: analysis.postedAt
+            ? new Date(analysis.postedAt)
+            : fetchResult.postedAt
+              ? new Date(fetchResult.postedAt)
+              : new Date(),
+          draftAiArguments,
+        },
+        userId
+      );
+    } catch (createErr) {
+      // Handle duplicate key violation from concurrent batch processing
+      const errMsg = createErr instanceof Error ? createErr.message : String(createErr);
+      if (errMsg.includes('duplicate key') || errMsg.includes('unique constraint')) {
+        const existingPost = await findPostBySourceUrl(url);
+        if (existingPost) {
+          return { url, status: 'duplicate', postId: existingPost.id };
+        }
+      }
+      throw createErr;
+    }
 
     return {
       url,
@@ -336,10 +442,10 @@ export async function processUrl(
       kolCreated,
     };
   } catch (pipelineErr) {
-    // Refund quota if consumed but pipeline failed
-    if (!quotaExempt) {
-      await refundAiQuota(userId).catch((refundErr) =>
-        console.error('Quota refund failed:', refundErr)
+    // Refund credits if consumed but pipeline failed
+    if (!quotaExempt && creditsConsumed > 0) {
+      await refundCredits(userId, creditsConsumed).catch((refundErr) =>
+        console.error('Credit refund failed:', refundErr)
       );
     }
     throw pipelineErr;

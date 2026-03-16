@@ -86,7 +86,7 @@
     "resetInDays": "{days}天後重置"
   },
   "ai": {
-    "quota": "AI 配額",
+    "quota": "AI 點數",
     "quotaThisWeek": "本週",
     "quotaLoading": "載入中...",
     "suggestion": "AI 建議",
@@ -96,7 +96,7 @@
     "analyzeResult": "AI 分析結果",
     "confidence": "信心度",
     "aiGenerated": "（AI 分析）",
-    "quotaLabel": "AI 配額: ",
+    "quotaLabel": "AI 點數: ",
     "identifyTickers": "AI 識別標的",
     "identifyingTickers": "AI 正在識別標的...",
     "tickersFound": "AI 識別到 {count} 個投資標的",
@@ -111,9 +111,10 @@
     "confidencePercent": "信心度: {percent}%",
     "fact": "事實",
     "opinion": "觀點",
-    "quotaDisplay": "AI 配額: {remaining}/{limit}",
-    "weeklyRemaining": "本週剩餘 AI 分析次數",
+    "quotaDisplay": "AI 點數: {remaining}/{limit}",
+    "weeklyRemaining": "本週剩餘 AI 點數",
     "nextWeek": "下週",
+    "credits": "點",
     "otherCategory": "其他",
     "underDevelopment": "開發中",
     "argumentComingSoon": "論點分析功能開發中。此功能將自動從文章中提取並分類投資論點。"

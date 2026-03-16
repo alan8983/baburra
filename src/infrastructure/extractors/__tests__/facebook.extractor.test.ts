@@ -239,8 +239,9 @@ describe('FacebookExtractor', () => {
         { retryAttempts: 1 }
       );
 
-      expect(result.content.length).toBeGreaterThanOrEqual(10);
-      expect(result.content.length).toBeLessThanOrEqual(10000);
+      expect(result.content).not.toBeNull();
+      expect(result.content!.length).toBeGreaterThanOrEqual(10);
+      expect(result.content!.length).toBeLessThanOrEqual(50000);
     });
   });
 

@@ -13,11 +13,14 @@ import type { DraftAiArguments } from '@/domain/models/draft';
 // =====================
 
 export interface AiUsage {
-  usageCount: number;
+  // New credit system fields
+  balance: number;
   weeklyLimit: number;
-  remaining: number;
   resetAt: string | null;
-  subscriptionTier: 'free' | 'premium';
+  subscriptionTier: 'free' | 'pro' | 'max';
+  // Backward-compatible fields
+  usageCount: number;
+  remaining: number;
 }
 
 export interface SentimentAnalysisResult {

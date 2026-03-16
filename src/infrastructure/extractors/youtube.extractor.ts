@@ -11,6 +11,13 @@
 
 import { SocialMediaExtractor, UrlFetchResult, ExtractorConfig, ExtractorError } from './types';
 import { YoutubeTranscript } from 'youtube-transcript-plus';
+import { CREDIT_COSTS } from '@/domain/models/user';
+
+export interface CaptionAvailabilityResult {
+  hasCaptions: boolean;
+  estimatedDurationSeconds: number | null;
+  estimatedCreditCost: number;
+}
 
 /** Shape of the YouTube oEmbed API JSON response */
 interface YouTubeOEmbedResponse {
@@ -79,6 +86,56 @@ export class YouTubeExtractor extends SocialMediaExtractor {
     );
   }
 
+  /**
+   * Lightweight check for caption availability and estimated credit cost.
+   * Used in the scrape discovery step to show per-URL cost estimates.
+   */
+  async checkCaptionAvailability(url: string): Promise<CaptionAvailabilityResult> {
+    const videoId = this.extractVideoId(url);
+    if (!videoId) {
+      return {
+        hasCaptions: false,
+        estimatedDurationSeconds: null,
+        estimatedCreditCost: CREDIT_COSTS.youtube_caption_analysis,
+      };
+    }
+
+    // Fetch page data for duration + try caption check in parallel
+    const [pageData, hasCaptions] = await Promise.all([
+      this.fetchPageData(videoId, 10000),
+      this.checkCaptionsExist(videoId),
+    ]);
+
+    const durationSeconds = pageData.durationSeconds;
+
+    let estimatedCreditCost: number;
+    if (hasCaptions) {
+      estimatedCreditCost = CREDIT_COSTS.youtube_caption_analysis;
+    } else {
+      // Gemini transcription cost: 7 credits per minute
+      const minutes = Math.ceil((durationSeconds || 60) / 60);
+      estimatedCreditCost = minutes * CREDIT_COSTS.video_transcription_per_min;
+    }
+
+    return {
+      hasCaptions,
+      estimatedDurationSeconds: durationSeconds,
+      estimatedCreditCost,
+    };
+  }
+
+  /**
+   * Quick check if captions exist for a video without fetching them.
+   */
+  private async checkCaptionsExist(videoId: string): Promise<boolean> {
+    try {
+      const transcript = await YoutubeTranscript.fetchTranscript(videoId);
+      return transcript.length > 0;
+    } catch {
+      return false;
+    }
+  }
+
   private extractVideoId(url: string): string | null {
     // youtu.be/{id}
     const shortMatch = url.match(/youtu\.be\/([\w-]+)/);
@@ -106,33 +163,30 @@ export class YouTubeExtractor extends SocialMediaExtractor {
       apiKey ? this.fetchPublishDate(videoId, apiKey, timeout) : Promise.resolve(null),
     ]);
 
-    // 2. Fetch transcript (with fallback to description)
-    let content: string;
+    // 2. Fetch transcript — if unavailable, return content=null for Gemini transcription
+    let content: string | null = null;
+    let captionSource: 'caption' | 'none' = 'none';
+
     try {
       const transcript = await YoutubeTranscript.fetchTranscript(videoId);
       content = transcript.map((segment) => segment.text).join(' ');
-    } catch {
-      // Fallback: use video title + description when transcript is unavailable
-      const fallbackParts: string[] = [];
-      if (metadata.title) fallbackParts.push(metadata.title);
-      if (pageData.description) fallbackParts.push(pageData.description);
+      captionSource = 'caption';
+    } catch (transcriptErr) {
+      console.warn(
+        `[YouTubeExtractor] Transcript unavailable for ${videoId}:`,
+        transcriptErr instanceof Error ? transcriptErr.message : transcriptErr
+      );
+      // No description fallback — content stays null, will be handled by Gemini transcription
+    }
 
-      if (fallbackParts.length === 0) {
-        throw new ExtractorError(
-          'FETCH_FAILED',
-          `No transcript or description available for video ${videoId}.`
-        );
+    // 3. Sanitize and validate (only if content available)
+    if (content !== null) {
+      content = this.sanitizeText(content);
+      if (content.length > 50000) {
+        content = content.slice(0, 50000);
       }
-
-      content = fallbackParts.join('\n\n');
+      this.validateContent(content);
     }
-
-    // 3. Sanitize and validate
-    content = this.sanitizeText(content);
-    if (content.length > 10000) {
-      content = content.slice(0, 10000);
-    }
-    this.validateContent(content);
 
     return {
       content,
@@ -143,6 +197,8 @@ export class YouTubeExtractor extends SocialMediaExtractor {
       postedAt: apiPublishDate ?? pageData.publishDate,
       kolName: metadata.author_name || null,
       kolAvatarUrl: null,
+      captionSource,
+      durationSeconds: pageData.durationSeconds ?? undefined,
     };
   }
 
@@ -153,7 +209,12 @@ export class YouTubeExtractor extends SocialMediaExtractor {
   private async fetchPageData(
     videoId: string,
     timeout: number
-  ): Promise<{ publishDate: string | null; description: string | null }> {
+  ): Promise<{
+    publishDate: string | null;
+    description: string | null;
+    shortDescription: string | null;
+    durationSeconds: number | null;
+  }> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
@@ -167,7 +228,13 @@ export class YouTubeExtractor extends SocialMediaExtractor {
         },
       });
 
-      if (!response.ok) return { publishDate: null, description: null };
+      if (!response.ok)
+        return {
+          publishDate: null,
+          description: null,
+          shortDescription: null,
+          durationSeconds: null,
+        };
 
       const html = await response.text();
 
@@ -186,25 +253,39 @@ export class YouTubeExtractor extends SocialMediaExtractor {
         }
       }
 
-      // Extract description (for fallback when transcript unavailable)
+      // Extract meta description (truncated ~200 chars)
       let description: string | null = null;
       const descMatch = html.match(/<meta\s+name="description"\s+content="([^"]*?)"/);
       if (descMatch && descMatch[1]) {
         description = this.decodeHtmlEntities(descMatch[1]);
       }
-      if (!description) {
-        const shortDescMatch = html.match(/"shortDescription"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-        if (shortDescMatch && shortDescMatch[1]) {
-          description = shortDescMatch[1]
-            .replace(/\\n/g, '\n')
-            .replace(/\\"/g, '"')
-            .replace(/\\\\/g, '\\');
-        }
+
+      // Extract shortDescription from JSON-LD (full description, 1000+ chars)
+      let shortDescription: string | null = null;
+      const shortDescMatch = html.match(/"shortDescription"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+      if (shortDescMatch && shortDescMatch[1]) {
+        shortDescription = shortDescMatch[1]
+          .replace(/\\n/g, '\n')
+          .replace(/\\"/g, '"')
+          .replace(/\\\\/g, '\\');
       }
 
-      return { publishDate, description };
-    } catch {
-      return { publishDate: null, description: null };
+      // Extract video duration in seconds from page HTML
+      let durationSeconds: number | null = null;
+      const lengthMatch = html.match(/"lengthSeconds"\s*:\s*"(\d+)"/);
+      if (lengthMatch) {
+        durationSeconds = parseInt(lengthMatch[1], 10);
+      }
+
+      return { publishDate, description, shortDescription, durationSeconds };
+    } catch (err) {
+      console.warn(`[YouTubeExtractor] Failed to fetch page data for ${videoId}:`, err);
+      return {
+        publishDate: null,
+        description: null,
+        shortDescription: null,
+        durationSeconds: null,
+      };
     } finally {
       clearTimeout(timeoutId);
     }

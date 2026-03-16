@@ -33,8 +33,9 @@ export function AiQuotaBadge({ variant = 'default', className }: AiQuotaBadgePro
     return null;
   }
 
-  const { remaining, weeklyLimit, resetAt } = usage;
-  const percentage = (remaining / weeklyLimit) * 100;
+  const remaining = usage.balance ?? usage.remaining;
+  const { weeklyLimit, resetAt } = usage;
+  const percentage = weeklyLimit > 0 ? (remaining / weeklyLimit) * 100 : 0;
 
   // 根據剩餘比例決定顏色
   const colorClass =

@@ -103,18 +103,27 @@ export async function getStockByTicker(ticker: string): Promise<StockWithStats |
 
 export async function createStock(input: CreateStockInput): Promise<Stock> {
   const supabase = createAdminClient();
+  const ticker = input.ticker.trim().toUpperCase();
   const { data: row, error } = await supabase
     .from('stocks')
-    .insert({
-      ticker: input.ticker.trim().toUpperCase(),
-      name: input.name,
-      logo_url: input.logoUrl ?? null,
-      market: input.market ?? 'US',
-    })
+    .upsert(
+      {
+        ticker,
+        name: input.name,
+        logo_url: input.logoUrl ?? null,
+        market: input.market ?? 'US',
+      },
+      { onConflict: 'ticker', ignoreDuplicates: true }
+    )
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
+  // upsert with ignoreDuplicates returns no row on conflict — fetch it
+  if (error || !row) {
+    const existing = await getStockByTicker(ticker);
+    if (existing) return existing;
+    throw new Error(error?.message ?? `Failed to create or find stock ${ticker}`);
+  }
   return mapDbToStock(row as DbStock);
 }
 

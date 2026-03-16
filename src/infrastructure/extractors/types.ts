@@ -4,7 +4,7 @@
 
 export interface UrlFetchResult {
   // Required fields
-  content: string; // Plain text, 10-10,000 characters
+  content: string | null; // Plain text, 10-50,000 characters; null when captions unavailable (YouTube)
   sourceUrl: string; // Complete URL
   sourcePlatform: 'twitter' | 'facebook' | 'threads' | 'instagram' | 'youtube' | 'manual';
 
@@ -14,6 +14,10 @@ export interface UrlFetchResult {
   postedAt: string | Date | null;
   kolName: string | null;
   kolAvatarUrl: string | null;
+
+  // YouTube-specific fields
+  captionSource?: 'caption' | 'none'; // Whether captions were available
+  durationSeconds?: number; // Video duration in seconds
 }
 
 export interface ExtractorConfig {
@@ -56,7 +60,7 @@ export abstract class SocialMediaExtractor {
   abstract extract(url: string, config?: ExtractorConfig): Promise<UrlFetchResult>;
 
   /**
-   * Validate content length (10-10,000 characters)
+   * Validate content length (10-50,000 characters)
    */
   protected validateContent(content: string): void {
     if (content.length < 10) {
@@ -65,10 +69,10 @@ export abstract class SocialMediaExtractor {
         `Content too short: ${content.length} characters (minimum 10)`
       );
     }
-    if (content.length > 10000) {
+    if (content.length > 50000) {
       throw new ExtractorError(
         'CONTENT_TOO_LONG',
-        `Content too long: ${content.length} characters (maximum 10,000)`
+        `Content too long: ${content.length} characters (maximum 50,000)`
       );
     }
   }

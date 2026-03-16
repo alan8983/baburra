@@ -64,7 +64,7 @@ export function ScrapeProgress({ jobId, onReset }: ScrapeProgressProps) {
 
     if (!job || toastShownRef.current) return;
 
-    if (prevStatus && prevStatus !== 'completed' && job.status === 'completed') {
+    if ((!prevStatus || prevStatus !== 'completed') && job.status === 'completed') {
       toastShownRef.current = true;
       const kolName = job.kolName ?? 'KOL';
       const imported = job.importedCount ?? job.stats?.postsCreated ?? 0;

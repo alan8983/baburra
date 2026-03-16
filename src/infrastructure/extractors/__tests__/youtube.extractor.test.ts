@@ -395,7 +395,7 @@ describe('YouTubeExtractor', () => {
         retryAttempts: 1,
       });
 
-      expect(result.content.length).toBeLessThanOrEqual(10000);
+      expect(result.content!.length).toBeLessThanOrEqual(50000);
     });
   });
 });
