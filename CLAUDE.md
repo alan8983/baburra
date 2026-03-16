@@ -161,6 +161,8 @@ In Cloud (remote) environments, `.env.local` does not exist. The preferred setup
 See `.env.example` for the full list. At minimum you need:
 - `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Supabase connection
 - `SUPABASE_SERVICE_ROLE_KEY` — Server-side Supabase (bypasses RLS)
+- `SUPABASE_ACCESS_TOKEN` — Supabase CLI authentication (generate at dashboard.supabase.com/account/tokens)
+- `SUPABASE_DB_PASSWORD` — Database password for CLI operations (found in Project Settings → Database)
 - `GEMINI_API_KEY` — AI sentiment analysis
 - `TIINGO_API_TOKEN` — Stock price data
 - `DEV_USER_ID` — Bypass auth in development
@@ -189,6 +191,48 @@ The Claude Preview tool uses `.claude/launch.json` to start the dev server. On W
 ```
 
 **In worktrees:** `node_modules` is NOT shared. Run `npm install` in the worktree before starting the dev server.
+
+## Supabase CLI
+
+The project is linked to Supabase project `jinxqfsejfrhmvlhrfjj`. CLI requires `SUPABASE_ACCESS_TOKEN` in the environment.
+
+### Command Safety Tiers
+
+**Free to run** (read-only, no confirmation needed):
+```bash
+supabase migration list -p "$SUPABASE_DB_PASSWORD"   # Show local vs remote migrations
+supabase db push --dry-run -p "$SUPABASE_DB_PASSWORD" # Preview pending migrations
+supabase gen types typescript --linked --schema public # Generate TypeScript types
+supabase inspect db-size                               # Database size stats
+supabase inspect db-table-sizes                        # Per-table sizes
+```
+
+**Run with user confirmation** (writes to remote DB or creates files):
+```bash
+supabase db push -p "$SUPABASE_DB_PASSWORD"           # Apply pending migrations
+supabase migration new <name>                          # Create new migration file
+```
+
+**Never run** (destructive, data loss risk):
+- `supabase db reset` — drops and recreates everything
+- `supabase migration repair` — modifies migration history
+- `supabase db push --include-all` — re-applies all migrations
+
+### Migration + Type Generation Workflow
+
+After creating or modifying a migration:
+1. `supabase db push --dry-run -p "$SUPABASE_DB_PASSWORD"` — preview what will be applied
+2. `supabase db push -p "$SUPABASE_DB_PASSWORD"` — apply (with user confirmation)
+3. `supabase gen types typescript --linked --schema public > src/infrastructure/supabase/database.types.ts` — regenerate types
+4. `npm run type-check` — verify types compile
+
+### Worktree Notes
+
+The Supabase project link is stored in `supabase/.temp/project-ref`. In worktrees, re-link if needed:
+```bash
+export SUPABASE_ACCESS_TOKEN=<token>
+supabase link --project-ref jinxqfsejfrhmvlhrfjj -p "$SUPABASE_DB_PASSWORD"
+```
 
 ## Key Conventions
 
