@@ -16,7 +16,7 @@ import {
 } from '@/infrastructure/repositories';
 import { enableMonitoring } from '@/infrastructure/repositories/kol-source.repository';
 import { getUserTier } from '@/infrastructure/repositories/profile.repository';
-import { unauthorizedError, forbiddenError, internalError } from '@/lib/api/error';
+import { unauthorizedError, internalError } from '@/lib/api/error';
 import { errorResponse } from '@/lib/api/validation';
 import { subscribeSchema, parseBody } from '@/lib/api/validation';
 import { APP_CONFIG, SCRAPE_CAPS } from '@/lib/constants/config';

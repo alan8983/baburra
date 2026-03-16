@@ -212,7 +212,7 @@ describe('FacebookExtractor', () => {
     });
 
     it('should throw FETCH_FAILED for too-long content', async () => {
-      const longContent = 'A'.repeat(10001);
+      const longContent = 'A'.repeat(50001);
       const html = buildFacebookHtml({
         ogDescription: longContent,
       });

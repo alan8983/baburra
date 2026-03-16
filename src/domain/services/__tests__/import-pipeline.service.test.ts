@@ -10,14 +10,18 @@ const mocks = vi.hoisted(() => ({
   createPost: vi.fn(),
   getStockByTicker: vi.fn(),
   createStock: vi.fn(),
-  consumeAiQuota: vi.fn(),
-  refundAiQuota: vi.fn(),
+  consumeCredits: vi.fn(),
+  refundCredits: vi.fn(),
   checkOnboardingImportUsed: vi.fn(),
   markOnboardingImportUsed: vi.fn(),
   getUserTimezone: vi.fn(),
   analyzeDraftContent: vi.fn(),
   extractArguments: vi.fn(),
   extractAtHandles: vi.fn(),
+  findTranscriptByUrl: vi.fn(),
+  saveTranscript: vi.fn(),
+  getAiModelVersion: vi.fn(),
+  geminiTranscribeVideo: vi.fn(),
 }));
 
 vi.mock('@/infrastructure/extractors', () => ({
@@ -31,11 +35,16 @@ vi.mock('@/infrastructure/repositories', () => ({
   createPost: mocks.createPost,
   getStockByTicker: mocks.getStockByTicker,
   createStock: mocks.createStock,
-  consumeAiQuota: mocks.consumeAiQuota,
 }));
 
 vi.mock('@/infrastructure/repositories/ai-usage.repository', () => ({
-  refundAiQuota: mocks.refundAiQuota,
+  consumeCredits: mocks.consumeCredits,
+  refundCredits: mocks.refundCredits,
+}));
+
+vi.mock('@/infrastructure/repositories/transcript.repository', () => ({
+  findTranscriptByUrl: mocks.findTranscriptByUrl,
+  saveTranscript: mocks.saveTranscript,
 }));
 
 vi.mock('@/infrastructure/repositories/profile.repository', () => ({
@@ -48,6 +57,11 @@ vi.mock('@/domain/services/ai.service', () => ({
   analyzeDraftContent: mocks.analyzeDraftContent,
   extractArguments: mocks.extractArguments,
   extractAtHandles: mocks.extractAtHandles,
+}));
+
+vi.mock('@/infrastructure/api/gemini.client', () => ({
+  getAiModelVersion: mocks.getAiModelVersion,
+  geminiTranscribeVideo: mocks.geminiTranscribeVideo,
 }));
 
 import { executeBatchImport } from '../import-pipeline.service';
@@ -86,8 +100,13 @@ function mockAnalysis(overrides = {}) {
 function setupSuccessfulImport() {
   mocks.getUserTimezone.mockResolvedValue('Asia/Taipei');
   mocks.checkOnboardingImportUsed.mockResolvedValue(true); // not first import
-  mocks.consumeAiQuota.mockResolvedValue(undefined);
-  mocks.refundAiQuota.mockResolvedValue(undefined);
+  mocks.consumeCredits.mockResolvedValue({
+    balance: 849,
+    weeklyLimit: 850,
+    resetAt: null,
+    subscriptionTier: 'free',
+  });
+  mocks.refundCredits.mockResolvedValue(undefined);
   mocks.findPostBySourceUrl.mockResolvedValue(null); // no duplicate
   mocks.extractFromUrl.mockResolvedValue(mockFetchResult());
   mocks.analyzeDraftContent.mockResolvedValue(mockAnalysis());
@@ -96,6 +115,9 @@ function setupSuccessfulImport() {
   mocks.getStockByTicker.mockResolvedValue({ id: 'stock-1', ticker: 'AAPL' });
   mocks.extractArguments.mockResolvedValue({ arguments: [] });
   mocks.createPost.mockResolvedValue({ id: 'post-1' });
+  mocks.getAiModelVersion.mockReturnValue('gemini-2.0-flash');
+  mocks.findTranscriptByUrl.mockResolvedValue(null);
+  mocks.saveTranscript.mockResolvedValue(undefined);
 }
 
 beforeEach(() => {
@@ -154,27 +176,28 @@ describe('executeBatchImport', () => {
     expect(result.totalImported).toBe(0);
     expect(result.urlResults[0].status).toBe('duplicate');
     expect(result.urlResults[0].postId).toBe('existing-post');
-    // Should not consume quota for duplicates
-    expect(mocks.consumeAiQuota).not.toHaveBeenCalled();
+    // Should not consume credits for duplicates
+    expect(mocks.consumeCredits).not.toHaveBeenCalled();
   });
 
   // ── Quota management ──
 
-  it('consumes AI quota for non-exempt users', async () => {
+  it('consumes credits for non-exempt users', async () => {
     setupSuccessfulImport();
 
     await executeBatchImport({ urls: ['https://x.com/trader/status/1'] }, USER_ID);
 
-    expect(mocks.consumeAiQuota).toHaveBeenCalledWith(USER_ID);
+    // text_analysis costs 1 credit
+    expect(mocks.consumeCredits).toHaveBeenCalledWith(USER_ID, 1, 'text_analysis');
   });
 
-  it('skips quota consumption for onboarding-exempt users (first import)', async () => {
+  it('skips credit consumption for onboarding-exempt users (first import)', async () => {
     setupSuccessfulImport();
     mocks.checkOnboardingImportUsed.mockResolvedValue(false); // first import
 
     await executeBatchImport({ urls: ['https://x.com/trader/status/1'] }, USER_ID);
 
-    expect(mocks.consumeAiQuota).not.toHaveBeenCalled();
+    expect(mocks.consumeCredits).not.toHaveBeenCalled();
   });
 
   it('marks onboarding import used after first successful import', async () => {
@@ -198,33 +221,37 @@ describe('executeBatchImport', () => {
     expect(result.onboardingQuotaUsed).toBe(false);
   });
 
-  it('returns quota exceeded error for all URLs when quota is exhausted', async () => {
+  it('returns error for all URLs when credits are insufficient', async () => {
     setupSuccessfulImport();
-    mocks.consumeAiQuota.mockRejectedValue({ code: 'AI_QUOTA_EXCEEDED' });
+    mocks.consumeCredits.mockRejectedValue(
+      Object.assign(new Error('Insufficient credits'), { code: 'INSUFFICIENT_CREDITS' })
+    );
 
     const result = await executeBatchImport(
       { urls: ['https://x.com/a/status/1', 'https://x.com/b/status/2'] },
       USER_ID
     );
 
-    // With parallel processing, both URLs independently hit quota exceeded
+    // With parallel processing, both URLs independently hit insufficient credits
     expect(result.urlResults[0].status).toBe('error');
-    expect(result.urlResults[0].error).toContain('quota');
+    expect(result.urlResults[0].error).toContain('Insufficient credits');
     expect(result.urlResults[1].status).toBe('error');
-    expect(result.urlResults[1].error).toContain('quota');
+    expect(result.urlResults[1].error).toContain('Insufficient credits');
     expect(result.totalError).toBe(2);
   });
 
-  it('refunds quota when pipeline fails after consumption', async () => {
+  it('refunds credits when pipeline fails after consumption', async () => {
     setupSuccessfulImport();
-    mocks.extractFromUrl.mockRejectedValue(new Error('Extraction failed'));
+    // Fail AFTER credit consumption — analyzeDraftContent throws
+    mocks.analyzeDraftContent.mockRejectedValue(new Error('AI analysis failed'));
 
     await executeBatchImport({ urls: ['https://x.com/fail/status/1'] }, USER_ID);
 
-    expect(mocks.refundAiQuota).toHaveBeenCalledWith(USER_ID);
+    // 1 credit consumed for text_analysis, then refunded
+    expect(mocks.refundCredits).toHaveBeenCalledWith(USER_ID, 1);
   });
 
-  it('refunds quota when zero tickers are identified', async () => {
+  it('refunds credits when zero tickers are identified', async () => {
     setupSuccessfulImport();
     mocks.analyzeDraftContent.mockResolvedValue(mockAnalysis({ stockTickers: [] }));
 
@@ -232,17 +259,17 @@ describe('executeBatchImport', () => {
 
     expect(result.urlResults[0].status).toBe('error');
     expect(result.urlResults[0].error).toBe('no_tickers_identified');
-    expect(mocks.refundAiQuota).toHaveBeenCalledWith(USER_ID);
+    expect(mocks.refundCredits).toHaveBeenCalledWith(USER_ID, 1);
   });
 
-  it('does not refund quota for exempt users on zero tickers', async () => {
+  it('does not refund credits for exempt users on zero tickers', async () => {
     setupSuccessfulImport();
     mocks.checkOnboardingImportUsed.mockResolvedValue(false); // exempt
     mocks.analyzeDraftContent.mockResolvedValue(mockAnalysis({ stockTickers: [] }));
 
     await executeBatchImport({ urls: ['https://x.com/noticker/status/1'] }, USER_ID);
 
-    expect(mocks.refundAiQuota).not.toHaveBeenCalled();
+    expect(mocks.refundCredits).not.toHaveBeenCalled();
   });
 
   // ── KOL auto-detection ──
@@ -466,8 +493,14 @@ describe('executeBatchImport', () => {
   it('correctly tallies imported, duplicate, and error counts', async () => {
     mocks.getUserTimezone.mockResolvedValue('Asia/Taipei');
     mocks.checkOnboardingImportUsed.mockResolvedValue(true);
-    mocks.consumeAiQuota.mockResolvedValue(undefined);
+    mocks.consumeCredits.mockResolvedValue({
+      balance: 849,
+      weeklyLimit: 850,
+      resetAt: null,
+      subscriptionTier: 'free',
+    });
     mocks.extractAtHandles.mockReturnValue([]);
+    mocks.getAiModelVersion.mockReturnValue('gemini-2.0-flash');
 
     // URL 1: success
     mocks.findPostBySourceUrl

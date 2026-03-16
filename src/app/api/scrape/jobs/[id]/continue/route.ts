@@ -9,7 +9,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { unauthorizedError, notFoundError, forbiddenError, internalError } from '@/lib/api/error';
-import { errorResponse } from '@/lib/api/validation';
 import { getScrapeJobById } from '@/infrastructure/repositories';
 import { processJobBatch } from '@/domain/services/profile-scrape.service';
 
