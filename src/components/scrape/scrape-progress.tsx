@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { Loader2, XCircle, Clock, Users } from 'lucide-react';
+import { Loader2, XCircle, CheckCircle2, Clock, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -172,6 +172,32 @@ export function ScrapeProgress({ jobId, onReset }: ScrapeProgressProps) {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Completed state */}
+        {job.status === 'completed' && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-green-600">
+              <CheckCircle2 className="h-5 w-5" />
+              <span className="text-sm">
+                {t('progress.detailedCounts', {
+                  processed,
+                  total,
+                  imported,
+                  duplicates,
+                  errors,
+                })}
+              </span>
+            </div>
+            {job.kolId && (
+              <Button variant="outline" onClick={() => router.push(ROUTES.KOL_DETAIL(job.kolId!))}>
+                {t('progress.viewKol')}
+              </Button>
+            )}
+            <Button variant="ghost" onClick={onReset}>
+              {t('progress.scrapeAnother')}
+            </Button>
           </div>
         )}
 

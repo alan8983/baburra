@@ -35,6 +35,8 @@ vi.mock('@/infrastructure/repositories', () => ({
 
 vi.mock('@/infrastructure/repositories/profile.repository', () => ({
   getUserTimezone: vi.fn().mockResolvedValue('UTC'),
+  checkOnboardingImportUsed: vi.fn().mockResolvedValue(true),
+  markOnboardingImportUsed: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@/domain/services/import-pipeline.service', () => ({
