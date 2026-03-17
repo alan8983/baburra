@@ -12,8 +12,8 @@ const mocks = vi.hoisted(() => ({
   createStock: vi.fn(),
   consumeCredits: vi.fn(),
   refundCredits: vi.fn(),
-  checkOnboardingImportUsed: vi.fn(),
-  markOnboardingImportUsed: vi.fn(),
+  checkFirstImportFree: vi.fn(),
+  markFirstImportUsed: vi.fn(),
   getUserTimezone: vi.fn(),
   analyzeDraftContent: vi.fn(),
   extractArguments: vi.fn(),
@@ -48,8 +48,8 @@ vi.mock('@/infrastructure/repositories/transcript.repository', () => ({
 }));
 
 vi.mock('@/infrastructure/repositories/profile.repository', () => ({
-  checkOnboardingImportUsed: mocks.checkOnboardingImportUsed,
-  markOnboardingImportUsed: mocks.markOnboardingImportUsed,
+  checkFirstImportFree: mocks.checkFirstImportFree,
+  markFirstImportUsed: mocks.markFirstImportUsed,
   getUserTimezone: mocks.getUserTimezone,
 }));
 
@@ -99,7 +99,7 @@ function mockAnalysis(overrides = {}) {
 /** Set up all mocks for a single successful URL import */
 function setupSuccessfulImport() {
   mocks.getUserTimezone.mockResolvedValue('Asia/Taipei');
-  mocks.checkOnboardingImportUsed.mockResolvedValue(true); // not first import
+  mocks.checkFirstImportFree.mockResolvedValue(false); // not first import (free already used)
   mocks.consumeCredits.mockResolvedValue({
     balance: 849,
     weeklyLimit: 850,
@@ -191,34 +191,34 @@ describe('executeBatchImport', () => {
     expect(mocks.consumeCredits).toHaveBeenCalledWith(USER_ID, 1, 'text_analysis');
   });
 
-  it('skips credit consumption for onboarding-exempt users (first import)', async () => {
+  it('skips credit consumption for first-import-free users', async () => {
     setupSuccessfulImport();
-    mocks.checkOnboardingImportUsed.mockResolvedValue(false); // first import
+    mocks.checkFirstImportFree.mockResolvedValue(true); // first import is free
 
     await executeBatchImport({ urls: ['https://x.com/trader/status/1'] }, USER_ID);
 
     expect(mocks.consumeCredits).not.toHaveBeenCalled();
   });
 
-  it('marks onboarding import used after first successful import', async () => {
+  it('marks first import used after first successful import', async () => {
     setupSuccessfulImport();
-    mocks.checkOnboardingImportUsed.mockResolvedValue(false);
+    mocks.checkFirstImportFree.mockResolvedValue(true); // first import is free
 
     const result = await executeBatchImport({ urls: ['https://x.com/trader/status/1'] }, USER_ID);
 
-    expect(mocks.markOnboardingImportUsed).toHaveBeenCalledWith(USER_ID);
-    expect(result.onboardingQuotaUsed).toBe(true);
+    expect(mocks.markFirstImportUsed).toHaveBeenCalledWith(USER_ID);
+    expect(result.firstImportFreeUsed).toBe(true);
   });
 
-  it('does not mark onboarding used when all URLs fail', async () => {
+  it('does not mark first import used when all URLs fail', async () => {
     setupSuccessfulImport();
-    mocks.checkOnboardingImportUsed.mockResolvedValue(false);
+    mocks.checkFirstImportFree.mockResolvedValue(true); // first import is free
     mocks.extractFromUrl.mockRejectedValue(new Error('Network error'));
 
     const result = await executeBatchImport({ urls: ['https://x.com/fail/status/1'] }, USER_ID);
 
-    expect(mocks.markOnboardingImportUsed).not.toHaveBeenCalled();
-    expect(result.onboardingQuotaUsed).toBe(false);
+    expect(mocks.markFirstImportUsed).not.toHaveBeenCalled();
+    expect(result.firstImportFreeUsed).toBe(false);
   });
 
   it('returns error for all URLs when credits are insufficient', async () => {
@@ -262,9 +262,9 @@ describe('executeBatchImport', () => {
     expect(mocks.refundCredits).toHaveBeenCalledWith(USER_ID, 1);
   });
 
-  it('does not refund credits for exempt users on zero tickers', async () => {
+  it('does not refund credits for first-import-free users on zero tickers', async () => {
     setupSuccessfulImport();
-    mocks.checkOnboardingImportUsed.mockResolvedValue(false); // exempt
+    mocks.checkFirstImportFree.mockResolvedValue(true); // first import is free (exempt)
     mocks.analyzeDraftContent.mockResolvedValue(mockAnalysis({ stockTickers: [] }));
 
     await executeBatchImport({ urls: ['https://x.com/noticker/status/1'] }, USER_ID);
@@ -492,7 +492,7 @@ describe('executeBatchImport', () => {
 
   it('correctly tallies imported, duplicate, and error counts', async () => {
     mocks.getUserTimezone.mockResolvedValue('Asia/Taipei');
-    mocks.checkOnboardingImportUsed.mockResolvedValue(true);
+    mocks.checkFirstImportFree.mockResolvedValue(false); // not first import
     mocks.consumeCredits.mockResolvedValue({
       balance: 849,
       weeklyLimit: 850,

@@ -26,8 +26,6 @@ import { ROUTES } from '@/lib/constants';
 import { APP_CONFIG } from '@/lib/constants/config';
 import { TrumpetIcon } from '@/components/icons/trumpet-icon';
 import { useDraftCount } from '@/hooks/use-drafts';
-import { useOnboarding } from '@/hooks/use-onboarding';
-import { Badge } from '@/components/ui/badge';
 import { AiQuotaFooter, LogoutButton } from './sidebar';
 
 const iconMap = {
@@ -49,10 +47,9 @@ const navItems: Array<{
   href: string;
   icon: keyof typeof iconMap;
   showBadge?: boolean;
-  showNewWhenNotOnboarded?: boolean;
 }> = [
   { key: 'dashboard', href: ROUTES.DASHBOARD, icon: 'LayoutDashboard' },
-  { key: 'quickInput', href: ROUTES.INPUT, icon: 'PenLine', showNewWhenNotOnboarded: true },
+  { key: 'quickInput', href: ROUTES.INPUT, icon: 'PenLine' },
   { key: 'scrape', href: ROUTES.SCRAPE, icon: 'Search' },
   { key: 'drafts', href: ROUTES.DRAFTS, icon: 'FileText', showBadge: true },
   { key: 'bookmarks', href: ROUTES.BOOKMARKS, icon: 'Bookmark' },
@@ -80,14 +77,12 @@ export function MobileNav() {
   const pathname = usePathname();
   const { mobileMenuOpen, setMobileMenuOpen } = useUIStore();
   const { data: draftCount = 0 } = useDraftCount();
-  const { isOnboardingCompleted } = useOnboarding();
 
   const renderNavItem = (item: {
     key: string;
     href: string;
     icon: keyof typeof iconMap;
     showBadge?: boolean;
-    showNewWhenNotOnboarded?: boolean;
   }) => {
     const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
     const Icon = iconMap[item.icon];
@@ -104,11 +99,6 @@ export function MobileNav() {
             <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-medium text-white">
               {draftCount}
             </span>
-          )}
-          {item.showNewWhenNotOnboarded && !isOnboardingCompleted && (
-            <Badge variant="secondary" className="ml-auto px-1.5 py-0 text-[10px]">
-              New
-            </Badge>
           )}
         </Button>
       </Link>

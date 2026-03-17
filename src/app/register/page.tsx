@@ -2,35 +2,22 @@
 
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Loader2, Mail, Lock, User, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Loader2, Mail, Lock, User, AlertCircle } from 'lucide-react';
 import { TrumpetIcon } from '@/components/icons/trumpet-icon';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ROUTES, API_ROUTES } from '@/lib/constants';
+import { ROUTES } from '@/lib/constants';
 import { useAuth } from '@/hooks/use-auth';
 import { GoogleIcon } from '@/components/icons/google-icon';
-import { getVariantFromCookie, AB_EXPERIMENTS } from '@/lib/ab-test';
 
 function RegisterForm() {
   const t = useTranslations('auth');
-  const tWelcome = useTranslations('welcome');
-  const searchParams = useSearchParams();
-  const isFromWelcome = searchParams.get('from') === 'welcome';
 
-  const {
-    signUp,
-    signInWithGoogle,
-    convertAnonymousToEmail,
-    convertAnonymousToGoogle,
-    isAnonymous,
-    loading,
-    error,
-  } = useAuth();
+  const { signUp, signInWithGoogle, loading, error } = useAuth();
 
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
@@ -38,35 +25,6 @@ function RegisterForm() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-
-  // Track AB conversion event (fire-and-forget)
-  const trackConversion = async (userId?: string) => {
-    const variant = getVariantFromCookie();
-    if (!variant) return;
-    try {
-      await fetch(API_ROUTES.AB_EVENTS, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          experiment: AB_EXPERIMENTS.ONBOARDING_BEFORE_REG,
-          variant,
-          userId,
-          event: 'converted',
-        }),
-      });
-    } catch {
-      /* non-critical */
-    }
-  };
-
-  // Mark onboarding as completed for variant B users (they already did it)
-  const markOnboardingDone = async () => {
-    try {
-      await fetch(API_ROUTES.PROFILE_ONBOARDING, { method: 'POST' });
-    } catch {
-      /* non-critical */
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,14 +47,7 @@ function RegisterForm() {
 
     setIsSubmitting(true);
     try {
-      if (isAnonymous && isFromWelcome) {
-        await convertAnonymousToEmail(email, password, displayName || undefined);
-        await markOnboardingDone();
-        await trackConversion();
-      } else {
-        await signUp(email, password, displayName || undefined);
-        await trackConversion();
-      }
+      await signUp(email, password, displayName || undefined);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : t('register.errors.registerFailed'));
     } finally {
@@ -107,11 +58,7 @@ function RegisterForm() {
   const handleGoogleSignIn = async () => {
     setFormError(null);
     try {
-      if (isAnonymous && isFromWelcome) {
-        await convertAnonymousToGoogle();
-      } else {
-        await signInWithGoogle();
-      }
+      await signInWithGoogle();
     } catch (err) {
       setFormError(err instanceof Error ? err.message : t('oauth.googleError'));
     }
@@ -130,13 +77,6 @@ function RegisterForm() {
         <CardDescription>{t('register.description')}</CardDescription>
       </CardHeader>
       <CardContent>
-        {isFromWelcome && (
-          <div className="mb-4 flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 flex-shrink-0" />
-            <span>{tWelcome('register.dataPreserved')}</span>
-          </div>
-        )}
-
         {displayError && (
           <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
             <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />

@@ -27,8 +27,6 @@ export const ROUTES = {
   POST_DETAIL: (id: string) => `/posts/${id}`,
   BOOKMARKS: '/bookmarks',
   SETTINGS: '/settings',
-  ONBOARDING: '/onboarding',
-  WELCOME: '/welcome',
   SCRAPE: '/scrape',
   SUBSCRIPTIONS: '/subscriptions',
 } as const;
@@ -93,8 +91,6 @@ export const API_ROUTES = {
 
   // Profile
   PROFILE: '/api/profile',
-  PROFILE_ONBOARDING: '/api/profile/onboarding',
-
   // Import
   IMPORT_BATCH: '/api/import/batch',
 
@@ -113,9 +109,6 @@ export const API_ROUTES = {
   // Cron
   CRON_PROCESS_JOBS: '/api/cron/process-jobs',
   CRON_MONITOR: '/api/cron/monitor',
-
-  // AB Testing
-  AB_EVENTS: '/api/ab/events',
 
   // Insights (Community)
   INSIGHTS_TRENDING_STOCKS: '/api/insights/trending-stocks',
