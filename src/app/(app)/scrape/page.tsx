@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
+import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { ProfileScrapeForm } from '@/components/scrape/profile-scrape-form';
 import { ScrapeProgress } from '@/components/scrape/scrape-progress';
@@ -11,8 +12,9 @@ import { useScrapeJobs, useDiscoverProfile, useInitiateScrape } from '@/hooks/us
 import type { DiscoverProfileResult } from '@/hooks/use-scrape';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ROUTES } from '@/lib/constants';
 
-type ScrapeState = 'input' | 'discovering' | 'selecting' | 'processing' | 'redirecting';
+type ScrapeState = 'input' | 'discovering' | 'selecting' | 'processing' | 'completed';
 
 function stateToStep(state: ScrapeState): ScrapeStep {
   switch (state) {
@@ -24,7 +26,7 @@ function stateToStep(state: ScrapeState): ScrapeStep {
       return 2;
     case 'processing':
       return 3;
-    case 'redirecting':
+    case 'completed':
       return 4;
   }
 }
@@ -133,17 +135,12 @@ export default function ScrapePage() {
           />
         )}
 
-        {state === 'processing' && activeJobId && (
-          <ScrapeProgress jobId={activeJobId} onReset={handleReset} />
-        )}
-
-        {state === 'redirecting' && (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center gap-3 py-12">
-              <Loader2 className="h-8 w-8 animate-spin" />
-              <p className="text-muted-foreground text-sm">{t('progress.statusCompleted')}</p>
-            </CardContent>
-          </Card>
+        {(state === 'processing' || state === 'completed') && activeJobId && (
+          <ScrapeProgress
+            jobId={activeJobId}
+            onReset={handleReset}
+            onComplete={() => setState('completed')}
+          />
         )}
 
         {/* Recent jobs list */}
@@ -154,22 +151,50 @@ export default function ScrapePage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {jobs.map((job) => (
-                  <div
-                    key={job.id}
-                    className="flex items-center justify-between rounded-md border p-3"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{job.kolName ?? job.url}</p>
-                      <p className="text-muted-foreground truncate text-xs">{job.url}</p>
+                {jobs.map((job) => {
+                  const statusKey =
+                    job.status === 'permanently_failed'
+                      ? 'Failed'
+                      : `${job.status.charAt(0).toUpperCase()}${job.status.slice(1)}`;
+                  const isClickable = job.kolId && job.status === 'completed';
+                  const dateStr = job.completedAt
+                    ? new Date(job.completedAt).toLocaleDateString()
+                    : new Date(job.createdAt).toLocaleDateString();
+
+                  const content = (
+                    <div className="hover:bg-muted/50 flex items-center justify-between rounded-md border p-3 transition-colors">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">
+                          {job.kolName ?? 'Unknown KOL'}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          {dateStr}
+                          {' \u2022 '}
+                          {t('jobs.importedCount', { count: job.importedCount ?? 0 })}
+                          {(job.errorCount ?? 0) > 0 && (
+                            <>
+                              {' \u2022 '}
+                              <span className="text-red-500">
+                                {t('jobs.errorCount', { count: job.errorCount ?? 0 })}
+                              </span>
+                            </>
+                          )}
+                        </p>
+                      </div>
+                      <Badge variant={statusVariantMap[job.status]}>
+                        {t(`progress.status${statusKey}`)}
+                      </Badge>
                     </div>
-                    <Badge variant={statusVariantMap[job.status]}>
-                      {t(
-                        `progress.status${job.status.charAt(0).toUpperCase()}${job.status.slice(1)}`
-                      )}
-                    </Badge>
-                  </div>
-                ))}
+                  );
+
+                  return isClickable ? (
+                    <Link key={job.id} href={ROUTES.KOL_DETAIL(job.kolId!)}>
+                      {content}
+                    </Link>
+                  ) : (
+                    <div key={job.id}>{content}</div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>

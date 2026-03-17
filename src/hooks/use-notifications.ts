@@ -49,8 +49,9 @@ function getSnapshot(): ScrapeNotification[] {
   return cachedSnapshot;
 }
 
+const emptyNotifications: ScrapeNotification[] = [];
 function getServerSnapshot(): ScrapeNotification[] {
-  return [];
+  return emptyNotifications;
 }
 
 function subscribe(onStoreChange: () => void): () => void {

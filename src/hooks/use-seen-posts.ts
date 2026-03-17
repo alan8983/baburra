@@ -25,8 +25,9 @@ function getSnapshot(): Set<string> {
   return cachedIds;
 }
 
+const emptySet = new Set<string>();
 function getServerSnapshot(): Set<string> {
-  return new Set();
+  return emptySet;
 }
 
 function subscribe(onStoreChange: () => void): () => void {

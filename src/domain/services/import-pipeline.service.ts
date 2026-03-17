@@ -222,10 +222,18 @@ export async function processUrl(
         }
 
         // Transcribe via Gemini
-        const transcriptText = await geminiTranscribeVideo(
-          fetchResult.sourceUrl,
-          durationSeconds ?? undefined
-        );
+        let transcriptText: string;
+        try {
+          transcriptText = await geminiTranscribeVideo(
+            fetchResult.sourceUrl,
+            durationSeconds ?? undefined
+          );
+        } catch (transcribeErr) {
+          console.error(
+            `[Gemini transcription failed] URL: ${fetchResult.sourceUrl} | Error: ${transcribeErr instanceof Error ? transcribeErr.message : String(transcribeErr)}`
+          );
+          throw transcribeErr;
+        }
         contentForAnalysis = transcriptText;
 
         // Save to transcript cache

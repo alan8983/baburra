@@ -10,9 +10,24 @@
  * - https://www.youtube.com/c/ChannelName
  */
 
-import { ProfileExtractor, ProfileExtractResult, DiscoveredUrl } from './profile-extractor';
+import {
+  ProfileExtractor,
+  ProfileExtractResult,
+  DiscoveredUrl,
+  ContentType,
+} from './profile-extractor';
 
 const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
+
+/** Parse ISO 8601 duration (e.g. PT1H2M30S) to seconds */
+function parseIsoDuration(iso: string): number {
+  const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!match) return 0;
+  const hours = parseInt(match[1] || '0', 10);
+  const minutes = parseInt(match[2] || '0', 10);
+  const seconds = parseInt(match[3] || '0', 10);
+  return hours * 3600 + minutes * 60 + seconds;
+}
 
 interface YouTubeChannelSnippet {
   title: string;
@@ -44,11 +59,17 @@ interface YouTubeSearchResponse {
 interface YouTubeVideoSnippet {
   title: string;
   publishedAt: string;
+  liveBroadcastContent?: 'none' | 'live' | 'upcoming';
+}
+
+interface YouTubeVideoContentDetails {
+  duration?: string; // ISO 8601, e.g. PT1H2M30S
 }
 
 interface YouTubeVideoItem {
   id: string;
   snippet: YouTubeVideoSnippet;
+  contentDetails?: YouTubeVideoContentDetails;
 }
 
 interface YouTubeVideosResponse {
@@ -196,9 +217,10 @@ export class YouTubeChannelExtractor extends ProfileExtractor {
     if (videoIds.length === 0) return [];
 
     // YouTube API accepts up to 50 IDs per request
+    // Request contentDetails alongside snippet for duration + live detection
     const params = new URLSearchParams({
       id: videoIds.join(','),
-      part: 'snippet',
+      part: 'snippet,contentDetails',
       key: apiKey,
     });
 
@@ -211,19 +233,43 @@ export class YouTubeChannelExtractor extends ProfileExtractor {
 
     const data = (await response.json()) as YouTubeVideosResponse;
 
-    const snippetMap = new Map<string, YouTubeVideoSnippet>();
+    const videoMap = new Map<string, YouTubeVideoItem>();
     for (const item of data.items ?? []) {
-      snippetMap.set(item.id, item.snippet);
+      videoMap.set(item.id, item);
     }
 
     return videoIds.map((id) => {
-      const snippet = snippetMap.get(id);
+      const item = videoMap.get(id);
+      const snippet = item?.snippet;
+      const durationSeconds = item?.contentDetails?.duration
+        ? parseIsoDuration(item.contentDetails.duration)
+        : undefined;
+      const contentType = this.classifyContentType(durationSeconds, snippet?.liveBroadcastContent);
+
       return {
         url: `https://www.youtube.com/watch?v=${id}`,
         title: snippet?.title,
         publishedAt: snippet?.publishedAt,
+        contentType,
+        durationSeconds,
       };
     });
+  }
+
+  private classifyContentType(
+    durationSeconds?: number,
+    liveBroadcastContent?: string
+  ): ContentType {
+    // Live stream: currently live or upcoming
+    if (liveBroadcastContent === 'live' || liveBroadcastContent === 'upcoming') {
+      return 'live_stream';
+    }
+    // Short: ≤60 seconds
+    if (durationSeconds !== undefined && durationSeconds <= 60) {
+      return 'short';
+    }
+    // Default: long video
+    return 'long_video';
   }
 }
 
