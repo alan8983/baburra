@@ -264,6 +264,47 @@ export function ScrapeProgress({ jobId, onReset, onComplete }: ScrapeProgressPro
           </div>
         )}
 
+        {/* Completed state */}
+        {job.status === 'completed' && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-green-600">
+              <CheckCircle2 className="h-5 w-5" />
+              <span className="text-sm">
+                {t('progress.detailedCounts', {
+                  processed,
+                  total,
+                  imported,
+                  duplicates,
+                  errors,
+                })}
+              </span>
+            </div>
+            {job.kolId && (
+              <Button variant="outline" onClick={() => router.push(ROUTES.KOL_DETAIL(job.kolId!))}>
+                {t('progress.viewKol')}
+              </Button>
+            )}
+            <Button variant="ghost" onClick={onReset}>
+              {t('progress.scrapeAnother')}
+            </Button>
+          </div>
+        )}
+
+        {/* Failed state */}
+        {(job.status === 'failed' || job.status === 'permanently_failed') && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-red-600">
+              <XCircle className="h-5 w-5" />
+              <span className="text-sm">
+                {t('progress.errorMessage', { error: job.error ?? '' })}
+              </span>
+            </div>
+            <Button variant="outline" onClick={onReset}>
+              {t('progress.scrapeAnother')}
+            </Button>
+          </div>
+        )}
+
         {/* Cancel during active processing (task 2.5) */}
         {isActive && (
           <Button variant="ghost" size="sm" onClick={onReset}>
