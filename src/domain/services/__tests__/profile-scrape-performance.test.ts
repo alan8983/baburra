@@ -77,7 +77,7 @@ function makeJob(overrides: Record<string, unknown> = {}) {
     duplicateCount: 0,
     errorCount: 0,
     filteredCount: 0,
-    discoveredUrls: Array.from({ length: 50 }, (_, i) => `https://youtube.com/watch?v=vid${i}`),
+    discoveredUrls: Array.from({ length: 50 }, (_, i) => `https://twitter.com/user/status/${i}`),
     retryCount: 0,
     errorMessage: null,
     startedAt: new Date(),
@@ -96,7 +96,7 @@ describe('Profile Scrape Performance', () => {
   it('should process 10 URLs per batch in parallel via Promise.allSettled', async () => {
     const job = makeJob({
       totalUrls: 10,
-      discoveredUrls: Array.from({ length: 10 }, (_, i) => `https://youtube.com/watch?v=vid${i}`),
+      discoveredUrls: Array.from({ length: 10 }, (_, i) => `https://twitter.com/user/status/${i}`),
     });
     mockGetScrapeJobById.mockResolvedValue(job);
 
@@ -124,13 +124,13 @@ describe('Profile Scrape Performance', () => {
   it('should handle mixed results (some succeed, some fail)', async () => {
     const job = makeJob({
       totalUrls: 10,
-      discoveredUrls: Array.from({ length: 10 }, (_, i) => `https://youtube.com/watch?v=vid${i}`),
+      discoveredUrls: Array.from({ length: 10 }, (_, i) => `https://twitter.com/user/status/${i}`),
     });
     mockGetScrapeJobById.mockResolvedValue(job);
 
     mockProcessUrl.mockImplementation(async (_url) => {
       const urlStr = _url as string;
-      const idx = parseInt(urlStr.split('vid')[1]);
+      const idx = parseInt(urlStr.split('/status/')[1]);
       if (idx < 5) return { url: urlStr, status: 'success' as const };
       if (idx < 8) return { url: urlStr, status: 'duplicate' as const };
       throw new Error('AI analysis failed');
@@ -146,7 +146,7 @@ describe('Profile Scrape Performance', () => {
   });
 
   it('should stop processing when timeout is reached', async () => {
-    const urls = Array.from({ length: 50 }, (_, i) => `https://youtube.com/watch?v=vid${i}`);
+    const urls = Array.from({ length: 50 }, (_, i) => `https://twitter.com/user/status/${i}`);
     const job = makeJob({ totalUrls: 50, discoveredUrls: urls });
     mockGetScrapeJobById.mockResolvedValue(job);
 
@@ -182,7 +182,7 @@ describe('Profile Scrape Performance', () => {
 
     const job = makeJob({
       totalUrls: 5,
-      discoveredUrls: Array.from({ length: 5 }, (_, i) => `https://youtube.com/watch?v=vid${i}`),
+      discoveredUrls: Array.from({ length: 5 }, (_, i) => `https://twitter.com/user/status/${i}`),
     });
     mockGetScrapeJobById.mockResolvedValue(job);
     mockProcessUrl.mockResolvedValue({ url: 'test', status: 'success' as const });
@@ -197,7 +197,7 @@ describe('Profile Scrape Performance', () => {
   });
 
   it('should process a full 50-URL job across multiple batches', async () => {
-    const urls = Array.from({ length: 50 }, (_, i) => `https://youtube.com/watch?v=vid${i}`);
+    const urls = Array.from({ length: 50 }, (_, i) => `https://twitter.com/user/status/${i}`);
     const job = makeJob({ totalUrls: 50, discoveredUrls: urls });
     mockGetScrapeJobById.mockResolvedValue(job);
 

@@ -51,4 +51,7 @@ export interface ScrapeJob {
   completedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+  // Joined from kol_sources → kols (populated in getScrapeJobsByUser)
+  kolId?: string;
+  kolName?: string;
 }

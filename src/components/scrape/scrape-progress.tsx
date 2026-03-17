@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { Loader2, XCircle, CheckCircle2, Clock, Users } from 'lucide-react';
+import { Loader2, XCircle, Clock, Users, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,7 @@ import { useScrapeJob, useScrapeJobs } from '@/hooks/use-scrape';
 interface ScrapeProgressProps {
   jobId: string;
   onReset: () => void;
+  onComplete?: () => void;
 }
 
 const statusVariantMap = {
@@ -24,14 +25,13 @@ const statusVariantMap = {
   permanently_failed: 'destructive',
 } as const;
 
-export function ScrapeProgress({ jobId, onReset }: ScrapeProgressProps) {
+export function ScrapeProgress({ jobId, onReset, onComplete }: ScrapeProgressProps) {
   const t = useTranslations('scrape');
   const router = useRouter();
   const { data: job, isLoading } = useScrapeJob(jobId);
   const { data: allJobs } = useScrapeJobs();
   const prevStatusRef = useRef<string | undefined>(undefined);
   const toastShownRef = useRef(false);
-  const redirectedRef = useRef(false);
   const [etaMinutes, setEtaMinutes] = useState(0);
 
   // ETA calculation — track start time and update ETA in effects
@@ -57,14 +57,17 @@ export function ScrapeProgress({ jobId, onReset }: ScrapeProgressProps) {
     }
   }, [processed, total]);
 
-  // Completion: toast + localStorage + auto-redirect
+  // Completion: toast + localStorage + notify parent (no auto-redirect)
   useEffect(() => {
     const prevStatus = prevStatusRef.current;
     prevStatusRef.current = job?.status;
 
     if (!job || toastShownRef.current) return;
 
-    if ((!prevStatus || prevStatus !== 'completed') && job.status === 'completed') {
+    const isFinished = job.status === 'completed' || job.status === 'failed';
+    const wasNotFinished = !prevStatus || (prevStatus !== 'completed' && prevStatus !== 'failed');
+
+    if (wasNotFinished && isFinished) {
       toastShownRef.current = true;
       const kolName = job.kolName ?? 'KOL';
       const imported = job.importedCount ?? job.stats?.postsCreated ?? 0;
@@ -80,13 +83,10 @@ export function ScrapeProgress({ jobId, onReset }: ScrapeProgressProps) {
         // localStorage unavailable
       }
 
-      // Auto-redirect to KOL detail page
-      if (job.kolId && !redirectedRef.current) {
-        redirectedRef.current = true;
-        router.push(ROUTES.KOL_DETAIL(job.kolId));
-      }
+      // Notify parent to transition flow chart to step 4
+      onComplete?.();
     }
-  }, [job, jobId, t, router]);
+  }, [job, jobId, t, onComplete]);
 
   if (isLoading || !job) {
     return (
@@ -99,9 +99,12 @@ export function ScrapeProgress({ jobId, onReset }: ScrapeProgressProps) {
   }
 
   const isActive = job.status === 'queued' || job.status === 'processing';
+  const isFinished =
+    job.status === 'completed' || job.status === 'failed' || job.status === 'permanently_failed';
   const imported = job.importedCount ?? job.stats?.postsCreated ?? 0;
   const duplicates = job.duplicateCount ?? job.stats?.duplicates ?? 0;
   const errors = job.errorCount ?? job.stats?.errors ?? 0;
+  const filtered = job.filteredCount ?? 0;
   const progressPercent = total > 0 ? Math.round((processed / total) * 100) : 0;
   const remainingUrls = total - processed;
 
@@ -120,6 +123,92 @@ export function ScrapeProgress({ jobId, onReset }: ScrapeProgressProps) {
     job.status === 'permanently_failed'
       ? 'Failed'
       : `${job.status.charAt(0).toUpperCase()}${job.status.slice(1)}`;
+
+  // Completion summary card (tasks 2.1-2.3)
+  if (isFinished) {
+    const allErrored = imported === 0 && errors > 0;
+
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              {allErrored ? (
+                <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              ) : (
+                <CheckCircle2 className="h-5 w-5 text-green-500" />
+              )}
+              {t('progress.summaryTitle')}
+            </CardTitle>
+            <Badge variant={statusVariantMap[job.status]}>{t(`progress.status${statusKey}`)}</Badge>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Summary counts */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-muted rounded-md p-3 text-center">
+              <p className="text-2xl font-bold text-green-600">{imported}</p>
+              <p className="text-muted-foreground text-xs">
+                {t('progress.summaryImported', { count: imported })}
+              </p>
+            </div>
+            <div className="bg-muted rounded-md p-3 text-center">
+              <p className="text-2xl font-bold text-red-500">{errors}</p>
+              <p className="text-muted-foreground text-xs">
+                {t('progress.summaryErrors', { count: errors })}
+              </p>
+            </div>
+            {filtered > 0 && (
+              <div className="bg-muted rounded-md p-3 text-center">
+                <p className="text-2xl font-bold text-yellow-500">{filtered}</p>
+                <p className="text-muted-foreground text-xs">
+                  {t('progress.summaryFiltered', { count: filtered })}
+                </p>
+              </div>
+            )}
+            {duplicates > 0 && (
+              <div className="bg-muted rounded-md p-3 text-center">
+                <p className="text-2xl font-bold text-gray-500">{duplicates}</p>
+                <p className="text-muted-foreground text-xs">
+                  {t('progress.summaryDuplicates', { count: duplicates })}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* No credits consumed message (task 2.3) */}
+          {allErrored && (
+            <div className="bg-muted flex items-center gap-2 rounded-md p-3">
+              <AlertTriangle className="text-muted-foreground h-4 w-4 shrink-0" />
+              <span className="text-muted-foreground text-sm">
+                {t('progress.noCreditsConsumed')}
+              </span>
+            </div>
+          )}
+
+          {/* Failed job error message */}
+          {(job.status === 'failed' || job.status === 'permanently_failed') && job.error && (
+            <div className="flex items-center gap-2 text-red-600">
+              <XCircle className="h-4 w-4 shrink-0" />
+              <span className="text-sm">{t('progress.errorMessage', { error: job.error })}</span>
+            </div>
+          )}
+
+          {/* Action buttons (task 2.2) */}
+          <div className="flex gap-3">
+            {job.kolId && (
+              <Button onClick={() => router.push(ROUTES.KOL_DETAIL(job.kolId!))}>
+                {t('progress.viewKol')}
+              </Button>
+            )}
+            <Button variant="outline" onClick={onReset}>
+              {t('progress.startOver')}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
@@ -214,6 +303,13 @@ export function ScrapeProgress({ jobId, onReset }: ScrapeProgressProps) {
               {t('progress.scrapeAnother')}
             </Button>
           </div>
+        )}
+
+        {/* Cancel during active processing (task 2.5) */}
+        {isActive && (
+          <Button variant="ghost" size="sm" onClick={onReset}>
+            {t('progress.cancel')}
+          </Button>
         )}
       </CardContent>
     </Card>

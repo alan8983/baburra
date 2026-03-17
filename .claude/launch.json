@@ -3,10 +3,21 @@
   "configurations": [
     {
       "name": "next-dev",
-      "runtimeExecutable": "node",
+      "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
       "runtimeArgs": ["node_modules/next/dist/bin/next", "dev", "--webpack"],
-      "port": 3000,
-      "autoPort": true
+      "port": 3000
+    },
+    {
+      "name": "supabase-local",
+      "runtimeExecutable": "node_modules\\supabase\\bin\\supabase.exe",
+      "runtimeArgs": ["start"],
+      "port": 54321
+    },
+    {
+      "name": "playwright-ui",
+      "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
+      "runtimeArgs": ["node_modules/.bin/playwright", "test", "--ui"],
+      "port": 0
     }
   ]
 }

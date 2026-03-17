@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   ArrowLeft,
@@ -18,8 +18,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 import { useAiUsage } from '@/hooks/use-ai';
 import type { DiscoveredUrl } from '@/infrastructure/extractors';
+import type { ContentType } from '@/infrastructure/extractors/profile-extractor';
 
 interface UrlDiscoveryListProps {
   kolName: string;
@@ -30,6 +32,24 @@ interface UrlDiscoveryListProps {
   onBack: () => void;
   isSubmitting: boolean;
 }
+
+const CONTENT_TYPE_COLORS: Record<ContentType, string> = {
+  long_video: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  short: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+  live_stream: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+};
+
+const CONTENT_TYPE_LABEL_KEYS: Record<ContentType, string> = {
+  long_video: 'contentTypeLongVideo',
+  short: 'contentTypeShort',
+  live_stream: 'contentTypeLiveStream',
+};
+
+const FILTER_LABEL_KEYS: Record<ContentType, string> = {
+  long_video: 'filterLongVideo',
+  short: 'filterShort',
+  live_stream: 'filterLiveStream',
+};
 
 export function UrlDiscoveryList({
   kolName,
@@ -47,14 +67,75 @@ export function UrlDiscoveryList({
     () => new Set(discoveredUrls.map((u) => u.url))
   );
 
-  const allSelected = selected.size === discoveredUrls.length;
+  // Content type filter state
+  const [activeFilters, setActiveFilters] = useState<Set<ContentType>>(
+    () => new Set(['long_video', 'short', 'live_stream'])
+  );
+
+  // Count URLs by content type
+  const contentTypeCounts = useMemo(() => {
+    const counts: Record<ContentType, number> = { long_video: 0, short: 0, live_stream: 0 };
+    for (const item of discoveredUrls) {
+      const ct = item.contentType ?? 'long_video';
+      counts[ct]++;
+    }
+    return counts;
+  }, [discoveredUrls]);
+
+  // Only show filter bar if there's more than one content type present
+  const presentTypes = useMemo(
+    () =>
+      (['long_video', 'short', 'live_stream'] as ContentType[]).filter(
+        (ct) => contentTypeCounts[ct] > 0
+      ),
+    [contentTypeCounts]
+  );
+  const showFilters = presentTypes.length > 1;
+
+  // Filtered URLs based on active content type filters
+  const filteredUrls = useMemo(() => {
+    if (!showFilters) return discoveredUrls;
+    return discoveredUrls.filter((item) => activeFilters.has(item.contentType ?? 'long_video'));
+  }, [discoveredUrls, activeFilters, showFilters]);
+
+  const allFiltersActive = activeFilters.size === presentTypes.length;
+
+  const toggleFilter = useCallback((ct: ContentType) => {
+    setActiveFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(ct)) {
+        // Don't allow deselecting all filters
+        if (next.size > 1) next.delete(ct);
+      } else {
+        next.add(ct);
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleAllFilters = useCallback(() => {
+    if (allFiltersActive) {
+      // Deselect all except the first present type
+      setActiveFilters(new Set([presentTypes[0]]));
+    } else {
+      setActiveFilters(new Set(presentTypes));
+    }
+  }, [allFiltersActive, presentTypes]);
+
+  // Select all / deselect all only affects currently visible (filtered) URLs
+  const visibleAllSelected =
+    filteredUrls.length > 0 && filteredUrls.every((u) => selected.has(u.url));
 
   const toggleAll = () => {
-    if (allSelected) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(discoveredUrls.map((u) => u.url)));
-    }
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (visibleAllSelected) {
+        for (const item of filteredUrls) next.delete(item.url);
+      } else {
+        for (const item of filteredUrls) next.add(item.url);
+      }
+      return next;
+    });
   };
 
   const toggleOne = (url: string) => {
@@ -126,22 +207,52 @@ export function UrlDiscoveryList({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Content type filter toggles */}
+        {showFilters && (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={allFiltersActive ? 'default' : 'outline'}
+              size="sm"
+              className="h-7 rounded-full px-3 text-xs"
+              onClick={toggleAllFilters}
+            >
+              {t('filterAll')} ({discoveredUrls.length})
+            </Button>
+            {presentTypes.map((ct) => (
+              <Button
+                key={ct}
+                variant={activeFilters.has(ct) ? 'default' : 'outline'}
+                size="sm"
+                className="h-7 rounded-full px-3 text-xs"
+                onClick={() => toggleFilter(ct)}
+              >
+                {t(FILTER_LABEL_KEYS[ct])} ({contentTypeCounts[ct]})
+              </Button>
+            ))}
+          </div>
+        )}
+
         {/* Select all toggle */}
         <div className="flex items-center justify-between">
           <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <Checkbox checked={allSelected} onCheckedChange={toggleAll} disabled={isSubmitting} />
-            {allSelected ? t('deselectAll') : t('selectAll')}
+            <Checkbox
+              checked={visibleAllSelected}
+              onCheckedChange={toggleAll}
+              disabled={isSubmitting}
+            />
+            {visibleAllSelected ? t('deselectAll') : t('selectAll')}
           </label>
         </div>
 
         {/* URL list */}
         <ScrollArea className="h-[360px] rounded-md border">
           <div className="divide-y">
-            {discoveredUrls.map((item) => {
+            {filteredUrls.map((item) => {
               const date = formatDate(item.publishedAt);
               const duration = formatDuration(item.durationSeconds);
               const creditCost = item.estimatedCreditCost ?? 1;
               const hasCaptions = item.captionAvailable;
+              const contentType = item.contentType ?? 'long_video';
 
               return (
                 <label
@@ -159,6 +270,15 @@ export function UrlDiscoveryList({
                     <div className="text-muted-foreground flex items-center gap-2 text-xs">
                       {date && <span>{date}</span>}
                       {duration && <span>{duration}</span>}
+                      {/* Content type tag */}
+                      <span
+                        className={cn(
+                          'rounded-full px-1.5 py-0 text-[10px] leading-4 font-medium',
+                          CONTENT_TYPE_COLORS[contentType]
+                        )}
+                      >
+                        {t(CONTENT_TYPE_LABEL_KEYS[contentType])}
+                      </span>
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">

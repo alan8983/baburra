@@ -36,7 +36,7 @@ const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 const DEFAULT_MODEL = process.env.AI_SENTIMENT_MODEL || 'gemini-2.5-flash-lite';
 const TRANSCRIPTION_MODEL = 'gemini-2.5-flash';
 const DEFAULT_TIMEOUT_MS = 30_000;
-const TRANSCRIPTION_TIMEOUT_MS = 120_000;
+const TRANSCRIPTION_TIMEOUT_MS = 180_000;
 const MAX_VIDEO_DURATION_SECONDS = 45 * 60; // 45 minutes
 
 /** Return the currently configured AI model name (for version tracking). */
@@ -258,7 +258,6 @@ export async function geminiTranscribeVideo(
           },
           {
             file_data: {
-              mime_type: 'video/youtube',
               file_uri: youtubeUrl,
             },
           },
@@ -267,7 +266,8 @@ export async function geminiTranscribeVideo(
     ],
     generationConfig: {
       temperature: 0.1,
-      maxOutputTokens: 8192,
+      maxOutputTokens: 16384,
+      mediaResolution: 'low',
     },
   };
 
@@ -312,6 +312,16 @@ export async function geminiTranscribeVideo(
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       throw new Error(`Gemini transcription timed out after ${TRANSCRIPTION_TIMEOUT_MS / 1000}s`);
+    }
+    if (error instanceof Error) {
+      console.error('[Gemini] Video transcription fetch error details:', {
+        name: error.name,
+        message: error.message,
+        cause: error.cause,
+        stack: error.stack,
+        url,
+        youtubeUrl,
+      });
     }
     throw error;
   } finally {

@@ -12,7 +12,15 @@ export interface DiscoverProfileResult {
   platform: string;
   platformId: string;
   platformUrl: string;
-  discoveredUrls: Array<{ url: string; title?: string; publishedAt?: string }>;
+  discoveredUrls: Array<{
+    url: string;
+    title?: string;
+    publishedAt?: string;
+    contentType?: 'long_video' | 'short' | 'live_stream';
+    captionAvailable?: boolean;
+    durationSeconds?: number;
+    estimatedCreditCost?: number;
+  }>;
   totalCount: number;
 }
 
@@ -33,6 +41,8 @@ export interface ScrapeJob {
   importedCount?: number;
   duplicateCount?: number;
   errorCount?: number;
+  filteredCount?: number;
+  completedAt?: string;
   stats?: {
     videosFound: number;
     postsCreated: number;

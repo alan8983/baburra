@@ -34,7 +34,15 @@
       "Bash(npx husky:*)",
       "Bash(GIT_REDIRECT_STDERR=2)",
       "Bash(1 git diff --ignore-cr-at-eol -- package.json)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(git fetch:*)",
+      "Bash(git merge:*)",
+      "Bash(npm run:*)",
+      "Bash(npm install:*)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(taskkill //F //IM node.exe)",
+      "Bash(npx openspec:*)",
+      "Bash(openspec new:*)"
     ],
     "additionalDirectories": [
       "c:\\Cursor_Master\\investment-idea-monitor\\src\\app\\api\\kols\\[id]\\win-rate"

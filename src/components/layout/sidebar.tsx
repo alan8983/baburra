@@ -124,7 +124,7 @@ function NavItem({ label, href, icon, badgeCount, showNewBadge, isCollapsed }: N
   );
 }
 
-function AiQuotaFooter({ isCollapsed }: { isCollapsed: boolean }) {
+export function AiQuotaFooter({ isCollapsed }: { isCollapsed: boolean }) {
   const t = useTranslations('common');
   const { data: usage, isLoading } = useAiUsage();
 
@@ -284,7 +284,7 @@ export function Sidebar() {
   );
 }
 
-function LogoutButton({ isCollapsed }: { isCollapsed: boolean }) {
+export function LogoutButton({ isCollapsed }: { isCollapsed: boolean }) {
   const t = useTranslations('common');
   const { signOut, loading } = useAuth();
 

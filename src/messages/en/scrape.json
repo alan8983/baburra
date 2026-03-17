@@ -30,7 +30,14 @@
     "estimatedCredits": "Estimated credits",
     "remainingBalance": "Remaining balance",
     "insufficientCredits": "Insufficient credits. Reduce selection or upgrade your plan.",
-    "creditNote": "1 min captionless YouTube video = 7 credits"
+    "creditNote": "1 min captionless YouTube video = 7 credits",
+    "filterAll": "All",
+    "filterLongVideo": "Long Video",
+    "filterShort": "Short",
+    "filterLiveStream": "Live Stream",
+    "contentTypeLongVideo": "Video",
+    "contentTypeShort": "Short",
+    "contentTypeLiveStream": "Live"
   },
   "queue": {
     "position": "Position #{position} in your queue",
@@ -50,7 +57,15 @@
     "completeToast": "Scrape complete! {count} posts imported for {kolName}",
     "viewKol": "View KOL",
     "scrapeAnother": "Scrape Another",
+    "startOver": "Start Over",
+    "cancel": "Cancel",
     "errorMessage": "Scrape failed: {error}",
+    "summaryTitle": "Scrape Complete",
+    "summaryImported": "{count} imported",
+    "summaryErrors": "{count} errors",
+    "summaryFiltered": "{count} filtered (no tickers)",
+    "summaryDuplicates": "{count} duplicates",
+    "noCreditsConsumed": "No posts were imported — no credits were consumed.",
     "stats": {
       "videosFound": "{count} videos found",
       "postsCreated": "{count} posts created",
@@ -60,7 +75,9 @@
   },
   "jobs": {
     "title": "Recent Jobs",
-    "empty": "No scrape jobs yet"
+    "empty": "No scrape jobs yet",
+    "importedCount": "{count} imported",
+    "errorCount": "{count} errors"
   },
   "notifications": {
     "title": "Notifications",
