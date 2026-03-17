@@ -36,7 +36,7 @@ export interface ImportBatchResult {
   totalImported: number;
   totalDuplicate: number;
   totalError: number;
-  onboardingQuotaUsed: boolean;
+  firstImportFreeUsed: boolean;
 }
 
 export interface ImportBatchInput {

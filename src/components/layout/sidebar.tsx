@@ -31,8 +31,6 @@ import { TrumpetIcon } from '@/components/icons/trumpet-icon';
 import { useAiUsage } from '@/hooks/use-ai';
 import { useAuth } from '@/hooks/use-auth';
 import { useDraftCount } from '@/hooks/use-drafts';
-import { useOnboarding } from '@/hooks/use-onboarding';
-import { Badge } from '@/components/ui/badge';
 
 const iconMap = {
   LayoutDashboard,
@@ -53,10 +51,9 @@ const navItems: Array<{
   href: string;
   icon: keyof typeof iconMap;
   showBadge?: boolean;
-  showNewWhenNotOnboarded?: boolean;
 }> = [
   { key: 'dashboard', href: ROUTES.DASHBOARD, icon: 'LayoutDashboard' },
-  { key: 'quickInput', href: ROUTES.INPUT, icon: 'PenLine', showNewWhenNotOnboarded: true },
+  { key: 'quickInput', href: ROUTES.INPUT, icon: 'PenLine' },
   { key: 'scrape', href: ROUTES.SCRAPE, icon: 'Search' },
   { key: 'drafts', href: ROUTES.DRAFTS, icon: 'FileText', showBadge: true },
   { key: 'bookmarks', href: ROUTES.BOOKMARKS, icon: 'Bookmark' },
@@ -84,11 +81,10 @@ interface NavItemProps {
   href: string;
   icon: keyof typeof iconMap;
   badgeCount?: number;
-  showNewBadge?: boolean;
   isCollapsed: boolean;
 }
 
-function NavItem({ label, href, icon, badgeCount, showNewBadge, isCollapsed }: NavItemProps) {
+function NavItem({ label, href, icon, badgeCount, isCollapsed }: NavItemProps) {
   const pathname = usePathname();
   const isActive = pathname === href || pathname.startsWith(`${href}/`);
   const Icon = iconMap[icon];
@@ -111,11 +107,6 @@ function NavItem({ label, href, icon, badgeCount, showNewBadge, isCollapsed }: N
               <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-medium text-white">
                 {badgeCount}
               </span>
-            )}
-            {showNewBadge && (
-              <Badge variant="secondary" className="ml-auto px-1.5 py-0 text-[10px]">
-                New
-              </Badge>
             )}
           </>
         )}
@@ -203,7 +194,6 @@ export function Sidebar() {
   const t = useTranslations('common');
   const { sidebarOpen, toggleSidebar } = useUIStore();
   const { data: draftCount = 0 } = useDraftCount();
-  const { isOnboardingCompleted } = useOnboarding();
 
   return (
     <aside
@@ -240,7 +230,6 @@ export function Sidebar() {
               href={item.href}
               icon={item.icon}
               badgeCount={item.showBadge ? draftCount : undefined}
-              showNewBadge={item.showNewWhenNotOnboarded && !isOnboardingCompleted}
               isCollapsed={!sidebarOpen}
             />
           ))}

@@ -63,7 +63,7 @@ Each argument is classified as:
 
 - Weekly AI usage tracked in `profiles.ai_usage_count`
 - Reset via `profiles.ai_usage_reset_at`
-- First onboarding import is quota-exempt (`onboarding_import_used`)
+- First import is quota-exempt via `profiles.first_import_free` flag
 - Profile scrape jobs are quota-exempt (`quotaExempt: true`)
 - Atomic operations: `consume_ai_quota()` and `refund_ai_quota()` DB functions
 

@@ -29,8 +29,8 @@ import {
 } from '@/infrastructure/repositories';
 import {
   getUserTimezone,
-  checkOnboardingImportUsed,
-  markOnboardingImportUsed,
+  checkFirstImportFree,
+  markFirstImportUsed,
 } from '@/infrastructure/repositories/profile.repository';
 import { processUrl } from '@/domain/services/import-pipeline.service';
 import type { KolCacheEntry } from '@/domain/services/import-pipeline.service';
@@ -239,10 +239,8 @@ export async function processJobBatch(
   const userId = job.triggeredBy ?? 'system';
   const timezone = job.triggeredBy ? await getUserTimezone(job.triggeredBy) : 'UTC';
 
-  // Check onboarding exemption (first import is free, matching importBatch behavior)
-  const onboardingAlreadyUsed =
-    userId !== 'system' ? await checkOnboardingImportUsed(userId) : true;
-  const isOnboardingExempt = !onboardingAlreadyUsed;
+  // Check first-import-free exemption (matching importBatch behavior)
+  const isFirstImportFree = userId !== 'system' ? await checkFirstImportFree(userId) : false;
 
   let importedCount = job.importedCount;
   let duplicateCount = job.duplicateCount;
@@ -269,7 +267,7 @@ export async function processJobBatch(
     const batch = remaining.slice(i, i + effectiveBatchSize);
 
     const results = await Promise.allSettled(
-      batch.map((url) => processUrl(url, userId, timezone, isOnboardingExempt, kolCache, kolId))
+      batch.map((url) => processUrl(url, userId, timezone, isFirstImportFree, kolCache, kolId))
     );
 
     for (const result of results) {
@@ -307,9 +305,9 @@ export async function processJobBatch(
     }
   }
 
-  // Mark onboarding import as used if this was the first import
-  if (isOnboardingExempt && importedCount > 0 && userId !== 'system') {
-    await markOnboardingImportUsed(userId);
+  // Mark first import as used if this was the free first import
+  if (isFirstImportFree && importedCount > 0 && userId !== 'system') {
+    await markFirstImportUsed(userId);
   }
 
   // Check if done

@@ -18,7 +18,7 @@ describe('useImportBatch', () => {
       totalImported: 1,
       totalDuplicate: 0,
       totalError: 0,
-      onboardingQuotaUsed: false,
+      firstImportFreeUsed: false,
     };
     fetchMock.mockResolvedValueOnce({
       ok: true,
@@ -50,7 +50,7 @@ describe('useImportBatch', () => {
           totalImported: 0,
           totalDuplicate: 0,
           totalError: 0,
-          onboardingQuotaUsed: false,
+          firstImportFreeUsed: false,
         }),
     });
 
@@ -80,7 +80,7 @@ describe('useImportBatch', () => {
           totalImported: 1,
           totalDuplicate: 0,
           totalError: 0,
-          onboardingQuotaUsed: false,
+          firstImportFreeUsed: false,
         }),
     });
 

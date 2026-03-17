@@ -516,16 +516,14 @@ export type Database = {
       };
       profiles: {
         Row: {
-          ai_usage_count: number | null;
-          ai_usage_reset_at: string | null;
           avatar_url: string | null;
           color_palette: string | null;
           created_at: string | null;
+          credit_balance: number | null;
+          credit_reset_at: string | null;
           display_name: string | null;
+          first_import_free: boolean | null;
           id: string;
-          onboarding_completed: boolean | null;
-          onboarding_completed_at: string | null;
-          onboarding_import_used: boolean | null;
           posts_last_viewed_at: string | null;
           subscription_tier: string | null;
           tier: string;
@@ -533,16 +531,14 @@ export type Database = {
           updated_at: string | null;
         };
         Insert: {
-          ai_usage_count?: number | null;
-          ai_usage_reset_at?: string | null;
           avatar_url?: string | null;
           color_palette?: string | null;
           created_at?: string | null;
+          credit_balance?: number | null;
+          credit_reset_at?: string | null;
           display_name?: string | null;
+          first_import_free?: boolean | null;
           id?: string;
-          onboarding_completed?: boolean | null;
-          onboarding_completed_at?: string | null;
-          onboarding_import_used?: boolean | null;
           posts_last_viewed_at?: string | null;
           subscription_tier?: string | null;
           tier?: string;
@@ -550,16 +546,14 @@ export type Database = {
           updated_at?: string | null;
         };
         Update: {
-          ai_usage_count?: number | null;
-          ai_usage_reset_at?: string | null;
           avatar_url?: string | null;
           color_palette?: string | null;
           created_at?: string | null;
+          credit_balance?: number | null;
+          credit_reset_at?: string | null;
           display_name?: string | null;
+          first_import_free?: boolean | null;
           id?: string;
-          onboarding_completed?: boolean | null;
-          onboarding_completed_at?: string | null;
-          onboarding_import_used?: boolean | null;
           posts_last_viewed_at?: string | null;
           subscription_tier?: string | null;
           tier?: string;
@@ -720,6 +714,36 @@ export type Database = {
         };
         Relationships: [];
       };
+      transcripts: {
+        Row: {
+          content: string;
+          created_at: string | null;
+          duration_seconds: number | null;
+          id: string;
+          language: string | null;
+          source: string;
+          source_url: string;
+        };
+        Insert: {
+          content: string;
+          created_at?: string | null;
+          duration_seconds?: number | null;
+          id?: string;
+          language?: string | null;
+          source: string;
+          source_url: string;
+        };
+        Update: {
+          content?: string;
+          created_at?: string | null;
+          duration_seconds?: number | null;
+          id?: string;
+          language?: string | null;
+          source?: string;
+          source_url?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       kol_stats: {
@@ -740,7 +764,10 @@ export type Database = {
       };
     };
     Functions: {
-      consume_ai_quota: { Args: { p_user_id: string }; Returns: Json };
+      consume_credits: {
+        Args: { p_amount: number; p_operation?: string; p_user_id: string };
+        Returns: Json;
+      };
       create_post_atomic:
         | {
             Args: {
@@ -796,7 +823,10 @@ export type Database = {
           ticker: string;
         }[];
       };
-      refund_ai_quota: { Args: { p_user_id: string }; Returns: undefined };
+      refund_credits: {
+        Args: { p_amount: number; p_user_id: string };
+        Returns: Json;
+      };
       show_limit: { Args: never; Returns: number };
       show_trgm: { Args: { '': string }; Returns: string[] };
     };

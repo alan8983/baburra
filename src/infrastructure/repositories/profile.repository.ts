@@ -54,14 +54,12 @@ export async function getProfile(userId: string) {
       displayName: null,
       timezone: DEFAULT_TIMEZONE,
       colorPalette: 'asian' as ColorPalette,
-      onboardingCompleted: false,
-      onboardingCompletedAt: null,
     };
   }
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('display_name, timezone, color_palette, onboarding_completed, onboarding_completed_at')
+    .select('display_name, timezone, color_palette')
     .eq('id', userId)
     .single();
 
@@ -71,8 +69,6 @@ export async function getProfile(userId: string) {
         displayName: null,
         timezone: DEFAULT_TIMEZONE,
         colorPalette: 'asian' as ColorPalette,
-        onboardingCompleted: false,
-        onboardingCompletedAt: null,
       };
     }
     throw new Error(`Failed to get profile: ${error.message}`);
@@ -82,10 +78,6 @@ export async function getProfile(userId: string) {
     displayName: data.display_name as string | null,
     timezone: (data.timezone as string) || DEFAULT_TIMEZONE,
     colorPalette: ((data.color_palette as string) || 'asian') as ColorPalette,
-    onboardingCompleted: data.onboarding_completed === true,
-    onboardingCompletedAt: data.onboarding_completed_at
-      ? new Date(data.onboarding_completed_at as string)
-      : null,
   };
 }
 
@@ -119,34 +111,34 @@ export async function updateProfile(userId: string, input: UpdateProfileInput): 
 }
 
 /**
- * 檢查用戶是否已使用免費的 onboarding 匯入
+ * 檢查用戶是否仍有免費首次匯入額度
  */
-export async function checkOnboardingImportUsed(userId: string): Promise<boolean> {
+export async function checkFirstImportFree(userId: string): Promise<boolean> {
   const supabase = createAdminClient();
   if (!supabase) {
-    return false;
+    return true; // Default: new user gets free import
   }
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('onboarding_import_used')
+    .select('first_import_free')
     .eq('id', userId)
     .single();
 
   if (error) {
     if (error.code === 'PGRST116') {
-      return false; // Profile not found — treat as not used (new user gets free import)
+      return true; // Profile not found — treat as eligible (new user)
     }
-    throw new Error(`Failed to check onboarding import status: ${error.message}`);
+    throw new Error(`Failed to check first import free status: ${error.message}`);
   }
 
-  return data.onboarding_import_used === true;
+  return data.first_import_free === true;
 }
 
 /**
- * 標記用戶已完成 onboarding 流程
+ * 標記用戶已使用免費首次匯入
  */
-export async function markOnboardingCompleted(userId: string): Promise<void> {
+export async function markFirstImportUsed(userId: string): Promise<void> {
   const supabase = createAdminClient();
   if (!supabase) {
     throw new Error('Missing Supabase admin credentials');
@@ -154,33 +146,11 @@ export async function markOnboardingCompleted(userId: string): Promise<void> {
 
   const { error } = await supabase
     .from('profiles')
-    .update({
-      onboarding_completed: true,
-      onboarding_completed_at: new Date().toISOString(),
-    })
+    .update({ first_import_free: false })
     .eq('id', userId);
 
   if (error) {
-    throw new Error(`Failed to mark onboarding as completed: ${error.message}`);
-  }
-}
-
-/**
- * 標記用戶已使用免費的 onboarding 匯入
- */
-export async function markOnboardingImportUsed(userId: string): Promise<void> {
-  const supabase = createAdminClient();
-  if (!supabase) {
-    throw new Error('Missing Supabase admin credentials');
-  }
-
-  const { error } = await supabase
-    .from('profiles')
-    .update({ onboarding_import_used: true })
-    .eq('id', userId);
-
-  if (error) {
-    throw new Error(`Failed to mark onboarding import as used: ${error.message}`);
+    throw new Error(`Failed to mark first import as used: ${error.message}`);
   }
 }
 
