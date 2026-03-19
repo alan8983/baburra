@@ -8,7 +8,7 @@
     "removeUrl": "Remove",
     "maxUrls": "Up to {max} URLs",
     "supportedPlatforms": "Supports: Twitter/X posts, YouTube videos",
-    "supportedMarkets": "Supported markets: US, Taiwan, Hong Kong, Crypto",
+    "supportedMarkets": "Supported markets: US, Taiwan, Crypto",
     "onboardingHint": "First import is AI-quota-free!",
     "submit": "Start Import",
     "submitting": "Importing..."

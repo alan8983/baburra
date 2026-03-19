@@ -12,7 +12,7 @@
 | `stocks` | Shared | Investment targets (ticker, name, market) |
 | `posts` | Shared | Published articles with sentiment, content, source URL |
 | `post_stocks` | Shared | Many-to-many: post ↔ stock |
-| `stock_prices` | Shared (cache) | Daily OHLCV price data from Tiingo |
+| `stock_prices` | Shared (cache) | Daily OHLCV price data — Tiingo (US/CRYPTO), TWSE Open Data (TW) |
 | `post_arguments` | Shared | AI-extracted investment arguments per post per stock |
 | `argument_categories` | Shared (seed) | 7 analysis framework categories |
 | `drafts` | Private | User drafts (pre-publication) |
