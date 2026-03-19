@@ -19,8 +19,14 @@ vi.mock('@/infrastructure/api/tiingo.client', () => ({
   fetchTiingoPrices: vi.fn(),
 }));
 
+// Mock Twelve Data client
+vi.mock('@/infrastructure/api/twelve-data.client', () => ({
+  fetchTwelveDataPrices: vi.fn(),
+}));
+
 import { getStockPrices } from '../stock-price.repository';
 import { fetchTiingoPrices } from '@/infrastructure/api/tiingo.client';
+import { fetchTwelveDataPrices } from '@/infrastructure/api/twelve-data.client';
 
 const STOCK_ID = '00000000-0000-0000-0000-000000000001';
 
@@ -238,6 +244,90 @@ describe('stock-price.repository', () => {
       await expect(
         getStockPrices('AAPL', { startDate: '2025-01-02', endDate: '2025-01-03' })
       ).rejects.toThrow('Tiingo API error 500');
+    });
+
+    it('should route TW market stock to Twelve Data', async () => {
+      setupMockChain(
+        { data: { id: STOCK_ID, market: 'TW' }, error: null },
+        { data: [], error: null },
+        { error: null }
+      );
+      vi.mocked(fetchTwelveDataPrices).mockResolvedValueOnce(tiingoRows);
+
+      const result = await getStockPrices('2330.TW', {
+        startDate: '2025-01-02',
+        endDate: '2025-01-03',
+      });
+
+      expect(fetchTwelveDataPrices).toHaveBeenCalledWith('2330.TW', 'TW', {
+        startDate: '2025-01-02',
+        endDate: '2025-01-03',
+      });
+      expect(fetchTiingoPrices).not.toHaveBeenCalled();
+      expect(result.candles).toHaveLength(2);
+    });
+
+    it('should route HK market stock to Twelve Data', async () => {
+      setupMockChain(
+        { data: { id: STOCK_ID, market: 'HK' }, error: null },
+        { data: [], error: null },
+        { error: null }
+      );
+      vi.mocked(fetchTwelveDataPrices).mockResolvedValueOnce(tiingoRows);
+
+      const result = await getStockPrices('0700.HK', {
+        startDate: '2025-01-02',
+        endDate: '2025-01-03',
+      });
+
+      expect(fetchTwelveDataPrices).toHaveBeenCalledWith('0700.HK', 'HK', {
+        startDate: '2025-01-02',
+        endDate: '2025-01-03',
+      });
+      expect(fetchTiingoPrices).not.toHaveBeenCalled();
+      expect(result.candles).toHaveLength(2);
+    });
+
+    it('should still route US market to Tiingo', async () => {
+      setupMockChain(
+        { data: { id: STOCK_ID, market: 'US' }, error: null },
+        { data: [], error: null },
+        { error: null }
+      );
+      vi.mocked(fetchTiingoPrices).mockResolvedValueOnce(tiingoRows);
+
+      await getStockPrices('AAPL', {
+        startDate: '2025-01-02',
+        endDate: '2025-01-03',
+      });
+
+      expect(fetchTiingoPrices).toHaveBeenCalledWith('AAPL', {
+        startDate: '2025-01-02',
+        endDate: '2025-01-03',
+        market: 'US',
+      });
+      expect(fetchTwelveDataPrices).not.toHaveBeenCalled();
+    });
+
+    it('should still route CRYPTO market to Tiingo', async () => {
+      setupMockChain(
+        { data: { id: STOCK_ID, market: 'CRYPTO' }, error: null },
+        { data: [], error: null },
+        { error: null }
+      );
+      vi.mocked(fetchTiingoPrices).mockResolvedValueOnce(tiingoRows);
+
+      await getStockPrices('BTC', {
+        startDate: '2025-01-02',
+        endDate: '2025-01-03',
+      });
+
+      expect(fetchTiingoPrices).toHaveBeenCalledWith('BTC', {
+        startDate: '2025-01-02',
+        endDate: '2025-01-03',
+        market: 'CRYPTO',
+      });
+      expect(fetchTwelveDataPrices).not.toHaveBeenCalled();
     });
 
     it('should return fresh cache for today when fetched_at is recent', async () => {

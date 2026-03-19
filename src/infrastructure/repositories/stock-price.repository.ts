@@ -8,6 +8,7 @@
 import { APP_CONFIG } from '@/lib/constants';
 import { createAdminClient } from '@/infrastructure/supabase/admin';
 import { fetchTiingoPrices } from '@/infrastructure/api/tiingo.client';
+import { fetchTwelveDataPrices } from '@/infrastructure/api/twelve-data.client';
 import type { CandlestickData, VolumeData } from '@/domain/models/stock';
 
 const CACHE_DAYS = APP_CONFIG.STOCK_PRICE_CACHE_DAYS;
@@ -244,20 +245,26 @@ export async function getStockPrices(
     staleCached = cached;
   }
 
-  // Step 3: Fetch from Tiingo (auto-selects equities or crypto endpoint)
+  // Step 3: Fetch from price provider (dispatch by market)
   try {
-    const tiingoRows = await fetchTiingoPrices(ticker, {
-      startDate: startStr,
-      endDate: endStr,
-      market,
-    });
+    const priceRows =
+      market === 'TW' || market === 'HK'
+        ? await fetchTwelveDataPrices(ticker, market, {
+            startDate: startStr,
+            endDate: endStr,
+          })
+        : await fetchTiingoPrices(ticker, {
+            startDate: startStr,
+            endDate: endStr,
+            market,
+          });
 
-    const { candles, volumes, rowsForCache } = transformTiingoRows(tiingoRows);
+    const { candles, volumes, rowsForCache } = transformTiingoRows(priceRows);
 
-    // Step 3a: Tiingo returned empty (e.g. 404 for crypto/unknown ticker) — fall back to stale cache
+    // Step 3a: Provider returned empty — fall back to stale cache
     if (candles.length === 0 && staleCached.length > 0) {
       console.warn(
-        `[getStockPrices] Tiingo returned empty for ${ticker}, serving stale cache (${staleCached.length} rows)`
+        `[getStockPrices] Price provider returned empty for ${ticker}, serving stale cache (${staleCached.length} rows)`
       );
       return dbRowsToChartData(staleCached);
     }
@@ -270,12 +277,12 @@ export async function getStockPrices(
     }
 
     return { candles, volumes };
-  } catch (tiingoError) {
-    // Step 5: Stale-while-revalidate — serve stale cache if Tiingo fails
+  } catch (fetchError) {
+    // Step 5: Stale-while-revalidate — serve stale cache if price provider fails
     if (staleCached.length > 0) {
-      console.warn(`Tiingo API failed for ${ticker}, serving stale cache`);
+      console.warn(`Price API failed for ${ticker}, serving stale cache`);
       return dbRowsToChartData(staleCached);
     }
-    throw tiingoError;
+    throw fetchError;
   }
 }
