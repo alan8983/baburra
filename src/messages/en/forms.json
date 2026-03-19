@@ -46,7 +46,6 @@
     "markets": {
       "us": "US Stocks (US)",
       "tw": "Taiwan Stocks (TW)",
-      "hk": "Hong Kong Stocks (HK)",
       "crypto": "Cryptocurrency"
     },
     "helpText": "Please enter stock ticker, e.g., AAPL for US stocks, 2330 for Taiwan stocks",

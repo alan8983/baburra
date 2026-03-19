@@ -19,14 +19,14 @@ vi.mock('@/infrastructure/api/tiingo.client', () => ({
   fetchTiingoPrices: vi.fn(),
 }));
 
-// Mock Twelve Data client
-vi.mock('@/infrastructure/api/twelve-data.client', () => ({
-  fetchTwelveDataPrices: vi.fn(),
+// Mock TWSE client
+vi.mock('@/infrastructure/api/twse.client', () => ({
+  fetchTwsePrices: vi.fn(),
 }));
 
 import { getStockPrices } from '../stock-price.repository';
 import { fetchTiingoPrices } from '@/infrastructure/api/tiingo.client';
-import { fetchTwelveDataPrices } from '@/infrastructure/api/twelve-data.client';
+import { fetchTwsePrices } from '@/infrastructure/api/twse.client';
 
 const STOCK_ID = '00000000-0000-0000-0000-000000000001';
 
@@ -246,20 +246,20 @@ describe('stock-price.repository', () => {
       ).rejects.toThrow('Tiingo API error 500');
     });
 
-    it('should route TW market stock to Twelve Data', async () => {
+    it('should route TW market stock to TWSE Open Data', async () => {
       setupMockChain(
         { data: { id: STOCK_ID, market: 'TW' }, error: null },
         { data: [], error: null },
         { error: null }
       );
-      vi.mocked(fetchTwelveDataPrices).mockResolvedValueOnce(tiingoRows);
+      vi.mocked(fetchTwsePrices).mockResolvedValueOnce(tiingoRows);
 
       const result = await getStockPrices('2330.TW', {
         startDate: '2025-01-02',
         endDate: '2025-01-03',
       });
 
-      expect(fetchTwelveDataPrices).toHaveBeenCalledWith('2330.TW', 'TW', {
+      expect(fetchTwsePrices).toHaveBeenCalledWith('2330.TW', {
         startDate: '2025-01-02',
         endDate: '2025-01-03',
       });
@@ -267,25 +267,21 @@ describe('stock-price.repository', () => {
       expect(result.candles).toHaveLength(2);
     });
 
-    it('should route HK market stock to Twelve Data', async () => {
+    it('should return empty for HK market (deferred — no data source yet)', async () => {
       setupMockChain(
         { data: { id: STOCK_ID, market: 'HK' }, error: null },
-        { data: [], error: null },
-        { error: null }
+        { data: [], error: null }
       );
-      vi.mocked(fetchTwelveDataPrices).mockResolvedValueOnce(tiingoRows);
 
       const result = await getStockPrices('0700.HK', {
         startDate: '2025-01-02',
         endDate: '2025-01-03',
       });
 
-      expect(fetchTwelveDataPrices).toHaveBeenCalledWith('0700.HK', 'HK', {
-        startDate: '2025-01-02',
-        endDate: '2025-01-03',
-      });
       expect(fetchTiingoPrices).not.toHaveBeenCalled();
-      expect(result.candles).toHaveLength(2);
+      expect(fetchTwsePrices).not.toHaveBeenCalled();
+      expect(result.candles).toHaveLength(0);
+      expect(result.volumes).toHaveLength(0);
     });
 
     it('should still route US market to Tiingo', async () => {
@@ -306,7 +302,7 @@ describe('stock-price.repository', () => {
         endDate: '2025-01-03',
         market: 'US',
       });
-      expect(fetchTwelveDataPrices).not.toHaveBeenCalled();
+      expect(fetchTwsePrices).not.toHaveBeenCalled();
     });
 
     it('should still route CRYPTO market to Tiingo', async () => {
@@ -327,7 +323,7 @@ describe('stock-price.repository', () => {
         endDate: '2025-01-03',
         market: 'CRYPTO',
       });
-      expect(fetchTwelveDataPrices).not.toHaveBeenCalled();
+      expect(fetchTwsePrices).not.toHaveBeenCalled();
     });
 
     it('should return fresh cache for today when fetched_at is recent', async () => {

@@ -8,7 +8,7 @@
 import { APP_CONFIG } from '@/lib/constants';
 import { createAdminClient } from '@/infrastructure/supabase/admin';
 import { fetchTiingoPrices } from '@/infrastructure/api/tiingo.client';
-import { fetchTwelveDataPrices } from '@/infrastructure/api/twelve-data.client';
+import { fetchTwsePrices } from '@/infrastructure/api/twse.client';
 import type { CandlestickData, VolumeData } from '@/domain/models/stock';
 
 const CACHE_DAYS = APP_CONFIG.STOCK_PRICE_CACHE_DAYS;
@@ -246,10 +246,17 @@ export async function getStockPrices(
   }
 
   // Step 3: Fetch from price provider (dispatch by market)
+  //   TW → TWSE Open Data, US/CRYPTO → Tiingo, HK → deferred (empty)
+  if (market === 'HK') {
+    console.warn(`[getStockPrices] HK market not yet supported, returning ${staleCached.length > 0 ? 'stale cache' : 'empty'} for ${ticker}`);
+    if (staleCached.length > 0) return dbRowsToChartData(staleCached);
+    return { candles: [], volumes: [] };
+  }
+
   try {
     const priceRows =
-      market === 'TW' || market === 'HK'
-        ? await fetchTwelveDataPrices(ticker, market, {
+      market === 'TW'
+        ? await fetchTwsePrices(ticker, {
             startDate: startStr,
             endDate: endStr,
           })
