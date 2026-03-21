@@ -164,7 +164,7 @@ See `.env.example` for the full list. At minimum you need:
 - `SUPABASE_ACCESS_TOKEN` — Supabase CLI authentication (generate at dashboard.supabase.com/account/tokens)
 - `SUPABASE_DB_PASSWORD` — Database password for CLI operations (found in Project Settings → Database)
 - `GEMINI_API_KEY` — AI sentiment analysis
-- `TIINGO_API_TOKEN` — Stock price data
+- `TIINGO_API_TOKEN` — Stock price data (US equities + crypto)
 - `DEV_USER_ID` — Bypass auth in development
 
 ### Previewing

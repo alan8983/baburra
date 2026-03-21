@@ -43,7 +43,9 @@
       "Bash(taskkill //F //IM node.exe)",
       "Bash(npx openspec:*)",
       "Bash(openspec new:*)",
-      "Bash(git rebase:*)"
+      "Bash(git rebase:*)",
+      "Bash(openspec status:*)",
+      "Bash(openspec instructions:*)"
     ],
     "additionalDirectories": [
       "c:\\Cursor_Master\\investment-idea-monitor\\src\\app\\api\\kols\\[id]\\win-rate"
