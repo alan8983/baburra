@@ -15,7 +15,6 @@
       "Bash(git stash:*)",
       "Bash(git stash pop:*)",
       "Bash(git reset:*)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nSync package-lock.json to fix CI npm ci failure\n\nCo-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git push:*)",
       "Bash(npm run lint:fix:*)",
       "Bash(git diff:*)",
@@ -32,20 +31,19 @@
       "Bash(npx supabase:*)",
       "Bash(wc:*)",
       "Bash(npx husky:*)",
-      "Bash(GIT_REDIRECT_STDERR=2)",
-      "Bash(1 git diff --ignore-cr-at-eol -- package.json)",
       "Bash(curl:*)",
       "Bash(git fetch:*)",
       "Bash(git merge:*)",
       "Bash(npm run:*)",
       "Bash(npm install:*)",
       "mcp__Claude_Preview__preview_start",
-      "Bash(taskkill //F //IM node.exe)",
       "Bash(npx openspec:*)",
       "Bash(openspec new:*)",
       "Bash(git rebase:*)",
       "Bash(openspec status:*)",
-      "Bash(openspec instructions:*)"
+      "Bash(openspec instructions:*)",
+      "Bash(source /c/Cursor_Master/investment-idea-monitor/.env.local)",
+      "Bash(export SUPABASE_ACCESS_TOKEN)"
     ],
     "additionalDirectories": [
       "c:\\Cursor_Master\\investment-idea-monitor\\src\\app\\api\\kols\\[id]\\win-rate"
