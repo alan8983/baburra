@@ -43,6 +43,7 @@
       "Bash(taskkill //F //IM node.exe)",
       "Bash(npx openspec:*)",
       "Bash(openspec new:*)",
+      "Bash(git rebase:*)",
       "Bash(openspec status:*)",
       "Bash(openspec instructions:*)"
     ],

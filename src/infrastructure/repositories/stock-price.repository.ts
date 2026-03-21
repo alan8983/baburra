@@ -248,7 +248,9 @@ export async function getStockPrices(
   // Step 3: Fetch from price provider (dispatch by market)
   //   TW → TWSE Open Data, US/CRYPTO → Tiingo, HK → deferred (empty)
   if (market === 'HK') {
-    console.warn(`[getStockPrices] HK market not yet supported, returning ${staleCached.length > 0 ? 'stale cache' : 'empty'} for ${ticker}`);
+    console.warn(
+      `[getStockPrices] HK market not yet supported, returning ${staleCached.length > 0 ? 'stale cache' : 'empty'} for ${ticker}`
+    );
     if (staleCached.length > 0) return dbRowsToChartData(staleCached);
     return { candles: [], volumes: [] };
   }
