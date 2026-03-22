@@ -267,7 +267,7 @@ export async function geminiTranscribeVideo(
     generationConfig: {
       temperature: 0.1,
       maxOutputTokens: 16384,
-      mediaResolution: 'low',
+      mediaResolution: 'MEDIA_RESOLUTION_LOW',
     },
   };
 

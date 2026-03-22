@@ -15,8 +15,6 @@ export interface ProfileData {
   displayName: string | null;
   timezone: string;
   colorPalette: ColorPalette;
-  onboardingCompleted: boolean;
-  onboardingCompletedAt: string | null;
 }
 
 interface UpdateProfileInput {

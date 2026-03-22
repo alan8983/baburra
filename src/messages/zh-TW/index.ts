@@ -11,8 +11,6 @@ import auth from './auth.json';
 import forms from './forms.json';
 import bookmarks from './bookmarks.json';
 import importMessages from './import.json';
-import onboarding from './onboarding.json';
-import welcome from './welcome.json';
 import scrape from './scrape.json';
 import subscriptions from './subscriptions.json';
 
@@ -29,8 +27,6 @@ const zhTWMessages = {
   forms,
   bookmarks,
   import: importMessages,
-  onboarding,
-  welcome,
   scrape,
   subscriptions,
 };

@@ -12,9 +12,9 @@ import { executeBatchImport } from '@/domain/services/import-pipeline.service';
 import { parseBody } from '@/lib/api/validation';
 import { unauthorizedError, internalError } from '@/lib/api/error';
 
-// Vercel serverless functions have a 60s timeout on Pro, 10s on Hobby.
-// Use 55s to leave margin for response serialization.
-const BATCH_TIMEOUT_MS = 55_000;
+// Gemini video transcription can take 60-120s for captionless YouTube videos.
+// Use 170s to accommodate transcription + analysis, with 10s margin for response.
+const BATCH_TIMEOUT_MS = 170_000;
 
 const importBatchSchema = z.object({
   urls: z
@@ -23,7 +23,7 @@ const importBatchSchema = z.object({
     .max(5, 'Maximum 5 URLs'),
 });
 
-export const maxDuration = 60;
+export const maxDuration = 180;
 
 export async function POST(request: NextRequest) {
   try {

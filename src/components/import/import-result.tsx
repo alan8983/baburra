@@ -9,7 +9,6 @@ import {
   XCircle,
   ArrowRight,
   RotateCcw,
-  Info,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -165,14 +164,6 @@ export function ImportResult({ result, onImportMore, onProceed, proceedLabel }: 
               </div>
             ))}
           </div>
-
-          {/* Onboarding note */}
-          {result.onboardingQuotaUsed && (
-            <div className="text-muted-foreground flex items-center gap-2 text-xs">
-              <Info className="h-4 w-4" />
-              {t('result.onboardingQuotaNote')}
-            </div>
-          )}
         </CardContent>
       </Card>
 

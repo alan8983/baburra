@@ -6,7 +6,6 @@
  *
  * Designed to be reusable across multiple entry points:
  * - /api/import/batch API route
- * - Onboarding flow (Phase 13)
  * - Profile auto-discovery (Phase 12b)
  */
 
@@ -25,8 +24,8 @@ import {
   saveTranscript,
 } from '@/infrastructure/repositories/transcript.repository';
 import {
-  checkOnboardingImportUsed,
-  markOnboardingImportUsed,
+  checkFirstImportFree,
+  markFirstImportUsed,
   getUserTimezone,
 } from '@/infrastructure/repositories/profile.repository';
 import {
@@ -74,7 +73,7 @@ export interface ImportBatchResult {
   totalImported: number;
   totalDuplicate: number;
   totalError: number;
-  onboardingQuotaUsed: boolean;
+  firstImportFreeUsed: boolean;
 }
 
 // ── KOL Cache ──
@@ -89,16 +88,15 @@ export async function executeBatchImport(
 ): Promise<ImportBatchResult> {
   const timezone = await getUserTimezone(userId);
 
-  // Step 1: Check onboarding exemption
-  const onboardingAlreadyUsed = await checkOnboardingImportUsed(userId);
-  const isOnboardingExempt = !onboardingAlreadyUsed;
+  // Step 1: Check first-import-free exemption
+  const isFirstImportFree = await checkFirstImportFree(userId);
 
   // Step 2: Process all URLs in parallel for speed
   // Each processUrl handles its own quota consumption and error recovery
   const kolCache = new Map<string, KolCacheEntry>();
 
   const settled = await Promise.allSettled(
-    input.urls.map((url) => processUrl(url, userId, timezone, isOnboardingExempt, kolCache))
+    input.urls.map((url) => processUrl(url, userId, timezone, isFirstImportFree, kolCache))
   );
 
   const urlResults: ImportUrlResult[] = settled.map((result, i) => {
@@ -119,9 +117,9 @@ export async function executeBatchImport(
     };
   });
 
-  // Step 3: Mark onboarding import used (if this was the first import)
-  if (isOnboardingExempt && urlResults.some((r) => r.status === 'success')) {
-    await markOnboardingImportUsed(userId);
+  // Step 3: Mark first import used (if this was the free first import)
+  if (isFirstImportFree && urlResults.some((r) => r.status === 'success')) {
+    await markFirstImportUsed(userId);
   }
 
   // Step 4: Aggregate KOL summary from successful results
@@ -152,7 +150,7 @@ export async function executeBatchImport(
     totalImported,
     totalDuplicate,
     totalError,
-    onboardingQuotaUsed: isOnboardingExempt && totalImported > 0,
+    firstImportFreeUsed: isFirstImportFree && totalImported > 0,
   };
 }
 

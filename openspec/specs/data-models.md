@@ -12,7 +12,7 @@
 | `stocks` | Shared | Investment targets (ticker, name, market) |
 | `posts` | Shared | Published articles with sentiment, content, source URL |
 | `post_stocks` | Shared | Many-to-many: post ↔ stock |
-| `stock_prices` | Shared (cache) | Daily OHLCV price data from Tiingo |
+| `stock_prices` | Shared (cache) | Daily OHLCV price data — Tiingo (US/CRYPTO), TWSE Open Data (TW) |
 | `post_arguments` | Shared | AI-extracted investment arguments per post per stock |
 | `argument_categories` | Shared (seed) | 7 analysis framework categories |
 | `drafts` | Private | User drafts (pre-publication) |
@@ -20,7 +20,6 @@
 | `kol_sources` | Shared | KOL platform identity + scrape state |
 | `kol_subscriptions` | Private | User subscriptions to KOLs |
 | `scrape_jobs` | Shared | Background scrape job queue |
-| `ab_experiments` | Shared | A/B test experiments and events |
 
 ## Domain Model Conventions
 
@@ -46,8 +45,9 @@ stocks ──< stock_prices
 
 | Migration | Description | Date |
 | --- | --- | --- |
+| 20250602 | Remove onboarding columns, add `first_import_free` | 2026-03-18 |
 | 027 | `post_arguments.statement_type` (fact/opinion/mixed) | 2026-03-13 |
 | 019-026 | Phase 12b tables (kol_sources, kol_subscriptions, scrape_jobs) | 2026-03-08 |
-| 017-018 | A/B testing + DB atomic operations | 2026-03-01 |
+| 017-018 | DB atomic operations | 2026-03-01 |
 
 > For full migration history, see `supabase/migrations/`.

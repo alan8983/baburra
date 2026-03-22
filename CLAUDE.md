@@ -66,7 +66,13 @@ Uses **next-intl**. Default locale is `zh-TW` (Traditional Chinese), also suppor
 
 ## Branch Workflow
 
-**IMPORTANT:** At the start of every session, if the user does not specify which branch to work on, **ask which branch before making any changes.** Run `git branch` to show available branches and confirm with the user.
+**IMPORTANT:** At the start of every local session, **sync local main with GitHub main** before doing anything else:
+
+```bash
+git checkout main && git pull origin main
+```
+
+Then, if the user does not specify which branch to work on, **ask which branch before making any changes.** Run `git branch` to show available branches and confirm with the user.
 
 - `main` — stable production code. Do not commit directly unless the user explicitly says so.
 - Feature/rebrand branches (e.g., `rebrand`) — used for isolated work. Always confirm the active branch before editing files.
@@ -164,7 +170,7 @@ See `.env.example` for the full list. At minimum you need:
 - `SUPABASE_ACCESS_TOKEN` — Supabase CLI authentication (generate at dashboard.supabase.com/account/tokens)
 - `SUPABASE_DB_PASSWORD` — Database password for CLI operations (found in Project Settings → Database)
 - `GEMINI_API_KEY` — AI sentiment analysis
-- `TIINGO_API_TOKEN` — Stock price data
+- `TIINGO_API_TOKEN` — Stock price data (US equities + crypto)
 - `DEV_USER_ID` — Bypass auth in development
 
 ### Previewing

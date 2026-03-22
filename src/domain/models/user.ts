@@ -12,8 +12,7 @@ export interface Profile {
   creditBalance: number;
   creditResetAt: Date | null;
   subscriptionTier: SubscriptionTier;
-  onboardingCompleted: boolean;
-  onboardingCompletedAt: Date | null;
+  firstImportFree: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
