@@ -73,6 +73,11 @@
     "sentimentChart": {
       "title": "觀點時間軸"
     },
+    "scorecard": {
+      "winRate": "勝率",
+      "correct": "正確",
+      "sectorPerformance": "各標的表現"
+    },
     "winRate": "勝率 (30日)",
     "loading": "載入中...",
     "errors": {

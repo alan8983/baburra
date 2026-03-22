@@ -51,6 +51,26 @@
     "importKol": "Import KOL Posts",
     "addPost": "Add Post Manually"
   },
+  "pulse": {
+    "title": "Portfolio Pulse",
+    "winRate": "Win Rate",
+    "avgReturn": "Avg Return",
+    "trend": "30d Trend",
+    "noData": "Track some KOL predictions to see your portfolio pulse."
+  },
+  "hotTakes": {
+    "title": "Hot Takes (48h)",
+    "noData": "No recent predictions in the last 48 hours."
+  },
+  "movers": {
+    "title": "Stock Movers",
+    "noData": "No stock price data available yet."
+  },
+  "leaderboard": {
+    "title": "KOL Leaderboard",
+    "noData": "No resolved predictions yet.",
+    "calls": "calls"
+  },
   "insights": {
     "trendingStocks": {
       "title": "Trending Stocks This Week",

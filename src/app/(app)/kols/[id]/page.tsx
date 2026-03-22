@@ -41,6 +41,7 @@ import {
 import { SubscriptionToggle } from '@/components/kol/subscription-toggle';
 import { formatReturnRate, getReturnRateColorClass } from '@/domain/calculators';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { KolScorecard } from './_components/kol-scorecard';
 
 const SentimentLineChart = dynamic(
   () =>
@@ -379,6 +380,19 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
     return Array.from(map.values());
   }, [postsData?.data]);
 
+  // Flatten all stock-level posts for the scorecard
+  const allStockPosts = useMemo(() => {
+    return postsByStock.flatMap((stock) =>
+      stock.posts.map((p) => ({
+        id: p.id,
+        stockTicker: stock.ticker,
+        stockName: stock.name,
+        sentiment: p.sentiment,
+        priceChanges: p.priceChanges,
+      }))
+    );
+  }, [postsByStock]);
+
   const stalePosts = useMemo(() => {
     const currentModel = postsData?.currentAiModel;
     if (!currentModel || !postsData?.data) return [];
@@ -423,72 +437,14 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
         </Link>
       </Button>
 
-      {/* KOL Header */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
-            <Avatar className="h-20 w-20">
-              <AvatarImage src={kol.avatarUrl || undefined} />
-              <AvatarFallback>
-                <User className="h-10 w-10" />
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 text-center sm:text-left">
-              <h1 className="text-2xl font-bold">{kol.name}</h1>
-              {kol.bio && <p className="text-muted-foreground mt-1 text-sm">{kol.bio}</p>}
-              <div className="mt-3 flex flex-wrap items-center justify-center gap-4 sm:justify-start">
-                <Badge variant="outline">
-                  {t('detail.stats.postCount')} {kol.postCount}
-                </Badge>
-                <Badge
-                  variant="default"
-                  className={kol.returnRate != null && kol.returnRate >= 0 ? 'bg-green-600' : ''}
-                >
-                  {kol.returnRate != null
-                    ? t('detail.stats.overallReturnRate', {
-                        percent: `${kol.returnRate >= 0 ? '+' : ''}${kol.returnRate.toFixed(1)}`,
-                      })
-                    : '—'}
-                </Badge>
-                {followerData && followerData.followerCount > 0 && (
-                  <Badge variant="secondary">
-                    <Users className="mr-1 h-3 w-3" />
-                    {t('detail.stats.followers', { count: followerData.followerCount })}
-                  </Badge>
-                )}
-              </div>
-              {Object.entries(kol.socialLinks).length > 0 && (
-                <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-                  {Object.entries(kol.socialLinks).map(([platform, url]) => (
-                    <a
-                      key={platform}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-muted-foreground hover:text-primary inline-flex items-center gap-1 text-sm"
-                    >
-                      <ExternalLink className="h-3 w-3" />
-                      {platform}
-                    </a>
-                  ))}
-                </div>
-              )}
-              {kolSources && kolSources.length > 0 && (
-                <div className="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-                  {kolSources.map((source) => (
-                    <SubscriptionToggle
-                      key={source.id}
-                      kolId={id}
-                      sourceId={source.id}
-                      isSubscribed={source.isSubscribed}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* KOL Scorecard */}
+      <KolScorecard
+        kol={kol}
+        followerCount={followerData?.followerCount}
+        sources={kolSources}
+        kolId={id}
+        stockPosts={allStockPosts}
+      />
 
       {/* Scrape in-progress banner */}
       {activeScrape && (

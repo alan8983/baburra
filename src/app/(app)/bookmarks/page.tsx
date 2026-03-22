@@ -14,6 +14,7 @@ import { formatDateTime } from '@/lib/utils/date';
 import { useBookmarks, useRemoveBookmark } from '@/hooks';
 import { EmptyState } from '@/components/shared/empty-state';
 import { toast } from 'sonner';
+import { getStaggerClass } from '@/lib/animations';
 
 export default function BookmarksPage() {
   const t = useTranslations('bookmarks');
@@ -57,10 +58,14 @@ export default function BookmarksPage() {
       {/* Bookmark List */}
       {!isLoading && bookmarks.length > 0 && (
         <div className="space-y-4">
-          {bookmarks.map((bookmark) => {
+          {bookmarks.map((bookmark, i) => {
             const post = bookmark.post;
             return (
-              <Card key={bookmark.id} className="hover:bg-muted/50 transition-colors">
+              <Card
+                key={bookmark.id}
+                className={`hover:bg-muted/50 transition-colors ${getStaggerClass(i)}`}
+                style={{ opacity: 0 }}
+              >
                 <CardContent className="pt-4">
                   <div className="flex items-start gap-4">
                     <Link

@@ -10,7 +10,13 @@ import { useTrendingStocks, usePopularKols } from '@/hooks';
 import { useColorPalette } from '@/lib/colors/color-palette-context';
 import { EmptyState } from '@/components/shared/empty-state';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { AnimatedNumber } from '@/components/ui/animated-number';
 import { ROUTES } from '@/lib/constants';
+import { PortfolioPulse } from './_components/portfolio-pulse';
+import { HotTakesFeed } from './_components/hot-takes-feed';
+import { StockMovers } from './_components/stock-movers';
+import { KolLeaderboard } from './_components/kol-leaderboard';
+import { getStaggerClass } from '@/lib/animations';
 
 // 格式化數字（千分位）- 使用動態語系
 function formatNumber(num: number, locale: string): string {
@@ -39,7 +45,7 @@ function formatRelativeTime(
   if (diffMins < 60) return t('time.minutesAgo', { count: diffMins });
   if (diffHours < 24) return t('time.hoursAgo', { count: diffHours });
   if (diffDays < 7) return t('time.daysAgo', { count: diffDays });
-  return formatDate(d, 'zh-TW'); // Fallback to zh-TW for date format
+  return formatDate(d, 'zh-TW');
 }
 
 export default function DashboardPage() {
@@ -50,18 +56,6 @@ export default function DashboardPage() {
   const { data, isLoading, error } = useDashboard();
   const { data: trendingStocks } = useTrendingStocks(7, 5);
   const { data: popularKols } = usePopularKols(5);
-
-  // Helper to get sentiment label
-  const getSentimentLabel = (sentiment: number) => {
-    const sentimentMap: Record<number, string> = {
-      [-2]: tCommon('sentiment.stronglyBearish'),
-      [-1]: tCommon('sentiment.bearish'),
-      [0]: tCommon('sentiment.neutral'),
-      [1]: tCommon('sentiment.bullish'),
-      [2]: tCommon('sentiment.stronglyBullish'),
-    };
-    return sentimentMap[sentiment] || '';
-  };
 
   if (isLoading) {
     return (
@@ -145,7 +139,7 @@ export default function DashboardPage() {
   const statsCards = [
     {
       title: t('stats.kolTotal'),
-      value: formatNumber(stats.kolCount, locale),
+      value: stats.kolCount,
       description:
         stats.kolMonthlyNew > 0
           ? t('stats.kolMonthlyNew', { count: formatNumber(stats.kolMonthlyNew, locale) })
@@ -154,7 +148,7 @@ export default function DashboardPage() {
     },
     {
       title: t('stats.stocks'),
-      value: formatNumber(stats.stockCount, locale),
+      value: stats.stockCount,
       description:
         stats.stockMonthlyNew > 0
           ? t('stats.stocksMonthlyNew', { count: formatNumber(stats.stockMonthlyNew, locale) })
@@ -163,7 +157,7 @@ export default function DashboardPage() {
     },
     {
       title: t('stats.posts'),
-      value: formatNumber(stats.postCount, locale),
+      value: stats.postCount,
       description:
         stats.postWeeklyNew > 0
           ? t('stats.postsWeeklyNew', { count: formatNumber(stats.postWeeklyNew, locale) })
@@ -172,7 +166,7 @@ export default function DashboardPage() {
     },
     {
       title: t('stats.drafts'),
-      value: formatNumber(stats.draftCount, locale),
+      value: stats.draftCount,
       description: stats.draftLastUpdated
         ? `${t('drafts.recentUpdate')}: ${formatRelativeTime(stats.draftLastUpdated, tCommon)}`
         : t('drafts.noDrafts'),
@@ -191,147 +185,60 @@ export default function DashboardPage() {
         <LocaleSwitcher />
       </div>
 
+      {/* Portfolio Pulse */}
+      <PortfolioPulse posts={recentPosts} />
+
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {statsCards.map((stat) => (
-          <Card key={stat.title}>
+        {statsCards.map((stat, i) => (
+          <Card key={stat.title} className={getStaggerClass(i)}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
               <stat.icon className="text-muted-foreground h-4 w-4" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
+              <div className="text-2xl font-bold">
+                <AnimatedNumber
+                  value={stat.value}
+                  formatter={(v, l) => v.toLocaleString(l)}
+                  locale={locale}
+                />
+              </div>
               <p className="text-muted-foreground text-xs">{stat.description}</p>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* Main Content Grid */}
+      {/* Insights Grid: Hot Takes + Stock Movers */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Recent Posts */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('recentPosts.title')}</CardTitle>
-            <CardDescription>{t('recentPosts.description')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {recentPosts.length === 0 ? (
-              <p className="text-muted-foreground py-4 text-center">{t('recentPosts.noPosts')}</p>
-            ) : (
-              <div className="space-y-4">
-                {recentPosts.map((post) => {
-                  const stockTickers = post.stocks.map((s) => s.ticker).join(', ');
-                  const firstStockId = post.stocks[0]?.id;
-                  const priceChange =
-                    firstStockId && post.priceChanges[firstStockId]
-                      ? (post.priceChanges[firstStockId].day30 ??
-                        post.priceChanges[firstStockId].day5 ??
-                        null)
-                      : null;
-                  const sentimentColor = colors.sentimentBadgeColors[post.sentiment];
-
-                  return (
-                    <Link
-                      key={post.id}
-                      href={ROUTES.POST_DETAIL(post.id)}
-                      className="hover:bg-muted flex items-center justify-between rounded-lg border-b px-2 py-3 transition-colors last:border-0"
-                    >
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium">{post.kol.name}</p>
-                        <p className="text-muted-foreground text-xs">
-                          {stockTickers || t('recentPosts.noStocks')} |{' '}
-                          {formatDate(post.postedAt, locale)}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`rounded px-2 py-0.5 text-xs font-medium ${sentimentColor}`}
-                        >
-                          {getSentimentLabel(post.sentiment)}
-                        </span>
-                        {priceChange !== null && (
-                          <span
-                            className={`text-sm font-medium ${
-                              priceChange >= 0 ? colors.bullish.text : colors.bearish.text
-                            }`}
-                          >
-                            {priceChange >= 0 ? '+' : ''}
-                            {priceChange.toFixed(1)}%
-                          </span>
-                        )}
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Top KOLs */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('topKols.title')}</CardTitle>
-            <CardDescription>{t('topKols.description')}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {topKols.length === 0 ? (
-              <p className="text-muted-foreground py-4 text-center">{t('topKols.noKols')}</p>
-            ) : (
-              <div className="space-y-4">
-                {topKols.map((kol, i) => (
-                  <Link
-                    key={kol.id}
-                    href={ROUTES.KOL_DETAIL(kol.id)}
-                    className="hover:bg-muted flex items-center justify-between rounded-lg border-b px-2 py-3 transition-colors last:border-0"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium">
-                        {i + 1}
-                      </span>
-                      <div>
-                        <p className="text-sm font-medium">{kol.name}</p>
-                        <p className="text-muted-foreground text-xs">
-                          {t('topKols.postCount', { count: formatNumber(kol.postCount, locale) })}
-                        </p>
-                      </div>
-                    </div>
-                    {kol.lastPostAt && (
-                      <div className="text-right">
-                        <p className="text-muted-foreground text-xs">
-                          {formatDate(kol.lastPostAt, locale)}
-                        </p>
-                        <p className="text-muted-foreground text-xs">{t('topKols.lastPost')}</p>
-                      </div>
-                    )}
-                  </Link>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <HotTakesFeed posts={recentPosts} />
+        <StockMovers posts={recentPosts} />
       </div>
 
-      {/* Community Insights */}
+      {/* Leaderboard + Community */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Trending Stocks This Week */}
+        <KolLeaderboard posts={recentPosts} />
+
+        {/* Community Insights: Trending Stocks */}
         <Card>
           <CardHeader>
-            <CardTitle>{t('insights.trendingStocks.title')}</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              {t('insights.trendingStocks.title')}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {!trendingStocks || trendingStocks.length === 0 ? (
-              <p className="text-muted-foreground py-4 text-center">
+              <p className="text-muted-foreground py-4 text-center text-sm">
                 {t('insights.trendingStocks.noData')}
               </p>
             ) : (
-              <div className="space-y-4">
-                {trendingStocks.map((stock) => (
+              <div className="space-y-1">
+                {trendingStocks.map((stock, i) => (
                   <Link
                     key={stock.stockId}
                     href={ROUTES.STOCK_DETAIL(stock.ticker)}
-                    className="hover:bg-muted flex items-center justify-between rounded-lg border-b px-2 py-3 transition-colors last:border-0"
+                    className={`hover:bg-muted flex items-center justify-between rounded-lg px-2 py-2.5 transition-colors ${getStaggerClass(i)}`}
                   >
                     <div className="flex items-center gap-3">
                       <TrendingUp className="text-muted-foreground h-4 w-4" />
@@ -349,49 +256,12 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
-
-        {/* Most Followed KOLs */}
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('insights.popularKols.title')}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {!popularKols || popularKols.length === 0 ? (
-              <p className="text-muted-foreground py-4 text-center">
-                {t('insights.popularKols.noData')}
-              </p>
-            ) : (
-              <div className="space-y-4">
-                {popularKols.map((kol) => (
-                  <Link
-                    key={kol.kolId}
-                    href={ROUTES.KOL_DETAIL(kol.kolId)}
-                    className="hover:bg-muted flex items-center justify-between rounded-lg border-b px-2 py-3 transition-colors last:border-0"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={kol.avatarUrl || undefined} />
-                        <AvatarFallback>
-                          <Users className="h-4 w-4" />
-                        </AvatarFallback>
-                      </Avatar>
-                      <p className="text-sm font-medium">{kol.name}</p>
-                    </div>
-                    <span className="text-muted-foreground text-xs">
-                      {t('insights.popularKols.followerCount', { count: kol.followerCount })}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
       {/* Quick Actions */}
       <Card>
         <CardHeader>
-          <CardTitle>{t('quickActions.title')}</CardTitle>
+          <CardTitle className="text-sm font-medium">{t('quickActions.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

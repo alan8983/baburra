@@ -38,6 +38,14 @@
     "sentimentChart": {
       "title": "KOL 觀點分析"
     },
+    "verdict": {
+      "said": "預測",
+      "correct": "預測正確",
+      "incorrect": "預測錯誤",
+      "pending": "等待價格資料",
+      "pendingResult": "待定",
+      "moreStocks": "另有 {count} 個標的追蹤於下方"
+    },
     "delete": "刪除文章",
     "deleteConfirm": "確定要刪除此文章嗎？",
     "deleteConfirmYes": "刪除",

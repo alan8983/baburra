@@ -38,6 +38,14 @@
     "sentimentChart": {
       "title": "KOL Opinion Analysis"
     },
+    "verdict": {
+      "said": "predicted",
+      "correct": "Prediction was correct",
+      "incorrect": "Prediction was wrong",
+      "pending": "Awaiting price data",
+      "pendingResult": "Pending",
+      "moreStocks": "+{count} more stock(s) tracked below"
+    },
     "delete": "Delete Post",
     "deleteConfirm": "Delete this post?",
     "deleteConfirmYes": "Delete",

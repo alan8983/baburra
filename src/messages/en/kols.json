@@ -73,6 +73,11 @@
     "sentimentChart": {
       "title": "Opinion Timeline"
     },
+    "scorecard": {
+      "winRate": "Win Rate",
+      "correct": "correct",
+      "sectorPerformance": "Performance by Stock"
+    },
     "winRate": "Win Rate (30d)",
     "loading": "Loading...",
     "errors": {
