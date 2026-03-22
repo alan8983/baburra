@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { ROUTES } from '@/lib/constants';
 import { useAuth } from '@/hooks/use-auth';
 import { GoogleIcon } from '@/components/icons/google-icon';
+import { BrandPanel } from '@/components/auth/brand-panel';
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -59,112 +60,119 @@ function LoginForm() {
   const displayError = formError || error?.message;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <div className="bg-primary mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg">
-            <TrumpetIcon className="text-primary-foreground h-6 w-6" />
-          </div>
-          <CardTitle className="text-2xl font-bold">{t('login.title')}</CardTitle>
-          <CardDescription>{t('login.description')}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {message && (
-            <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-              {message}
-            </div>
-          )}
+    <div className="flex min-h-screen">
+      {/* Left: Brand Panel (hidden on mobile) */}
+      <BrandPanel />
 
-          {displayError && (
-            <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-              <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-              <span>{displayError}</span>
+      {/* Right: Auth Form */}
+      <div className="bg-background flex w-full flex-col items-center justify-center p-6 md:w-1/2">
+        <Card className="w-full max-w-md border-0 shadow-none md:border md:shadow-sm">
+          <CardHeader className="space-y-1 text-center">
+            {/* Show logo on mobile only (brand panel is hidden) */}
+            <div className="bg-primary mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg md:hidden">
+              <TrumpetIcon className="text-primary-foreground h-6 w-6" />
             </div>
-          )}
-
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={handleGoogleSignIn}
-            disabled={isLoading}
-          >
-            <GoogleIcon className="mr-2 h-4 w-4" />
-            {t('oauth.continueWithGoogle')}
-          </Button>
-
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card text-muted-foreground px-2">{t('oauth.orDivider')}</span>
-            </div>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">{t('login.email')}</Label>
-              <div className="relative">
-                <Mail className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder={t('login.emailPlaceholder')}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
-                  disabled={isLoading}
-                  required
-                />
+            <CardTitle className="text-2xl font-bold">{t('login.title')}</CardTitle>
+            <CardDescription>{t('login.description')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {message && (
+              <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-300">
+                {message}
               </div>
-            </div>
+            )}
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">{t('login.password')}</Label>
-                <Link
-                  href={ROUTES.RESET_PASSWORD}
-                  className="text-muted-foreground hover:text-primary text-xs"
-                >
-                  {t('login.forgotPassword')}
-                </Link>
+            {displayError && (
+              <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300">
+                <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                <span>{displayError}</span>
               </div>
-              <div className="relative">
-                <Lock className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder={t('login.passwordPlaceholder')}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10"
-                  disabled={isLoading}
-                  required
-                />
-              </div>
-            </div>
+            )}
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t('login.submitting')}
-                </>
-              ) : (
-                t('login.submit')
-              )}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleGoogleSignIn}
+              disabled={isLoading}
+            >
+              <GoogleIcon className="mr-2 h-4 w-4" />
+              {t('oauth.continueWithGoogle')}
             </Button>
-          </form>
 
-          <div className="text-muted-foreground mt-6 text-center text-sm">
-            {t('login.noAccount')}{' '}
-            <Link href={ROUTES.REGISTER} className="text-primary font-medium hover:underline">
-              {t('login.registerNow')}
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card text-muted-foreground px-2">{t('oauth.orDivider')}</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">{t('login.email')}</Label>
+                <div className="relative">
+                  <Mail className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder={t('login.emailPlaceholder')}
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10"
+                    disabled={isLoading}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">{t('login.password')}</Label>
+                  <Link
+                    href={ROUTES.RESET_PASSWORD}
+                    className="text-muted-foreground hover:text-primary text-xs"
+                  >
+                    {t('login.forgotPassword')}
+                  </Link>
+                </div>
+                <div className="relative">
+                  <Lock className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder={t('login.passwordPlaceholder')}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10"
+                    disabled={isLoading}
+                    required
+                  />
+                </div>
+              </div>
+
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {t('login.submitting')}
+                  </>
+                ) : (
+                  t('login.submit')
+                )}
+              </Button>
+            </form>
+
+            <div className="text-muted-foreground mt-6 text-center text-sm">
+              {t('login.noAccount')}{' '}
+              <Link href={ROUTES.REGISTER} className="text-primary font-medium hover:underline">
+                {t('login.registerNow')}
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
@@ -174,7 +182,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-4">
+        <div className="bg-background flex min-h-screen items-center justify-center p-4">
           <div className="text-muted-foreground flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />
             {t('loading')}

@@ -27,6 +27,7 @@ import { PriceChangeBadge } from '@/components/shared/price-change-badge';
 import { useSeenPosts } from '@/hooks/use-seen-posts';
 import { EmptyState } from '@/components/shared/empty-state';
 import { cn } from '@/lib/utils';
+import { getStaggerClass } from '@/lib/animations';
 
 export default function PostsPage() {
   const router = useRouter();
@@ -128,7 +129,7 @@ export default function PostsPage() {
       {/* Post List */}
       {!isLoading && (
         <div className="space-y-4">
-          {filteredPosts.map((post) => {
+          {filteredPosts.map((post, i) => {
             const priceByStockId = post.priceChanges ?? {};
             const postIsNew = isNew(post.id);
             return (
@@ -138,8 +139,10 @@ export default function PostsPage() {
                   'relative cursor-pointer transition-colors',
                   postIsNew
                     ? 'border-l-primary bg-primary/5 hover:bg-primary/10 border-l-3'
-                    : 'hover:bg-muted/50'
+                    : 'hover:bg-muted/50',
+                  getStaggerClass(i)
                 )}
+                style={{ opacity: 0 }}
                 onClick={() => {
                   markSeen(post.id);
                   router.push(ROUTES.POST_DETAIL(post.id));

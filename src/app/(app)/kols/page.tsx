@@ -13,6 +13,7 @@ import { ROUTES } from '@/lib/constants';
 import { formatDate } from '@/lib/utils/date';
 import { useKols } from '@/hooks';
 import { EmptyState } from '@/components/shared/empty-state';
+import { getStaggerClass } from '@/lib/animations';
 
 export default function KolsPage() {
   const router = useRouter();
@@ -73,10 +74,11 @@ export default function KolsPage() {
       {/* KOL Grid */}
       {!isLoading && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredKols.map((kol) => (
+          {filteredKols.map((kol, i) => (
             <Card
               key={kol.id}
-              className="hover:bg-muted/50 cursor-pointer transition-colors"
+              className={`hover:bg-muted/50 cursor-pointer transition-colors ${getStaggerClass(i)}`}
+              style={{ opacity: 0 }}
               onClick={() => router.push(ROUTES.KOL_DETAIL(kol.id))}
             >
               <CardHeader className="pb-3">

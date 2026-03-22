@@ -13,6 +13,7 @@ import { formatDate } from '@/lib/utils/date';
 import { useColorPalette } from '@/lib/colors/color-palette-context';
 import { useStocks } from '@/hooks';
 import { EmptyState } from '@/components/shared/empty-state';
+import { getStaggerClass } from '@/lib/animations';
 
 export default function StocksPage() {
   const router = useRouter();
@@ -74,10 +75,11 @@ export default function StocksPage() {
       {/* Stock Grid */}
       {!isLoading && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredStocks.map((stock) => (
+          {filteredStocks.map((stock, i) => (
             <Card
               key={stock.id}
-              className="hover:bg-muted/50 cursor-pointer transition-colors"
+              className={`hover:bg-muted/50 cursor-pointer transition-colors ${getStaggerClass(i)}`}
+              style={{ opacity: 0 }}
               onClick={() => router.push(ROUTES.STOCK_DETAIL(stock.ticker))}
             >
               <CardHeader className="pb-3">

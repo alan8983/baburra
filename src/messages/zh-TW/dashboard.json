@@ -51,6 +51,26 @@
     "importKol": "匯入 KOL 文章",
     "addPost": "手動新增文章"
   },
+  "pulse": {
+    "title": "投資組合脈搏",
+    "winRate": "勝率",
+    "avgReturn": "平均報酬",
+    "trend": "30日趨勢",
+    "noData": "追蹤 KOL 預測以查看您的投資組合脈搏。"
+  },
+  "hotTakes": {
+    "title": "最新觀點 (48h)",
+    "noData": "過去 48 小時內無新預測。"
+  },
+  "movers": {
+    "title": "標的異動",
+    "noData": "尚無標的價格資料。"
+  },
+  "leaderboard": {
+    "title": "KOL 排行榜",
+    "noData": "尚無已結算的預測。",
+    "calls": "次預測"
+  },
   "insights": {
     "trendingStocks": {
       "title": "本週熱門標的",

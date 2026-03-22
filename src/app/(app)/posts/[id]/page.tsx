@@ -45,6 +45,7 @@ import {
 } from '@/hooks';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ArgumentPlaceholder } from '@/components/ai/argument-placeholder';
+import { VerdictHero } from './_components/verdict-hero';
 
 const CandlestickChart = dynamic(
   () =>
@@ -335,6 +336,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
               })
             }
             disabled={toggleBookmark.isPending}
+            className={toggleBookmark.isSuccess ? 'animate-scale-pulse' : ''}
           >
             {isBookmarked ? (
               <>
@@ -382,6 +384,14 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
           </AlertDescription>
         </Alert>
       )}
+
+      {/* Verdict Hero */}
+      <VerdictHero
+        sentiment={post.sentiment}
+        stocks={post.stocks}
+        priceChanges={post.priceChanges ?? {}}
+        kolName={post.kol.name}
+      />
 
       {/* Shared Heading */}
       <div className="space-y-3">
