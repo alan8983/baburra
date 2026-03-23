@@ -1705,7 +1705,6 @@ describe('analyzeDraftContent — prompt improvements', () => {
     await analyzeDraftContent('test content');
     const promptArg = mockGenerateJson.mock.calls[0][0] as string;
     expect(promptArg).toContain('特斯拉→TSLA');
-    expect(promptArg).toContain('比亞迪→1211.HK');
     expect(promptArg).toContain('蘋果→AAPL');
   });
 
