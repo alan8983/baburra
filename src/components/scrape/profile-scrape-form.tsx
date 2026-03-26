@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { Youtube, Twitter } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -27,10 +27,6 @@ interface ProfileScrapeFormProps {
 export function ProfileScrapeForm({ onJobCreated, initialUrl }: ProfileScrapeFormProps) {
   const t = useTranslations('scrape');
   const [url, setUrl] = useState(initialUrl ?? '');
-
-  useEffect(() => {
-    if (initialUrl) setUrl(initialUrl);
-  }, [initialUrl]);
 
   const platform = useMemo(() => detectPlatform(url), [url]);
   const isValidUrl = useMemo(() => {
