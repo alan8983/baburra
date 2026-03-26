@@ -84,7 +84,7 @@ export async function middleware(request: NextRequest) {
   // 首頁重導向
   if (pathname === '/') {
     if (user && !user.is_anonymous) {
-      return NextResponse.redirect(new URL('/input', request.url));
+      return NextResponse.redirect(new URL('/scrape', request.url));
     }
     return NextResponse.redirect(new URL('/login', request.url));
   }
@@ -93,7 +93,7 @@ export async function middleware(request: NextRequest) {
   if (publicRoutes.includes(pathname)) {
     // 如果已登入（非匿名）但訪問登入/註冊頁，重導向到快速輸入
     if (user && !user.is_anonymous && (pathname === '/login' || pathname === '/register')) {
-      return NextResponse.redirect(new URL('/input', request.url));
+      return NextResponse.redirect(new URL('/scrape', request.url));
     }
     return response;
   }

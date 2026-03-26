@@ -54,12 +54,13 @@ export async function getProfile(userId: string) {
       displayName: null,
       timezone: DEFAULT_TIMEZONE,
       colorPalette: 'asian' as ColorPalette,
+      firstImportFree: true,
     };
   }
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('display_name, timezone, color_palette')
+    .select('display_name, timezone, color_palette, first_import_free')
     .eq('id', userId)
     .single();
 
@@ -69,6 +70,7 @@ export async function getProfile(userId: string) {
         displayName: null,
         timezone: DEFAULT_TIMEZONE,
         colorPalette: 'asian' as ColorPalette,
+        firstImportFree: true,
       };
     }
     throw new Error(`Failed to get profile: ${error.message}`);
@@ -78,6 +80,7 @@ export async function getProfile(userId: string) {
     displayName: data.display_name as string | null,
     timezone: (data.timezone as string) || DEFAULT_TIMEZONE,
     colorPalette: ((data.color_palette as string) || 'asian') as ColorPalette,
+    firstImportFree: data.first_import_free === true,
   };
 }
 
