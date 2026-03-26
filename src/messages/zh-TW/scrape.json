@@ -1,6 +1,18 @@
 {
   "title": "擷取 KOL 資料",
   "description": "輸入 KOL 的頻道 URL，系統自動擷取個人資料並建立追蹤",
+  "hero": {
+    "title": "追蹤你的第一個投資 KOL",
+    "subtitle": "貼上 YouTube 頻道連結，AI 自動分析觀點勝率",
+    "freeBadge": "首次完全免費，不需信用卡",
+    "presetHint": "不確定要貼什麼？試試看：",
+    "preset1Name": "股癌 Gooaye",
+    "preset1Url": "https://www.youtube.com/@Gooaye",
+    "preset2Name": "柴鼠兄弟 ZRBros",
+    "preset2Url": "https://www.youtube.com/@ZRBros",
+    "preset3Name": "財報狗",
+    "preset3Url": "https://www.youtube.com/@statementdog"
+  },
   "form": {
     "urlLabel": "KOL 頻道 URL",
     "urlPlaceholder": "貼上 YouTube 頻道 URL",
@@ -30,6 +42,7 @@
     "estimatedCredits": "預估消耗點數",
     "remainingBalance": "剩餘點數",
     "insufficientCredits": "點數不足，請減少選取項目或升級方案",
+    "firstImportFree": "首次匯入免費 — 本次不扣點",
     "creditNote": "1分鐘無字幕YouTube影片 = 7點",
     "filterAll": "全部",
     "filterLongVideo": "長影片",

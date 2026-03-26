@@ -1,6 +1,18 @@
 {
   "title": "Scrape KOL Profile",
   "description": "Enter a KOL channel URL to auto-scrape their profile and start tracking",
+  "hero": {
+    "title": "Track Your First Investment KOL",
+    "subtitle": "Paste a YouTube channel URL — AI analyzes opinion accuracy automatically",
+    "freeBadge": "First import completely free, no credit card needed",
+    "presetHint": "Not sure what to paste? Try these:",
+    "preset1Name": "Gooaye 股癌",
+    "preset1Url": "https://www.youtube.com/@Gooaye",
+    "preset2Name": "ZRBros 柴鼠兄弟",
+    "preset2Url": "https://www.youtube.com/@ZRBros",
+    "preset3Name": "Statement Dog",
+    "preset3Url": "https://www.youtube.com/@statementdog"
+  },
   "form": {
     "urlLabel": "KOL Channel URL",
     "urlPlaceholder": "Paste a YouTube channel URL",
@@ -30,6 +42,7 @@
     "estimatedCredits": "Estimated credits",
     "remainingBalance": "Remaining balance",
     "insufficientCredits": "Insufficient credits. Reduce selection or upgrade your plan.",
+    "firstImportFree": "First import free — no credits deducted",
     "creditNote": "1 min captionless YouTube video = 7 credits",
     "filterAll": "All",
     "filterLongVideo": "Long Video",

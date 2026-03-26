@@ -15,6 +15,7 @@ export interface ProfileData {
   displayName: string | null;
   timezone: string;
   colorPalette: ColorPalette;
+  firstImportFree: boolean;
 }
 
 interface UpdateProfileInput {

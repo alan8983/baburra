@@ -10,6 +10,7 @@ import {
   Captions,
   CaptionsOff,
   Sparkles,
+  Gift,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -31,6 +32,7 @@ interface UrlDiscoveryListProps {
   onConfirm: (selectedUrls: string[]) => void;
   onBack: () => void;
   isSubmitting: boolean;
+  firstImportFree?: boolean;
 }
 
 const CONTENT_TYPE_COLORS: Record<ContentType, string> = {
@@ -59,6 +61,7 @@ export function UrlDiscoveryList({
   onConfirm,
   onBack,
   isSubmitting,
+  firstImportFree,
 }: UrlDiscoveryListProps) {
   const t = useTranslations('scrape.discover');
   const tCommon = useTranslations('common');
@@ -158,7 +161,7 @@ export function UrlDiscoveryList({
   }, [discoveredUrls, selected]);
 
   const remainingBalance = usage?.balance ?? usage?.remaining ?? 0;
-  const insufficientCredits = totalEstimatedCredits > remainingBalance;
+  const insufficientCredits = !firstImportFree && totalEstimatedCredits > remainingBalance;
 
   const PlatformIcon = platform === 'youtube' ? Youtube : Twitter;
   const platformColor = platform === 'youtube' ? 'text-red-500' : 'text-sky-500';
@@ -332,10 +335,16 @@ export function UrlDiscoveryList({
               </span>
             </div>
           )}
+          {firstImportFree && (
+            <div className="mt-1 flex items-center gap-1.5 text-sm font-medium text-green-600">
+              <Gift className="h-3.5 w-3.5" />
+              {t('firstImportFree')}
+            </div>
+          )}
           {insufficientCredits && (
             <p className="mt-1 text-xs text-red-600">{t('insufficientCredits')}</p>
           )}
-          {platform === 'youtube' && (
+          {platform === 'youtube' && !firstImportFree && (
             <p className="text-muted-foreground mt-1 text-xs">{t('creditNote')}</p>
           )}
         </div>

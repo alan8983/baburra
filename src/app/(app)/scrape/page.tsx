@@ -8,8 +8,10 @@ import { ProfileScrapeForm } from '@/components/scrape/profile-scrape-form';
 import { ScrapeProgress } from '@/components/scrape/scrape-progress';
 import { ScrapeFlowChart, type ScrapeStep } from '@/components/scrape/scrape-flow-chart';
 import { UrlDiscoveryList } from '@/components/scrape/url-discovery-list';
+import { FirstTimeHero } from '@/components/scrape/first-time-hero';
 import { useScrapeJobs, useDiscoverProfile, useInitiateScrape } from '@/hooks/use-scrape';
 import type { DiscoverProfileResult } from '@/hooks/use-scrape';
+import { useProfile } from '@/hooks/use-profile';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ROUTES } from '@/lib/constants';
@@ -34,14 +36,18 @@ function stateToStep(state: ScrapeState): ScrapeStep {
 export default function ScrapePage() {
   const t = useTranslations('scrape');
   const { data: jobs } = useScrapeJobs();
+  const { data: profile } = useProfile();
   const discoverProfile = useDiscoverProfile();
   const initiateScrape = useInitiateScrape();
 
   const [state, setState] = useState<ScrapeState>('input');
   const [profileUrl, setProfileUrl] = useState('');
+  const [presetUrl, setPresetUrl] = useState<string | undefined>();
   const [discoverResult, setDiscoverResult] = useState<DiscoverProfileResult | null>(null);
   const [activeJobId, setActiveJobId] = useState<string | null>(null);
   const [error, setError] = useState(false);
+
+  const isFirstTimeUser = profile?.firstImportFree === true;
 
   const currentStep = stateToStep(state);
 
@@ -108,11 +114,18 @@ export default function ScrapePage() {
           <p className="text-muted-foreground mt-2">{t('description')}</p>
         </div>
 
+        {/* First-time user hero banner */}
+        {isFirstTimeUser && state === 'input' && (
+          <FirstTimeHero onSelectPreset={setPresetUrl} />
+        )}
+
         {/* Flow Chart */}
         <ScrapeFlowChart currentStep={currentStep} error={error} />
 
         {/* Content area — conditional on state */}
-        {state === 'input' && <ProfileScrapeForm onJobCreated={handleUrlSubmit} />}
+        {state === 'input' && (
+          <ProfileScrapeForm onJobCreated={handleUrlSubmit} initialUrl={presetUrl} />
+        )}
 
         {state === 'discovering' && (
           <Card>
@@ -132,6 +145,7 @@ export default function ScrapePage() {
             onConfirm={handleConfirmSelection}
             onBack={handleReset}
             isSubmitting={initiateScrape.isPending}
+            firstImportFree={isFirstTimeUser}
           />
         )}
 
