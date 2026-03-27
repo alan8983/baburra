@@ -24,5 +24,5 @@
 
 ## 5. Verify
 
-- [ ] 5.1 Test discovery with a YouTube channel that has a mix of long videos and Shorts — verify tags appear correctly
-- [ ] 5.2 Test filter toggles — verify selecting/deselecting filters updates the list and credit estimation
+- [x] 5.1 Test discovery with a YouTube channel that has a mix of long videos and Shorts — verify tags appear correctly
+- [x] 5.2 Test filter toggles — verify selecting/deselecting filters updates the list and credit estimation
