@@ -70,7 +70,7 @@ export function ScrapeProgress({ jobId, onReset, onComplete }: ScrapeProgressPro
     if (wasNotFinished && isFinished) {
       toastShownRef.current = true;
       const kolName = job.kolName ?? 'KOL';
-      const imported = job.importedCount ?? job.stats?.postsCreated ?? 0;
+      const imported = job.importedCount ?? 0;
       toast.success(t('progress.completeToast', { kolName, count: imported }));
 
       // Store completion in localStorage for notification bell
@@ -101,9 +101,9 @@ export function ScrapeProgress({ jobId, onReset, onComplete }: ScrapeProgressPro
   const isActive = job.status === 'queued' || job.status === 'processing';
   const isFinished =
     job.status === 'completed' || job.status === 'failed' || job.status === 'permanently_failed';
-  const imported = job.importedCount ?? job.stats?.postsCreated ?? 0;
-  const duplicates = job.duplicateCount ?? job.stats?.duplicates ?? 0;
-  const errors = job.errorCount ?? job.stats?.errors ?? 0;
+  const imported = job.importedCount ?? 0;
+  const duplicates = job.duplicateCount ?? 0;
+  const errors = job.errorCount ?? 0;
   const filtered = job.filteredCount ?? 0;
   const progressPercent = total > 0 ? Math.round((processed / total) * 100) : 0;
   const remainingUrls = total - processed;
@@ -187,10 +187,10 @@ export function ScrapeProgress({ jobId, onReset, onComplete }: ScrapeProgressPro
           )}
 
           {/* Failed job error message */}
-          {(job.status === 'failed' || job.status === 'permanently_failed') && job.error && (
+          {(job.status === 'failed' || job.status === 'permanently_failed') && job.errorMessage && (
             <div className="flex items-center gap-2 text-red-600">
               <XCircle className="h-4 w-4 shrink-0" />
-              <span className="text-sm">{t('progress.errorMessage', { error: job.error })}</span>
+              <span className="text-sm">{t('progress.errorMessage', { error: job.errorMessage })}</span>
             </div>
           )}
 
@@ -296,7 +296,7 @@ export function ScrapeProgress({ jobId, onReset, onComplete }: ScrapeProgressPro
             <div className="flex items-center gap-2 text-red-600">
               <XCircle className="h-5 w-5" />
               <span className="text-sm">
-                {t('progress.errorMessage', { error: job.error ?? '' })}
+                {t('progress.errorMessage', { error: job.errorMessage ?? '' })}
               </span>
             </div>
             <Button variant="outline" onClick={onReset}>

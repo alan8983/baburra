@@ -216,26 +216,39 @@ export class YouTubeChannelExtractor extends ProfileExtractor {
   private async fetchVideoSnippets(videoIds: string[], apiKey: string): Promise<DiscoveredUrl[]> {
     if (videoIds.length === 0) return [];
 
-    // YouTube API accepts up to 50 IDs per request
-    // Request contentDetails alongside snippet for duration + live detection
-    const params = new URLSearchParams({
-      id: videoIds.join(','),
-      part: 'snippet,contentDetails',
-      key: apiKey,
-    });
+    // YouTube Data API v3 videos.list accepts max 50 IDs per request — paginate in chunks
+    const CHUNK_SIZE = 50;
+    const videoMap = new Map<string, YouTubeVideoItem>();
 
-    const response = await fetch(`${YOUTUBE_API_BASE}/videos?${params}`);
+    for (let i = 0; i < videoIds.length; i += CHUNK_SIZE) {
+      const chunk = videoIds.slice(i, i + CHUNK_SIZE);
+      const params = new URLSearchParams({
+        id: chunk.join(','),
+        part: 'snippet,contentDetails',
+        key: apiKey,
+      });
 
-    if (!response.ok) {
-      // Fallback: return URLs without metadata if snippet fetch fails
-      return videoIds.map((id) => ({ url: `https://www.youtube.com/watch?v=${id}` }));
+      const response = await fetch(`${YOUTUBE_API_BASE}/videos?${params}`);
+
+      if (!response.ok) {
+        console.warn(
+          `[YouTubeExtractor] videos.list failed for chunk ${i / CHUNK_SIZE + 1}: ${response.status} ${response.statusText}`
+        );
+        continue;
+      }
+
+      const data = (await response.json()) as YouTubeVideosResponse;
+      for (const item of data.items ?? []) {
+        videoMap.set(item.id, item);
+      }
     }
 
-    const data = (await response.json()) as YouTubeVideosResponse;
-
-    const videoMap = new Map<string, YouTubeVideoItem>();
-    for (const item of data.items ?? []) {
-      videoMap.set(item.id, item);
+    // Log video IDs the API didn't return (private, deleted, or unavailable)
+    const missingIds = videoIds.filter((id) => !videoMap.has(id));
+    if (missingIds.length > 0) {
+      console.warn(
+        `[YouTubeExtractor] ${missingIds.length}/${videoIds.length} video(s) not returned by API (private/deleted/unavailable): ${missingIds.join(', ')}`
+      );
     }
 
     return videoIds.map((id) => {
