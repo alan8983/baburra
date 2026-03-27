@@ -189,7 +189,7 @@ export async function initiateProfileScrape(
     status: 'queued',
     initialProgress: {
       processedUrls: 0,
-      totalUrls: profile.postUrls.length,
+      totalUrls: urlsToScrape.length,
       importedCount: 0,
       duplicateCount: 0,
       errorCount: 0,

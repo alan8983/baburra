@@ -31,11 +31,10 @@ export interface ScrapeJobInput {
 
 export interface ScrapeJob {
   id: string;
-  url: string;
   status: 'queued' | 'processing' | 'completed' | 'failed' | 'permanently_failed';
   kolId?: string;
   kolName?: string;
-  error?: string;
+  errorMessage?: string;
   processedUrls?: number;
   totalUrls?: number;
   importedCount?: number;
@@ -43,12 +42,6 @@ export interface ScrapeJob {
   errorCount?: number;
   filteredCount?: number;
   completedAt?: string;
-  stats?: {
-    videosFound: number;
-    postsCreated: number;
-    duplicates: number;
-    errors: number;
-  };
   createdAt: string;
   updatedAt: string;
 }
