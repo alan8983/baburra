@@ -20,7 +20,7 @@ export function FirstTimeHero({ onSelectPreset }: FirstTimeHeroProps) {
   ];
 
   return (
-    <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+    <Card className="border-primary/20 from-primary/5 to-primary/10 bg-gradient-to-br">
       <CardContent className="flex flex-col items-center gap-4 py-8 text-center">
         <Target className="text-primary h-10 w-10" />
         <div className="space-y-2">

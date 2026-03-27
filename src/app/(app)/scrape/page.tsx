@@ -115,9 +115,7 @@ export default function ScrapePage() {
         </div>
 
         {/* First-time user hero banner */}
-        {isFirstTimeUser && state === 'input' && (
-          <FirstTimeHero onSelectPreset={setPresetUrl} />
-        )}
+        {isFirstTimeUser && state === 'input' && <FirstTimeHero onSelectPreset={setPresetUrl} />}
 
         {/* Flow Chart */}
         <ScrapeFlowChart currentStep={currentStep} error={error} />

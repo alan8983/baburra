@@ -190,7 +190,9 @@ export function ScrapeProgress({ jobId, onReset, onComplete }: ScrapeProgressPro
           {(job.status === 'failed' || job.status === 'permanently_failed') && job.errorMessage && (
             <div className="flex items-center gap-2 text-red-600">
               <XCircle className="h-4 w-4 shrink-0" />
-              <span className="text-sm">{t('progress.errorMessage', { error: job.errorMessage })}</span>
+              <span className="text-sm">
+                {t('progress.errorMessage', { error: job.errorMessage })}
+              </span>
             </div>
           )}
 
