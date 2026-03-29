@@ -7,16 +7,20 @@ import type { UpdateProfileInput, ColorPalette } from '@/domain/models/user';
 
 const DEFAULT_TIMEZONE = 'Asia/Taipei';
 
-export type UserTier = 'free' | 'paid';
+import type { SubscriptionTier } from '@/domain/models/user';
 
-export async function getUserTier(userId: string): Promise<UserTier> {
+export async function getUserTier(userId: string): Promise<SubscriptionTier> {
   const supabase = createAdminClient();
   if (!supabase) return 'free';
 
-  const { data, error } = await supabase.from('profiles').select('tier').eq('id', userId).single();
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('subscription_tier')
+    .eq('id', userId)
+    .single();
 
   if (error) return 'free';
-  return (data?.tier as UserTier) || 'free';
+  return (data?.subscription_tier as SubscriptionTier) || 'free';
 }
 
 /**

@@ -25,12 +25,6 @@ export const APP_CONFIG = {
   ALLOWED_IMAGE_TYPES: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
   // Scrape rate limiting
   SCRAPE_DAILY_LIMIT: 3,
-
-  // Subscription tier limits
-  SUBSCRIPTION_LIMITS: {
-    free: 10,
-    paid: 50,
-  },
 } as const;
 
 // AI rate limiting for concurrent Gemini calls during scrape

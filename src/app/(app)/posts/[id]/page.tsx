@@ -42,9 +42,11 @@ import {
   useToggleBookmark,
   useDeletePost,
   useReanalyze,
+  usePostArguments,
 } from '@/hooks';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArgumentPlaceholder } from '@/components/ai/argument-placeholder';
+import { PostArguments, type TickerArgumentGroup } from '@/components/ai/post-arguments';
+import { BlurGate } from '@/components/paywall/blur-gate';
 import { VerdictHero } from './_components/verdict-hero';
 
 const CandlestickChart = dynamic(
@@ -243,6 +245,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   const router = useRouter();
   const { id } = use(params);
   const { data: post, isLoading, error } = usePost(id);
+  const { data: rawArguments } = usePostArguments(id);
   const { data: bookmarkData } = useBookmarkStatus(id);
   const toggleBookmark = useToggleBookmark(id);
   const deletePost = useDeletePost();
@@ -251,6 +254,32 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   const isBookmarked = bookmarkData?.isBookmarked ?? false;
   const isModelStale =
     post && (post.aiModelVersion == null || post.aiModelVersion !== post.currentAiModel);
+
+  // Transform flat argument responses into ticker-grouped structure for PostArguments
+  const argumentGroups: TickerArgumentGroup[] = useMemo(() => {
+    if (!rawArguments || !post) return [];
+    const stockMap = new Map(post.stocks.map((s) => [s.id, s]));
+    const grouped = new Map<string, TickerArgumentGroup>();
+    for (const arg of rawArguments) {
+      const stock = stockMap.get(arg.stockId);
+      if (!stock) continue;
+      if (!grouped.has(arg.stockId)) {
+        grouped.set(arg.stockId, { ticker: stock.ticker, name: stock.name, arguments: [] });
+      }
+      grouped.get(arg.stockId)!.arguments.push({
+        id: arg.id,
+        categoryCode: arg.category.code,
+        categoryName: arg.category.name,
+        parentName: arg.category.parentId ? arg.category.name : arg.category.name,
+        originalText: arg.originalText,
+        summary: arg.summary,
+        sentiment: arg.sentiment as import('@/domain/models/post').Sentiment,
+        confidence: arg.confidence,
+        statementType: arg.statementType,
+      });
+    }
+    return Array.from(grouped.values());
+  }, [rawArguments, post]);
 
   if (error || (!isLoading && !post)) {
     return (
@@ -528,8 +557,14 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
         </div>
       </div>
 
-      {/* Arguments section — placeholder while feature is under development */}
-      <ArgumentPlaceholder />
+      {/* Arguments section — gated for free users */}
+      {argumentGroups.length > 0 && (
+        <BlurGate feature="argument_cards">
+          {argumentGroups.map((group) => (
+            <PostArguments key={group.ticker} tickerGroups={[group]} />
+          ))}
+        </BlurGate>
+      )}
     </div>
   );
 }

@@ -19,7 +19,8 @@ import { getUserTier } from '@/infrastructure/repositories/profile.repository';
 import { unauthorizedError, internalError } from '@/lib/api/error';
 import { errorResponse } from '@/lib/api/validation';
 import { subscribeSchema, parseBody } from '@/lib/api/validation';
-import { APP_CONFIG, SCRAPE_CAPS } from '@/lib/constants/config';
+import { SCRAPE_CAPS } from '@/lib/constants/config';
+import { TIER_LIMITS } from '@/lib/constants/tiers';
 
 export async function GET() {
   try {
@@ -46,9 +47,9 @@ export async function POST(request: NextRequest) {
       getUserTier(userId),
       getUserSubscriptionCount(userId),
     ]);
-    const limit = APP_CONFIG.SUBSCRIPTION_LIMITS[tier];
+    const limit = TIER_LIMITS[tier].kolTracking;
     if (currentCount >= limit) {
-      return errorResponse(403, 'TIER_LIMIT_REACHED', 'Subscription limit reached', {
+      return errorResponse(403, 'TRACKING_LIMIT_REACHED', 'KOL tracking limit reached', {
         tier,
         limit,
         current: currentCount,
