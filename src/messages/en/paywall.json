@@ -1,0 +1,32 @@
+{
+  "blur": {
+    "title": "Unlock Full Analysis",
+    "description": "Upgrade to Pro for all AI argument analysis",
+    "cta": "Upgrade to Pro"
+  },
+  "proBadge": "Pro",
+  "tracking": {
+    "title": "Tracking Limit Reached",
+    "description": "You are tracking {current}/{limit} KOLs",
+    "upgrade": "Upgrade to Pro — track up to {limit}",
+    "swap": "Swap Tracking",
+    "unsubscribe": "Unsubscribe"
+  },
+  "upgrade": {
+    "title": "Upgrade Your Plan",
+    "currentTier": "Current plan: {tier}",
+    "cta": "Upgrade to {tier}",
+    "features": {
+      "argumentCards": "Full AI argument analysis",
+      "winRateBreakdown": "Detailed win rate breakdown",
+      "kolComparison": "KOL comparison view",
+      "moreTracking": "Track more KOLs"
+    },
+    "dismiss": "Maybe later"
+  },
+  "tierNames": {
+    "free": "Free",
+    "pro": "Pro",
+    "max": "Max"
+  }
+}

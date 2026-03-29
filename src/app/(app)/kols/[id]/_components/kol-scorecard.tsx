@@ -11,6 +11,7 @@ import { useColorPalette } from '@/lib/colors/color-palette-context';
 import { formatReturnRate, getReturnRateColorClass } from '@/domain/calculators';
 import { WinRateRing } from './win-rate-ring';
 import { SubscriptionToggle } from '@/components/kol/subscription-toggle';
+import { BlurGate } from '@/components/paywall/blur-gate';
 import type { KOLWithStats } from '@/domain/models/kol';
 import type { Sentiment } from '@/domain/models/post';
 
@@ -207,65 +208,67 @@ export function KolScorecard({
               )}
             </div>
 
-            {/* Return Rates + Sector */}
-            <div className="flex flex-col gap-3">
-              {/* 4-period returns */}
-              <div className="grid grid-cols-4 gap-2">
-                {periods.map((item) => (
-                  <div key={item.key} className="min-w-[60px] rounded-lg border p-2 text-center">
-                    <p className="text-muted-foreground text-xs font-medium">{item.label}</p>
-                    {item.data.allPending ? (
-                      <p className="text-muted-foreground mt-1 text-sm">
-                        <Clock className="inline h-3.5 w-3.5" />
-                      </p>
-                    ) : (
-                      <p
-                        className={`mt-1 text-sm font-bold ${getReturnRateColorClass(item.data.avgReturn, palette)}`}
-                      >
-                        {formatReturnRate(item.data.avgReturn)}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Sector breakdown */}
-              {sectorBreakdown.length > 0 && (
-                <div className="rounded-lg border p-3">
-                  <p className="text-muted-foreground mb-2 text-xs font-medium">
-                    {t('detail.scorecard.sectorPerformance')}
-                  </p>
-                  <div className="space-y-1.5">
-                    {sectorBreakdown.slice(0, 5).map((sector) => (
-                      <div
-                        key={sector.ticker}
-                        className="flex items-center justify-between text-xs"
-                      >
-                        <span className="font-medium">{sector.ticker}</span>
-                        <div className="flex items-center gap-2">
-                          {/* Mini bar */}
-                          <div className="bg-muted h-1.5 w-16 overflow-hidden rounded-full">
-                            <div
-                              className={`h-full rounded-full ${
-                                sector.winRate >= 50 ? 'bg-emerald-500' : 'bg-red-500'
-                              }`}
-                              style={{ width: `${Math.min(sector.winRate, 100)}%` }}
-                            />
-                          </div>
-                          <span
-                            className={`min-w-[36px] text-right font-bold ${
-                              sector.winRate >= 50 ? colors.bullish.text : colors.bearish.text
-                            }`}
-                          >
-                            {sector.winRate.toFixed(0)}%
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+            {/* Return Rates + Sector (gated for free users) */}
+            <BlurGate feature="win_rate_breakdown">
+              <div className="flex flex-col gap-3">
+                {/* 4-period returns */}
+                <div className="grid grid-cols-4 gap-2">
+                  {periods.map((item) => (
+                    <div key={item.key} className="min-w-[60px] rounded-lg border p-2 text-center">
+                      <p className="text-muted-foreground text-xs font-medium">{item.label}</p>
+                      {item.data.allPending ? (
+                        <p className="text-muted-foreground mt-1 text-sm">
+                          <Clock className="inline h-3.5 w-3.5" />
+                        </p>
+                      ) : (
+                        <p
+                          className={`mt-1 text-sm font-bold ${getReturnRateColorClass(item.data.avgReturn, palette)}`}
+                        >
+                          {formatReturnRate(item.data.avgReturn)}
+                        </p>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              )}
-            </div>
+
+                {/* Sector breakdown */}
+                {sectorBreakdown.length > 0 && (
+                  <div className="rounded-lg border p-3">
+                    <p className="text-muted-foreground mb-2 text-xs font-medium">
+                      {t('detail.scorecard.sectorPerformance')}
+                    </p>
+                    <div className="space-y-1.5">
+                      {sectorBreakdown.slice(0, 5).map((sector) => (
+                        <div
+                          key={sector.ticker}
+                          className="flex items-center justify-between text-xs"
+                        >
+                          <span className="font-medium">{sector.ticker}</span>
+                          <div className="flex items-center gap-2">
+                            {/* Mini bar */}
+                            <div className="bg-muted h-1.5 w-16 overflow-hidden rounded-full">
+                              <div
+                                className={`h-full rounded-full ${
+                                  sector.winRate >= 50 ? 'bg-emerald-500' : 'bg-red-500'
+                                }`}
+                                style={{ width: `${Math.min(sector.winRate, 100)}%` }}
+                              />
+                            </div>
+                            <span
+                              className={`min-w-[36px] text-right font-bold ${
+                                sector.winRate >= 50 ? colors.bullish.text : colors.bearish.text
+                              }`}
+                            >
+                              {sector.winRate.toFixed(0)}%
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </BlurGate>
           </div>
         </div>
       </CardContent>

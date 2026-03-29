@@ -5,6 +5,7 @@
 import { ReactNode } from 'react';
 import { QueryProvider } from './query-provider';
 import { ColorPaletteProvider } from '@/lib/colors/color-palette-context';
+import { UpgradePromptProvider } from '@/components/paywall/upgrade-prompt';
 import { Toaster } from '@/components/ui/sonner';
 
 interface ProvidersProps {
@@ -15,8 +16,10 @@ export function Providers({ children }: ProvidersProps) {
   return (
     <QueryProvider>
       <ColorPaletteProvider>
-        {children}
-        <Toaster position="top-right" richColors />
+        <UpgradePromptProvider>
+          {children}
+          <Toaster position="top-right" richColors />
+        </UpgradePromptProvider>
       </ColorPaletteProvider>
     </QueryProvider>
   );

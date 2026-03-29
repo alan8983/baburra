@@ -13,6 +13,7 @@ import bookmarks from './bookmarks.json';
 import importMessages from './import.json';
 import scrape from './scrape.json';
 import subscriptions from './subscriptions.json';
+import paywall from './paywall.json';
 
 const enMessages = {
   common,
@@ -29,6 +30,7 @@ const enMessages = {
   import: importMessages,
   scrape,
   subscriptions,
+  paywall,
 };
 
 export default enMessages;

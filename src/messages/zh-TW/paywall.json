@@ -1,0 +1,32 @@
+{
+  "blur": {
+    "title": "升級解鎖完整分析",
+    "description": "升級 Pro 查看所有 AI 論點分析",
+    "cta": "升級 Pro"
+  },
+  "proBadge": "Pro",
+  "tracking": {
+    "title": "已達追蹤上限",
+    "description": "你已追蹤 {current}/{limit} 位 KOL",
+    "upgrade": "升級 Pro — 追蹤最多 {limit} 位",
+    "swap": "替換追蹤",
+    "unsubscribe": "取消追蹤"
+  },
+  "upgrade": {
+    "title": "升級你的方案",
+    "currentTier": "目前方案：{tier}",
+    "cta": "升級至 {tier}",
+    "features": {
+      "argumentCards": "完整 AI 論點分析",
+      "winRateBreakdown": "勝率詳細分析",
+      "kolComparison": "KOL 比較功能",
+      "moreTracking": "追蹤更多 KOL"
+    },
+    "dismiss": "稍後再說"
+  },
+  "tierNames": {
+    "free": "免費版",
+    "pro": "Pro",
+    "max": "Max"
+  }
+}
