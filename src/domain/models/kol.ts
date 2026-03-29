@@ -1,5 +1,19 @@
 // KOL 領域模型
 
+export type ValidationStatus = 'pending' | 'validating' | 'active' | 'rejected';
+
+export interface ValidationScore {
+  totalPosts: number;
+  postsWithTickers: number;
+  coverageRate: number;
+  postsWithSentiment: number;
+  directionalityRate: number;
+  totalArguments: number;
+  avgArgumentsPerPost: number;
+  passed: boolean;
+  failedCriteria: string[];
+}
+
 export interface KOL {
   id: string;
   name: string;
@@ -7,6 +21,10 @@ export interface KOL {
   avatarUrl: string | null;
   bio: string | null;
   socialLinks: SocialLinks;
+  validationStatus: ValidationStatus;
+  validationScore: ValidationScore | null;
+  validatedAt: Date | null;
+  validatedBy: string | null;
   createdBy: string | null;
   createdAt: Date;
   updatedAt: Date;

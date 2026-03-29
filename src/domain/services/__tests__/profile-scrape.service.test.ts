@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   // Repositories
   findKolByName: vi.fn(),
   createKol: vi.fn(),
+  createKolWithValidation: vi.fn(),
   findPostBySourceUrl: vi.fn(),
   findOrCreateSource: vi.fn(),
   getSourceById: vi.fn(),
@@ -18,6 +19,10 @@ const mocks = vi.hoisted(() => ({
   completeScrapeJob: vi.fn(),
   failScrapeJob: vi.fn(),
   getUserTimezone: vi.fn(),
+  checkFirstImportFree: vi.fn(),
+  markFirstImportUsed: vi.fn(),
+  updateValidationStatus: vi.fn(),
+  handleValidationCompletion: vi.fn(),
   // Extractors
   youtubeChannelExtractor: {
     platform: 'youtube',
@@ -36,6 +41,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/infrastructure/repositories', () => ({
   findKolByName: mocks.findKolByName,
   createKol: mocks.createKol,
+  createKolWithValidation: mocks.createKolWithValidation,
   findPostBySourceUrl: mocks.findPostBySourceUrl,
   findOrCreateSource: mocks.findOrCreateSource,
   getSourceById: mocks.getSourceById,
@@ -51,6 +57,16 @@ vi.mock('@/infrastructure/repositories', () => ({
 
 vi.mock('@/infrastructure/repositories/profile.repository', () => ({
   getUserTimezone: mocks.getUserTimezone,
+  checkFirstImportFree: mocks.checkFirstImportFree,
+  markFirstImportUsed: mocks.markFirstImportUsed,
+}));
+
+vi.mock('@/infrastructure/repositories/kol.repository', () => ({
+  updateValidationStatus: mocks.updateValidationStatus,
+}));
+
+vi.mock('@/domain/services/kol-validation.service', () => ({
+  handleValidationCompletion: mocks.handleValidationCompletion,
 }));
 
 vi.mock('@/infrastructure/extractors', () => ({
@@ -62,7 +78,11 @@ vi.mock('@/domain/services/import-pipeline.service', () => ({
   processUrl: mocks.processUrl,
 }));
 
-import { initiateProfileScrape, checkForNewContent } from '../profile-scrape.service';
+import {
+  initiateProfileScrape,
+  processJobBatch,
+  checkForNewContent,
+} from '../profile-scrape.service';
 
 // ── Helpers ──
 
@@ -112,7 +132,7 @@ describe('initiateProfileScrape', () => {
     mocks.twitterProfileExtractor.isValidProfileUrl.mockReturnValue(false);
     mocks.youtubeChannelExtractor.extractProfile.mockResolvedValue(mockProfile());
     mocks.findKolByName.mockResolvedValue(null);
-    mocks.createKol.mockResolvedValue({ id: 'kol-new', name: 'TraderJoe' });
+    mocks.createKolWithValidation.mockResolvedValue({ id: 'kol-new', name: 'TraderJoe' });
     mocks.findOrCreateSource.mockResolvedValue(mockSource());
     mocks.updateScrapeStatus.mockResolvedValue(undefined);
     mocks.createScrapeJob.mockResolvedValue({ id: 'job-1' });
@@ -153,18 +173,19 @@ describe('initiateProfileScrape', () => {
     await initiateProfileScrape('https://youtube.com/@traderjoe', USER_ID);
 
     expect(mocks.findKolByName).toHaveBeenCalledWith('TraderJoe');
-    expect(mocks.createKol).toHaveBeenCalledWith({
+    expect(mocks.createKolWithValidation).toHaveBeenCalledWith({
       name: 'TraderJoe',
       avatarUrl: 'https://img.example.com/avatar.jpg',
+      validatedBy: USER_ID,
     });
   });
 
-  it('reuses existing KOL and does not call createKol', async () => {
+  it('reuses existing KOL and does not call createKolWithValidation', async () => {
     mocks.findKolByName.mockResolvedValue({ id: 'kol-existing', name: 'TraderJoe' });
 
     const result = await initiateProfileScrape('https://youtube.com/@traderjoe', USER_ID);
 
-    expect(mocks.createKol).not.toHaveBeenCalled();
+    expect(mocks.createKolWithValidation).not.toHaveBeenCalled();
     expect(result.kolId).toBe('kol-existing');
   });
 
@@ -185,7 +206,20 @@ describe('initiateProfileScrape', () => {
     expect(mocks.updateScrapeStatus).toHaveBeenCalledWith('source-1', 'scraping');
   });
 
-  it('creates scrape job with correct args', async () => {
+  it('creates validation_scrape job for new KOL', async () => {
+    await initiateProfileScrape('https://youtube.com/@traderjoe', USER_ID);
+
+    expect(mocks.createScrapeJob).toHaveBeenCalledWith(
+      'source-1',
+      'validation_scrape',
+      USER_ID,
+      expect.arrayContaining(['https://youtube.com/watch?v=vid1'])
+    );
+  });
+
+  it('creates initial_scrape job for existing KOL', async () => {
+    mocks.findKolByName.mockResolvedValue({ id: 'kol-existing', name: 'TraderJoe' });
+
     await initiateProfileScrape('https://youtube.com/@traderjoe', USER_ID);
 
     expect(mocks.createScrapeJob).toHaveBeenCalledWith(
@@ -227,16 +261,17 @@ describe('initiateProfileScrape', () => {
     expect(result.initialProgress.totalUrls).toBe(0);
   });
 
-  it('handles null kolAvatarUrl by passing undefined to createKol', async () => {
+  it('handles null kolAvatarUrl by passing undefined to createKolWithValidation', async () => {
     mocks.youtubeChannelExtractor.extractProfile.mockResolvedValue(
       mockProfile({ kolAvatarUrl: null })
     );
 
     await initiateProfileScrape('https://youtube.com/@traderjoe', USER_ID);
 
-    expect(mocks.createKol).toHaveBeenCalledWith({
+    expect(mocks.createKolWithValidation).toHaveBeenCalledWith({
       name: 'TraderJoe',
       avatarUrl: undefined,
+      validatedBy: USER_ID,
     });
   });
 });
@@ -326,5 +361,157 @@ describe('checkForNewContent', () => {
   it('calls updateScrapeStatus to maintain current status', async () => {
     await checkForNewContent('source-1');
     expect(mocks.updateScrapeStatus).toHaveBeenCalledWith('source-1', 'idle');
+  });
+});
+
+// ── 11.1: Validation flow integration ──
+
+describe('validation scrape flow', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.youtubeChannelExtractor.isValidProfileUrl.mockReturnValue(true);
+    mocks.twitterProfileExtractor.isValidProfileUrl.mockReturnValue(false);
+    mocks.youtubeChannelExtractor.extractProfile.mockResolvedValue(mockProfile());
+    mocks.findKolByName.mockResolvedValue(null); // new KOL
+    mocks.createKolWithValidation.mockResolvedValue({ id: 'kol-new', name: 'TraderJoe' });
+    mocks.findOrCreateSource.mockResolvedValue(mockSource());
+    mocks.updateScrapeStatus.mockResolvedValue(undefined);
+    mocks.createScrapeJob.mockResolvedValue({ id: 'job-val' });
+    mocks.getScrapeJobById.mockResolvedValue({
+      id: 'job-val',
+      kolSourceId: 'source-1',
+      status: 'queued',
+      jobType: 'validation_scrape',
+      discoveredUrls: ['https://youtube.com/watch?v=vid1', 'https://youtube.com/watch?v=vid2'],
+      totalUrls: 2,
+      processedUrls: 0,
+      importedCount: 0,
+      duplicateCount: 0,
+      errorCount: 0,
+      filteredCount: 0,
+      triggeredBy: USER_ID,
+      retryCount: 0,
+    });
+    mocks.getSourceById.mockResolvedValue(mockSource({ kolId: 'kol-new' }));
+    mocks.startScrapeJob.mockResolvedValue(undefined);
+    mocks.updateScrapeJobProgress.mockResolvedValue(undefined);
+    mocks.completeScrapeJob.mockResolvedValue(undefined);
+    mocks.updateValidationStatus.mockResolvedValue(undefined);
+    mocks.handleValidationCompletion.mockResolvedValue(undefined);
+    mocks.getUserTimezone.mockResolvedValue('Asia/Taipei');
+    mocks.checkFirstImportFree.mockResolvedValue(false);
+    mocks.processUrl.mockResolvedValue({ status: 'success' });
+  });
+
+  it('new KOL nomination creates validation_scrape job', async () => {
+    const result = await initiateProfileScrape('https://youtube.com/@traderjoe', USER_ID);
+
+    expect(result.jobId).toBe('job-val');
+    expect(mocks.createKolWithValidation).toHaveBeenCalledWith({
+      name: 'TraderJoe',
+      avatarUrl: 'https://img.example.com/avatar.jpg',
+      validatedBy: USER_ID,
+    });
+    expect(mocks.createScrapeJob).toHaveBeenCalledWith(
+      'source-1',
+      'validation_scrape',
+      USER_ID,
+      expect.any(Array)
+    );
+  });
+
+  it('validation scrape limits to 10 URLs', async () => {
+    const manyUrls = Array.from({ length: 20 }, (_, i) => `https://youtube.com/watch?v=vid${i}`);
+    mocks.youtubeChannelExtractor.extractProfile.mockResolvedValue(
+      mockProfile({ postUrls: manyUrls })
+    );
+
+    await initiateProfileScrape('https://youtube.com/@traderjoe', USER_ID);
+
+    const passedUrls = mocks.createScrapeJob.mock.calls[0][3];
+    expect(passedUrls).toHaveLength(10);
+  });
+
+  it('processJobBatch sets KOL to validating status', async () => {
+    await processJobBatch('job-val', 10, 50_000);
+
+    expect(mocks.updateValidationStatus).toHaveBeenCalledWith('kol-new', 'validating');
+  });
+
+  it('processJobBatch triggers handleValidationCompletion on completion', async () => {
+    await processJobBatch('job-val', 10, 50_000);
+
+    expect(mocks.handleValidationCompletion).toHaveBeenCalledWith('kol-new');
+  });
+
+  it('validation scrape is quota-exempt (skips first-import check)', async () => {
+    await processJobBatch('job-val', 10, 50_000);
+
+    // checkFirstImportFree should NOT be called since validation scrapes are always exempt
+    expect(mocks.checkFirstImportFree).not.toHaveBeenCalled();
+  });
+
+  it('existing KOL re-scrape creates initial_scrape, not validation_scrape', async () => {
+    mocks.findKolByName.mockResolvedValue({ id: 'kol-existing', name: 'TraderJoe' });
+
+    await initiateProfileScrape('https://youtube.com/@traderjoe', USER_ID);
+
+    expect(mocks.createScrapeJob).toHaveBeenCalledWith(
+      'source-1',
+      'initial_scrape',
+      USER_ID,
+      expect.any(Array)
+    );
+  });
+});
+
+// ── 11.2: Backward compatibility ──
+
+describe('backward compatibility', () => {
+  it('existing KOL scrape does not call createKolWithValidation', async () => {
+    vi.clearAllMocks();
+    mocks.youtubeChannelExtractor.isValidProfileUrl.mockReturnValue(true);
+    mocks.twitterProfileExtractor.isValidProfileUrl.mockReturnValue(false);
+    mocks.youtubeChannelExtractor.extractProfile.mockResolvedValue(mockProfile());
+    mocks.findKolByName.mockResolvedValue({ id: 'kol-existing', name: 'TraderJoe' });
+    mocks.findOrCreateSource.mockResolvedValue(mockSource());
+    mocks.updateScrapeStatus.mockResolvedValue(undefined);
+    mocks.createScrapeJob.mockResolvedValue({ id: 'job-1' });
+
+    const result = await initiateProfileScrape('https://youtube.com/@traderjoe', USER_ID);
+
+    expect(mocks.createKolWithValidation).not.toHaveBeenCalled();
+    expect(result.kolId).toBe('kol-existing');
+  });
+
+  it('non-validation job does not trigger handleValidationCompletion', async () => {
+    vi.clearAllMocks();
+    mocks.getScrapeJobById.mockResolvedValue({
+      id: 'job-normal',
+      kolSourceId: 'source-1',
+      status: 'queued',
+      jobType: 'initial_scrape',
+      discoveredUrls: ['https://youtube.com/watch?v=vid1'],
+      totalUrls: 1,
+      processedUrls: 0,
+      importedCount: 0,
+      duplicateCount: 0,
+      errorCount: 0,
+      filteredCount: 0,
+      triggeredBy: USER_ID,
+      retryCount: 0,
+    });
+    mocks.getSourceById.mockResolvedValue(mockSource({ kolId: 'kol-existing' }));
+    mocks.startScrapeJob.mockResolvedValue(undefined);
+    mocks.updateScrapeJobProgress.mockResolvedValue(undefined);
+    mocks.completeScrapeJob.mockResolvedValue(undefined);
+    mocks.getUserTimezone.mockResolvedValue('UTC');
+    mocks.checkFirstImportFree.mockResolvedValue(false);
+    mocks.processUrl.mockResolvedValue({ status: 'success' });
+
+    await processJobBatch('job-normal', 10, 50_000);
+
+    expect(mocks.handleValidationCompletion).not.toHaveBeenCalled();
+    expect(mocks.updateValidationStatus).not.toHaveBeenCalled();
   });
 });

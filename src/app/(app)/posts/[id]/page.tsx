@@ -22,6 +22,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ROUTES } from '@/lib/constants';
 import { formatDateTime } from '@/lib/utils/date';
 import { sentimentKey } from '@/lib/utils/sentiment';
@@ -64,7 +65,7 @@ const SentimentLineChart = dynamic(
     })),
   { ssr: false }
 );
-import type { Sentiment } from '@/domain/models/post';
+import type { Sentiment, TickerSource } from '@/domain/models/post';
 
 function toDateString(postedAt: Date | string): string {
   if (postedAt instanceof Date) return postedAt.toISOString().slice(0, 10);
@@ -474,6 +475,29 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
                   >
                     {stock.ticker}
                   </Link>
+                  {stock.source === 'inferred' && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge
+                          variant="outline"
+                          className="border-amber-300 text-[10px] font-normal text-amber-600"
+                        >
+                          推論
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        <p className="text-xs">
+                          此標的為系統根據宏觀分析推論，非 KOL 直接提及
+                          {stock.inferenceReason && (
+                            <>
+                              <br />
+                              <span className="font-medium">{stock.inferenceReason}</span>
+                            </>
+                          )}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                   <span className="text-muted-foreground">{stock.name}</span>
                   {stock.sentiment !== null && stock.sentiment !== post.sentiment && (
                     <Badge

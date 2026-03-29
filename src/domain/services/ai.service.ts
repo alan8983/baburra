@@ -15,12 +15,16 @@ export interface SentimentAnalysisResult {
   reasoning: string;
 }
 
+export type TickerIdentificationSource = 'explicit' | 'inferred';
+
 export interface IdentifiedTicker {
   ticker: string;
   name: string;
   market: 'US' | 'TW' | 'HK' | 'CRYPTO';
   confidence: number;
   mentionedAs: string;
+  source: TickerIdentificationSource;
+  inferenceReason?: string;
 }
 
 export interface TickerIdentificationResult {
@@ -229,7 +233,9 @@ function buildDraftAnalysisPrompt(timezone: string): string {
       "name": "<標的全名>",
       "market": "<市場: US / TW / HK / CRYPTO>",
       "confidence": <0 到 1 的小數>,
-      "mentionedAs": "<文章中出現的原始文字>"
+      "mentionedAs": "<文章中出現的原始文字>",
+      "source": "<explicit 或 inferred>",
+      "inferenceReason": "<僅當 source 為 inferred 時填寫，說明推論原因>"
     }
   ],
   "sentiment": <-3 到 3 的整數>,
@@ -262,7 +268,29 @@ function buildDraftAnalysisPrompt(timezone: string): string {
    - 如果某公司同時在多個交易所上市（例如：Mercado Libre 在巴西為 MELI34/MELID，在美國為 MELI），請務必使用支援市場的代碼（優先美股）
    - 不要回傳不支援市場的代碼（例如：巴西 B3、倫敦 LSE、東京 TSE、韓國 KRX、印度 BSE 等）
    - 自我檢查：回傳前請逐一確認每個 ticker 確實在所標示的市場（US/TW/CRYPTO）上交易，若有誤請修正為正確的支援市場代碼
-   - 如果文章沒有提及任何標的，回傳空陣列
+   - 如果文章沒有明確提及任何標的，嘗試以下宏觀推論規則
+   **宏觀推論規則 (Macro-to-Instrument Inference):**
+   當文章討論宏觀經濟主題但未明確提及特定標的時，推論最直接受影響的可交易工具。
+   推論時 source 設為 "inferred"，並提供 inferenceReason。
+   若文章明確提及標的，source 設為 "explicit"，inferenceReason 留空。
+
+   宏觀主題 → 推論標的對照表：
+   - 台灣景氣燈號 / CPI / GDP / PMI → 0050.TW (元大台灣50)，台灣大盤代理
+   - 美國 CPI / GDP / 就業數據 / 非農 → SPY (S&P 500 ETF)，美國大盤代理
+   - Fed 利率決議 / 聯準會 / 鮑爾 / 升降息 → TLT (20+年美國公債ETF)，利率敏感工具；降息看多TLT，升息看空TLT
+   - 台灣央行利率決策 → 0055.TW (元大金融)，台灣利率敏感金融股
+   - 半導體產業 / 晶片 / AI晶片趨勢 → SMH (VanEck半導體ETF)，半導體產業代理
+   - 原油 / OPEC / 油價 → USO (原油ETF)，原物料代理
+   - 黃金 / 避險需求 → GLD (黃金ETF)，貴金屬代理
+   - 日本央行 / BOJ / YCC → EWJ (iShares日本ETF)，日本市場代理
+   - 中國經濟 / 中國PMI → FXI (中國大型股ETF)，中國市場代理
+
+   推論原則：
+   - 優先選擇高流動性、知名ETF作為推論標的
+   - 當多個標的可能適用時，選擇最直接受影響的（例如：利率討論 → TLT，成長討論 → SPY）
+   - 若宏觀主題無明確可交易代理，不要勉強推論，回傳空陣列
+   - 推論的標的也視為投資觀點對象，不算比較基準
+   - inferenceReason 用繁體中文簡要說明推論邏輯（例如："Fed升息直接影響長天期公債價格"）
 3. 情緒判斷 (sentiment):
    - 3: 強烈看多 (明確表示非常看好，建議買入，語氣極為堅定)
    - 2: 看多 (正面評價，認為會上漲)
@@ -480,6 +508,7 @@ function mergeWithCashtags(aiTickers: IdentifiedTicker[], content: string): Iden
       market: 'US',
       confidence: 0.7,
       mentionedAs: `$${tag}`,
+      source: 'explicit',
     });
   }
 
@@ -745,6 +774,8 @@ export async function identifyTickers(content: string): Promise<TickerIdentifica
       market: t.market as IdentifiedTicker['market'],
       confidence: Math.max(0, Math.min(1, t.confidence || 0.5)),
       mentionedAs: (t.mentionedAs || t.name).slice(0, 100),
+      source: (t.source === 'inferred' ? 'inferred' : 'explicit') as TickerIdentificationSource,
+      inferenceReason: t.inferenceReason as string | undefined,
     }));
 
   // Merge with regex-extracted cashtags to catch any the AI missed
@@ -790,6 +821,8 @@ export async function analyzeDraftContent(
       market: string;
       confidence: number;
       mentionedAs: string;
+      source?: string;
+      inferenceReason?: string;
     }>;
     sentiment: number;
     stockSentiments?: Record<string, number>;
@@ -813,6 +846,10 @@ export async function analyzeDraftContent(
       market: t.market as IdentifiedTicker['market'],
       confidence: Math.max(0, Math.min(1, t.confidence || 0.5)),
       mentionedAs: (t.mentionedAs || t.name).slice(0, 100),
+      source: (t.source === 'inferred' ? 'inferred' : 'explicit') as TickerIdentificationSource,
+      ...(t.source === 'inferred' && t.inferenceReason
+        ? { inferenceReason: t.inferenceReason }
+        : {}),
     }));
 
   // Merge with regex-extracted cashtags to catch any the AI missed

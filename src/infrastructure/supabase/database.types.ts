@@ -300,6 +300,10 @@ export type Database = {
           slug: string;
           social_links: Json | null;
           updated_at: string | null;
+          validated_at: string | null;
+          validated_by: string | null;
+          validation_score: Json | null;
+          validation_status: string;
         };
         Insert: {
           avatar_url?: string | null;
@@ -311,6 +315,10 @@ export type Database = {
           slug: string;
           social_links?: Json | null;
           updated_at?: string | null;
+          validated_at?: string | null;
+          validated_by?: string | null;
+          validation_score?: Json | null;
+          validation_status?: string;
         };
         Update: {
           avatar_url?: string | null;
@@ -322,6 +330,10 @@ export type Database = {
           slug?: string;
           social_links?: Json | null;
           updated_at?: string | null;
+          validated_at?: string | null;
+          validated_by?: string | null;
+          validation_score?: Json | null;
+          validation_status?: string;
         };
         Relationships: [
           {

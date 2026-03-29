@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
@@ -191,6 +192,23 @@ export default function PostsPage() {
                           return (
                             <div key={stock.ticker} className="flex items-center gap-1 text-sm">
                               <Badge variant="outline">{stock.ticker}</Badge>
+                              {stock.source === 'inferred' && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge
+                                      variant="outline"
+                                      className="border-amber-300 text-[10px] font-normal text-amber-600"
+                                    >
+                                      推論
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="max-w-xs">
+                                    <p className="text-xs">
+                                      此標的為系統根據宏觀分析推論，非 KOL 直接提及
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
                               {best ? (
                                 <PriceChangeBadge
                                   value={best.value}

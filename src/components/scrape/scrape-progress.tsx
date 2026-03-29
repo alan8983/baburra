@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/constants';
 import { useScrapeJob, useScrapeJobs } from '@/hooks/use-scrape';
+import { useKol } from '@/hooks/use-kols';
 
 interface ScrapeProgressProps {
   jobId: string;
@@ -30,6 +31,8 @@ export function ScrapeProgress({ jobId, onReset, onComplete }: ScrapeProgressPro
   const router = useRouter();
   const { data: job, isLoading } = useScrapeJob(jobId);
   const { data: allJobs } = useScrapeJobs();
+  const kolId = job?.kolId;
+  const { data: kol } = useKol(kolId ?? '');
   const prevStatusRef = useRef<string | undefined>(undefined);
   const toastShownRef = useRef(false);
   const [etaMinutes, setEtaMinutes] = useState(0);
@@ -281,6 +284,45 @@ export function ScrapeProgress({ jobId, onReset, onComplete }: ScrapeProgressPro
                 })}
               </span>
             </div>
+            {/* Validation status indicator */}
+            {kol && kol.validationStatus && kol.validationStatus !== 'active' && (
+              <div
+                className={`rounded-md border p-3 text-sm ${
+                  kol.validationStatus === 'validating'
+                    ? 'border-yellow-200 bg-yellow-50 text-yellow-800'
+                    : kol.validationStatus === 'rejected'
+                      ? 'border-red-200 bg-red-50 text-red-800'
+                      : 'border-blue-200 bg-blue-50 text-blue-800'
+                }`}
+              >
+                {kol.validationStatus === 'validating' && (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>驗證中...</span>
+                  </div>
+                )}
+                {kol.validationStatus === 'rejected' && (
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>未通過驗證：近期內容未發現足夠可追蹤的投資觀點</span>
+                  </div>
+                )}
+                {kol.validationStatus === 'pending' && (
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4" />
+                    <span>等待驗證中</span>
+                  </div>
+                )}
+              </div>
+            )}
+            {kol && kol.validationStatus === 'active' && (
+              <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>已通過，已加入公共資料庫</span>
+                </div>
+              </div>
+            )}
             {job.kolId && (
               <Button variant="outline" onClick={() => router.push(ROUTES.KOL_DETAIL(job.kolId!))}>
                 {t('progress.viewKol')}

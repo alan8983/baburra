@@ -40,6 +40,7 @@ interface KolScorecardProps {
   sources?: { id: string; isSubscribed: boolean }[];
   kolId: string;
   stockPosts: StockPost[];
+  hasInferredTickers?: boolean;
 }
 
 interface PeriodStats {
@@ -77,6 +78,7 @@ export function KolScorecard({
   sources,
   kolId,
   stockPosts,
+  hasInferredTickers,
 }: KolScorecardProps) {
   const t = useTranslations('kols');
   const { palette, colors } = useColorPalette();
@@ -204,6 +206,11 @@ export function KolScorecard({
               {totalCalls > 0 && (
                 <p className="text-muted-foreground mt-1 text-xs">
                   {winCount}/{totalCalls} {t('detail.scorecard.correct')}
+                </p>
+              )}
+              {hasInferredTickers && totalCalls > 0 && (
+                <p className="text-muted-foreground mt-1 max-w-[140px] text-center text-[10px] leading-tight">
+                  此勝率包含系統推論的關聯標的
                 </p>
               )}
             </div>

@@ -37,6 +37,8 @@ type DbStock = {
 type DbPostStock = {
   stock_id: string;
   sentiment: number | null;
+  source: string | null;
+  inference_reason: string | null;
   stocks: DbStock | null;
 };
 
@@ -91,7 +93,7 @@ export async function listPosts(params: {
   let query = supabase
     .from('posts')
     .select(
-      `*, kols(id, name, avatar_url), post_stocks(stock_id, sentiment, stocks(id, ticker, name))`,
+      `*, kols(id, name, avatar_url), post_stocks(stock_id, sentiment, source, inference_reason, stocks(id, ticker, name))`,
       { count: 'exact' }
     );
 
@@ -134,6 +136,8 @@ export async function listPosts(params: {
         ticker: ps.stocks!.ticker,
         name: ps.stocks!.name,
         sentiment: (ps.sentiment as Post['sentiment'] | null) ?? null,
+        source: (ps.source as 'explicit' | 'inferred') ?? 'explicit',
+        inferenceReason: ps.inference_reason ?? null,
       }));
     return {
       ...post,
@@ -151,7 +155,7 @@ export async function getPostById(id: string): Promise<PostWithPriceChanges | nu
   const { data: row, error } = await supabase
     .from('posts')
     .select(
-      `*, kols(id, name, avatar_url), post_stocks(stock_id, sentiment, stocks(id, ticker, name))`
+      `*, kols(id, name, avatar_url), post_stocks(stock_id, sentiment, source, inference_reason, stocks(id, ticker, name))`
     )
     .eq('id', id)
     .single();
@@ -176,6 +180,8 @@ export async function getPostById(id: string): Promise<PostWithPriceChanges | nu
       ticker: ps.stocks!.ticker,
       name: ps.stocks!.name,
       sentiment: (ps.sentiment as Post['sentiment'] | null) ?? null,
+      source: (ps.source as 'explicit' | 'inferred') ?? 'explicit',
+      inferenceReason: ps.inference_reason ?? null,
     }));
 
   return { ...post, kol, stocks, priceChanges: {} };
@@ -188,6 +194,8 @@ export async function createPost(input: CreatePostInput, createdBy: string | nul
   const stocksParam = (input.stockIds ?? []).map((stockId) => ({
     stock_id: stockId,
     sentiment: input.stockSentiments?.[stockId] ?? null,
+    source: input.stockSources?.[stockId]?.source ?? 'explicit',
+    inference_reason: input.stockSources?.[stockId]?.inferenceReason ?? null,
   }));
 
   // Build arguments array for RPC (resolve ticker → stock_id)
@@ -375,9 +383,14 @@ export async function findPostBySourceUrl(sourceUrl: string): Promise<PostWithRe
     .single();
   const { data: psRows } = await supabase
     .from('post_stocks')
-    .select('stock_id, sentiment')
+    .select('stock_id, sentiment, source, inference_reason')
     .eq('post_id', post.id);
-  const psEntries = (psRows ?? []) as { stock_id: string; sentiment: number | null }[];
+  const psEntries = (psRows ?? []) as {
+    stock_id: string;
+    sentiment: number | null;
+    source: string | null;
+    inference_reason: string | null;
+  }[];
   const stockIds = psEntries.map((p) => p.stock_id);
   let stocks: PostWithRelations['stocks'] = [];
   if (stockIds.length > 0) {
@@ -385,13 +398,20 @@ export async function findPostBySourceUrl(sourceUrl: string): Promise<PostWithRe
       .from('stocks')
       .select('id, ticker, name')
       .in('id', stockIds);
-    const sentimentMap = new Map(psEntries.map((p) => [p.stock_id, p.sentiment]));
-    stocks = (sRows ?? []).map((s) => ({
-      id: s.id as string,
-      ticker: s.ticker as string,
-      name: s.name as string,
-      sentiment: (sentimentMap.get(s.id as string) as Post['sentiment'] | null) ?? null,
-    }));
+    const psMap = new Map(psEntries.map((p) => [p.stock_id, p]));
+    stocks = (sRows ?? []).map((s) => {
+      const ps = psMap.get(s.id as string);
+      return {
+        id: s.id as string,
+        ticker: s.ticker as string,
+        name: s.name as string,
+        sentiment: (ps?.sentiment as Post['sentiment'] | null) ?? null,
+        source: (ps?.source === 'inferred'
+          ? 'inferred'
+          : 'explicit') as import('@/domain/models/post').TickerSource,
+        inferenceReason: ps?.inference_reason ?? null,
+      };
+    });
   }
 
   return {

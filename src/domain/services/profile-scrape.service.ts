@@ -15,6 +15,7 @@ import { CREDIT_COSTS } from '@/domain/models/user';
 import {
   findKolByName,
   createKol,
+  createKolWithValidation,
   findPostBySourceUrl,
   findOrCreateSource,
   getSourceById,
@@ -35,6 +36,8 @@ import {
 import { processUrl } from '@/domain/services/import-pipeline.service';
 import type { KolCacheEntry } from '@/domain/services/import-pipeline.service';
 import type { ScrapeJobType } from '@/domain/models';
+import { updateValidationStatus } from '@/infrastructure/repositories/kol.repository';
+import { handleValidationCompletion } from '@/domain/services/kol-validation.service';
 
 // ── Types ──
 
@@ -151,11 +154,13 @@ export async function initiateProfileScrape(
 
   // 3. Find or create KOL
   const existingKol = await findKolByName(profile.kolName);
+  const isNewKol = !existingKol;
   const kol = existingKol
     ? { id: existingKol.id, name: existingKol.name, created: false }
-    : await createKol({
+    : await createKolWithValidation({
         name: profile.kolName,
         avatarUrl: profile.kolAvatarUrl ?? undefined,
+        validatedBy: userId,
       }).then((k) => ({ id: k.id, name: k.name, created: true }));
 
   // 4. Find or create kol_source
@@ -169,14 +174,14 @@ export async function initiateProfileScrape(
   // 5. Update scrape status
   await updateScrapeStatus(source.id, 'scraping');
 
-  // 6. Create scrape job (use selectedUrls if provided, otherwise all discovered URLs)
-  const urlsToScrape = selectedUrls ?? profile.postUrls;
-  const job = await createScrapeJob(
-    source.id,
-    'initial_scrape' as ScrapeJobType,
-    userId,
-    urlsToScrape
-  );
+  // 6. Create scrape job
+  // New KOLs get a validation_scrape (limited to 10 posts) to check quality
+  const isValidation = isNewKol;
+  const jobType: ScrapeJobType = isValidation ? 'validation_scrape' : 'initial_scrape';
+  const allUrls = selectedUrls ?? profile.postUrls;
+  // Validation scrapes are limited to 10 posts
+  const urlsToScrape = isValidation ? allUrls.slice(0, 10) : allUrls;
+  const job = await createScrapeJob(source.id, jobType, userId, urlsToScrape);
 
   // 7. Return immediately — batch processing is driven by the /continue endpoint
   // which the frontend triggers during polling. This avoids Vercel function timeouts.
@@ -239,8 +244,17 @@ export async function processJobBatch(
   const userId = job.triggeredBy ?? 'system';
   const timezone = job.triggeredBy ? await getUserTimezone(job.triggeredBy) : 'UTC';
 
+  const isValidationScrape = job.jobType === 'validation_scrape';
+
+  // Validation scrapes set the KOL to 'validating' status
+  if (isValidationScrape && job.status === 'queued') {
+    await updateValidationStatus(kolId, 'validating');
+  }
+
   // Check first-import-free exemption (matching importBatch behavior)
-  const isFirstImportFree = userId !== 'system' ? await checkFirstImportFree(userId) : false;
+  // Validation scrapes are always quota-exempt
+  const isFirstImportFree =
+    isValidationScrape || (userId !== 'system' ? await checkFirstImportFree(userId) : false);
 
   let importedCount = job.importedCount;
   let duplicateCount = job.duplicateCount;
@@ -322,6 +336,15 @@ export async function processJobBatch(
       filteredCount,
     });
     await updateScrapeStatus(source.id, 'completed', importedCount);
+
+    // Trigger validation scoring for validation scrape jobs
+    if (isValidationScrape) {
+      try {
+        await handleValidationCompletion(kolId);
+      } catch (validationErr) {
+        console.error(`Validation scoring failed for KOL ${kolId}:`, validationErr);
+      }
+    }
   }
 
   return {

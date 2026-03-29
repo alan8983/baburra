@@ -37,6 +37,8 @@ export interface ArgumentItem {
 export interface TickerArgumentGroup {
   ticker: string;
   name: string;
+  source?: 'explicit' | 'inferred';
+  inferenceReason?: string | null;
   arguments: ArgumentItem[];
 }
 
@@ -142,6 +144,29 @@ function TickerSection({ group }: { group: TickerArgumentGroup }) {
         <Badge variant="outline" className="text-sm font-semibold">
           {group.ticker}
         </Badge>
+        {group.source === 'inferred' && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge
+                variant="outline"
+                className="border-amber-300 text-[10px] font-normal text-amber-600"
+              >
+                推論
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs">
+              <p className="text-xs">
+                此標的為系統根據宏觀分析推論，非 KOL 直接提及
+                {group.inferenceReason && (
+                  <>
+                    <br />
+                    <span className="font-medium">{group.inferenceReason}</span>
+                  </>
+                )}
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        )}
         <span className="text-muted-foreground text-sm">{group.name}</span>
         <span className="text-muted-foreground text-xs">({group.arguments.length})</span>
         {isExpanded ? (

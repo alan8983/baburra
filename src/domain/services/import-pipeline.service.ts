@@ -338,23 +338,33 @@ export async function processUrl(
     // 7. Find or create stocks for identified tickers
     const stockIds: string[] = [];
     const stockSentiments: Record<string, Sentiment> = {};
+    const stockSources: Record<
+      string,
+      { source: 'explicit' | 'inferred'; inferenceReason?: string }
+    > = {};
     const tickerToStockId: Record<string, string> = {};
 
     for (const ticker of analysis.stockTickers) {
       try {
         const existingStock = await getStockByTicker(ticker.ticker);
+        let stockId: string;
         if (existingStock) {
-          stockIds.push(existingStock.id);
-          tickerToStockId[ticker.ticker.toUpperCase()] = existingStock.id;
+          stockId = existingStock.id;
+          stockIds.push(stockId);
         } else {
           const newStock = await createStock({
             ticker: ticker.ticker,
             name: ticker.name,
             market: ticker.market,
           });
-          stockIds.push(newStock.id);
-          tickerToStockId[ticker.ticker.toUpperCase()] = newStock.id;
+          stockId = newStock.id;
+          stockIds.push(stockId);
         }
+        tickerToStockId[ticker.ticker.toUpperCase()] = stockId;
+        stockSources[stockId] = {
+          source: ticker.source ?? 'explicit',
+          ...(ticker.inferenceReason ? { inferenceReason: ticker.inferenceReason } : {}),
+        };
       } catch (stockErr) {
         console.error(`Failed to find/create stock ${ticker.ticker}:`, stockErr);
       }
@@ -414,6 +424,7 @@ export async function processUrl(
           sentimentAiGenerated: true,
           aiModelVersion: getAiModelVersion(),
           stockSentiments: Object.keys(stockSentiments).length > 0 ? stockSentiments : undefined,
+          stockSources: Object.keys(stockSources).length > 0 ? stockSources : undefined,
           postedAt: analysis.postedAt
             ? new Date(analysis.postedAt)
             : fetchResult.postedAt

@@ -48,11 +48,15 @@ export interface Post {
   createdBy: string | null;
 }
 
+export type TickerSource = 'explicit' | 'inferred';
+
 export interface PostStockLink {
   id: string;
   ticker: string;
   name: string;
   sentiment: Sentiment | null; // null = use post-level sentiment
+  source: TickerSource;
+  inferenceReason: string | null;
 }
 
 export interface PostWithRelations extends Post {
@@ -81,6 +85,11 @@ export interface PriceChangeByPeriod {
   day365Status: PriceChangeStatus;
 }
 
+export interface StockSourceInfo {
+  source: TickerSource;
+  inferenceReason?: string;
+}
+
 export interface CreatePostInput {
   kolId: string;
   stockIds: string[];
@@ -91,6 +100,7 @@ export interface CreatePostInput {
   images?: string[];
   sentiment: Sentiment;
   stockSentiments?: Record<string, Sentiment>; // stockId -> per-stock sentiment
+  stockSources?: Record<string, StockSourceInfo>; // stockId -> source tracking
   sentimentAiGenerated?: boolean;
   aiModelVersion?: string;
   postedAt: Date;
