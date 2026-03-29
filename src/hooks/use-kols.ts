@@ -28,7 +28,12 @@ export const kolKeys = {
 };
 
 // 取得 KOL 列表
-export function useKols(params?: { search?: string; page?: number; limit?: number }) {
+export function useKols(params?: {
+  search?: string;
+  page?: number;
+  limit?: number;
+  validationStatus?: string;
+}) {
   return useQuery({
     queryKey: kolKeys.list(params ?? {}),
     queryFn: async (): Promise<{ data: KOLWithStats[]; total: number }> => {
@@ -36,6 +41,7 @@ export function useKols(params?: { search?: string; page?: number; limit?: numbe
       if (params?.search) searchParams.set('search', params.search);
       if (params?.page) searchParams.set('page', params.page.toString());
       if (params?.limit) searchParams.set('limit', params.limit.toString());
+      if (params?.validationStatus) searchParams.set('validationStatus', params.validationStatus);
 
       const url = `${API_ROUTES.KOLS}?${searchParams.toString()}`;
       const res = await fetch(url);

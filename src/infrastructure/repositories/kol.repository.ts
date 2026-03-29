@@ -8,6 +8,8 @@ import type {
   CreateKOLInput,
   UpdateKOLInput,
   KOLSearchResult,
+  ValidationStatus,
+  ValidationScore,
 } from '@/domain/models';
 
 type DbKol = {
@@ -17,6 +19,10 @@ type DbKol = {
   avatar_url: string | null;
   bio: string | null;
   social_links: Record<string, string>;
+  validation_status: string;
+  validation_score: unknown;
+  validated_at: string | null;
+  validated_by: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -30,6 +36,10 @@ function mapDbToKol(row: DbKol): KOL {
     avatarUrl: row.avatar_url ?? null,
     bio: row.bio ?? null,
     socialLinks: (row.social_links as Record<string, string>) ?? {},
+    validationStatus: (row.validation_status as ValidationStatus) ?? 'pending',
+    validationScore: (row.validation_score as ValidationScore) ?? null,
+    validatedAt: row.validated_at ? new Date(row.validated_at) : null,
+    validatedBy: row.validated_by ?? null,
     createdBy: row.created_by ?? null,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
@@ -48,11 +58,16 @@ export async function listKols(params: {
   search?: string;
   page?: number;
   limit?: number;
+  validationStatus?: ValidationStatus | 'all';
 }): Promise<{ data: KOLWithStats[]; total: number }> {
   const supabase = createAdminClient();
-  const { search = '', page = 1, limit = 20 } = params;
+  const { search = '', page = 1, limit = 20, validationStatus = 'active' } = params;
 
   let query = supabase.from('kols').select('*', { count: 'exact', head: false });
+
+  if (validationStatus !== 'all') {
+    query = query.eq('validation_status', validationStatus);
+  }
 
   if (search.trim()) {
     const s = escapePostgrestSearch(search.trim());
@@ -190,4 +205,59 @@ export async function findKolByName(name: string): Promise<KOLSearchResult | nul
 
 export function toKOLSearchResult(kol: KOL): KOLSearchResult {
   return { id: kol.id, name: kol.name, avatarUrl: kol.avatarUrl };
+}
+
+export async function updateValidationStatus(
+  kolId: string,
+  status: ValidationStatus,
+  score?: ValidationScore
+): Promise<void> {
+  const supabase = createAdminClient();
+  const payload: Record<string, unknown> = {
+    validation_status: status,
+  };
+  if (status === 'active' || status === 'rejected') {
+    payload.validated_at = new Date().toISOString();
+  }
+  if (score !== undefined) {
+    payload.validation_score = score;
+  }
+  const { error } = await supabase.from('kols').update(payload).eq('id', kolId);
+  if (error) throw new Error(error.message);
+}
+
+export async function createKolWithValidation(
+  input: CreateKOLInput & { validatedBy?: string }
+): Promise<KOL> {
+  const supabase = createAdminClient();
+  const baseSlug = generateSlug(input.name);
+  let slug = baseSlug;
+  let attempt = 0;
+  while (true) {
+    const { data: existing } = await supabase
+      .from('kols')
+      .select('id')
+      .eq('slug', slug)
+      .maybeSingle();
+    if (!existing) break;
+    attempt += 1;
+    slug = `${baseSlug}-${attempt}`;
+  }
+
+  const { data: row, error } = await supabase
+    .from('kols')
+    .insert({
+      name: input.name,
+      slug,
+      avatar_url: input.avatarUrl ?? null,
+      bio: input.bio ?? null,
+      social_links: input.socialLinks ?? {},
+      validation_status: 'pending',
+      validated_by: input.validatedBy ?? null,
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return mapDbToKol(row as DbKol);
 }

@@ -12,14 +12,26 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search') ?? undefined;
+    const validationStatus = searchParams.get('validationStatus') ?? undefined;
     const pagination = parsePaginationParams(searchParams);
     if (pagination.error) {
       return badRequestError(pagination.error);
     }
+
+    // Validate validationStatus param
+    const validStatuses = ['pending', 'validating', 'active', 'rejected', 'all'];
+    if (validationStatus && !validStatuses.includes(validationStatus)) {
+      return badRequestError(
+        `Invalid validationStatus. Must be one of: ${validStatuses.join(', ')}`
+      );
+    }
+
     const result = await listKols({
       search: search || undefined,
       page: pagination.data?.page,
       limit: pagination.data?.limit,
+      validationStatus:
+        (validationStatus as 'pending' | 'validating' | 'active' | 'rejected' | 'all') ?? 'active',
     });
     return NextResponse.json(result);
   } catch (err) {

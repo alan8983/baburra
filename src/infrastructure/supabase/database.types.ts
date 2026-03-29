@@ -300,6 +300,10 @@ export type Database = {
           slug: string;
           social_links: Json | null;
           updated_at: string | null;
+          validated_at: string | null;
+          validated_by: string | null;
+          validation_score: Json | null;
+          validation_status: string;
         };
         Insert: {
           avatar_url?: string | null;
@@ -311,6 +315,10 @@ export type Database = {
           slug: string;
           social_links?: Json | null;
           updated_at?: string | null;
+          validated_at?: string | null;
+          validated_by?: string | null;
+          validation_score?: Json | null;
+          validation_status?: string;
         };
         Update: {
           avatar_url?: string | null;
@@ -322,6 +330,10 @@ export type Database = {
           slug?: string;
           social_links?: Json | null;
           updated_at?: string | null;
+          validated_at?: string | null;
+          validated_by?: string | null;
+          validation_score?: Json | null;
+          validation_status?: string;
         };
         Relationships: [
           {
@@ -401,20 +413,26 @@ export type Database = {
       post_stocks: {
         Row: {
           id: string;
+          inference_reason: string | null;
           post_id: string;
           sentiment: number | null;
+          source: string;
           stock_id: string;
         };
         Insert: {
           id?: string;
+          inference_reason?: string | null;
           post_id: string;
           sentiment?: number | null;
+          source?: string;
           stock_id: string;
         };
         Update: {
           id?: string;
+          inference_reason?: string | null;
           post_id?: string;
           sentiment?: number | null;
+          source?: string;
           stock_id?: string;
         };
         Relationships: [
@@ -526,7 +544,6 @@ export type Database = {
           id: string;
           posts_last_viewed_at: string | null;
           subscription_tier: string | null;
-          tier: string;
           timezone: string | null;
           updated_at: string | null;
         };
@@ -541,7 +558,6 @@ export type Database = {
           id?: string;
           posts_last_viewed_at?: string | null;
           subscription_tier?: string | null;
-          tier?: string;
           timezone?: string | null;
           updated_at?: string | null;
         };
@@ -556,7 +572,6 @@ export type Database = {
           id?: string;
           posts_last_viewed_at?: string | null;
           subscription_tier?: string | null;
-          tier?: string;
           timezone?: string | null;
           updated_at?: string | null;
         };
@@ -629,6 +644,13 @@ export type Database = {
             columns: ['kol_source_id'];
             isOneToOne: false;
             referencedRelation: 'kol_sources';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'scrape_jobs_triggered_by_fkey';
+            columns: ['triggered_by'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
             referencedColumns: ['id'];
           },
         ];

@@ -13,7 +13,13 @@ type VerdictState = 'correct' | 'incorrect' | 'pending';
 
 interface VerdictHeroProps {
   sentiment: Sentiment;
-  stocks: { id: string; ticker: string; name: string; sentiment: Sentiment | null }[];
+  stocks: {
+    id: string;
+    ticker: string;
+    name: string;
+    sentiment: Sentiment | null;
+    source?: 'explicit' | 'inferred';
+  }[];
   priceChanges: Record<string, PriceChangeByPeriod>;
   kolName: string;
 }

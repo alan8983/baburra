@@ -1740,3 +1740,151 @@ describe('analyzeDraftContent — prompt improvements', () => {
     expect(promptArg).toContain('社群媒體貼文格式');
   });
 });
+
+// =====================
+// Macro Inference (source tracking)
+// =====================
+
+describe('analyzeDraftContent — macro inference', () => {
+  it('explicit ticker should have source: explicit', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: null,
+      tickers: [
+        {
+          ticker: '2330.TW',
+          name: '台積電',
+          market: 'TW',
+          confidence: 0.95,
+          mentionedAs: '台積電',
+          source: 'explicit',
+        },
+      ],
+      sentiment: 2,
+      confidence: 0.9,
+      reasoning: '看好台積電',
+      postedAt: null,
+    });
+
+    const result = await analyzeDraftContent('我看好台積電今年的營收成長');
+    expect(result.stockTickers).toHaveLength(1);
+    expect(result.stockTickers[0].source).toBe('explicit');
+    expect(result.stockTickers[0].inferenceReason).toBeUndefined();
+  });
+
+  it('inferred ticker should have source: inferred with inferenceReason', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: null,
+      tickers: [
+        {
+          ticker: 'TLT',
+          name: '20+ Year Treasury Bond ETF',
+          market: 'US',
+          confidence: 0.8,
+          mentionedAs: '長天期公債',
+          source: 'inferred',
+          inferenceReason: 'Fed降息直接影響長天期公債價格',
+        },
+      ],
+      sentiment: 2,
+      confidence: 0.85,
+      reasoning: '聯準會降息利多公債',
+      postedAt: null,
+    });
+
+    const result = await analyzeDraftContent('聯準會鮑爾暗示明年可能降息');
+    expect(result.stockTickers).toHaveLength(1);
+    expect(result.stockTickers[0].ticker).toBe('TLT');
+    expect(result.stockTickers[0].source).toBe('inferred');
+    expect(result.stockTickers[0].inferenceReason).toBe('Fed降息直接影響長天期公債價格');
+  });
+
+  it('mixed post should return both explicit and inferred tickers', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: null,
+      tickers: [
+        {
+          ticker: '2330.TW',
+          name: '台積電',
+          market: 'TW',
+          confidence: 0.95,
+          mentionedAs: '台積電',
+          source: 'explicit',
+        },
+        {
+          ticker: 'SMH',
+          name: 'VanEck Semiconductor ETF',
+          market: 'US',
+          confidence: 0.75,
+          mentionedAs: '半導體產業',
+          source: 'inferred',
+          inferenceReason: '半導體產業趨勢最直接反映在半導體類股ETF',
+        },
+      ],
+      sentiment: 2,
+      confidence: 0.9,
+      reasoning: '看好半導體',
+      postedAt: null,
+    });
+
+    const result = await analyzeDraftContent('台積電受惠於半導體產業AI需求');
+    expect(result.stockTickers).toHaveLength(2);
+    expect(result.stockTickers[0].source).toBe('explicit');
+    expect(result.stockTickers[1].source).toBe('inferred');
+    expect(result.stockTickers[1].inferenceReason).toBeDefined();
+  });
+
+  it('no-ticker post should return empty array', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: null,
+      tickers: [],
+      sentiment: 0,
+      confidence: 0.5,
+      reasoning: '投資教育內容，無具體標的',
+      postedAt: null,
+    });
+
+    const result = await analyzeDraftContent('投資要有紀律，不要追高殺低');
+    expect(result.stockTickers).toHaveLength(0);
+  });
+
+  it('tickers without source field should default to explicit', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: null,
+      tickers: [
+        {
+          ticker: 'AAPL',
+          name: 'Apple Inc.',
+          market: 'US',
+          confidence: 0.9,
+          mentionedAs: 'AAPL',
+          // no source field — backward compatibility
+        },
+      ],
+      sentiment: 1,
+      confidence: 0.8,
+      reasoning: '',
+      postedAt: null,
+    });
+
+    const result = await analyzeDraftContent('AAPL looks good');
+    expect(result.stockTickers[0].source).toBe('explicit');
+  });
+
+  it('prompt should contain macro inference rules', async () => {
+    mockGenerateJson.mockResolvedValueOnce({
+      kolName: null,
+      tickers: [],
+      sentiment: 0,
+      confidence: 0.5,
+      reasoning: '',
+      postedAt: null,
+    });
+
+    await analyzeDraftContent('test');
+    const promptArg = mockGenerateJson.mock.calls[0][0] as string;
+    expect(promptArg).toContain('宏觀推論規則');
+    expect(promptArg).toContain('inferenceReason');
+    expect(promptArg).toContain('0050.TW');
+    expect(promptArg).toContain('TLT');
+  });
+});

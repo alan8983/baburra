@@ -289,3 +289,20 @@ export async function failScrapeJob(jobId: string, errorMessage: string): Promis
 
   if (error) throw new Error(error.message);
 }
+
+export async function findValidationJobByKolSourceId(
+  kolSourceId: string
+): Promise<ScrapeJob | null> {
+  const supabase = createAdminClient();
+  const { data: row, error } = await supabase
+    .from('scrape_jobs')
+    .select('*')
+    .eq('kol_source_id', kolSourceId)
+    .eq('job_type', 'validation_scrape')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error || !row) return null;
+  return mapDbToScrapeJob(row as DbScrapeJob);
+}

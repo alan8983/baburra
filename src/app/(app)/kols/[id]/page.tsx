@@ -393,6 +393,11 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
     );
   }, [postsByStock]);
 
+  const hasInferredTickers = useMemo(() => {
+    const list = postsData?.data ?? [];
+    return list.some((post) => post.stocks.some((s) => s.source === 'inferred'));
+  }, [postsData?.data]);
+
   const stalePosts = useMemo(() => {
     const currentModel = postsData?.currentAiModel;
     if (!currentModel || !postsData?.data) return [];
@@ -444,6 +449,7 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
         sources={kolSources}
         kolId={id}
         stockPosts={allStockPosts}
+        hasInferredTickers={hasInferredTickers}
       />
 
       {/* Scrape in-progress banner */}

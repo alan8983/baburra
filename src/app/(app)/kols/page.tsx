@@ -15,11 +15,22 @@ import { useKols } from '@/hooks';
 import { EmptyState } from '@/components/shared/empty-state';
 import { getStaggerClass } from '@/lib/animations';
 
+const STATUS_OPTIONS = [
+  { value: 'active', label: '已驗證' },
+  { value: 'pending', label: '驗證中' },
+  { value: 'rejected', label: '未通過' },
+  { value: 'all', label: '全部' },
+] as const;
+
 export default function KolsPage() {
   const router = useRouter();
   const t = useTranslations('kols');
   const [searchQuery, setSearchQuery] = useState('');
-  const { data, isLoading, error } = useKols({ search: searchQuery || undefined });
+  const [statusFilter, setStatusFilter] = useState<string>('active');
+  const { data, isLoading, error } = useKols({
+    search: searchQuery || undefined,
+    validationStatus: statusFilter,
+  });
 
   const kols = data?.data ?? [];
   const filteredKols = kols;
@@ -51,15 +62,29 @@ export default function KolsPage() {
         </Button>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="text-muted-foreground absolute top-3 left-3 h-4 w-4" />
-        <Input
-          placeholder={t('search')}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
-        />
+      {/* Search + Status Filter */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="relative max-w-md flex-1">
+          <Search className="text-muted-foreground absolute top-3 left-3 h-4 w-4" />
+          <Input
+            placeholder={t('search')}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="flex gap-1">
+          {STATUS_OPTIONS.map((opt) => (
+            <Button
+              key={opt.value}
+              variant={statusFilter === opt.value ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setStatusFilter(opt.value)}
+            >
+              {opt.label}
+            </Button>
+          ))}
+        </div>
       </div>
 
       {/* Loading */}

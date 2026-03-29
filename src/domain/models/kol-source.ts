@@ -24,7 +24,7 @@ export interface KolSubscription {
   createdAt: Date;
 }
 
-export type ScrapeJobType = 'initial_scrape' | 'incremental_check';
+export type ScrapeJobType = 'initial_scrape' | 'incremental_check' | 'validation_scrape';
 export type ScrapeJobStatus =
   | 'queued'
   | 'processing'
