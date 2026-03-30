@@ -38,7 +38,7 @@ const TRANSCRIPTION_MODEL = 'gemini-2.5-flash';
 const DEFAULT_TIMEOUT_MS = 30_000;
 const TRANSCRIPTION_TIMEOUT_MS = 180_000; // Floor for short/unknown videos
 const MAX_TRANSCRIPTION_TIMEOUT_MS = 600_000; // Cap at 10 minutes
-const MAX_VIDEO_DURATION_SECONDS = 45 * 60; // 45 minutes
+const MAX_VIDEO_DURATION_SECONDS = 60 * 60; // 60 minutes
 const RETRY_DELAYS = [5_000, 15_000]; // Backoff delays for retries
 
 /** Return the currently configured AI model name (for version tracking). */
@@ -288,7 +288,7 @@ export async function geminiTranscribeVideo(
 ): Promise<string> {
   if (durationSeconds && durationSeconds > MAX_VIDEO_DURATION_SECONDS) {
     throw new Error(
-      `Video too long (${Math.ceil(durationSeconds / 60)} min). Maximum is 45 minutes.`
+      `Video too long (${Math.ceil(durationSeconds / 60)} min). Maximum is ${Math.ceil(MAX_VIDEO_DURATION_SECONDS / 60)} minutes.`
     );
   }
 
