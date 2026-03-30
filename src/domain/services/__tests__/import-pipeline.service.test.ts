@@ -525,4 +525,31 @@ describe('executeBatchImport', () => {
     expect(result.totalDuplicate).toBe(1);
     expect(result.totalError).toBe(1);
   });
+
+  // ── postedAt priority ──
+
+  it('prefers extractor postedAt over AI analysis postedAt', async () => {
+    setupSuccessfulImport();
+    const extractorDate = '2025-07-28T00:00:00Z';
+    const aiDate = '2026-03-30T00:00:00Z';
+    mocks.extractFromUrl.mockResolvedValue(mockFetchResult({ postedAt: extractorDate }));
+    mocks.analyzeDraftContent.mockResolvedValue(mockAnalysis({ postedAt: aiDate }));
+
+    await executeBatchImport({ urls: ['https://x.com/trader/status/1'] }, USER_ID);
+
+    const createPostCall = mocks.createPost.mock.calls[0][0];
+    expect(createPostCall.postedAt).toEqual(new Date(extractorDate));
+  });
+
+  it('falls back to AI postedAt when extractor postedAt is null', async () => {
+    setupSuccessfulImport();
+    const aiDate = '2025-06-15T10:00:00Z';
+    mocks.extractFromUrl.mockResolvedValue(mockFetchResult({ postedAt: null }));
+    mocks.analyzeDraftContent.mockResolvedValue(mockAnalysis({ postedAt: aiDate }));
+
+    await executeBatchImport({ urls: ['https://x.com/trader/status/1'] }, USER_ID);
+
+    const createPostCall = mocks.createPost.mock.calls[0][0];
+    expect(createPostCall.postedAt).toEqual(new Date(aiDate));
+  });
 });

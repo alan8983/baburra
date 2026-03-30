@@ -38,7 +38,7 @@ import { CREDIT_COSTS } from '@/domain/models/user';
 import type { Sentiment, SourcePlatform } from '@/domain/models/post';
 import type { DraftAiArguments } from '@/domain/models/draft';
 
-const MAX_VIDEO_DURATION_SECONDS = 45 * 60; // 45 minutes
+const MAX_VIDEO_DURATION_SECONDS = 60 * 60; // 60 minutes
 
 // ── Types ──
 
@@ -183,12 +183,12 @@ export async function processUrl(
       // YouTube video with no captions — need Gemini transcription
       const durationSeconds = fetchResult.durationSeconds;
 
-      // Reject videos >45 minutes
+      // Reject videos exceeding max duration
       if (durationSeconds && durationSeconds > MAX_VIDEO_DURATION_SECONDS) {
         return {
           url,
           status: 'error',
-          error: `Video too long (${Math.ceil(durationSeconds / 60)} min). Maximum is 45 minutes.`,
+          error: `Video too long (${Math.ceil(durationSeconds / 60)} min). Maximum is ${Math.ceil(MAX_VIDEO_DURATION_SECONDS / 60)} minutes.`,
         };
       }
 
@@ -425,10 +425,10 @@ export async function processUrl(
           aiModelVersion: getAiModelVersion(),
           stockSentiments: Object.keys(stockSentiments).length > 0 ? stockSentiments : undefined,
           stockSources: Object.keys(stockSources).length > 0 ? stockSources : undefined,
-          postedAt: analysis.postedAt
-            ? new Date(analysis.postedAt)
-            : fetchResult.postedAt
-              ? new Date(fetchResult.postedAt)
+          postedAt: fetchResult.postedAt
+            ? new Date(fetchResult.postedAt)
+            : analysis.postedAt
+              ? new Date(analysis.postedAt)
               : new Date(),
           draftAiArguments,
         },

@@ -43,13 +43,25 @@ export async function enrichPostsWithPriceChanges(posts: PostWithPriceChanges[])
       withTimeout(getStockPrices(ticker, { startDate: startDateStr }), 5000)
     )
   );
+  const failedTickers: string[] = [];
   for (let i = 0; i < entries.length; i++) {
     const [stockId, ticker] = entries[i];
     const result = results[i];
     if (result.status === 'rejected') {
-      console.error(`[enrichPriceChanges] Failed to fetch prices for ${ticker}:`, result.reason);
+      failedTickers.push(ticker);
     }
     candlesByStock[stockId] = result.status === 'fulfilled' ? result.value.candles : [];
+  }
+  if (failedTickers.length > 0) {
+    if (failedTickers.length === entries.length) {
+      console.warn(
+        `[enrichPriceChanges] All ${failedTickers.length} stocks failed — price data unavailable`
+      );
+    } else {
+      console.debug(
+        `[enrichPriceChanges] ${failedTickers.length}/${entries.length} stocks failed: ${failedTickers.join(', ')}`
+      );
+    }
   }
 
   // Build posts input for batch calculation (post-relative price changes)
