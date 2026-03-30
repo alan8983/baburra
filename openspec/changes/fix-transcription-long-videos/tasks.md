@@ -39,3 +39,17 @@
 - [ ] **6.1** Run `npm run type-check` — no type errors
 - [ ] **6.2** Run `npx vitest run` — existing tests pass
 - [ ] **6.3** Review the complete `geminiTranscribeVideo()` function for correctness
+
+## 7. E2E Smoke Test (Browser MCP)
+
+- [ ] **7.1** Start the dev server (`npm run dev`)
+- [ ] **7.2** Navigate to the Scrape page via Browser MCP
+- [ ] **7.3** Submit a YouTube channel URL that contains a long video (>10 min) without captions
+- [ ] **7.4** Proceed through the discovery step — verify the URL list shows correct duration and credit estimates
+- [ ] **7.5** Select a long captionless video and start processing
+- [ ] **7.6** Monitor the scrape progress via Browser MCP — verify:
+  - No immediate error/timeout on the long video
+  - Progress UI updates as the video is being transcribed
+  - Job completes with status `success` (or `error` with a clear, actionable message — not a generic "fetch failed")
+- [ ] **7.7** If the video imported successfully, verify the resulting post has transcript-derived content (navigate to the post detail page via Browser MCP)
+- [ ] **7.8** Check server logs (terminal) for retry attempts, timeout values, and token config to confirm dynamic scaling is active
