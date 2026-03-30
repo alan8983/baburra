@@ -36,8 +36,10 @@ const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 const DEFAULT_MODEL = process.env.AI_SENTIMENT_MODEL || 'gemini-2.5-flash-lite';
 const TRANSCRIPTION_MODEL = 'gemini-2.5-flash';
 const DEFAULT_TIMEOUT_MS = 30_000;
-const TRANSCRIPTION_TIMEOUT_MS = 180_000;
+const TRANSCRIPTION_TIMEOUT_MS = 180_000; // Floor for short/unknown videos
+const MAX_TRANSCRIPTION_TIMEOUT_MS = 600_000; // Cap at 10 minutes
 const MAX_VIDEO_DURATION_SECONDS = 45 * 60; // 45 minutes
+const RETRY_DELAYS = [5_000, 15_000]; // Backoff delays for retries
 
 /** Return the currently configured AI model name (for version tracking). */
 export function getAiModelVersion(): string {
@@ -228,12 +230,56 @@ export async function generateJson<T>(
 }
 
 /**
+ * Check if an error is retryable (transient failures that may succeed on retry).
+ */
+function isRetryableError(error: unknown): boolean {
+  if (error instanceof Error) {
+    // Timeout (AbortError)
+    if (error.name === 'AbortError') return true;
+    // Network errors (fetch failed, connection reset, etc.)
+    if (error instanceof TypeError && error.message.includes('fetch failed')) return true;
+    // HTTP 429/500/503 encoded in error message
+    if (/API error (429|500|503)/.test(error.message)) return true;
+  }
+  return false;
+}
+
+/**
+ * Compute dynamic timeout based on video duration.
+ * Longer videos need more time for Gemini to download and process.
+ * Formula: max(180s, min(600s, 60s + duration × 4s))
+ */
+function getTranscriptionTimeout(durationSeconds?: number): number {
+  if (!durationSeconds) return TRANSCRIPTION_TIMEOUT_MS;
+  return Math.max(
+    TRANSCRIPTION_TIMEOUT_MS,
+    Math.min(MAX_TRANSCRIPTION_TIMEOUT_MS, 60_000 + durationSeconds * 4_000)
+  );
+}
+
+/**
+ * Compute dynamic maxOutputTokens based on video duration.
+ * Longer videos produce longer transcripts.
+ * Formula: min(65536, max(16384, durationMinutes × 1000))
+ */
+function getMaxOutputTokens(durationSeconds?: number): number {
+  if (!durationSeconds) return 16_384;
+  const durationMinutes = Math.ceil(durationSeconds / 60);
+  return Math.min(65_536, Math.max(16_384, durationMinutes * 1_000));
+}
+
+/**
  * Transcribe a YouTube video using Gemini multimodal (video + audio understanding).
  * Uses gemini-2.5-flash (not flash-lite) for better audio quality.
  * Videos >45 minutes are rejected.
  *
+ * Features:
+ * - Dynamic timeout scaling based on video duration (180s–600s)
+ * - Retry with exponential backoff for transient errors (up to 2 retries)
+ * - Dynamic maxOutputTokens scaling for long videos (16K–65K)
+ *
  * @param youtubeUrl - Full YouTube video URL
- * @param durationSeconds - Optional video duration for validation
+ * @param durationSeconds - Optional video duration for validation and scaling
  * @returns Transcript text in the video's original language
  */
 export async function geminiTranscribeVideo(
@@ -248,6 +294,13 @@ export async function geminiTranscribeVideo(
 
   const apiKey = getApiKey();
   const url = `${GEMINI_BASE}/models/${TRANSCRIPTION_MODEL}:generateContent`;
+  const timeoutMs = getTranscriptionTimeout(durationSeconds);
+  const maxOutputTokens = getMaxOutputTokens(durationSeconds);
+  const durationMin = durationSeconds ? Math.ceil(durationSeconds / 60) : undefined;
+
+  console.log(
+    `[Gemini] Transcribing video: ${youtubeUrl} | duration=${durationMin ?? '?'}min | timeout=${timeoutMs / 1000}s | maxTokens=${maxOutputTokens}`
+  );
 
   const requestBody = {
     contents: [
@@ -266,65 +319,113 @@ export async function geminiTranscribeVideo(
     ],
     generationConfig: {
       temperature: 0.1,
-      maxOutputTokens: 16384,
+      maxOutputTokens,
       mediaResolution: 'MEDIA_RESOLUTION_LOW',
     },
   };
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), TRANSCRIPTION_TIMEOUT_MS);
+  // Attempt with retries
+  let lastError: Error | undefined;
 
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey,
-      },
-      body: JSON.stringify(requestBody),
-      signal: controller.signal,
-    });
+  for (let attempt = 0; attempt <= RETRY_DELAYS.length; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(
-        `Gemini transcription API error ${res.status}: ${errorText || res.statusText}`
-      );
-    }
-
-    const data = (await res.json()) as GeminiResponse;
-
-    if (!data.candidates || data.candidates.length === 0) {
-      throw new Error('Gemini transcription returned no candidates');
-    }
-
-    const candidate = data.candidates[0];
-    if (!candidate.content?.parts || candidate.content.parts.length === 0) {
-      throw new Error('Gemini transcription returned empty content');
-    }
-
-    const transcript = candidate.content.parts.map((p) => p.text).join('');
-    if (!transcript.trim()) {
-      throw new Error('Gemini transcription returned empty transcript');
-    }
-
-    return transcript;
-  } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error(`Gemini transcription timed out after ${TRANSCRIPTION_TIMEOUT_MS / 1000}s`);
-    }
-    if (error instanceof Error) {
-      console.error('[Gemini] Video transcription fetch error details:', {
-        name: error.name,
-        message: error.message,
-        cause: error.cause,
-        stack: error.stack,
-        url,
-        youtubeUrl,
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
       });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        const statusError = new Error(
+          `Gemini transcription API error ${res.status}: ${errorText || res.statusText}`
+        );
+
+        // Non-retryable HTTP errors — fail immediately
+        if (res.status === 400 || res.status === 403) {
+          throw statusError;
+        }
+
+        if (res.status === 429) {
+          console.warn(
+            `[Gemini] Rate limit (429) hit for ${youtubeUrl}. Will retry if attempts remain.`
+          );
+        }
+
+        throw statusError;
+      }
+
+      const data = (await res.json()) as GeminiResponse;
+
+      if (!data.candidates || data.candidates.length === 0) {
+        throw new Error('Gemini transcription returned no candidates');
+      }
+
+      const candidate = data.candidates[0];
+      if (!candidate.content?.parts || candidate.content.parts.length === 0) {
+        throw new Error('Gemini transcription returned empty content');
+      }
+
+      const transcript = candidate.content.parts.map((p) => p.text).join('');
+      if (!transcript.trim()) {
+        throw new Error('Gemini transcription returned empty transcript');
+      }
+
+      if (attempt > 0) {
+        console.log(`[Gemini] Transcription succeeded on attempt ${attempt + 1} for ${youtubeUrl}`);
+      }
+
+      return transcript;
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      // Convert AbortError to a descriptive error
+      if (error instanceof Error && error.name === 'AbortError') {
+        lastError = new Error(
+          `Video transcription timed out after ${timeoutMs / 1000}s` +
+            (durationMin
+              ? ` for a ${durationMin}-min video. Try a shorter video or retry later.`
+              : '.')
+        );
+      } else {
+        lastError = error instanceof Error ? error : new Error(String(error));
+      }
+
+      // Check if we should retry
+      const canRetry = attempt < RETRY_DELAYS.length && isRetryableError(error);
+      if (!canRetry) {
+        // Log final failure details
+        console.error('[Gemini] Video transcription failed (no more retries):', {
+          name: lastError.name,
+          message: lastError.message,
+          attempt: attempt + 1,
+          youtubeUrl,
+          durationMin,
+          timeoutMs,
+        });
+        throw lastError;
+      }
+
+      // Wait before retrying
+      const delay = RETRY_DELAYS[attempt];
+      console.warn(
+        `[Gemini] Transcription attempt ${attempt + 1} failed for ${youtubeUrl}: ${lastError.message}. Retrying in ${delay / 1000}s...`
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
+
+      continue;
+    } finally {
+      clearTimeout(timeoutId);
     }
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
   }
+
+  // Should not reach here, but safety net
+  throw lastError ?? new Error('Gemini transcription failed after all retries');
 }
