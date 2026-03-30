@@ -263,18 +263,21 @@ export async function processJobBatch(
   let processedUrls = job.processedUrls;
   const kolCache = new Map<string, KolCacheEntry>();
 
-  // YouTube URLs may need Gemini transcription (~70s each), so process them
-  // one at a time to avoid batch timeout issues. Non-YouTube URLs use the
-  // caller-provided batchSize for parallel throughput.
+  // YouTube URLs may need Gemini transcription (up to 10 min for long videos),
+  // so process them one at a time. Non-YouTube URLs use the caller-provided
+  // batchSize for parallel throughput.
   const isYouTube = job.discoveredUrls.some((u) => u.includes('youtube.com/watch'));
   const effectiveBatchSize = isYouTube ? 1 : batchSize;
+  // YouTube transcription can take up to 600s per video + overhead;
+  // use a longer timeout safeguard so we don't cut off mid-transcription.
+  const effectiveTimeout = isYouTube ? 650_000 : timeoutMs;
 
   // Process URLs in parallel batches with timeout safeguard
   const remaining = job.discoveredUrls.slice(processedUrls);
 
   for (let i = 0; i < remaining.length; i += effectiveBatchSize) {
     // Timeout safeguard: stop if elapsed time exceeds limit
-    if (Date.now() - startTime > timeoutMs) {
+    if (Date.now() - startTime > effectiveTimeout) {
       break;
     }
 
