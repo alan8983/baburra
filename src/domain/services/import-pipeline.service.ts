@@ -34,11 +34,14 @@ import {
   extractAtHandles,
 } from '@/domain/services/ai.service';
 import { getAiModelVersion, geminiTranscribeVideo } from '@/infrastructure/api/gemini.client';
+import { downloadYoutubeAudio } from '@/infrastructure/api/youtube-audio.client';
+import { deepgramTranscribe } from '@/infrastructure/api/deepgram.client';
 import { CREDIT_COSTS } from '@/domain/models/user';
 import type { Sentiment, SourcePlatform } from '@/domain/models/post';
 import type { DraftAiArguments } from '@/domain/models/draft';
 
-const MAX_VIDEO_DURATION_SECONDS = 60 * 60; // 60 minutes
+const MAX_VIDEO_DURATION_SECONDS = 120 * 60; // 120 minutes
+const LONG_VIDEO_THRESHOLD_SECONDS = 30 * 60; // 30 minutes — use audio pipeline above this
 
 // ── Types ──
 
@@ -219,16 +222,33 @@ export async function processUrl(
           }
         }
 
-        // Transcribe via Gemini
+        // Transcribe via Gemini — route based on video duration
         let transcriptText: string;
+        const isLongVideo =
+          durationSeconds != null && durationSeconds > LONG_VIDEO_THRESHOLD_SECONDS;
+
         try {
-          transcriptText = await geminiTranscribeVideo(
-            fetchResult.sourceUrl,
-            durationSeconds ?? undefined
-          );
+          if (isLongVideo) {
+            // Long video: download audio → transcribe via Deepgram Nova-2
+            console.log(
+              `[Pipeline] Long video (${Math.ceil(durationSeconds! / 60)}min) — using Deepgram transcription`
+            );
+
+            const audio = await downloadYoutubeAudio(fetchResult.sourceUrl, {
+              maxDurationSeconds: MAX_VIDEO_DURATION_SECONDS,
+            });
+
+            transcriptText = await deepgramTranscribe(audio.buffer, audio.mimeType);
+          } else {
+            // Short video (≤30 min) or unknown duration: use direct YouTube URL
+            transcriptText = await geminiTranscribeVideo(
+              fetchResult.sourceUrl,
+              durationSeconds ?? undefined
+            );
+          }
         } catch (transcribeErr) {
           console.error(
-            `[Gemini transcription failed] URL: ${fetchResult.sourceUrl} | Error: ${transcribeErr instanceof Error ? transcribeErr.message : String(transcribeErr)}`
+            `[Transcription failed] URL: ${fetchResult.sourceUrl} | pipeline=${isLongVideo ? 'deepgram' : 'gemini-video'} | Error: ${transcribeErr instanceof Error ? transcribeErr.message : String(transcribeErr)}`
           );
           throw transcribeErr;
         }
@@ -238,7 +258,7 @@ export async function processUrl(
         await saveTranscript({
           sourceUrl: fetchResult.sourceUrl,
           content: transcriptText,
-          source: 'gemini',
+          source: isLongVideo ? 'deepgram' : 'gemini',
           durationSeconds: durationSeconds ?? undefined,
         }).catch((err) => console.error('Failed to cache transcript:', err));
       }

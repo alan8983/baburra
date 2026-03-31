@@ -38,7 +38,7 @@ const TRANSCRIPTION_MODEL = 'gemini-2.5-flash';
 const DEFAULT_TIMEOUT_MS = 30_000;
 const TRANSCRIPTION_TIMEOUT_MS = 180_000; // Floor for short/unknown videos
 const MAX_TRANSCRIPTION_TIMEOUT_MS = 600_000; // Cap at 10 minutes
-const MAX_VIDEO_DURATION_SECONDS = 60 * 60; // 60 minutes
+const MAX_VIDEO_DURATION_SECONDS = 120 * 60; // 120 minutes
 const RETRY_DELAYS = [5_000, 15_000]; // Backoff delays for retries
 
 /** Return the currently configured AI model name (for version tracking). */
@@ -238,6 +238,10 @@ function isRetryableError(error: unknown): boolean {
     if (error.name === 'AbortError') return true;
     // Network errors (fetch failed, connection reset, etc.)
     if (error instanceof TypeError && error.message.includes('fetch failed')) return true;
+    // Socket errors from undici (stale connection after large file upload)
+    // See: https://github.com/nodejs/undici/issues/3492
+    if (error.name === 'SocketError') return true;
+    if (/ECONNRESET|socket hang up|other side closed/.test(error.message)) return true;
     // HTTP 429/500/503 encoded in error message
     if (/API error (429|500|503)/.test(error.message)) return true;
   }
