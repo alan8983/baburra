@@ -12,9 +12,10 @@ import { executeBatchImport } from '@/domain/services/import-pipeline.service';
 import { parseBody } from '@/lib/api/validation';
 import { unauthorizedError, internalError } from '@/lib/api/error';
 
-// Gemini video transcription can take 60-120s for captionless YouTube videos.
-// Use 170s to accommodate transcription + analysis, with 10s margin for response.
-const BATCH_TIMEOUT_MS = 170_000;
+// Long captionless videos (up to 120 min) use audio download + Gemini File API.
+// Pipeline: download (~10s) + upload (~10s) + transcribe (~120s) + analysis (~30s) = ~170s.
+// Use 280s to accommodate the full pipeline with margin.
+const BATCH_TIMEOUT_MS = 280_000;
 
 const importBatchSchema = z.object({
   urls: z
@@ -23,7 +24,7 @@ const importBatchSchema = z.object({
     .max(5, 'Maximum 5 URLs'),
 });
 
-export const maxDuration = 180;
+export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
   try {

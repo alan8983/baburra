@@ -33,12 +33,19 @@ import {
   extractArguments,
   extractAtHandles,
 } from '@/domain/services/ai.service';
-import { getAiModelVersion, geminiTranscribeVideo } from '@/infrastructure/api/gemini.client';
+import {
+  getAiModelVersion,
+  geminiTranscribeVideo,
+  geminiTranscribeAudio,
+} from '@/infrastructure/api/gemini.client';
+import { downloadYoutubeAudio } from '@/infrastructure/api/youtube-audio.client';
+import { uploadToGeminiFiles, deleteGeminiFile } from '@/infrastructure/api/gemini-file.client';
 import { CREDIT_COSTS } from '@/domain/models/user';
 import type { Sentiment, SourcePlatform } from '@/domain/models/post';
 import type { DraftAiArguments } from '@/domain/models/draft';
 
-const MAX_VIDEO_DURATION_SECONDS = 60 * 60; // 60 minutes
+const MAX_VIDEO_DURATION_SECONDS = 120 * 60; // 120 minutes
+const LONG_VIDEO_THRESHOLD_SECONDS = 30 * 60; // 30 minutes — use audio pipeline above this
 
 // ── Types ──
 
@@ -219,16 +226,52 @@ export async function processUrl(
           }
         }
 
-        // Transcribe via Gemini
+        // Transcribe via Gemini — route based on video duration
         let transcriptText: string;
+        const isLongVideo =
+          durationSeconds != null && durationSeconds > LONG_VIDEO_THRESHOLD_SECONDS;
+
         try {
-          transcriptText = await geminiTranscribeVideo(
-            fetchResult.sourceUrl,
-            durationSeconds ?? undefined
-          );
+          if (isLongVideo) {
+            // Long video: download audio → upload to Gemini Files → transcribe
+            console.log(
+              `[Pipeline] Long video (${Math.ceil(durationSeconds! / 60)}min) — using audio download pipeline`
+            );
+
+            const audio = await downloadYoutubeAudio(fetchResult.sourceUrl, {
+              maxDurationSeconds: MAX_VIDEO_DURATION_SECONDS,
+            });
+
+            const upload = await uploadToGeminiFiles(
+              audio.buffer,
+              audio.mimeType,
+              `import-${Date.now()}`
+            );
+
+            // Wait after upload to let Google's load balancer recover.
+            // Without this delay, the transcription request often fails with
+            // SocketError ("other side closed") due to stale connection state.
+            console.log('[Pipeline] Waiting 10s after upload before transcription...');
+            await new Promise((resolve) => setTimeout(resolve, 10_000));
+
+            try {
+              transcriptText = await geminiTranscribeAudio(upload.fileUri, audio.durationSeconds);
+            } finally {
+              // Always clean up the uploaded file
+              deleteGeminiFile(upload.fileName).catch((err) =>
+                console.error('[Pipeline] Gemini file cleanup failed:', err)
+              );
+            }
+          } else {
+            // Short video (≤30 min) or unknown duration: use direct YouTube URL
+            transcriptText = await geminiTranscribeVideo(
+              fetchResult.sourceUrl,
+              durationSeconds ?? undefined
+            );
+          }
         } catch (transcribeErr) {
           console.error(
-            `[Gemini transcription failed] URL: ${fetchResult.sourceUrl} | Error: ${transcribeErr instanceof Error ? transcribeErr.message : String(transcribeErr)}`
+            `[Gemini transcription failed] URL: ${fetchResult.sourceUrl} | pipeline=${isLongVideo ? 'audio' : 'video'} | Error: ${transcribeErr instanceof Error ? transcribeErr.message : String(transcribeErr)}`
           );
           throw transcribeErr;
         }

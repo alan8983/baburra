@@ -38,7 +38,7 @@ const TRANSCRIPTION_MODEL = 'gemini-2.5-flash';
 const DEFAULT_TIMEOUT_MS = 30_000;
 const TRANSCRIPTION_TIMEOUT_MS = 180_000; // Floor for short/unknown videos
 const MAX_TRANSCRIPTION_TIMEOUT_MS = 600_000; // Cap at 10 minutes
-const MAX_VIDEO_DURATION_SECONDS = 60 * 60; // 60 minutes
+const MAX_VIDEO_DURATION_SECONDS = 120 * 60; // 120 minutes
 const RETRY_DELAYS = [5_000, 15_000]; // Backoff delays for retries
 
 /** Return the currently configured AI model name (for version tracking). */
@@ -238,6 +238,10 @@ function isRetryableError(error: unknown): boolean {
     if (error.name === 'AbortError') return true;
     // Network errors (fetch failed, connection reset, etc.)
     if (error instanceof TypeError && error.message.includes('fetch failed')) return true;
+    // Socket errors from undici (stale connection after large file upload)
+    // See: https://github.com/nodejs/undici/issues/3492
+    if (error.name === 'SocketError') return true;
+    if (/ECONNRESET|socket hang up|other side closed/.test(error.message)) return true;
     // HTTP 429/500/503 encoded in error message
     if (/API error (429|500|503)/.test(error.message)) return true;
   }
@@ -428,4 +432,244 @@ export async function geminiTranscribeVideo(
 
   // Should not reach here, but safety net
   throw lastError ?? new Error('Gemini transcription failed after all retries');
+}
+
+/**
+ * Make a POST request using undici.request() with reset: true.
+ *
+ * After uploading large files via fetch(), Node.js's connection pool can enter
+ * a stale state where subsequent fetch() calls to the same host fail with
+ * "SocketError: other side closed" (bytesRead: 0). Using undici.request()
+ * with reset: true forces a fresh TCP connection, avoiding this issue.
+ *
+ * @see https://github.com/nodejs/undici/issues/3492
+ */
+async function childProcessPost(
+  requestUrl: string,
+  body: string,
+  headers: Record<string, string>,
+  timeoutMs: number
+): Promise<{ statusCode: number; body: string }> {
+  // Spawn a fresh Node.js child process for the HTTP request.
+  //
+  // After uploading large files (~46 MB) to generativelanguage.googleapis.com,
+  // the parent process's network stack (both undici/fetch AND native https)
+  // enters a broken state where ALL subsequent connections to Google fail with
+  // "socket hang up" or "SocketError: other side closed".
+  //
+  // A child process has its own TCP connection pool and DNS cache, completely
+  // isolated from the parent, which reliably avoids this issue.
+  // Spike scripts (standalone Node.js) always succeeded — confirming that
+  // process isolation is the fix.
+  const { spawn } = await import('child_process');
+  const { writeFileSync, unlinkSync } = await import('fs');
+  const { join } = await import('path');
+  const { tmpdir } = await import('os');
+
+  // Write request body to temp file to avoid shell arg length limits
+  const tmpBodyFile = join(tmpdir(), `gemini-req-${Date.now()}.json`);
+  writeFileSync(tmpBodyFile, body, 'utf-8');
+
+  // Inline script passed via -e flag
+  const script = [
+    'const https=require("https"),fs=require("fs");',
+    `const url=new URL(${JSON.stringify(requestUrl)});`,
+    `const body=fs.readFileSync(${JSON.stringify(tmpBodyFile)},"utf-8");`,
+    `const hdrs=${JSON.stringify({ ...headers, 'Content-Length': String(Buffer.byteLength(body)) })};`,
+    'const req=https.request({',
+    '  hostname:url.hostname,path:url.pathname+url.search,',
+    `  method:"POST",headers:hdrs,timeout:${timeoutMs}`,
+    '},res=>{',
+    '  let d="";res.on("data",c=>d+=c);',
+    '  res.on("end",()=>{process.stdout.write(JSON.stringify({s:res.statusCode,b:d}))});',
+    '});',
+    'req.on("error",e=>{process.stderr.write(e.message);process.exit(1)});',
+    'req.on("timeout",()=>{req.destroy();process.stderr.write("timeout");process.exit(1)});',
+    'req.write(body);req.end();',
+  ].join('');
+
+  return new Promise((resolve, reject) => {
+    const child = spawn('node', ['-e', script], {
+      timeout: timeoutMs + 10_000,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (d: Buffer) => (stdout += d.toString()));
+    child.stderr.on('data', (d: Buffer) => (stderr += d.toString()));
+
+    child.on('close', (code) => {
+      // Clean up temp file
+      try {
+        unlinkSync(tmpBodyFile);
+      } catch {
+        /* ignore */
+      }
+
+      if (code !== 0) {
+        reject(new Error(`Child process exited ${code}: ${stderr.slice(0, 500)}`));
+        return;
+      }
+      try {
+        const parsed = JSON.parse(stdout) as { s: number; b: string };
+        resolve({ statusCode: parsed.s, body: parsed.b });
+      } catch {
+        reject(new Error(`Failed to parse child process output: ${stdout.slice(0, 200)}`));
+      }
+    });
+
+    child.on('error', (err) => {
+      try {
+        unlinkSync(tmpBodyFile);
+      } catch {
+        /* ignore */
+      }
+      reject(err);
+    });
+  });
+}
+
+/**
+ * Transcribe audio via Gemini File API upload.
+ * Used for long videos (>30 min) where the direct YouTube URL approach fails.
+ *
+ * Unlike geminiTranscribeVideo(), this accepts a Gemini-hosted file_uri
+ * (from uploadToGeminiFiles) rather than a YouTube URL.
+ * Audio-only = no video tokens, only audio tokens (~32/sec).
+ *
+ * Uses undici.request() with reset: true instead of fetch() to avoid
+ * stale socket issues after large file uploads to the same Google host.
+ *
+ * Features:
+ * - Dynamic maxOutputTokens scaling for long audio (16K–65K)
+ * - Retry with exponential backoff for transient errors (up to 2 retries)
+ * - No mediaResolution config needed (audio-only)
+ *
+ * @param fileUri - Gemini-hosted file URI (from File API upload)
+ * @param durationSeconds - Audio duration for timeout and token scaling
+ * @returns Transcript text in the audio's original language
+ */
+export async function geminiTranscribeAudio(
+  fileUri: string,
+  durationSeconds?: number
+): Promise<string> {
+  const apiKey = getApiKey();
+  const requestUrl = `${GEMINI_BASE}/models/${TRANSCRIPTION_MODEL}:generateContent?key=${apiKey}`;
+  const timeoutMs = getTranscriptionTimeout(durationSeconds);
+  const maxOutputTokens = getMaxOutputTokens(durationSeconds);
+  const durationMin = durationSeconds ? Math.ceil(durationSeconds / 60) : undefined;
+
+  console.log(
+    `[Gemini] Transcribing audio: ${fileUri} | duration=${durationMin ?? '?'}min | timeout=${timeoutMs / 1000}s | maxTokens=${maxOutputTokens}`
+  );
+
+  const bodyJson = JSON.stringify({
+    contents: [
+      {
+        parts: [
+          {
+            text: 'Transcribe the spoken content of this audio in its original language. Output only the transcript text, no timestamps or speaker labels.',
+          },
+          {
+            file_data: {
+              file_uri: fileUri,
+            },
+          },
+        ],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.1,
+      maxOutputTokens,
+    },
+  });
+
+  // Attempt with retries
+  let lastError: Error | undefined;
+
+  for (let attempt = 0; attempt <= RETRY_DELAYS.length; attempt++) {
+    try {
+      const { statusCode, body: responseText } = await childProcessPost(
+        requestUrl,
+        bodyJson,
+        { 'Content-Type': 'application/json' },
+        timeoutMs
+      );
+
+      if (statusCode !== 200) {
+        const statusError = new Error(
+          `Gemini audio transcription API error ${statusCode}: ${responseText.slice(0, 500)}`
+        );
+
+        if (statusCode === 400 || statusCode === 403) {
+          throw statusError;
+        }
+
+        if (statusCode === 429) {
+          console.warn(
+            `[Gemini] Rate limit (429) hit for audio transcription. Will retry if attempts remain.`
+          );
+        }
+
+        throw statusError;
+      }
+
+      const data = JSON.parse(responseText) as GeminiResponse;
+
+      if (!data.candidates || data.candidates.length === 0) {
+        throw new Error('Gemini audio transcription returned no candidates');
+      }
+
+      const candidate = data.candidates[0];
+      if (!candidate.content?.parts || candidate.content.parts.length === 0) {
+        throw new Error('Gemini audio transcription returned empty content');
+      }
+
+      const transcript = candidate.content.parts.map((p) => p.text).join('');
+      if (!transcript.trim()) {
+        throw new Error('Gemini audio transcription returned empty transcript');
+      }
+
+      if (attempt > 0) {
+        console.log(`[Gemini] Audio transcription succeeded on attempt ${attempt + 1}`);
+      }
+
+      return transcript;
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        lastError = new Error(
+          `Audio transcription timed out after ${timeoutMs / 1000}s` +
+            (durationMin
+              ? ` for a ${durationMin}-min audio. Try a shorter audio or retry later.`
+              : '.')
+        );
+      } else {
+        lastError = error instanceof Error ? error : new Error(String(error));
+      }
+
+      const canRetry = attempt < RETRY_DELAYS.length && isRetryableError(error);
+      if (!canRetry) {
+        console.error('[Gemini] Audio transcription failed (no more retries):', {
+          name: lastError.name,
+          message: lastError.message,
+          attempt: attempt + 1,
+          fileUri,
+          durationMin,
+          timeoutMs,
+        });
+        throw lastError;
+      }
+
+      const delay = RETRY_DELAYS[attempt];
+      console.warn(
+        `[Gemini] Audio transcription attempt ${attempt + 1} failed: ${lastError.message}. Retrying in ${delay / 1000}s...`
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
+
+      continue;
+    }
+  }
+
+  throw lastError ?? new Error('Gemini audio transcription failed after all retries');
 }
