@@ -43,7 +43,16 @@
       "Bash(openspec status:*)",
       "Bash(openspec instructions:*)",
       "Bash(source /c/Cursor_Master/investment-idea-monitor/.env.local)",
-      "Bash(export SUPABASE_ACCESS_TOKEN)"
+      "Bash(export SUPABASE_ACCESS_TOKEN)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d, indent=2\\)\\)\")",
+      "mcp__4979d5c0-fccb-4998-ad93-552dfff5ee67__execute_sql",
+      "Bash(netstat -ano)",
+      "Bash(taskkill //PID 47664 //F)",
+      "Bash(taskkill //PID 23616 //F)",
+      "Bash(rm -rf .next)",
+      "Bash(node node_modules/next/dist/bin/next dev --webpack --port 3001)",
+      "Bash(taskkill //PID 48856 //F)",
+      "Bash(gh pr:*)"
     ],
     "additionalDirectories": [
       "c:\\Cursor_Master\\investment-idea-monitor\\src\\app\\api\\kols\\[id]\\win-rate"
