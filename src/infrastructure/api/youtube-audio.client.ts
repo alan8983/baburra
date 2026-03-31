@@ -84,7 +84,7 @@ export async function downloadYoutubeAudio(
   }
 
   // Step 2: Download audio-only
-  // Prefer m4a (AAC) for best Gemini compatibility, fall back to any audio
+  // Prefer Opus/WebM (~50% smaller than m4a, no transcoding needed), fall back to any audio
   const tmpFile = join(tmpdir(), `baburra-audio-${Date.now()}-${info.id}`);
   const startDl = Date.now();
 
@@ -94,7 +94,7 @@ export async function downloadYoutubeAudio(
     );
 
     execSync(
-      `"${ytdlpPath}" -f "bestaudio[ext=m4a]/bestaudio" --no-playlist -o "${tmpFile}.%(ext)s" "${youtubeUrl}"`,
+      `"${ytdlpPath}" -f "bestaudio[acodec=opus]/bestaudio" --no-playlist -o "${tmpFile}.%(ext)s" "${youtubeUrl}"`,
       { encoding: 'utf-8', timeout: DOWNLOAD_TIMEOUT_MS, stdio: ['pipe', 'pipe', 'pipe'] }
     );
 
