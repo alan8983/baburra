@@ -9,14 +9,21 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { ROUTES } from '@/lib/constants';
 import { useQuickInput } from '@/hooks';
-import { useImportBatch, type ImportBatchResult } from '@/hooks/use-import';
+import { useBackgroundImport, type ImportBatchResult } from '@/hooks/use-import';
 import { AnalysisLoadingOverlay } from '@/components/loading/analysis-loading-overlay';
 import { ImportResult } from '@/components/import/import-result';
-import { ImportLoadingOverlay } from '@/components/import/import-loading-overlay';
 import { InputWizardStepper, type WizardStep } from '@/components/input/input-wizard-stepper';
 import { DetectedUrls } from '@/components/input/detected-urls';
 import { parseInputContent } from '@/lib/utils/parse-input-content';
+import {
+  estimateImportTime,
+  formatTimeEstimate,
+  type UrlEstimateInput,
+} from '@/lib/utils/estimate-import-time';
+import { CREDIT_COSTS } from '@/domain/models/user';
 import { toast } from 'sonner';
+
+const YOUTUBE_URL_PATTERN = /youtube\.com|youtu\.be/i;
 
 type InputMethod = 'text' | 'urls';
 
@@ -45,7 +52,7 @@ export default function InputPage() {
   const [wizard, setWizard] = useState<WizardState>(INITIAL_STATE);
 
   const quickInput = useQuickInput();
-  const importBatch = useImportBatch();
+  const { startImport } = useBackgroundImport();
 
   const parsed = useMemo(() => parseInputContent(content), [content]);
 
@@ -74,22 +81,15 @@ export default function InputPage() {
   }, [content, quickInput, t]);
 
   const handleImportSubmit = useCallback(
-    async (urls: string[]) => {
-      setWizard((prev) => ({ ...prev, method: 'urls', step: 2 }));
-      try {
-        const result = await importBatch.mutateAsync({ urls });
-        setContent('');
-        setWizard((prev) => ({
-          ...prev,
-          importResult: result,
-          step: 3,
-        }));
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Import failed');
-        setWizard(INITIAL_STATE);
-      }
+    (urls: string[]) => {
+      // Fire import in background — toast tracks progress
+      startImport(urls);
+      // Reset form immediately (non-blocking)
+      setContent('');
+      setWizard(INITIAL_STATE);
+      toast.info(t('wizard.importStarted'));
     },
-    [importBatch]
+    [startImport, t]
   );
 
   const handleSubmit = useCallback(() => {
@@ -109,7 +109,26 @@ export default function InputPage() {
     setWizard(INITIAL_STATE);
   }, []);
 
-  const isPending = quickInput.isPending || importBatch.isPending;
+  const isPending = quickInput.isPending;
+
+  // Compute estimate when URLs are detected
+  const urlEstimate = useMemo(() => {
+    if (parsed.mode !== 'urls' || parsed.urls.length === 0) return null;
+    const urlInputs: UrlEstimateInput[] = parsed.urls.map((url) => ({
+      platform: YOUTUBE_URL_PATTERN.test(url) ? 'youtube' : 'twitter',
+      hasCaptions: false,
+      durationSeconds: null,
+    }));
+    const { batch } = estimateImportTime(urlInputs);
+    let credits = 0;
+    for (const input of urlInputs) {
+      credits +=
+        input.platform === 'youtube'
+          ? Math.ceil(600 / 60) * CREDIT_COSTS.video_transcription_per_min
+          : CREDIT_COSTS.text_analysis;
+    }
+    return { credits, time: formatTimeEstimate(batch) };
+  }, [parsed]);
   const tooManyUrls = parsed.mode === 'urls' && parsed.urls.length > MAX_URLS;
   const canSubmit =
     parsed.mode !== 'empty' && !isPending && !tooManyUrls && !parsed.hasUnsupportedUrls;
@@ -137,6 +156,12 @@ export default function InputPage() {
               />
 
               <DetectedUrls parsed={parsed} />
+
+              {urlEstimate && canSubmit && (
+                <p className="text-muted-foreground text-center text-sm">
+                  {urlEstimate.credits} credits &middot; {urlEstimate.time}
+                </p>
+              )}
 
               <div className="flex items-center justify-between">
                 <p className="text-muted-foreground text-xs">{t('tips.hint')}</p>
@@ -230,9 +255,8 @@ export default function InputPage() {
         )}
       </div>
 
-      {/* Loading overlays */}
+      {/* Loading overlay (text input only — import uses background toast) */}
       <AnalysisLoadingOverlay isVisible={wizard.step === 2 && wizard.method === 'text'} />
-      <ImportLoadingOverlay isVisible={wizard.step === 2 && wizard.method === 'urls'} />
     </div>
   );
 }

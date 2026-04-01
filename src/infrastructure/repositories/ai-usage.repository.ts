@@ -2,7 +2,7 @@
  * Credit System Repository (formerly AI Usage Quota)
  *
  * Provides credit-based usage tracking with variable costs per operation.
- * Tiers: free (850/wk), pro (4200/wk), max (21000/wk)
+ * Tiers: free (700/wk), pro (4200/wk), max (21000/wk)
  */
 
 import { createAdminClient } from '@/infrastructure/supabase/admin';
@@ -192,6 +192,53 @@ export async function resetCredits(userId: string): Promise<void> {
   if (error) {
     throw new Error(`Failed to reset credits: ${error.message}`);
   }
+}
+
+// ── Reconciliation ──
+
+/**
+ * Reconcile transcription credits after Deepgram returns.
+ * Compares actual duration (from transcript) vs estimated duration.
+ * Only adjusts if difference exceeds 20% threshold.
+ *
+ * @returns The delta applied (positive = additional charge, negative = refund), or 0 if skipped
+ */
+export async function reconcileTranscriptionCredits(
+  userId: string,
+  estimatedMinutes: number,
+  actualMinutes: number,
+  costPerMinute: number
+): Promise<number> {
+  const estimatedCost = Math.ceil(estimatedMinutes) * costPerMinute;
+  const actualCost = Math.ceil(actualMinutes) * costPerMinute;
+  const delta = actualCost - estimatedCost;
+
+  // Skip if within 20% threshold
+  if (Math.abs(delta) / estimatedCost <= 0.2) {
+    return 0;
+  }
+
+  if (delta > 0) {
+    // Actual longer than estimated — charge more
+    try {
+      await consumeCredits(userId, delta, 'transcription_reconciliation');
+    } catch (err) {
+      // Log but don't block pipeline
+      console.warn(
+        `[Reconciliation] Failed to charge additional ${delta} credits for user ${userId}:`,
+        err instanceof Error ? err.message : err
+      );
+    }
+  } else {
+    // Actual shorter than estimated — refund
+    await refundCredits(userId, Math.abs(delta));
+  }
+
+  console.log(
+    `[Reconciliation] User ${userId}: estimated=${estimatedMinutes}min, actual=${actualMinutes.toFixed(1)}min, delta=${delta} credits`
+  );
+
+  return delta;
 }
 
 // ── Backward-compatible aliases ──

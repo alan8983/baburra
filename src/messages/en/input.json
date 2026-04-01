@@ -18,7 +18,8 @@
     "summaryDraft": "1 draft created",
     "viewDraft": "View Draft",
     "viewPosts": "View Posts",
-    "importMore": "Import More"
+    "importMore": "Import More",
+    "importStarted": "Import started — you can continue browsing while it processes"
   },
   "inputCard": {
     "placeholder": "Paste article content or URLs (separate multiple URLs with semicolons or new lines)..."

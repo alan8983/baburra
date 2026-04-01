@@ -26,7 +26,7 @@ export interface UpdateProfileInput {
 
 // Credit system constants
 export const CREDIT_LIMITS = {
-  free: 850,
+  free: 700,
   pro: 4200,
   max: 21000,
 } as const;
@@ -34,7 +34,7 @@ export const CREDIT_LIMITS = {
 export const CREDIT_COSTS = {
   text_analysis: 1,
   youtube_caption_analysis: 2,
-  video_transcription_per_min: 7,
+  video_transcription_per_min: 5,
   reroll_analysis: 3,
 } as const;
 
