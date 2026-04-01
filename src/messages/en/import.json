@@ -11,7 +11,8 @@
     "supportedMarkets": "Supported markets: US, Taiwan, Crypto",
     "onboardingHint": "First import is AI-quota-free!",
     "submit": "Start Import",
-    "submitting": "Importing..."
+    "submitting": "Importing...",
+    "credits": "credits"
   },
   "result": {
     "title": "Import Results",

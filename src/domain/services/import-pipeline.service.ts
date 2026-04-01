@@ -18,7 +18,11 @@ import {
   getStockByTicker,
   createStock,
 } from '@/infrastructure/repositories';
-import { consumeCredits, refundCredits } from '@/infrastructure/repositories/ai-usage.repository';
+import {
+  consumeCredits,
+  refundCredits,
+  reconcileTranscriptionCredits,
+} from '@/infrastructure/repositories/ai-usage.repository';
 import {
   findTranscriptByUrl,
   saveTranscript,
@@ -33,15 +37,14 @@ import {
   extractArguments,
   extractAtHandles,
 } from '@/domain/services/ai.service';
-import { getAiModelVersion, geminiTranscribeVideo } from '@/infrastructure/api/gemini.client';
+import { getAiModelVersion } from '@/infrastructure/api/gemini.client';
 import { downloadYoutubeAudio } from '@/infrastructure/api/youtube-audio.client';
-import { deepgramTranscribe } from '@/infrastructure/api/deepgram.client';
+import { deepgramTranscribe, extractActualDuration } from '@/infrastructure/api/deepgram.client';
 import { CREDIT_COSTS } from '@/domain/models/user';
 import type { Sentiment, SourcePlatform } from '@/domain/models/post';
 import type { DraftAiArguments } from '@/domain/models/draft';
 
 const MAX_VIDEO_DURATION_SECONDS = 120 * 60; // 120 minutes
-const LONG_VIDEO_THRESHOLD_SECONDS = 30 * 60; // 30 minutes — use audio pipeline above this
 
 // ── Types ──
 
@@ -222,43 +225,51 @@ export async function processUrl(
           }
         }
 
-        // Transcribe via Gemini — route based on video duration
+        // Transcribe via Deepgram Nova-3: download audio → transcribe
         let transcriptText: string;
-        const isLongVideo =
-          durationSeconds != null && durationSeconds > LONG_VIDEO_THRESHOLD_SECONDS;
 
         try {
-          if (isLongVideo) {
-            // Long video: download audio → transcribe via Deepgram Nova-2
-            console.log(
-              `[Pipeline] Long video (${Math.ceil(durationSeconds! / 60)}min) — using Deepgram transcription`
-            );
+          console.log(
+            `[Pipeline] Captionless video (${durationSeconds ? Math.ceil(durationSeconds / 60) + 'min' : 'unknown duration'}) — using Deepgram transcription`
+          );
 
-            const audio = await downloadYoutubeAudio(fetchResult.sourceUrl, {
-              maxDurationSeconds: MAX_VIDEO_DURATION_SECONDS,
-            });
+          const audio = await downloadYoutubeAudio(fetchResult.sourceUrl, {
+            maxDurationSeconds: MAX_VIDEO_DURATION_SECONDS,
+          });
 
-            transcriptText = await deepgramTranscribe(audio.buffer, audio.mimeType);
-          } else {
-            // Short video (≤30 min) or unknown duration: use direct YouTube URL
-            transcriptText = await geminiTranscribeVideo(
-              fetchResult.sourceUrl,
-              durationSeconds ?? undefined
-            );
-          }
+          transcriptText = await deepgramTranscribe(audio.buffer, audio.mimeType);
         } catch (transcribeErr) {
           console.error(
-            `[Transcription failed] URL: ${fetchResult.sourceUrl} | pipeline=${isLongVideo ? 'deepgram' : 'gemini-video'} | Error: ${transcribeErr instanceof Error ? transcribeErr.message : String(transcribeErr)}`
+            `[Transcription failed] URL: ${fetchResult.sourceUrl} | pipeline=deepgram | Error: ${transcribeErr instanceof Error ? transcribeErr.message : String(transcribeErr)}`
           );
           throw transcribeErr;
         }
         contentForAnalysis = transcriptText;
 
+        // Post-transcription credit reconciliation
+        if (!quotaExempt && creditsConsumed > 0) {
+          try {
+            const actualDurationSec = extractActualDuration(transcriptText);
+            if (actualDurationSec !== null) {
+              const estimatedMinutes = Math.ceil((durationSeconds || 60) / 60);
+              const actualMinutes = actualDurationSec / 60;
+              await reconcileTranscriptionCredits(
+                userId,
+                estimatedMinutes,
+                actualMinutes,
+                CREDIT_COSTS.video_transcription_per_min
+              );
+            }
+          } catch (reconErr) {
+            console.error('Credit reconciliation failed (non-blocking):', reconErr);
+          }
+        }
+
         // Save to transcript cache
         await saveTranscript({
           sourceUrl: fetchResult.sourceUrl,
           content: transcriptText,
-          source: isLongVideo ? 'deepgram' : 'gemini',
+          source: 'deepgram',
           durationSeconds: durationSeconds ?? undefined,
         }).catch((err) => console.error('Failed to cache transcript:', err));
       }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { deepgramTranscribe, formatTranscript } from '../deepgram.client';
+import { deepgramTranscribe, formatTranscript, extractActualDuration } from '../deepgram.client';
 
 describe('deepgram.client', () => {
   describe('formatTranscript', () => {
@@ -42,6 +42,30 @@ describe('deepgram.client', () => {
       const utterances = [{ speaker: 0, start: 3661, end: 3700, transcript: 'Over one hour in' }];
 
       expect(formatTranscript(utterances)).toBe('[Speaker 0, 01:01:01] Over one hour in');
+    });
+  });
+
+  describe('extractActualDuration', () => {
+    it('extracts duration from last utterance timestamp', () => {
+      const transcript = [
+        '[Speaker 0, 00:00:00] Hello',
+        '[Speaker 1, 00:05:30] World',
+        '[Speaker 0, 00:42:15] Last utterance',
+      ].join('\n');
+
+      expect(extractActualDuration(transcript)).toBe(42 * 60 + 15);
+    });
+
+    it('returns null for transcript with no timestamps', () => {
+      expect(extractActualDuration('Just plain text without timestamps')).toBeNull();
+    });
+
+    it('handles single utterance', () => {
+      expect(extractActualDuration('[Speaker 0, 01:01:01] Only one')).toBe(3661);
+    });
+
+    it('returns null for empty string', () => {
+      expect(extractActualDuration('')).toBeNull();
     });
   });
 
@@ -122,20 +146,142 @@ describe('deepgram.client', () => {
       expect(result).toBe('Plain transcript text');
     });
 
-    it('throws on Deepgram API error', async () => {
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockResolvedValue({
-          ok: false,
-          status: 400,
-          statusText: 'Bad Request',
-          text: () => Promise.resolve('Invalid audio format'),
-        })
-      );
+    it('throws immediately on non-retryable 400 error', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 400,
+        statusText: 'Bad Request',
+        text: () => Promise.resolve('Invalid audio format'),
+      });
+      vi.stubGlobal('fetch', fetchMock);
 
       await expect(deepgramTranscribe(Buffer.from('bad'), 'audio/webm')).rejects.toThrow(
         'Deepgram API error 400: Invalid audio format'
       );
+
+      // Should NOT retry — only 1 fetch call
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('throws immediately on non-retryable 401 error', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        statusText: 'Unauthorized',
+        text: () => Promise.resolve('Invalid API key'),
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      await expect(deepgramTranscribe(Buffer.from('bad'), 'audio/webm')).rejects.toThrow(
+        'Deepgram API error 401'
+      );
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('throws immediately on non-retryable 403 error', async () => {
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        statusText: 'Forbidden',
+        text: () => Promise.resolve('Access denied'),
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      await expect(deepgramTranscribe(Buffer.from('bad'), 'audio/webm')).rejects.toThrow(
+        'Deepgram API error 403'
+      );
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('retries on transient 503 error and succeeds', async () => {
+      // Mock setTimeout to execute immediately (avoids real 5s delay)
+      const originalSetTimeout = globalThis.setTimeout;
+      vi.stubGlobal('setTimeout', (fn: (...args: unknown[]) => void, _ms?: number) =>
+        originalSetTimeout(fn, 0)
+      );
+
+      const mockResponse = {
+        results: {
+          utterances: [{ speaker: 0, start: 0, end: 10, transcript: 'Hello' }],
+        },
+      };
+
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 503,
+          statusText: 'Service Unavailable',
+          text: () => Promise.resolve(''),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(mockResponse),
+        });
+      vi.stubGlobal('fetch', fetchMock);
+
+      const result = await deepgramTranscribe(Buffer.from('audio'), 'audio/webm');
+
+      expect(result).toBe('[Speaker 0, 00:00:00] Hello');
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      vi.stubGlobal('setTimeout', originalSetTimeout);
+    });
+
+    it('retries on transient 429 error and succeeds', async () => {
+      const originalSetTimeout = globalThis.setTimeout;
+      vi.stubGlobal('setTimeout', (fn: (...args: unknown[]) => void, _ms?: number) =>
+        originalSetTimeout(fn, 0)
+      );
+
+      const mockResponse = {
+        results: {
+          utterances: [{ speaker: 0, start: 0, end: 10, transcript: 'Hello' }],
+        },
+      };
+
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 429,
+          statusText: 'Too Many Requests',
+          text: () => Promise.resolve(''),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: () => Promise.resolve(mockResponse),
+        });
+      vi.stubGlobal('fetch', fetchMock);
+
+      const result = await deepgramTranscribe(Buffer.from('audio'), 'audio/webm');
+
+      expect(result).toBe('[Speaker 0, 00:00:00] Hello');
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      vi.stubGlobal('setTimeout', originalSetTimeout);
+    });
+
+    it('exhausts all 3 attempts and throws last error', async () => {
+      // Mock setTimeout to execute immediately (avoids real 20s delay)
+      const originalSetTimeout = globalThis.setTimeout;
+      vi.stubGlobal('setTimeout', (fn: (...args: unknown[]) => void, _ms?: number) =>
+        originalSetTimeout(fn, 0)
+      );
+
+      const fetchMock = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 503,
+        statusText: 'Service Unavailable',
+        text: () => Promise.resolve('server down'),
+      });
+      vi.stubGlobal('fetch', fetchMock);
+
+      await expect(deepgramTranscribe(Buffer.from('audio'), 'audio/webm')).rejects.toThrow(
+        'Deepgram API error 503'
+      );
+
+      // 1 original + 2 retries = 3 total attempts
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+      vi.stubGlobal('setTimeout', originalSetTimeout);
     });
 
     it('throws when no transcript returned', async () => {

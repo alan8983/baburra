@@ -11,7 +11,8 @@
     "supportedMarkets": "支援市場行情：美股、台股、加密貨幣",
     "onboardingHint": "首次匯入免消耗 AI 配額！",
     "submit": "開始匯入",
-    "submitting": "匯入中..."
+    "submitting": "匯入中...",
+    "credits": "點數"
   },
   "result": {
     "title": "匯入結果",

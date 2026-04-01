@@ -16,7 +16,7 @@ vi.mock('@/infrastructure/supabase/admin', () => ({
   }),
 }));
 
-import { consumeAiQuota, getAiUsage } from '../ai-usage.repository';
+import { consumeAiQuota, getAiUsage, reconcileTranscriptionCredits } from '../ai-usage.repository';
 
 const USER_ID = '00000000-0000-0000-0000-000000000001';
 
@@ -40,10 +40,10 @@ describe('ai-usage.repository', () => {
       const resetAt = '2025-02-01T00:00:00Z';
       mockRpc.mockResolvedValue({
         data: {
-          credit_balance: 847,
+          credit_balance: 697,
           credit_reset_at: resetAt,
           subscription_tier: 'free',
-          weekly_limit: 850,
+          weekly_limit: 700,
         },
         error: null,
       });
@@ -57,8 +57,8 @@ describe('ai-usage.repository', () => {
       });
       expect(result).toEqual({
         usageCount: 3,
-        weeklyLimit: 850,
-        remaining: 847,
+        weeklyLimit: 700,
+        remaining: 697,
         resetAt: new Date(resetAt),
         subscriptionTier: 'free',
       });
@@ -125,10 +125,10 @@ describe('ai-usage.repository', () => {
     it('should handle object RPC response', async () => {
       mockRpc.mockResolvedValue({
         data: {
-          credit_balance: 849,
+          credit_balance: 699,
           credit_reset_at: '2025-02-01T00:00:00Z',
           subscription_tier: 'free',
-          weekly_limit: 850,
+          weekly_limit: 700,
         },
         error: null,
       });
@@ -136,16 +136,16 @@ describe('ai-usage.repository', () => {
       const result = await consumeAiQuota(USER_ID);
 
       expect(result.usageCount).toBe(1);
-      expect(result.remaining).toBe(849);
+      expect(result.remaining).toBe(699);
     });
 
     it('should handle null resetAt in RPC response', async () => {
       mockRpc.mockResolvedValue({
         data: {
-          credit_balance: 849,
+          credit_balance: 699,
           credit_reset_at: null,
           subscription_tier: 'free',
-          weekly_limit: 850,
+          weekly_limit: 700,
         },
         error: null,
       });
@@ -156,11 +156,79 @@ describe('ai-usage.repository', () => {
     });
   });
 
+  describe('reconcileTranscriptionCredits', () => {
+    it('skips reconciliation when difference is within 20% threshold', async () => {
+      const result = await reconcileTranscriptionCredits('user-1', 60, 55, 5);
+
+      expect(result).toBe(0);
+      expect(mockRpc).not.toHaveBeenCalled();
+    });
+
+    it('refunds credits when actual is significantly shorter than estimated', async () => {
+      // Estimated 60min, actual 42min → delta = (42 - 60) × 5 = -90
+      mockRpc.mockResolvedValue({
+        data: { credit_balance: 790, refunded: 90 },
+        error: null,
+      });
+
+      const result = await reconcileTranscriptionCredits('user-1', 60, 42, 5);
+
+      expect(result).toBe(-90);
+      expect(mockRpc).toHaveBeenCalledWith('refund_credits', {
+        p_user_id: 'user-1',
+        p_amount: 90,
+      });
+    });
+
+    it('charges additional credits when actual is significantly longer than estimated', async () => {
+      // Estimated 10min, actual 45min → delta = (45 - 10) × 5 = 175
+      mockRpc.mockResolvedValue({
+        data: {
+          credit_balance: 525,
+          credit_reset_at: null,
+          subscription_tier: 'free',
+          weekly_limit: 700,
+          consumed: 175,
+          operation: 'transcription_reconciliation',
+        },
+        error: null,
+      });
+
+      const result = await reconcileTranscriptionCredits('user-1', 10, 45, 5);
+
+      expect(result).toBe(175);
+      expect(mockRpc).toHaveBeenCalledWith('consume_credits', {
+        p_user_id: 'user-1',
+        p_amount: 175,
+        p_operation: 'transcription_reconciliation',
+      });
+    });
+
+    it('does not throw when additional charge fails (insufficient balance)', async () => {
+      mockRpc.mockResolvedValue({
+        data: null,
+        error: { message: 'INSUFFICIENT_CREDITS' },
+      });
+
+      // Mock getCreditInfo follow-up for consumeCredits error handling
+      setupProfileMock({
+        credit_balance: 0,
+        credit_reset_at: '2025-02-01T00:00:00Z',
+        subscription_tier: 'free',
+      });
+
+      // Should not throw — reconciliation failure is non-blocking
+      const result = await reconcileTranscriptionCredits('user-1', 10, 45, 5);
+
+      expect(result).toBe(175);
+    });
+  });
+
   describe('getAiUsage', () => {
     it('should return usage info from profile', async () => {
       const futureReset = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
       setupProfileMock({
-        credit_balance: 845,
+        credit_balance: 695,
         credit_reset_at: futureReset,
         subscription_tier: 'free',
       });
@@ -168,8 +236,8 @@ describe('ai-usage.repository', () => {
       const result = await getAiUsage(USER_ID);
 
       expect(result.usageCount).toBe(5);
-      expect(result.remaining).toBe(845);
-      expect(result.weeklyLimit).toBe(850);
+      expect(result.remaining).toBe(695);
+      expect(result.weeklyLimit).toBe(700);
     });
 
     it('should reset effective usage count when past reset date', async () => {
@@ -183,7 +251,7 @@ describe('ai-usage.repository', () => {
       const result = await getAiUsage(USER_ID);
 
       expect(result.usageCount).toBe(0);
-      expect(result.remaining).toBe(850);
+      expect(result.remaining).toBe(700);
     });
 
     it('should return defaults for missing user (PGRST116)', async () => {
@@ -192,8 +260,8 @@ describe('ai-usage.repository', () => {
       const result = await getAiUsage(USER_ID);
 
       expect(result.usageCount).toBe(0);
-      expect(result.weeklyLimit).toBe(850);
-      expect(result.remaining).toBe(850);
+      expect(result.weeklyLimit).toBe(700);
+      expect(result.remaining).toBe(700);
       expect(result.subscriptionTier).toBe('free');
     });
   });

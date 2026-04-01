@@ -8,6 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import {
+  estimateImportTime,
+  formatTimeEstimate,
+  type UrlEstimateInput,
+} from '@/lib/utils/estimate-import-time';
+import { CREDIT_COSTS } from '@/domain/models/user';
 
 const MAX_URLS = 5;
 
@@ -47,6 +53,34 @@ export function ImportForm({ onSubmit, isLoading }: ImportFormProps) {
   const hasInvalidUrls = useMemo(() => validUrls.some((u) => !isUrlSupported(u)), [validUrls]);
 
   const canSubmit = validUrls.length > 0 && !hasInvalidUrls && !isLoading;
+
+  // Estimate credit cost and processing time
+  const estimate = useMemo(() => {
+    if (validUrls.length === 0) return null;
+    const urlInputs: UrlEstimateInput[] = validUrls.map((u) => {
+      const trimmed = u.trim();
+      if (YOUTUBE_PATTERN.test(trimmed)) {
+        // Without pre-fetch metadata, assume captionless + default duration
+        return { platform: 'youtube' as const, hasCaptions: false, durationSeconds: null };
+      }
+      return { platform: 'twitter' as const };
+    });
+
+    const timeEst = estimateImportTime(urlInputs);
+
+    // Estimate credits: YouTube videos = default 10min × cost/min, text = 1
+    let credits = 0;
+    for (const input of urlInputs) {
+      if (input.platform === 'youtube') {
+        const minutes = Math.ceil((input.durationSeconds || 600) / 60);
+        credits += minutes * CREDIT_COSTS.video_transcription_per_min;
+      } else {
+        credits += CREDIT_COSTS.text_analysis;
+      }
+    }
+
+    return { credits, time: formatTimeEstimate(timeEst.batch) };
+  }, [validUrls]);
 
   const handleAddUrl = () => {
     if (urls.length < MAX_URLS) {
@@ -146,6 +180,13 @@ export function ImportForm({ onSubmit, isLoading }: ImportFormProps) {
           {/* Validation errors */}
           {hasInvalidUrls && (
             <p className="text-destructive text-sm">{t('errors.unsupportedUrl')}</p>
+          )}
+
+          {/* Cost & time estimate */}
+          {estimate && canSubmit && (
+            <p className="text-muted-foreground text-center text-sm">
+              {estimate.credits} {t('form.credits')} &middot; {estimate.time}
+            </p>
           )}
 
           {/* Submit */}

@@ -18,7 +18,8 @@
     "summaryDraft": "已建立 1 份草稿",
     "viewDraft": "查看草稿",
     "viewPosts": "查看文章",
-    "importMore": "繼續匯入"
+    "importMore": "繼續匯入",
+    "importStarted": "匯入已開始 — 您可以繼續瀏覽，進度會在右下角顯示"
   },
   "inputCard": {
     "placeholder": "貼上文章內容或網址（多個網址可用分號或換行分隔）..."

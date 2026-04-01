@@ -21,7 +21,8 @@ const mocks = vi.hoisted(() => ({
   findTranscriptByUrl: vi.fn(),
   saveTranscript: vi.fn(),
   getAiModelVersion: vi.fn(),
-  geminiTranscribeVideo: vi.fn(),
+  downloadYoutubeAudio: vi.fn(),
+  deepgramTranscribe: vi.fn(),
 }));
 
 vi.mock('@/infrastructure/extractors', () => ({
@@ -61,7 +62,14 @@ vi.mock('@/domain/services/ai.service', () => ({
 
 vi.mock('@/infrastructure/api/gemini.client', () => ({
   getAiModelVersion: mocks.getAiModelVersion,
-  geminiTranscribeVideo: mocks.geminiTranscribeVideo,
+}));
+
+vi.mock('@/infrastructure/api/youtube-audio.client', () => ({
+  downloadYoutubeAudio: mocks.downloadYoutubeAudio,
+}));
+
+vi.mock('@/infrastructure/api/deepgram.client', () => ({
+  deepgramTranscribe: mocks.deepgramTranscribe,
 }));
 
 import { executeBatchImport } from '../import-pipeline.service';
@@ -101,8 +109,8 @@ function setupSuccessfulImport() {
   mocks.getUserTimezone.mockResolvedValue('Asia/Taipei');
   mocks.checkFirstImportFree.mockResolvedValue(false); // not first import (free already used)
   mocks.consumeCredits.mockResolvedValue({
-    balance: 849,
-    weeklyLimit: 850,
+    balance: 699,
+    weeklyLimit: 700,
     resetAt: null,
     subscriptionTier: 'free',
   });
@@ -494,8 +502,8 @@ describe('executeBatchImport', () => {
     mocks.getUserTimezone.mockResolvedValue('Asia/Taipei');
     mocks.checkFirstImportFree.mockResolvedValue(false); // not first import
     mocks.consumeCredits.mockResolvedValue({
-      balance: 849,
-      weeklyLimit: 850,
+      balance: 699,
+      weeklyLimit: 700,
       resetAt: null,
       subscriptionTier: 'free',
     });
