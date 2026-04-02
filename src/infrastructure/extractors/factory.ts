@@ -11,6 +11,7 @@ import { twitterExtractor } from './twitter.extractor';
 import { youtubeExtractor } from './youtube.extractor';
 import { tiktokExtractor } from './tiktok.extractor';
 import { facebookExtractor } from './facebook.extractor';
+import { podcastEpisodeExtractor } from './podcast.extractor';
 
 export class ExtractorFactory {
   private extractors: Map<string, SocialMediaExtractor> = new Map();
@@ -20,6 +21,7 @@ export class ExtractorFactory {
     this.register(youtubeExtractor);
     this.register(tiktokExtractor);
     this.register(facebookExtractor);
+    this.register(podcastEpisodeExtractor);
   }
 
   register(extractor: SocialMediaExtractor): void {
@@ -61,3 +63,4 @@ export { twitterExtractor } from './twitter.extractor';
 export { youtubeExtractor } from './youtube.extractor';
 export { tiktokExtractor } from './tiktok.extractor';
 export { facebookExtractor } from './facebook.extractor';
+export { podcastEpisodeExtractor } from './podcast.extractor';

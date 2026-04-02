@@ -1,4 +1,4 @@
-import { Youtube, Twitter, Link } from 'lucide-react';
+import { Youtube, Twitter, Headphones, Link } from 'lucide-react';
 import type { SVGProps } from 'react';
 
 function TikTokIcon(props: SVGProps<SVGSVGElement>) {
@@ -43,6 +43,8 @@ export function getPlatformIconByName(platform: PlatformName, className: string 
       return <TikTokIcon className={`${className} text-black dark:text-white`} />;
     case 'facebook':
       return <FacebookIcon className={`${className} text-blue-600`} />;
+    case 'podcast':
+      return <Headphones className={`${className} text-emerald-500`} />;
     default:
       return <Link className={`${className} text-muted-foreground`} />;
   }
@@ -58,6 +60,8 @@ export function getPlatformColor(platform: PlatformName): string {
       return 'text-black dark:text-white';
     case 'facebook':
       return 'text-blue-600';
+    case 'podcast':
+      return 'text-emerald-500';
     default:
       return 'text-muted-foreground';
   }

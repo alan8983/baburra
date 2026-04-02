@@ -26,3 +26,14 @@ export { YouTubeChannelExtractor, youtubeChannelExtractor } from './youtube-chan
 export { TwitterProfileExtractor, twitterProfileExtractor } from './twitter-profile.extractor';
 export { TikTokProfileExtractor, tiktokProfileExtractor } from './tiktok-profile.extractor';
 export { FacebookProfileExtractor, facebookProfileExtractor } from './facebook-profile.extractor';
+export {
+  PodcastEpisodeExtractor,
+  podcastEpisodeExtractor,
+  encodeEpisodeUrl,
+  decodeEpisodeUrl,
+} from './podcast.extractor';
+export {
+  PodcastProfileExtractor,
+  podcastProfileExtractor,
+  isInvestmentRelevant,
+} from './podcast-profile.extractor';

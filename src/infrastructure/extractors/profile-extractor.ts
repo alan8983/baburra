@@ -6,7 +6,7 @@
  * - ProfileExtractor: discovers post URLs from a profile/channel URL
  */
 
-export type ContentType = 'long_video' | 'short' | 'live_stream' | 'text_post';
+export type ContentType = 'long_video' | 'short' | 'live_stream' | 'text_post' | 'podcast_episode';
 
 export interface DiscoveredUrl {
   url: string;

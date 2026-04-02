@@ -32,6 +32,7 @@ const CONTENT_TYPE_COLORS: Record<ContentType, string> = {
   short: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
   live_stream: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
   text_post: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+  podcast_episode: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
 };
 
 const CONTENT_TYPE_LABEL_KEYS: Record<ContentType, string> = {
@@ -39,6 +40,7 @@ const CONTENT_TYPE_LABEL_KEYS: Record<ContentType, string> = {
   short: 'contentTypeShort',
   live_stream: 'contentTypeLiveStream',
   text_post: 'contentTypeTextPost',
+  podcast_episode: 'contentTypePodcast',
 };
 
 const FILTER_LABEL_KEYS: Record<ContentType, string> = {
@@ -46,6 +48,7 @@ const FILTER_LABEL_KEYS: Record<ContentType, string> = {
   short: 'filterShort',
   live_stream: 'filterLiveStream',
   text_post: 'filterTextPost',
+  podcast_episode: 'filterPodcast',
 };
 
 export function UrlDiscoveryList({
@@ -67,7 +70,7 @@ export function UrlDiscoveryList({
 
   // Content type filter state
   const [activeFilters, setActiveFilters] = useState<Set<ContentType>>(
-    () => new Set(['long_video', 'short', 'live_stream', 'text_post'])
+    () => new Set(['long_video', 'short', 'live_stream', 'text_post', 'podcast_episode'])
   );
 
   // Count URLs by content type
@@ -77,6 +80,7 @@ export function UrlDiscoveryList({
       short: 0,
       live_stream: 0,
       text_post: 0,
+      podcast_episode: 0,
     };
     for (const item of discoveredUrls) {
       const ct = item.contentType ?? 'long_video';
@@ -88,9 +92,9 @@ export function UrlDiscoveryList({
   // Only show filter bar if there's more than one content type present
   const presentTypes = useMemo(
     () =>
-      (['long_video', 'short', 'live_stream', 'text_post'] as ContentType[]).filter(
-        (ct) => contentTypeCounts[ct] > 0
-      ),
+      (
+        ['long_video', 'short', 'live_stream', 'text_post', 'podcast_episode'] as ContentType[]
+      ).filter((ct) => contentTypeCounts[ct] > 0),
     [contentTypeCounts]
   );
   const showFilters = presentTypes.length > 1;
@@ -284,25 +288,32 @@ export function UrlDiscoveryList({
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
-                    {/* Caption status icon (YouTube only) */}
-                    {platform === 'youtube' && hasCaptions !== undefined && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span>
-                              {hasCaptions ? (
-                                <Captions className="h-3.5 w-3.5 text-green-500" />
-                              ) : (
-                                <CaptionsOff className="h-3.5 w-3.5 text-amber-500" />
-                              )}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {hasCaptions ? t('captionAvailable') : t('captionUnavailable')}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
+                    {/* Caption/transcript status icon (YouTube + Podcast) */}
+                    {(platform === 'youtube' || platform === 'podcast') &&
+                      hasCaptions !== undefined && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span>
+                                {hasCaptions ? (
+                                  <Captions className="h-3.5 w-3.5 text-green-500" />
+                                ) : (
+                                  <CaptionsOff className="h-3.5 w-3.5 text-amber-500" />
+                                )}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {hasCaptions
+                                ? platform === 'podcast'
+                                  ? t('transcriptAvailable')
+                                  : t('captionAvailable')
+                                : platform === 'podcast'
+                                  ? t('transcriptUnavailable')
+                                  : t('captionUnavailable')}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                     {/* Credit cost badge */}
                     <Badge
                       variant="outline"
@@ -343,7 +354,7 @@ export function UrlDiscoveryList({
           {insufficientCredits && (
             <p className="mt-1 text-xs text-red-600">{t('insufficientCredits')}</p>
           )}
-          {platform === 'youtube' && !firstImportFree && (
+          {(platform === 'youtube' || platform === 'podcast') && !firstImportFree && (
             <p className="text-muted-foreground mt-1 text-xs">{t('creditNote')}</p>
           )}
         </div>

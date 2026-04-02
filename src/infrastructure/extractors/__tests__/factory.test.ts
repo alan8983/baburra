@@ -38,7 +38,8 @@ describe('ExtractorFactory', () => {
       expect(platforms).toContain('youtube');
       expect(platforms).toContain('tiktok');
       expect(platforms).toContain('facebook');
-      expect(platforms).toHaveLength(4);
+      expect(platforms).toContain('podcast');
+      expect(platforms).toHaveLength(5);
     });
   });
 
@@ -65,6 +66,12 @@ describe('ExtractorFactory', () => {
       const facebook = extractorFactory.getExtractor('facebook');
       expect(facebook).toBeDefined();
       expect(facebook!.platform).toBe('facebook');
+    });
+
+    it('should return the correct extractor for podcast', () => {
+      const podcast = extractorFactory.getExtractor('podcast');
+      expect(podcast).toBeDefined();
+      expect(podcast!.platform).toBe('podcast');
     });
 
     it('should return undefined for unregistered platforms', () => {
@@ -156,11 +163,12 @@ describe('ExtractorFactory', () => {
   describe('register', () => {
     it('should start with all default extractors registered', () => {
       const factory = new ExtractorFactory();
-      expect(factory.getSupportedPlatforms()).toHaveLength(4);
+      expect(factory.getSupportedPlatforms()).toHaveLength(5);
       expect(factory.getSupportedPlatforms()).toContain('twitter');
       expect(factory.getSupportedPlatforms()).toContain('youtube');
       expect(factory.getSupportedPlatforms()).toContain('tiktok');
       expect(factory.getSupportedPlatforms()).toContain('facebook');
+      expect(factory.getSupportedPlatforms()).toContain('podcast');
     });
   });
 });

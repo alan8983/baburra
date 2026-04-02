@@ -52,7 +52,11 @@
     "contentTypeShort": "Short",
     "contentTypeLiveStream": "Live",
     "contentTypeTextPost": "Text",
-    "filterTextPost": "Text Post"
+    "filterTextPost": "Text Post",
+    "contentTypePodcast": "Podcast",
+    "filterPodcast": "Podcast",
+    "transcriptAvailable": "Transcript available",
+    "transcriptUnavailable": "Transcription required"
   },
   "queue": {
     "position": "Position #{position} in your queue",

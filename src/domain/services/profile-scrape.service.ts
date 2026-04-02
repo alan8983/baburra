@@ -11,6 +11,7 @@ import {
   tiktokProfileExtractor,
   facebookProfileExtractor,
   youtubeExtractor,
+  podcastProfileExtractor,
 } from '@/infrastructure/extractors';
 import type { ProfileExtractor, DiscoveredUrl } from '@/infrastructure/extractors';
 import { CREDIT_COSTS } from '@/domain/models/user';
@@ -85,6 +86,7 @@ const profileExtractors: ProfileExtractor[] = [
   twitterProfileExtractor,
   tiktokProfileExtractor,
   facebookProfileExtractor,
+  podcastProfileExtractor,
 ];
 
 function getProfileExtractor(url: string): ProfileExtractor | null {
@@ -142,6 +144,10 @@ export async function discoverProfileUrls(profileUrl: string): Promise<DiscoverR
       ...item,
       estimatedCreditCost: CREDIT_COSTS.text_analysis,
     }));
+  } else if (extractor.platform === 'podcast') {
+    // Podcast URLs: credit estimates already computed by PodcastProfileExtractor
+    // (2 credits with transcript, duration × 5 without)
+    // No additional enrichment needed — pass through as-is
   } else {
     // Other platforms: 1 credit per post
     discoveredUrls = discoveredUrls.map((item) => ({
