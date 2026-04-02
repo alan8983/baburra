@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { Rss, User, Youtube, Trash2 } from 'lucide-react';
+import { Rss, User, Youtube, Headphones, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -15,6 +15,7 @@ import { EmptyState } from '@/components/shared/empty-state';
 
 const platformIcons: Record<string, typeof Youtube> = {
   youtube: Youtube,
+  podcast: Headphones,
 };
 
 export default function SubscriptionsPage() {

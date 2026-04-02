@@ -6,7 +6,14 @@ export interface UrlFetchResult {
   // Required fields
   content: string | null; // Plain text, 10-50,000 characters; null when captions unavailable (YouTube)
   sourceUrl: string; // Complete URL
-  sourcePlatform: 'twitter' | 'facebook' | 'threads' | 'instagram' | 'youtube' | 'manual';
+  sourcePlatform:
+    | 'twitter'
+    | 'facebook'
+    | 'threads'
+    | 'instagram'
+    | 'youtube'
+    | 'podcast'
+    | 'manual';
 
   // Optional fields
   title: string | null;

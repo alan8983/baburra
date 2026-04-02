@@ -9,6 +9,7 @@
 import { SocialMediaExtractor, UrlFetchResult, ExtractorConfig, ExtractorError } from './types';
 import { twitterExtractor } from './twitter.extractor';
 import { youtubeExtractor } from './youtube.extractor';
+import { podcastEpisodeExtractor } from './podcast.extractor';
 
 export class ExtractorFactory {
   private extractors: Map<string, SocialMediaExtractor> = new Map();
@@ -16,6 +17,7 @@ export class ExtractorFactory {
   constructor() {
     this.register(twitterExtractor);
     this.register(youtubeExtractor);
+    this.register(podcastEpisodeExtractor);
   }
 
   register(extractor: SocialMediaExtractor): void {
@@ -55,3 +57,4 @@ export const extractorFactory = new ExtractorFactory();
 
 export { twitterExtractor } from './twitter.extractor';
 export { youtubeExtractor } from './youtube.extractor';
+export { podcastEpisodeExtractor } from './podcast.extractor';
