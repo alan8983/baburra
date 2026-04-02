@@ -2,16 +2,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import {
-  ArrowLeft,
-  Youtube,
-  Twitter,
-  Loader2,
-  Captions,
-  CaptionsOff,
-  Sparkles,
-  Gift,
-} from 'lucide-react';
+import { ArrowLeft, Loader2, Captions, CaptionsOff, Sparkles, Gift } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -23,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { useAiUsage } from '@/hooks/use-ai';
 import type { DiscoveredUrl } from '@/infrastructure/extractors';
 import type { ContentType } from '@/infrastructure/extractors/profile-extractor';
+import { getPlatformIconByName } from '@/components/ui/platform-icons';
 
 interface UrlDiscoveryListProps {
   kolName: string;
@@ -39,18 +31,21 @@ const CONTENT_TYPE_COLORS: Record<ContentType, string> = {
   long_video: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
   short: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
   live_stream: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+  text_post: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
 };
 
 const CONTENT_TYPE_LABEL_KEYS: Record<ContentType, string> = {
   long_video: 'contentTypeLongVideo',
   short: 'contentTypeShort',
   live_stream: 'contentTypeLiveStream',
+  text_post: 'contentTypeTextPost',
 };
 
 const FILTER_LABEL_KEYS: Record<ContentType, string> = {
   long_video: 'filterLongVideo',
   short: 'filterShort',
   live_stream: 'filterLiveStream',
+  text_post: 'filterTextPost',
 };
 
 export function UrlDiscoveryList({
@@ -72,12 +67,17 @@ export function UrlDiscoveryList({
 
   // Content type filter state
   const [activeFilters, setActiveFilters] = useState<Set<ContentType>>(
-    () => new Set(['long_video', 'short', 'live_stream'])
+    () => new Set(['long_video', 'short', 'live_stream', 'text_post'])
   );
 
   // Count URLs by content type
   const contentTypeCounts = useMemo(() => {
-    const counts: Record<ContentType, number> = { long_video: 0, short: 0, live_stream: 0 };
+    const counts: Record<ContentType, number> = {
+      long_video: 0,
+      short: 0,
+      live_stream: 0,
+      text_post: 0,
+    };
     for (const item of discoveredUrls) {
       const ct = item.contentType ?? 'long_video';
       counts[ct]++;
@@ -88,7 +88,7 @@ export function UrlDiscoveryList({
   // Only show filter bar if there's more than one content type present
   const presentTypes = useMemo(
     () =>
-      (['long_video', 'short', 'live_stream'] as ContentType[]).filter(
+      (['long_video', 'short', 'live_stream', 'text_post'] as ContentType[]).filter(
         (ct) => contentTypeCounts[ct] > 0
       ),
     [contentTypeCounts]
@@ -163,8 +163,7 @@ export function UrlDiscoveryList({
   const remainingBalance = usage?.balance ?? usage?.remaining ?? 0;
   const insufficientCredits = !firstImportFree && totalEstimatedCredits > remainingBalance;
 
-  const PlatformIcon = platform === 'youtube' ? Youtube : Twitter;
-  const platformColor = platform === 'youtube' ? 'text-red-500' : 'text-sky-500';
+  const platformIcon = getPlatformIconByName(platform, 'h-4 w-4 shrink-0');
 
   const formatDate = useMemo(() => {
     const fmt = new Intl.DateTimeFormat(undefined, {
@@ -200,7 +199,7 @@ export function UrlDiscoveryList({
           <div className="min-w-0 flex-1">
             <CardTitle className="flex items-center gap-2 text-lg">
               {kolName}
-              <PlatformIcon className={`h-4 w-4 shrink-0 ${platformColor}`} />
+              {platformIcon}
             </CardTitle>
             <p className="text-muted-foreground text-sm">
               {t('found', { count: discoveredUrls.length })} &bull;{' '}

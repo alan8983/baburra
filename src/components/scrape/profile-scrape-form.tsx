@@ -2,22 +2,37 @@
 
 import { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { Youtube, Twitter } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { getPlatformIconByName } from '@/components/ui/platform-icons';
+import type { PlatformName } from '@/components/ui/platform-icons';
 
 const YOUTUBE_CHANNEL_PATTERN = /^https?:\/\/(www\.)?youtube\.com\/(channel\/|c\/|@)[\w.-]+/;
 const TWITTER_PROFILE_PATTERN = /^https?:\/\/(www\.)?(twitter|x)\.com\/[\w]+\/?$/;
+const TIKTOK_PROFILE_PATTERN = /^https?:\/\/(www\.)?tiktok\.com\/@[\w.-]+\/?$/;
+const FACEBOOK_PROFILE_PATTERN = /^https?:\/\/(www\.)?facebook\.com\/[\w.-]+\/?$/;
 
-function detectPlatform(url: string): 'youtube' | 'twitter' | null {
+const FACEBOOK_POST_EXCLUSIONS = /\/(posts|permalink|share|videos|photo|events|groups)\//;
+
+function detectPlatform(url: string): PlatformName | null {
   const trimmed = url.trim();
   if (YOUTUBE_CHANNEL_PATTERN.test(trimmed)) return 'youtube';
   if (TWITTER_PROFILE_PATTERN.test(trimmed) && !/\/status\//.test(trimmed)) return 'twitter';
+  if (TIKTOK_PROFILE_PATTERN.test(trimmed) && !/\/video\//.test(trimmed)) return 'tiktok';
+  if (FACEBOOK_PROFILE_PATTERN.test(trimmed) && !FACEBOOK_POST_EXCLUSIONS.test(trimmed))
+    return 'facebook';
   return null;
 }
+
+const PLATFORM_LABELS: Record<string, string> = {
+  youtube: 'YouTube',
+  twitter: 'Twitter/X',
+  tiktok: 'TikTok',
+  facebook: 'Facebook',
+};
 
 interface ProfileScrapeFormProps {
   onJobCreated: (url: string) => void;
@@ -52,8 +67,7 @@ export function ProfileScrapeForm({ onJobCreated, initialUrl }: ProfileScrapeFor
           <div className="space-y-2">
             <Label htmlFor="scrape-url">{t('form.urlLabel')}</Label>
             <div className="flex items-center gap-2">
-              {platform === 'youtube' && <Youtube className="h-5 w-5 shrink-0 text-red-500" />}
-              {platform === 'twitter' && <Twitter className="h-5 w-5 shrink-0 text-sky-500" />}
+              {platform && getPlatformIconByName(platform, 'h-5 w-5 shrink-0')}
               <Input
                 id="scrape-url"
                 type="url"
@@ -66,14 +80,9 @@ export function ProfileScrapeForm({ onJobCreated, initialUrl }: ProfileScrapeFor
             {isValidUrl === false && <p className="text-sm text-red-500">{t('form.invalidUrl')}</p>}
             <div className="flex items-center gap-2">
               <p className="text-muted-foreground text-xs">{t('form.supportedPlatforms')}</p>
-              {platform === 'youtube' && (
+              {platform && (
                 <Badge variant="secondary" className="text-xs">
-                  {t('form.platformYouTube')}
-                </Badge>
-              )}
-              {platform === 'twitter' && (
-                <Badge variant="secondary" className="text-xs">
-                  Twitter/X
+                  {PLATFORM_LABELS[platform] ?? platform}
                 </Badge>
               )}
             </div>

@@ -50,7 +50,9 @@
     "filterLiveStream": "Live Stream",
     "contentTypeLongVideo": "Video",
     "contentTypeShort": "Short",
-    "contentTypeLiveStream": "Live"
+    "contentTypeLiveStream": "Live",
+    "contentTypeTextPost": "Text",
+    "filterTextPost": "Text Post"
   },
   "queue": {
     "position": "Position #{position} in your queue",

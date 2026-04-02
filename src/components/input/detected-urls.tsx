@@ -1,18 +1,10 @@
 import { useTranslations } from 'next-intl';
-import { Twitter, Youtube, Link, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { getPlatformIconByUrl } from '@/components/ui/platform-icons';
 import type { ParsedInput } from '@/lib/utils/parse-input-content';
 
 const MAX_URLS = 5;
-
-const TWITTER_PATTERN = /twitter\.com|x\.com/i;
-const YOUTUBE_PATTERN = /youtube\.com|youtu\.be/i;
-
-function getPlatformIcon(url: string) {
-  if (TWITTER_PATTERN.test(url)) return <Twitter className="h-3.5 w-3.5 text-sky-500" />;
-  if (YOUTUBE_PATTERN.test(url)) return <Youtube className="h-3.5 w-3.5 text-red-500" />;
-  return <Link className="text-muted-foreground h-3.5 w-3.5" />;
-}
 
 interface DetectedUrlsProps {
   parsed: ParsedInput;
@@ -36,7 +28,7 @@ export function DetectedUrls({ parsed }: DetectedUrlsProps) {
             variant={seg.platform ? 'secondary' : 'destructive'}
             className="gap-1 text-xs font-normal"
           >
-            {getPlatformIcon(seg.text)}
+            {getPlatformIconByUrl(seg.text, 'h-3.5 w-3.5')}
             <span className="max-w-[200px] truncate">{seg.text}</span>
           </Badge>
         ))}

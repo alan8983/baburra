@@ -8,6 +8,8 @@
 import {
   youtubeChannelExtractor,
   twitterProfileExtractor,
+  tiktokProfileExtractor,
+  facebookProfileExtractor,
   youtubeExtractor,
 } from '@/infrastructure/extractors';
 import type { ProfileExtractor, DiscoveredUrl } from '@/infrastructure/extractors';
@@ -78,7 +80,12 @@ export interface IncrementalCheckResult {
 
 // ── Profile Extractor Registry ──
 
-const profileExtractors: ProfileExtractor[] = [youtubeChannelExtractor, twitterProfileExtractor];
+const profileExtractors: ProfileExtractor[] = [
+  youtubeChannelExtractor,
+  twitterProfileExtractor,
+  tiktokProfileExtractor,
+  facebookProfileExtractor,
+];
 
 function getProfileExtractor(url: string): ProfileExtractor | null {
   return profileExtractors.find((e) => e.isValidProfileUrl(url)) ?? null;
@@ -119,8 +126,24 @@ export async function discoverProfileUrls(profileUrl: string): Promise<DiscoverR
       })
     );
     discoveredUrls = enriched;
+  } else if (extractor.platform === 'tiktok') {
+    // TikTok videos: same cost as captionless YouTube (transcription required)
+    discoveredUrls = discoveredUrls.map((item) => {
+      const durationMin = Math.ceil((item.durationSeconds || 60) / 60);
+      return {
+        ...item,
+        estimatedCreditCost:
+          durationMin <= 1 ? 3 : durationMin * CREDIT_COSTS.video_transcription_per_min,
+      };
+    });
+  } else if (extractor.platform === 'facebook') {
+    // Facebook text posts: 1 credit per post
+    discoveredUrls = discoveredUrls.map((item) => ({
+      ...item,
+      estimatedCreditCost: CREDIT_COSTS.text_analysis,
+    }));
   } else {
-    // Non-YouTube URLs: always 1 credit (text_analysis)
+    // Other platforms: 1 credit per post
     discoveredUrls = discoveredUrls.map((item) => ({
       ...item,
       estimatedCreditCost: CREDIT_COSTS.text_analysis,

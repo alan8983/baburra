@@ -24,6 +24,13 @@ import { CREDIT_COSTS } from '@/domain/models/user';
 import { toast } from 'sonner';
 
 const YOUTUBE_URL_PATTERN = /youtube\.com|youtu\.be/i;
+const TIKTOK_URL_PATTERN = /tiktok\.com/i;
+
+function detectUrlPlatformForEstimate(url: string): 'youtube' | 'twitter' | 'other' {
+  if (YOUTUBE_URL_PATTERN.test(url)) return 'youtube';
+  if (TIKTOK_URL_PATTERN.test(url)) return 'other'; // TikTok timing similar to YouTube
+  return 'twitter'; // Default for Twitter/X, Facebook, and other text-based platforms
+}
 
 type InputMethod = 'text' | 'urls';
 
@@ -115,7 +122,7 @@ export default function InputPage() {
   const urlEstimate = useMemo(() => {
     if (parsed.mode !== 'urls' || parsed.urls.length === 0) return null;
     const urlInputs: UrlEstimateInput[] = parsed.urls.map((url) => ({
-      platform: YOUTUBE_URL_PATTERN.test(url) ? 'youtube' : 'twitter',
+      platform: detectUrlPlatformForEstimate(url),
       hasCaptions: false,
       durationSeconds: null,
     }));

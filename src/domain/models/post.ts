@@ -9,6 +9,7 @@ export type SourcePlatform =
   | 'threads'
   | 'instagram'
   | 'youtube'
+  | 'tiktok'
   | 'manual';
 
 export const SENTIMENT_LABELS: Record<Sentiment, string> = {
