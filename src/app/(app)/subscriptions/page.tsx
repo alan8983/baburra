@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { Rss, User, Youtube, Headphones, Trash2 } from 'lucide-react';
+import { Rss, User, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,11 +12,7 @@ import { ROUTES } from '@/lib/constants';
 import { formatDateTime } from '@/lib/utils/date';
 import { useSubscriptions, useUnsubscribe } from '@/hooks';
 import { EmptyState } from '@/components/shared/empty-state';
-
-const platformIcons: Record<string, typeof Youtube> = {
-  youtube: Youtube,
-  podcast: Headphones,
-};
+import { getPlatformIconByName } from '@/components/ui/platform-icons';
 
 export default function SubscriptionsPage() {
   const t = useTranslations('subscriptions');
@@ -59,8 +55,6 @@ export default function SubscriptionsPage() {
       {!isLoading && items.length > 0 && (
         <div className="space-y-4">
           {items.map((sub) => {
-            const PlatformIcon = platformIcons[sub.platform] ?? Rss;
-
             return (
               <Card key={sub.id} className="hover:bg-muted/50 transition-colors">
                 <CardContent className="pt-4">
@@ -79,7 +73,7 @@ export default function SubscriptionsPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-medium">{sub.kolName}</span>
                           <Badge variant="outline" className="gap-1">
-                            <PlatformIcon className="h-3 w-3" />
+                            {getPlatformIconByName(sub.platform, 'h-3 w-3')}
                             {sub.platform}
                           </Badge>
                           <Badge variant={sub.monitoringEnabled ? 'default' : 'secondary'}>

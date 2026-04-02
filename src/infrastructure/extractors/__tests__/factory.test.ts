@@ -13,15 +13,33 @@ vi.mock('youtube-transcript-plus', () => ({
   },
 }));
 
+// Mock apify-client to avoid real API calls
+vi.mock('apify-client', () => {
+  class MockApifyClient {
+    actor() {
+      return { call: vi.fn(), start: vi.fn() };
+    }
+    dataset() {
+      return { listItems: vi.fn().mockResolvedValue({ items: [] }) };
+    }
+    run() {
+      return { get: vi.fn() };
+    }
+  }
+  return { ApifyClient: MockApifyClient };
+});
+
 describe('ExtractorFactory', () => {
   describe('getSupportedPlatforms', () => {
-    it('should return twitter, youtube, and podcast platforms', () => {
+    it('should return all registered platforms', () => {
       const platforms = extractorFactory.getSupportedPlatforms();
 
       expect(platforms).toContain('twitter');
       expect(platforms).toContain('youtube');
+      expect(platforms).toContain('tiktok');
+      expect(platforms).toContain('facebook');
       expect(platforms).toContain('podcast');
-      expect(platforms).toHaveLength(3);
+      expect(platforms).toHaveLength(5);
     });
   });
 
@@ -38,8 +56,25 @@ describe('ExtractorFactory', () => {
       expect(youtube!.platform).toBe('youtube');
     });
 
+    it('should return the correct extractor for tiktok', () => {
+      const tiktok = extractorFactory.getExtractor('tiktok');
+      expect(tiktok).toBeDefined();
+      expect(tiktok!.platform).toBe('tiktok');
+    });
+
+    it('should return the correct extractor for facebook', () => {
+      const facebook = extractorFactory.getExtractor('facebook');
+      expect(facebook).toBeDefined();
+      expect(facebook!.platform).toBe('facebook');
+    });
+
+    it('should return the correct extractor for podcast', () => {
+      const podcast = extractorFactory.getExtractor('podcast');
+      expect(podcast).toBeDefined();
+      expect(podcast!.platform).toBe('podcast');
+    });
+
     it('should return undefined for unregistered platforms', () => {
-      expect(extractorFactory.getExtractor('facebook')).toBeUndefined();
       expect(extractorFactory.getExtractor('threads')).toBeUndefined();
       expect(extractorFactory.getExtractor('instagram')).toBeUndefined();
     });
@@ -57,9 +92,19 @@ describe('ExtractorFactory', () => {
       expect(extractorFactory.isSupported('https://m.youtube.com/watch?v=abc123')).toBe(true);
     });
 
-    it('should return false for unsupported URLs including Facebook and Threads', () => {
-      expect(extractorFactory.isSupported('https://www.facebook.com/share/p/abc/')).toBe(false);
-      expect(extractorFactory.isSupported('https://www.facebook.com/user/posts/123')).toBe(false);
+    it('should return true for supported TikTok URLs', () => {
+      expect(extractorFactory.isSupported('https://www.tiktok.com/@user/video/1234567890')).toBe(
+        true
+      );
+      expect(extractorFactory.isSupported('https://vm.tiktok.com/abc123')).toBe(true);
+    });
+
+    it('should return true for supported Facebook URLs', () => {
+      expect(extractorFactory.isSupported('https://www.facebook.com/share/p/abc/')).toBe(true);
+      expect(extractorFactory.isSupported('https://www.facebook.com/user/posts/123')).toBe(true);
+    });
+
+    it('should return false for unsupported URLs', () => {
       expect(extractorFactory.isSupported('https://threads.net/@user/post/abc')).toBe(false);
       expect(extractorFactory.isSupported('https://reddit.com/r/stocks/comments/abc')).toBe(false);
       expect(extractorFactory.isSupported('not-a-url')).toBe(false);
@@ -106,14 +151,6 @@ describe('ExtractorFactory', () => {
       } as ExtractorError);
     });
 
-    it('should throw INVALID_URL for Facebook URLs', async () => {
-      await expect(
-        extractorFactory.extractFromUrl('https://www.facebook.com/share/p/abc/')
-      ).rejects.toMatchObject({
-        code: 'INVALID_URL',
-      } as ExtractorError);
-    });
-
     it('should throw INVALID_URL for Threads URLs', async () => {
       await expect(
         extractorFactory.extractFromUrl('https://threads.net/@user/post/abc')
@@ -124,11 +161,13 @@ describe('ExtractorFactory', () => {
   });
 
   describe('register', () => {
-    it('should start with twitter, youtube, and podcast extractors registered', () => {
+    it('should start with all default extractors registered', () => {
       const factory = new ExtractorFactory();
-      expect(factory.getSupportedPlatforms()).toHaveLength(3);
+      expect(factory.getSupportedPlatforms()).toHaveLength(5);
       expect(factory.getSupportedPlatforms()).toContain('twitter');
       expect(factory.getSupportedPlatforms()).toContain('youtube');
+      expect(factory.getSupportedPlatforms()).toContain('tiktok');
+      expect(factory.getSupportedPlatforms()).toContain('facebook');
       expect(factory.getSupportedPlatforms()).toContain('podcast');
     });
   });

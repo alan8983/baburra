@@ -38,7 +38,8 @@ export const SCRAPE_CAPS: Record<string, number> = {
   youtube: 200,
   twitter: 500,
   instagram: 500,
-  facebook: 500,
+  facebook: 300,
+  tiktok: 200,
 };
 
 // 情緒值對應 (-3 ~ +3, 7-point scale)

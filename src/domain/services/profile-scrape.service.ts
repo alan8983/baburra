@@ -8,6 +8,8 @@
 import {
   youtubeChannelExtractor,
   twitterProfileExtractor,
+  tiktokProfileExtractor,
+  facebookProfileExtractor,
   youtubeExtractor,
   podcastProfileExtractor,
 } from '@/infrastructure/extractors';
@@ -82,6 +84,8 @@ export interface IncrementalCheckResult {
 const profileExtractors: ProfileExtractor[] = [
   youtubeChannelExtractor,
   twitterProfileExtractor,
+  tiktokProfileExtractor,
+  facebookProfileExtractor,
   podcastProfileExtractor,
 ];
 
@@ -124,12 +128,28 @@ export async function discoverProfileUrls(profileUrl: string): Promise<DiscoverR
       })
     );
     discoveredUrls = enriched;
+  } else if (extractor.platform === 'tiktok') {
+    // TikTok videos: same cost as captionless YouTube (transcription required)
+    discoveredUrls = discoveredUrls.map((item) => {
+      const durationMin = Math.ceil((item.durationSeconds || 60) / 60);
+      return {
+        ...item,
+        estimatedCreditCost:
+          durationMin <= 1 ? 3 : durationMin * CREDIT_COSTS.video_transcription_per_min,
+      };
+    });
+  } else if (extractor.platform === 'facebook') {
+    // Facebook text posts: 1 credit per post
+    discoveredUrls = discoveredUrls.map((item) => ({
+      ...item,
+      estimatedCreditCost: CREDIT_COSTS.text_analysis,
+    }));
   } else if (extractor.platform === 'podcast') {
     // Podcast URLs: credit estimates already computed by PodcastProfileExtractor
     // (2 credits with transcript, duration × 5 without)
     // No additional enrichment needed — pass through as-is
   } else {
-    // Non-YouTube/non-podcast URLs: always 1 credit (text_analysis)
+    // Other platforms: 1 credit per post
     discoveredUrls = discoveredUrls.map((item) => ({
       ...item,
       estimatedCreditCost: CREDIT_COSTS.text_analysis,

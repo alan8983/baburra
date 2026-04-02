@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { Plus, X, Loader2, Twitter, Youtube, Link } from 'lucide-react';
+import { Plus, X, Loader2, Link } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -14,11 +14,9 @@ import {
   type UrlEstimateInput,
 } from '@/lib/utils/estimate-import-time';
 import { CREDIT_COSTS } from '@/domain/models/user';
+import { getPlatformIconByUrl } from '@/components/ui/platform-icons';
 
 const MAX_URLS = 5;
-
-const TWITTER_PATTERN = /twitter\.com|x\.com/i;
-const YOUTUBE_PATTERN = /youtube\.com|youtu\.be/i;
 
 const SUPPORTED_URL_PATTERNS = [
   /^https?:\/\/(www\.)?(twitter|x)\.com\/[\w]+\/status\/[\d]+/,
@@ -26,17 +24,15 @@ const SUPPORTED_URL_PATTERNS = [
   /^https?:\/\/(www\.)?youtube\.com\/watch\?v=[\w-]+/,
   /^https?:\/\/youtu\.be\/[\w-]+/,
   /^https?:\/\/m\.youtube\.com\/watch\?v=[\w-]+/,
+  /^https?:\/\/(www\.)?tiktok\.com\/@[\w.-]+\/video\/\d+/,
+  /^https?:\/\/vm\.tiktok\.com\/[\w]+/,
+  /^https?:\/\/(www\.)?facebook\.com\/[\w.-]+\/posts\//,
+  /^https?:\/\/(www\.)?facebook\.com\/permalink\.php\?story_fbid=/,
+  /^https?:\/\/(www\.)?facebook\.com\/share\/p\//,
 ];
 
 function isUrlSupported(url: string): boolean {
   return SUPPORTED_URL_PATTERNS.some((p) => p.test(url.trim()));
-}
-
-function getPlatformIcon(url: string) {
-  const trimmed = url.trim();
-  if (TWITTER_PATTERN.test(trimmed)) return <Twitter className="h-4 w-4 text-sky-500" />;
-  if (YOUTUBE_PATTERN.test(trimmed)) return <Youtube className="h-4 w-4 text-red-500" />;
-  return <Link className="text-muted-foreground h-4 w-4" />;
 }
 
 interface ImportFormProps {
@@ -59,7 +55,7 @@ export function ImportForm({ onSubmit, isLoading }: ImportFormProps) {
     if (validUrls.length === 0) return null;
     const urlInputs: UrlEstimateInput[] = validUrls.map((u) => {
       const trimmed = u.trim();
-      if (YOUTUBE_PATTERN.test(trimmed)) {
+      if (/youtube\.com|youtu\.be/i.test(trimmed)) {
         // Without pre-fetch metadata, assume captionless + default duration
         return { platform: 'youtube' as const, hasCaptions: false, durationSeconds: null };
       }
@@ -122,7 +118,7 @@ export function ImportForm({ onSubmit, isLoading }: ImportFormProps) {
               <div key={index} className="flex items-center gap-2">
                 <div className="flex-shrink-0">
                   {url.trim() ? (
-                    getPlatformIcon(url)
+                    getPlatformIconByUrl(url)
                   ) : (
                     <Link className="text-muted-foreground h-4 w-4" />
                   )}

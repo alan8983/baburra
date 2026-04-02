@@ -12,6 +12,7 @@ export interface UrlFetchResult {
     | 'threads'
     | 'instagram'
     | 'youtube'
+    | 'tiktok'
     | 'podcast'
     | 'manual';
 

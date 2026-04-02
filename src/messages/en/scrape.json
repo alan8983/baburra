@@ -51,6 +51,8 @@
     "contentTypeLongVideo": "Video",
     "contentTypeShort": "Short",
     "contentTypeLiveStream": "Live",
+    "contentTypeTextPost": "Text",
+    "filterTextPost": "Text Post",
     "contentTypePodcast": "Podcast",
     "filterPodcast": "Podcast",
     "transcriptAvailable": "Transcript available",
