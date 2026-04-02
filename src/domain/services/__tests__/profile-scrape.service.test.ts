@@ -34,6 +34,11 @@ const mocks = vi.hoisted(() => ({
     isValidProfileUrl: vi.fn(),
     extractProfile: vi.fn(),
   },
+  podcastProfileExtractor: {
+    platform: 'podcast',
+    isValidProfileUrl: vi.fn(),
+    extractProfile: vi.fn(),
+  },
   // Import pipeline
   processUrl: vi.fn(),
 }));
@@ -72,6 +77,17 @@ vi.mock('@/domain/services/kol-validation.service', () => ({
 vi.mock('@/infrastructure/extractors', () => ({
   youtubeChannelExtractor: mocks.youtubeChannelExtractor,
   twitterProfileExtractor: mocks.twitterProfileExtractor,
+  tiktokProfileExtractor: {
+    platform: 'tiktok',
+    isValidProfileUrl: vi.fn(),
+    extractProfile: vi.fn(),
+  },
+  facebookProfileExtractor: {
+    platform: 'facebook',
+    isValidProfileUrl: vi.fn(),
+    extractProfile: vi.fn(),
+  },
+  podcastProfileExtractor: mocks.podcastProfileExtractor,
 }));
 
 vi.mock('@/domain/services/import-pipeline.service', () => ({

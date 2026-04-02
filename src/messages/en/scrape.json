@@ -51,7 +51,13 @@
     "contentTypeLongVideo": "Video",
     "contentTypeShort": "Short",
     "contentTypeLiveStream": "Live",
-    "shortsAutoFilter": "This channel is mostly Shorts — auto-filtered to show Shorts only"
+    "shortsAutoFilter": "This channel is mostly Shorts — auto-filtered to show Shorts only",
+    "contentTypeTextPost": "Text",
+    "filterTextPost": "Text Post",
+    "contentTypePodcast": "Podcast",
+    "filterPodcast": "Podcast",
+    "transcriptAvailable": "Transcript available",
+    "transcriptUnavailable": "Transcription required"
   },
   "queue": {
     "position": "Position #{position} in your queue",

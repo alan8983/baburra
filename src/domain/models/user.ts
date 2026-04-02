@@ -37,6 +37,7 @@ export const CREDIT_COSTS = {
   video_transcription_per_min: 5,
   short_transcription: 3,
   reroll_analysis: 3,
+  podcast_transcript_analysis: 2,
 } as const;
 
 // Backward compatibility alias (deprecated — use CREDIT_LIMITS)

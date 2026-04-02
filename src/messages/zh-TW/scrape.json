@@ -51,7 +51,13 @@
     "contentTypeLongVideo": "影片",
     "contentTypeShort": "短影片",
     "contentTypeLiveStream": "直播",
-    "shortsAutoFilter": "此頻道以短影片為主，已自動選取短影片"
+    "shortsAutoFilter": "此頻道以短影片為主，已自動選取短影片",
+    "contentTypeTextPost": "文字",
+    "filterTextPost": "文字貼文",
+    "contentTypePodcast": "Podcast",
+    "filterPodcast": "Podcast",
+    "transcriptAvailable": "有逐字稿",
+    "transcriptUnavailable": "需轉錄"
   },
   "queue": {
     "position": "您的佇列位置: 第 {position} 位",

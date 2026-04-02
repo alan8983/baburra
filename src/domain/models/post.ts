@@ -10,6 +10,7 @@ export type SourcePlatform =
   | 'instagram'
   | 'youtube'
   | 'youtube_short'
+  | 'tiktok'
   | 'manual';
 
 export const SENTIMENT_LABELS: Record<Sentiment, string> = {

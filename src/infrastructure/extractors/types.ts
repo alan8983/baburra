@@ -13,6 +13,8 @@ export interface UrlFetchResult {
     | 'instagram'
     | 'youtube'
     | 'youtube_short'
+    | 'tiktok'
+    | 'podcast'
     | 'manual';
 
   // Optional fields

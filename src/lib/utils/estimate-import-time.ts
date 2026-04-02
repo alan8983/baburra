@@ -24,7 +24,7 @@ export function estimateUrlSeconds(input: UrlEstimateInput): number {
   if (input.hasCaptions) return 8;
 
   const minutes = Math.ceil((input.durationSeconds || 600) / 60);
-  const downloadTime = 12; // yt-dlp ~10-15s
+  const downloadTime = 12; // ytdl-core ~10-15s
   const transcribeRate = 1; // Deepgram ~1s/min
   const analysisTime = 15; // sentiment + arguments
   return downloadTime + minutes * transcribeRate + analysisTime;
