@@ -1,0 +1,13 @@
+{
+  "title": "你已加入候補名單",
+  "subtitle": "Beta 名額已滿",
+  "positionLabel": "你的排隊位置",
+  "totalWaiting": "共 {total} 人等候中",
+  "notifyMessage": "當有名額開放時，我們會透過 Email 通知你。你不需要做任何事情，靜候佳音即可！",
+  "logout": "登出",
+  "capacity": {
+    "full": "Beta 名額已滿 — 你將被加入候補名單",
+    "nearCapacity": "剩餘名額有限",
+    "open": ""
+  }
+}

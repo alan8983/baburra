@@ -29,6 +29,7 @@ export const ROUTES = {
   SETTINGS: '/settings',
   SCRAPE: '/scrape',
   SUBSCRIPTIONS: '/subscriptions',
+  WAITLIST: '/waitlist',
 } as const;
 
 // API 路由
@@ -105,6 +106,15 @@ export const API_ROUTES = {
   SUBSCRIPTIONS: '/api/subscriptions',
   SUBSCRIPTION_DELETE: (sourceId: string) => `/api/subscriptions/${sourceId}`,
   KOL_SOURCES: (kolId: string) => `/api/kols/${kolId}/sources`,
+
+  // Waitlist
+  WAITLIST_POSITION: '/api/waitlist/position',
+
+  // Auth Capacity (public)
+  AUTH_CAPACITY: '/api/auth/capacity',
+
+  // Admin
+  ADMIN_ACTIVATE_USERS: '/api/admin/activate-users',
 
   // Cron
   CRON_PROCESS_JOBS: '/api/cron/process-jobs',

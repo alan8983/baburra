@@ -1,4 +1,5 @@
 import type { SubscriptionTier } from '@/domain/models/user';
+import { isBetaMode } from '@/lib/constants/billing';
 
 export type Feature =
   | 'argument_cards'
@@ -41,6 +42,12 @@ const TIER_RANK: Record<SubscriptionTier, number> = {
 
 export function getFeatureAccess(feature: Feature, userTier: SubscriptionTier): FeatureAccess {
   const config = FEATURE_MAP[feature];
+
+  // Beta mode: all features unlocked for all users
+  if (isBetaMode()) {
+    return { gate: 'full_access', requiredTier: config.requiredTier };
+  }
+
   const hasAccess = TIER_RANK[userTier] >= TIER_RANK[config.requiredTier];
 
   if (hasAccess) {

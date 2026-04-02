@@ -139,6 +139,10 @@
     "pending": "Period not yet elapsed",
     "noData": "No price data available"
   },
+  "betaBanner": {
+    "message": "Open Beta — {credits} credits/week",
+    "feedback": "Give feedback"
+  },
   "errors": {
     "generic": "An error occurred, please try again later",
     "network": "Network connection error, please try again later",

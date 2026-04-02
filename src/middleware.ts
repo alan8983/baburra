@@ -12,6 +12,7 @@ const publicRoutes = [
   '/auth/callback',
   '/reset-password',
   '/reset-password/confirm',
+  '/waitlist',
 ];
 
 // API 路由（部分需要認證）
@@ -109,6 +110,41 @@ export async function middleware(request: NextRequest) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('next', pathname);
     return NextResponse.redirect(loginUrl);
+  }
+
+  // Waitlist enforcement: check profiles.status for authenticated users
+  // Use service role key to bypass RLS
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (serviceRoleKey) {
+    const adminClient = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceRoleKey, {
+      cookies: {
+        getAll() {
+          return [];
+        },
+        setAll() {},
+      },
+    });
+
+    const { data: profile } = await adminClient
+      .from('profiles')
+      .select('status')
+      .eq('id', user.id)
+      .single();
+
+    if (profile?.status === 'waitlisted') {
+      // Allow access to waitlist page and its API
+      if (pathname === '/waitlist' || pathname.startsWith('/api/waitlist/')) {
+        return response;
+      }
+
+      // API routes: return 403
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json({ error: 'Waitlisted' }, { status: 403 });
+      }
+
+      // Page routes: redirect to waitlist
+      return NextResponse.redirect(new URL('/waitlist', request.url));
+    }
   }
 
   return response;

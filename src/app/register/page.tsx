@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { Loader2, Mail, Lock, User, AlertCircle } from 'lucide-react';
@@ -17,6 +17,7 @@ import { BrandPanel } from '@/components/auth/brand-panel';
 
 function RegisterForm() {
   const t = useTranslations('auth');
+  const tWaitlist = useTranslations('waitlist');
 
   const { signUp, signInWithGoogle, loading, error } = useAuth();
 
@@ -26,6 +27,16 @@ function RegisterForm() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [capacityStatus, setCapacityStatus] = useState<'open' | 'near_capacity' | 'full' | null>(
+    null
+  );
+
+  useEffect(() => {
+    fetch('/api/auth/capacity')
+      .then((res) => res.json())
+      .then((data) => setCapacityStatus(data.status))
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,6 +95,20 @@ function RegisterForm() {
             <CardDescription>{t('register.description')}</CardDescription>
           </CardHeader>
           <CardContent>
+            {capacityStatus && capacityStatus !== 'open' && (
+              <div
+                className={`mb-4 rounded-lg border p-3 text-sm ${
+                  capacityStatus === 'full'
+                    ? 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300'
+                    : 'border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-950/30 dark:text-yellow-300'
+                }`}
+              >
+                {capacityStatus === 'full'
+                  ? tWaitlist('capacity.full')
+                  : tWaitlist('capacity.nearCapacity')}
+              </div>
+            )}
+
             {displayError && (
               <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300">
                 <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />

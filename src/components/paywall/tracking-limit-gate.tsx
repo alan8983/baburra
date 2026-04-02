@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useUpgradePrompt } from '@/components/paywall/upgrade-prompt';
 import { useUnsubscribe, type Subscription } from '@/hooks/use-subscriptions';
-import { TIER_LIMITS } from '@/lib/constants/tiers';
+import { getEffectiveKolLimit } from '@/lib/constants/tiers';
 import type { SubscriptionTier } from '@/domain/models/user';
 
 interface TrackingLimitGateProps {
@@ -31,11 +31,11 @@ export function TrackingLimitGate({
   const t = useTranslations('paywall');
   const { openUpgrade } = useUpgradePrompt();
   const unsubscribe = useUnsubscribe();
-  const limit = TIER_LIMITS[userTier].kolTracking;
+  const limit = getEffectiveKolLimit(userTier);
   const current = subscriptions.length;
 
   const nextTier = userTier === 'free' ? 'pro' : 'max';
-  const nextLimit = TIER_LIMITS[nextTier].kolTracking;
+  const nextLimit = getEffectiveKolLimit(nextTier);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

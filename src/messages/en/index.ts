@@ -14,6 +14,7 @@ import importMessages from './import.json';
 import scrape from './scrape.json';
 import subscriptions from './subscriptions.json';
 import paywall from './paywall.json';
+import waitlist from './waitlist.json';
 
 const enMessages = {
   common,
@@ -31,6 +32,7 @@ const enMessages = {
   scrape,
   subscriptions,
   paywall,
+  waitlist,
 };
 
 export default enMessages;

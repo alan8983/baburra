@@ -1,0 +1,13 @@
+{
+  "title": "You're on the Waitlist",
+  "subtitle": "Beta is currently full",
+  "positionLabel": "Your position",
+  "totalWaiting": "{total} people waiting",
+  "notifyMessage": "We'll notify you by email when a spot opens up. You don't need to do anything — just sit tight!",
+  "logout": "Log out",
+  "capacity": {
+    "full": "Beta is full — you'll be added to the waitlist",
+    "nearCapacity": "Limited spots remaining",
+    "open": ""
+  }
+}

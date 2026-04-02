@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { useUserTier } from '@/hooks/use-feature-gate';
 import { CheckCircle2 } from 'lucide-react';
+import { BILLING_MODE } from '@/lib/constants/billing';
 
 type UpgradeTier = 'pro' | 'max';
 
@@ -35,6 +36,8 @@ export function UpgradePromptProvider({ children }: { children: React.ReactNode 
   const t = useTranslations('paywall');
 
   const openUpgrade = useCallback((tier: UpgradeTier) => {
+    // Beta mode: don't show upgrade prompts
+    if (BILLING_MODE === 'beta') return;
     setTargetTier(tier);
     setOpen(true);
   }, []);
