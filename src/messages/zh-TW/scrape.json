@@ -50,7 +50,8 @@
     "filterLiveStream": "直播",
     "contentTypeLongVideo": "影片",
     "contentTypeShort": "短影片",
-    "contentTypeLiveStream": "直播"
+    "contentTypeLiveStream": "直播",
+    "shortsAutoFilter": "此頻道以短影片為主，已自動選取短影片"
   },
   "queue": {
     "position": "您的佇列位置: 第 {position} 位",

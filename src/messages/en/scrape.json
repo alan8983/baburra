@@ -50,7 +50,8 @@
     "filterLiveStream": "Live Stream",
     "contentTypeLongVideo": "Video",
     "contentTypeShort": "Short",
-    "contentTypeLiveStream": "Live"
+    "contentTypeLiveStream": "Live",
+    "shortsAutoFilter": "This channel is mostly Shorts — auto-filtered to show Shorts only"
   },
   "queue": {
     "position": "Position #{position} in your queue",

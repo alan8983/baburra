@@ -454,7 +454,10 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
               className="text-primary hidden items-center gap-1 text-sm hover:underline sm:inline-flex"
             >
               <ExternalLink className="h-3 w-3" />
-              {t('detail.sourceLink', { platform: post.sourcePlatform })}
+              {t('detail.sourceLink', {
+                platform:
+                  post.sourcePlatform === 'youtube_short' ? 'YouTube Short' : post.sourcePlatform,
+              })}
             </a>
           )}
         </div>
@@ -532,7 +535,10 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
             className="text-primary inline-flex items-center gap-1 text-sm hover:underline sm:hidden"
           >
             <ExternalLink className="h-3 w-3" />
-            {t('detail.sourceLink', { platform: post.sourcePlatform })}
+            {t('detail.sourceLink', {
+              platform:
+                post.sourcePlatform === 'youtube_short' ? 'YouTube Short' : post.sourcePlatform,
+            })}
           </a>
         )}
       </div>

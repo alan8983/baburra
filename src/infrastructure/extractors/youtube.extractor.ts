@@ -108,11 +108,14 @@ export class YouTubeExtractor extends SocialMediaExtractor {
 
     const durationSeconds = pageData.durationSeconds;
 
+    const isShort = (durationSeconds ?? 0) > 0 && durationSeconds! <= 60;
+
     let estimatedCreditCost: number;
     if (hasCaptions) {
       estimatedCreditCost = CREDIT_COSTS.youtube_caption_analysis;
+    } else if (isShort) {
+      estimatedCreditCost = CREDIT_COSTS.short_transcription;
     } else {
-      // Gemini transcription cost: 7 credits per minute
       const minutes = Math.ceil((durationSeconds || 60) / 60);
       estimatedCreditCost = minutes * CREDIT_COSTS.video_transcription_per_min;
     }
@@ -188,10 +191,12 @@ export class YouTubeExtractor extends SocialMediaExtractor {
       this.validateContent(content);
     }
 
+    const isShort = (pageData.durationSeconds ?? 0) > 0 && pageData.durationSeconds! <= 60;
+
     return {
       content,
       sourceUrl: url,
-      sourcePlatform: 'youtube',
+      sourcePlatform: isShort ? 'youtube_short' : 'youtube',
       title: metadata.title || null,
       images: metadata.thumbnail_url ? [metadata.thumbnail_url] : [],
       postedAt: apiPublishDate ?? pageData.publishDate,
