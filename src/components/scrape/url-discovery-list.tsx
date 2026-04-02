@@ -64,15 +64,6 @@ export function UrlDiscoveryList({
   const t = useTranslations('scrape.discover');
   const tCommon = useTranslations('common');
   const { data: usage } = useAiUsage();
-  const [selected, setSelected] = useState<Set<string>>(
-    () => new Set(discoveredUrls.map((u) => u.url))
-  );
-
-  // Content type filter state
-  const [activeFilters, setActiveFilters] = useState<Set<ContentType>>(
-    () => new Set(['long_video', 'short', 'live_stream', 'text_post', 'podcast_episode'])
-  );
-
   // Count URLs by content type
   const contentTypeCounts = useMemo(() => {
     const counts: Record<ContentType, number> = {
@@ -88,6 +79,24 @@ export function UrlDiscoveryList({
     }
     return counts;
   }, [discoveredUrls]);
+
+  // Auto-filter: if >60% of URLs are Shorts, default to showing only Shorts
+  const shortsRatio =
+    discoveredUrls.length > 0 ? contentTypeCounts.short / discoveredUrls.length : 0;
+  const shouldAutoFilterShorts = shortsRatio > 0.6;
+
+  const [selected, setSelected] = useState<Set<string>>(
+    () => new Set(discoveredUrls.map((u) => u.url))
+  );
+
+  // Content type filter state
+  const [activeFilters, setActiveFilters] = useState<Set<ContentType>>(() =>
+    shouldAutoFilterShorts
+      ? new Set(['short'])
+      : new Set(['long_video', 'short', 'live_stream', 'text_post', 'podcast_episode'])
+  );
+
+  const [autoFilterApplied] = useState(shouldAutoFilterShorts);
 
   // Only show filter bar if there's more than one content type present
   const presentTypes = useMemo(
@@ -215,26 +224,31 @@ export function UrlDiscoveryList({
       <CardContent className="space-y-4">
         {/* Content type filter toggles */}
         {showFilters && (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant={allFiltersActive ? 'default' : 'outline'}
-              size="sm"
-              className="h-7 rounded-full px-3 text-xs"
-              onClick={toggleAllFilters}
-            >
-              {t('filterAll')} ({discoveredUrls.length})
-            </Button>
-            {presentTypes.map((ct) => (
+          <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
               <Button
-                key={ct}
-                variant={activeFilters.has(ct) ? 'default' : 'outline'}
+                variant={allFiltersActive ? 'default' : 'outline'}
                 size="sm"
                 className="h-7 rounded-full px-3 text-xs"
-                onClick={() => toggleFilter(ct)}
+                onClick={toggleAllFilters}
               >
-                {t(FILTER_LABEL_KEYS[ct])} ({contentTypeCounts[ct]})
+                {t('filterAll')} ({discoveredUrls.length})
               </Button>
-            ))}
+              {presentTypes.map((ct) => (
+                <Button
+                  key={ct}
+                  variant={activeFilters.has(ct) ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-7 rounded-full px-3 text-xs"
+                  onClick={() => toggleFilter(ct)}
+                >
+                  {t(FILTER_LABEL_KEYS[ct])} ({contentTypeCounts[ct]})
+                </Button>
+              ))}
+            </div>
+            {autoFilterApplied && (
+              <p className="text-muted-foreground text-xs">{t('shortsAutoFilter')}</p>
+            )}
           </div>
         )}
 

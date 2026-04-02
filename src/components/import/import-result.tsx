@@ -127,8 +127,13 @@ export function ImportResult({ result, onImportMore, onProceed, proceedLabel }: 
                     )}
 
                     {urlResult.sourcePlatform && (
-                      <Badge variant="outline" className="text-xs">
-                        {urlResult.sourcePlatform}
+                      <Badge
+                        variant="outline"
+                        className={`text-xs ${urlResult.sourcePlatform === 'youtube_short' ? 'border-purple-200 bg-purple-50 text-purple-700' : ''}`}
+                      >
+                        {urlResult.sourcePlatform === 'youtube_short'
+                          ? 'Short'
+                          : urlResult.sourcePlatform}
                       </Badge>
                     )}
 

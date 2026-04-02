@@ -35,6 +35,7 @@ export const CREDIT_COSTS = {
   text_analysis: 1,
   youtube_caption_analysis: 2,
   video_transcription_per_min: 5,
+  short_transcription: 3,
   reroll_analysis: 3,
   podcast_transcript_analysis: 2,
 } as const;

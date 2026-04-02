@@ -37,8 +37,9 @@ import {
   extractArguments,
   extractAtHandles,
 } from '@/domain/services/ai.service';
-import { getAiModelVersion } from '@/infrastructure/api/gemini.client';
+import { getAiModelVersion, geminiTranscribeShort } from '@/infrastructure/api/gemini.client';
 import { downloadYoutubeAudio } from '@/infrastructure/api/youtube-audio.client';
+import { isLikelyInvestmentContent } from '@/domain/services/content-filter';
 import { deepgramTranscribe, extractActualDuration } from '@/infrastructure/api/deepgram.client';
 import { CREDIT_COSTS } from '@/domain/models/user';
 import type { Sentiment, SourcePlatform } from '@/domain/models/post';
@@ -183,10 +184,24 @@ export async function processUrl(
   let contentForAnalysis: string;
   let creditsConsumed = 0;
 
+  // Detect Shorts: <=60s YouTube videos
+  const isShort =
+    (fetchResult.sourcePlatform === 'youtube_short' || fetchResult.sourcePlatform === 'youtube') &&
+    (fetchResult.durationSeconds ?? 0) > 0 &&
+    fetchResult.durationSeconds! <= 60;
+
+  // Override sourcePlatform for Shorts
+  if (isShort && fetchResult.sourcePlatform !== 'youtube_short') {
+    fetchResult.sourcePlatform = 'youtube_short';
+  }
+
   // Steps 3-9 are wrapped in try/catch to refund credits on failure
   try {
-    if (fetchResult.content === null && fetchResult.sourcePlatform === 'youtube') {
-      // YouTube video with no captions — need Gemini transcription
+    if (
+      fetchResult.content === null &&
+      (fetchResult.sourcePlatform === 'youtube' || fetchResult.sourcePlatform === 'youtube_short')
+    ) {
+      // YouTube video with no captions — need transcription
       const durationSeconds = fetchResult.durationSeconds;
 
       // Reject videos exceeding max duration
@@ -198,14 +213,24 @@ export async function processUrl(
         };
       }
 
+      // Shorts pre-filter: check title/description for investment relevance before transcription
+      if (isShort) {
+        const title = fetchResult.title ?? '';
+        const description = ''; // description not available on UrlFetchResult
+        if (!isLikelyInvestmentContent(title, description)) {
+          return { url, status: 'error', error: 'filtered_not_investment' };
+        }
+      }
+
       // Check transcript cache first
       const cachedTranscript = await findTranscriptByUrl(fetchResult.sourceUrl);
       if (cachedTranscript) {
         contentForAnalysis = cachedTranscript.content;
       } else {
-        // Calculate credit cost for transcription
-        const minutes = Math.ceil((durationSeconds || 60) / 60); // Default 1 min if unknown
-        const transcriptionCost = minutes * CREDIT_COSTS.video_transcription_per_min;
+        // Determine credit cost: flat rate for Shorts, per-minute for long videos
+        const transcriptionCost = isShort
+          ? CREDIT_COSTS.short_transcription
+          : Math.ceil((durationSeconds || 60) / 60) * CREDIT_COSTS.video_transcription_per_min;
 
         // Consume credits for transcription (unless exempt)
         if (!quotaExempt) {
@@ -225,29 +250,55 @@ export async function processUrl(
           }
         }
 
-        // Transcribe via Deepgram Nova-3: download audio → transcribe
         let transcriptText: string;
 
-        try {
-          console.log(
-            `[Pipeline] Captionless video (${durationSeconds ? Math.ceil(durationSeconds / 60) + 'min' : 'unknown duration'}) — using Deepgram transcription`
-          );
+        if (isShort) {
+          // Shorts: try Gemini file_uri first, fall back to Deepgram
+          try {
+            console.log(
+              `[Pipeline] Captionless Short (${durationSeconds}s) — trying Gemini file_uri transcription`
+            );
+            transcriptText = await geminiTranscribeShort(fetchResult.sourceUrl);
+          } catch (geminiErr) {
+            console.warn(
+              `[Pipeline] Gemini file_uri failed for Short, falling back to Deepgram:`,
+              geminiErr instanceof Error ? geminiErr.message : String(geminiErr)
+            );
+            try {
+              const audio = await downloadYoutubeAudio(fetchResult.sourceUrl, {
+                maxDurationSeconds: MAX_VIDEO_DURATION_SECONDS,
+              });
+              transcriptText = await deepgramTranscribe(audio.buffer, audio.mimeType);
+            } catch (deepgramErr) {
+              console.error(
+                `[Transcription failed] URL: ${fetchResult.sourceUrl} | pipeline=deepgram-fallback | Error: ${deepgramErr instanceof Error ? deepgramErr.message : String(deepgramErr)}`
+              );
+              throw deepgramErr;
+            }
+          }
+        } else {
+          // Long videos: Deepgram only
+          try {
+            console.log(
+              `[Pipeline] Captionless video (${durationSeconds ? Math.ceil(durationSeconds / 60) + 'min' : 'unknown duration'}) — using Deepgram transcription`
+            );
 
-          const audio = await downloadYoutubeAudio(fetchResult.sourceUrl, {
-            maxDurationSeconds: MAX_VIDEO_DURATION_SECONDS,
-          });
+            const audio = await downloadYoutubeAudio(fetchResult.sourceUrl, {
+              maxDurationSeconds: MAX_VIDEO_DURATION_SECONDS,
+            });
 
-          transcriptText = await deepgramTranscribe(audio.buffer, audio.mimeType);
-        } catch (transcribeErr) {
-          console.error(
-            `[Transcription failed] URL: ${fetchResult.sourceUrl} | pipeline=deepgram | Error: ${transcribeErr instanceof Error ? transcribeErr.message : String(transcribeErr)}`
-          );
-          throw transcribeErr;
+            transcriptText = await deepgramTranscribe(audio.buffer, audio.mimeType);
+          } catch (transcribeErr) {
+            console.error(
+              `[Transcription failed] URL: ${fetchResult.sourceUrl} | pipeline=deepgram | Error: ${transcribeErr instanceof Error ? transcribeErr.message : String(transcribeErr)}`
+            );
+            throw transcribeErr;
+          }
         }
         contentForAnalysis = transcriptText;
 
-        // Post-transcription credit reconciliation
-        if (!quotaExempt && creditsConsumed > 0) {
+        // Post-transcription credit reconciliation (skip for flat-rate Shorts)
+        if (!isShort && !quotaExempt && creditsConsumed > 0) {
           try {
             const actualDurationSec = extractActualDuration(transcriptText);
             if (actualDurationSec !== null) {
@@ -266,10 +317,11 @@ export async function processUrl(
         }
 
         // Save to transcript cache
+        const transcriptSource = isShort ? 'gemini' : 'deepgram';
         await saveTranscript({
           sourceUrl: fetchResult.sourceUrl,
           content: transcriptText,
-          source: 'deepgram',
+          source: transcriptSource,
           durationSeconds: durationSeconds ?? undefined,
         }).catch((err) => console.error('Failed to cache transcript:', err));
       }
@@ -277,10 +329,11 @@ export async function processUrl(
       contentForAnalysis = fetchResult.content;
 
       // Determine credit cost based on platform
-      const creditCost =
-        fetchResult.sourcePlatform === 'youtube'
-          ? CREDIT_COSTS.youtube_caption_analysis
-          : CREDIT_COSTS.text_analysis;
+      const isYouTube =
+        fetchResult.sourcePlatform === 'youtube' || fetchResult.sourcePlatform === 'youtube_short';
+      const creditCost = isYouTube
+        ? CREDIT_COSTS.youtube_caption_analysis
+        : CREDIT_COSTS.text_analysis;
 
       // Consume credits (unless exempt)
       if (!quotaExempt) {
@@ -288,7 +341,7 @@ export async function processUrl(
           await consumeCredits(
             userId,
             creditCost,
-            fetchResult.sourcePlatform === 'youtube' ? 'youtube_caption_analysis' : 'text_analysis'
+            isYouTube ? 'youtube_caption_analysis' : 'text_analysis'
           );
           creditsConsumed += creditCost;
         } catch (quotaErr) {
@@ -305,7 +358,7 @@ export async function processUrl(
       }
 
       // Save YouTube captions to transcript cache for future use
-      if (fetchResult.sourcePlatform === 'youtube' && fetchResult.captionSource === 'caption') {
+      if (isYouTube && fetchResult.captionSource === 'caption') {
         await saveTranscript({
           sourceUrl: fetchResult.sourceUrl,
           content: fetchResult.content,

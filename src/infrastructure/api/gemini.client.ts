@@ -223,3 +223,79 @@ export async function generateJson<T>(
     throw new Error(`Failed to parse Gemini response as JSON: ${cleanedText.slice(0, 200)}...`);
   }
 }
+
+/**
+ * Transcribe a short YouTube video (<=60s) using Gemini file_uri.
+ * Sends the YouTube URL directly to Gemini as a video file reference.
+ * Returns the verbatim transcript text.
+ */
+export async function geminiTranscribeShort(youtubeUrl: string): Promise<string> {
+  const apiKey = getApiKey();
+  const model = 'gemini-2.5-flash-lite';
+  const url = `${GEMINI_BASE}/models/${model}:generateContent`;
+  const TRANSCRIBE_TIMEOUT_MS = 60_000;
+
+  const requestBody = {
+    contents: [
+      {
+        parts: [
+          {
+            fileData: {
+              fileUri: youtubeUrl,
+              mimeType: 'video/*',
+            },
+          },
+          {
+            text: 'Transcribe this video verbatim. Output ONLY the spoken words, no timestamps, no speaker labels, no commentary. If the speech is in Chinese, output in Chinese. If in English, output in English. If mixed, preserve the original languages.',
+          },
+        ],
+      },
+    ],
+    generationConfig: {
+      temperature: 0.1,
+      maxOutputTokens: 4096,
+    },
+  };
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), TRANSCRIBE_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+      body: JSON.stringify(requestBody),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(
+        `Gemini transcription API error ${res.status}: ${errorText || res.statusText}`
+      );
+    }
+
+    const data = (await res.json()) as GeminiResponse;
+
+    if (!data.candidates || data.candidates.length === 0) {
+      throw new Error('Gemini transcription returned no candidates');
+    }
+
+    const candidate = data.candidates[0];
+    if (!candidate.content?.parts || candidate.content.parts.length === 0) {
+      throw new Error('Gemini transcription returned empty content');
+    }
+
+    return candidate.content.parts.map((p) => p.text).join('');
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(`Gemini transcription timed out after ${TRANSCRIBE_TIMEOUT_MS}ms`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}

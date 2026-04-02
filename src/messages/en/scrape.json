@@ -51,6 +51,7 @@
     "contentTypeLongVideo": "Video",
     "contentTypeShort": "Short",
     "contentTypeLiveStream": "Live",
+    "shortsAutoFilter": "This channel is mostly Shorts — auto-filtered to show Shorts only",
     "contentTypeTextPost": "Text",
     "filterTextPost": "Text Post",
     "contentTypePodcast": "Podcast",

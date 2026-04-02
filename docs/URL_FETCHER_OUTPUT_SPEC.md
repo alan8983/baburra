@@ -55,9 +55,10 @@ interface UrlFetchResult {
    * - 'facebook': Facebook 平台
    * - 'threads': Meta Threads 平台
    * - 'youtube': YouTube 影片（逐字稿擷取）
+   * - 'youtube_short': YouTube 短影片（<=60秒，平價轉錄）
    * - 'manual': 其他來源或手動輸入
    */
-  sourcePlatform: 'twitter' | 'facebook' | 'threads' | 'youtube' | 'manual';
+  sourcePlatform: 'twitter' | 'facebook' | 'threads' | 'youtube' | 'youtube_short' | 'manual';
 
   // ========== 選填欄位 ==========
 
@@ -428,7 +429,7 @@ const url = 'https://www.youtube.com/watch?v=abcdefg1234';
 - [ ] `content` 長度在 10-10,000 字元之間
 - [ ] `content` 保留適當的換行符號
 - [ ] `sourceUrl` 是完整的 URL
-- [ ] `sourcePlatform` 正確識別平台類型（twitter / facebook / threads / youtube / manual）
+- [ ] `sourcePlatform` 正確識別平台類型（twitter / facebook / threads / youtube / youtube_short / manual）
 - [ ] `images` 陣列包含完整的圖片 URL
 - [ ] `postedAt` 是有效的日期格式
 - [ ] 錯誤情況都有適當的錯誤代碼和訊息
@@ -443,3 +444,4 @@ const url = 'https://www.youtube.com/watch?v=abcdefg1234';
 | ---- | ---------- | ------------------------------------------------------------------------------------------------------------------ |
 | 1.0  | 2026-02-05 | 初始版本 - 定義 URL 抓取模塊 Output Spec                                                                           |
 | 1.1  | 2026-02-18 | 新增 Threads、YouTube 平台至 sourcePlatform；補充各平台解析說明與 Twitter oEmbed 限制；新增 YouTube 逐字稿測試案例 |
+| 1.2  | 2026-04-02 | 新增 `youtube_short` 來源平台值，用於 YouTube 短影片（<=60秒）的獨立追蹤與平價計費 |
