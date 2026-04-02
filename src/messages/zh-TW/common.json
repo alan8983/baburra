@@ -139,6 +139,10 @@
     "pending": "期間尚未到期",
     "noData": "無股價資料"
   },
+  "betaBanner": {
+    "message": "Open Beta — 每週 {credits} 點",
+    "feedback": "提供回饋"
+  },
   "errors": {
     "generic": "發生錯誤，請稍後再試",
     "network": "網路連線錯誤，請稍後再試",

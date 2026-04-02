@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { useFeatureGate } from '@/hooks/use-feature-gate';
 import { Button } from '@/components/ui/button';
 import { useUpgradePrompt } from '@/components/paywall/upgrade-prompt';
+import { BILLING_MODE } from '@/lib/constants/billing';
 import type { Feature } from '@/domain/services/feature-gate.service';
 
 interface BlurGateProps {
@@ -17,6 +18,11 @@ export function BlurGate({ feature, children }: BlurGateProps) {
   const { canAccess, isBlurred, previewLimit, requiredTier } = useFeatureGate(feature);
   const t = useTranslations('paywall');
   const { openUpgrade } = useUpgradePrompt();
+
+  // Beta mode: render children without blur
+  if (BILLING_MODE === 'beta') {
+    return <>{children}</>;
+  }
 
   if (canAccess || !isBlurred) {
     return <>{children}</>;

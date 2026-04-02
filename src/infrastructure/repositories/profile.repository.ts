@@ -3,7 +3,7 @@
  */
 
 import { createAdminClient } from '@/infrastructure/supabase/admin';
-import type { UpdateProfileInput, ColorPalette } from '@/domain/models/user';
+import type { UpdateProfileInput, ColorPalette, ProfileStatus } from '@/domain/models/user';
 
 const DEFAULT_TIMEZONE = 'Asia/Taipei';
 
@@ -64,7 +64,7 @@ export async function getProfile(userId: string) {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('display_name, timezone, color_palette, first_import_free')
+    .select('display_name, timezone, color_palette, first_import_free, status')
     .eq('id', userId)
     .single();
 
@@ -74,6 +74,7 @@ export async function getProfile(userId: string) {
         displayName: null,
         timezone: DEFAULT_TIMEZONE,
         colorPalette: 'asian' as ColorPalette,
+        status: 'active' as ProfileStatus,
         firstImportFree: true,
       };
     }
@@ -84,6 +85,7 @@ export async function getProfile(userId: string) {
     displayName: data.display_name as string | null,
     timezone: (data.timezone as string) || DEFAULT_TIMEZONE,
     colorPalette: ((data.color_palette as string) || 'asian') as ColorPalette,
+    status: ((data.status as string) || 'active') as ProfileStatus,
     firstImportFree: data.first_import_free === true,
   };
 }

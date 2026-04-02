@@ -1,7 +1,10 @@
 // User 領域模型
 
+import { isBetaMode, BETA_CREDIT_LIMIT } from '@/lib/constants/billing';
+
 export type SubscriptionTier = 'free' | 'pro' | 'max';
 export type ColorPalette = 'american' | 'asian';
+export type ProfileStatus = 'active' | 'waitlisted';
 
 export interface Profile {
   id: string;
@@ -12,6 +15,7 @@ export interface Profile {
   creditBalance: number;
   creditResetAt: Date | null;
   subscriptionTier: SubscriptionTier;
+  status: ProfileStatus;
   firstImportFree: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -30,6 +34,11 @@ export const CREDIT_LIMITS = {
   pro: 4200,
   max: 21000,
 } as const;
+
+export function getEffectiveCreditLimit(tier: SubscriptionTier): number {
+  if (isBetaMode()) return BETA_CREDIT_LIMIT;
+  return CREDIT_LIMITS[tier];
+}
 
 export const CREDIT_COSTS = {
   text_analysis: 1,
