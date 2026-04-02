@@ -6,6 +6,7 @@ import {
   ArrowLeft,
   Youtube,
   Twitter,
+  Headphones,
   Loader2,
   Captions,
   CaptionsOff,
@@ -39,18 +40,21 @@ const CONTENT_TYPE_COLORS: Record<ContentType, string> = {
   long_video: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
   short: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
   live_stream: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+  podcast_episode: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
 };
 
 const CONTENT_TYPE_LABEL_KEYS: Record<ContentType, string> = {
   long_video: 'contentTypeLongVideo',
   short: 'contentTypeShort',
   live_stream: 'contentTypeLiveStream',
+  podcast_episode: 'contentTypePodcast',
 };
 
 const FILTER_LABEL_KEYS: Record<ContentType, string> = {
   long_video: 'filterLongVideo',
   short: 'filterShort',
   live_stream: 'filterLiveStream',
+  podcast_episode: 'filterPodcast',
 };
 
 export function UrlDiscoveryList({
@@ -72,12 +76,17 @@ export function UrlDiscoveryList({
 
   // Content type filter state
   const [activeFilters, setActiveFilters] = useState<Set<ContentType>>(
-    () => new Set(['long_video', 'short', 'live_stream'])
+    () => new Set(['long_video', 'short', 'live_stream', 'podcast_episode'])
   );
 
   // Count URLs by content type
   const contentTypeCounts = useMemo(() => {
-    const counts: Record<ContentType, number> = { long_video: 0, short: 0, live_stream: 0 };
+    const counts: Record<ContentType, number> = {
+      long_video: 0,
+      short: 0,
+      live_stream: 0,
+      podcast_episode: 0,
+    };
     for (const item of discoveredUrls) {
       const ct = item.contentType ?? 'long_video';
       counts[ct]++;
@@ -88,7 +97,7 @@ export function UrlDiscoveryList({
   // Only show filter bar if there's more than one content type present
   const presentTypes = useMemo(
     () =>
-      (['long_video', 'short', 'live_stream'] as ContentType[]).filter(
+      (['long_video', 'short', 'live_stream', 'podcast_episode'] as ContentType[]).filter(
         (ct) => contentTypeCounts[ct] > 0
       ),
     [contentTypeCounts]
@@ -163,8 +172,14 @@ export function UrlDiscoveryList({
   const remainingBalance = usage?.balance ?? usage?.remaining ?? 0;
   const insufficientCredits = !firstImportFree && totalEstimatedCredits > remainingBalance;
 
-  const PlatformIcon = platform === 'youtube' ? Youtube : Twitter;
-  const platformColor = platform === 'youtube' ? 'text-red-500' : 'text-sky-500';
+  const PlatformIcon =
+    platform === 'youtube' ? Youtube : platform === 'podcast' ? Headphones : Twitter;
+  const platformColor =
+    platform === 'youtube'
+      ? 'text-red-500'
+      : platform === 'podcast'
+        ? 'text-emerald-500'
+        : 'text-sky-500';
 
   const formatDate = useMemo(() => {
     const fmt = new Intl.DateTimeFormat(undefined, {
@@ -285,25 +300,32 @@ export function UrlDiscoveryList({
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
-                    {/* Caption status icon (YouTube only) */}
-                    {platform === 'youtube' && hasCaptions !== undefined && (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span>
-                              {hasCaptions ? (
-                                <Captions className="h-3.5 w-3.5 text-green-500" />
-                              ) : (
-                                <CaptionsOff className="h-3.5 w-3.5 text-amber-500" />
-                              )}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {hasCaptions ? t('captionAvailable') : t('captionUnavailable')}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    )}
+                    {/* Caption/transcript status icon (YouTube + Podcast) */}
+                    {(platform === 'youtube' || platform === 'podcast') &&
+                      hasCaptions !== undefined && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span>
+                                {hasCaptions ? (
+                                  <Captions className="h-3.5 w-3.5 text-green-500" />
+                                ) : (
+                                  <CaptionsOff className="h-3.5 w-3.5 text-amber-500" />
+                                )}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {hasCaptions
+                                ? platform === 'podcast'
+                                  ? t('transcriptAvailable')
+                                  : t('captionAvailable')
+                                : platform === 'podcast'
+                                  ? t('transcriptUnavailable')
+                                  : t('captionUnavailable')}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                     {/* Credit cost badge */}
                     <Badge
                       variant="outline"
@@ -344,7 +366,7 @@ export function UrlDiscoveryList({
           {insufficientCredits && (
             <p className="mt-1 text-xs text-red-600">{t('insufficientCredits')}</p>
           )}
-          {platform === 'youtube' && !firstImportFree && (
+          {(platform === 'youtube' || platform === 'podcast') && !firstImportFree && (
             <p className="text-muted-foreground mt-1 text-xs">{t('creditNote')}</p>
           )}
         </div>

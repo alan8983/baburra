@@ -12,7 +12,7 @@ export interface Transcript {
   id: string;
   sourceUrl: string;
   content: string;
-  source: 'caption' | 'gemini' | 'deepgram';
+  source: 'caption' | 'gemini' | 'deepgram' | 'rss_transcript';
   language: string | null;
   durationSeconds: number | null;
   createdAt: Date;
@@ -33,7 +33,7 @@ function mapDbToTranscript(row: DbTranscript): Transcript {
     id: row.id,
     sourceUrl: row.source_url,
     content: row.content,
-    source: row.source as 'caption' | 'gemini' | 'deepgram',
+    source: row.source as 'caption' | 'gemini' | 'deepgram' | 'rss_transcript',
     language: row.language,
     durationSeconds: row.duration_seconds,
     createdAt: new Date(row.created_at),
@@ -62,7 +62,7 @@ export async function findTranscriptByUrl(sourceUrl: string): Promise<Transcript
 export async function saveTranscript(input: {
   sourceUrl: string;
   content: string;
-  source: 'caption' | 'gemini' | 'deepgram';
+  source: 'caption' | 'gemini' | 'deepgram' | 'rss_transcript';
   language?: string;
   durationSeconds?: number;
 }): Promise<Transcript> {

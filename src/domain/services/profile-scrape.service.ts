@@ -9,6 +9,7 @@ import {
   youtubeChannelExtractor,
   twitterProfileExtractor,
   youtubeExtractor,
+  podcastProfileExtractor,
 } from '@/infrastructure/extractors';
 import type { ProfileExtractor, DiscoveredUrl } from '@/infrastructure/extractors';
 import { CREDIT_COSTS } from '@/domain/models/user';
@@ -78,7 +79,11 @@ export interface IncrementalCheckResult {
 
 // ── Profile Extractor Registry ──
 
-const profileExtractors: ProfileExtractor[] = [youtubeChannelExtractor, twitterProfileExtractor];
+const profileExtractors: ProfileExtractor[] = [
+  youtubeChannelExtractor,
+  twitterProfileExtractor,
+  podcastProfileExtractor,
+];
 
 function getProfileExtractor(url: string): ProfileExtractor | null {
   return profileExtractors.find((e) => e.isValidProfileUrl(url)) ?? null;
@@ -119,8 +124,12 @@ export async function discoverProfileUrls(profileUrl: string): Promise<DiscoverR
       })
     );
     discoveredUrls = enriched;
+  } else if (extractor.platform === 'podcast') {
+    // Podcast URLs: credit estimates already computed by PodcastProfileExtractor
+    // (2 credits with transcript, duration × 5 without)
+    // No additional enrichment needed — pass through as-is
   } else {
-    // Non-YouTube URLs: always 1 credit (text_analysis)
+    // Non-YouTube/non-podcast URLs: always 1 credit (text_analysis)
     discoveredUrls = discoveredUrls.map((item) => ({
       ...item,
       estimatedCreditCost: CREDIT_COSTS.text_analysis,

@@ -15,12 +15,13 @@ vi.mock('youtube-transcript-plus', () => ({
 
 describe('ExtractorFactory', () => {
   describe('getSupportedPlatforms', () => {
-    it('should return twitter and youtube platforms', () => {
+    it('should return twitter, youtube, and podcast platforms', () => {
       const platforms = extractorFactory.getSupportedPlatforms();
 
       expect(platforms).toContain('twitter');
       expect(platforms).toContain('youtube');
-      expect(platforms).toHaveLength(2);
+      expect(platforms).toContain('podcast');
+      expect(platforms).toHaveLength(3);
     });
   });
 
@@ -123,11 +124,12 @@ describe('ExtractorFactory', () => {
   });
 
   describe('register', () => {
-    it('should start with twitter and youtube extractors registered', () => {
+    it('should start with twitter, youtube, and podcast extractors registered', () => {
       const factory = new ExtractorFactory();
-      expect(factory.getSupportedPlatforms()).toHaveLength(2);
+      expect(factory.getSupportedPlatforms()).toHaveLength(3);
       expect(factory.getSupportedPlatforms()).toContain('twitter');
       expect(factory.getSupportedPlatforms()).toContain('youtube');
+      expect(factory.getSupportedPlatforms()).toContain('podcast');
     });
   });
 });

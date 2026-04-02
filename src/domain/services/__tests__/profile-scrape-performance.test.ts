@@ -53,6 +53,11 @@ vi.mock('@/infrastructure/extractors', () => ({
     isValidProfileUrl: vi.fn(),
     extractProfile: vi.fn(),
   },
+  podcastProfileExtractor: {
+    platform: 'podcast',
+    isValidProfileUrl: vi.fn(),
+    extractProfile: vi.fn(),
+  },
 }));
 
 import { processJobBatch } from '../profile-scrape.service';

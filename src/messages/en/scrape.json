@@ -50,7 +50,11 @@
     "filterLiveStream": "Live Stream",
     "contentTypeLongVideo": "Video",
     "contentTypeShort": "Short",
-    "contentTypeLiveStream": "Live"
+    "contentTypeLiveStream": "Live",
+    "contentTypePodcast": "Podcast",
+    "filterPodcast": "Podcast",
+    "transcriptAvailable": "Transcript available",
+    "transcriptUnavailable": "Transcription required"
   },
   "queue": {
     "position": "Position #{position} in your queue",

@@ -15,3 +15,14 @@ export type { ProfileExtractResult, DiscoveredUrl, ContentType } from './profile
 export { ProfileExtractor } from './profile-extractor';
 export { YouTubeChannelExtractor, youtubeChannelExtractor } from './youtube-channel.extractor';
 export { TwitterProfileExtractor, twitterProfileExtractor } from './twitter-profile.extractor';
+export {
+  PodcastEpisodeExtractor,
+  podcastEpisodeExtractor,
+  encodeEpisodeUrl,
+  decodeEpisodeUrl,
+} from './podcast.extractor';
+export {
+  PodcastProfileExtractor,
+  podcastProfileExtractor,
+  isInvestmentRelevant,
+} from './podcast-profile.extractor';
