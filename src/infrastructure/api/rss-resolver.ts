@@ -1,14 +1,52 @@
 /**
  * RSS Feed Resolver — resolves Spotify, Apple Podcasts, and direct RSS URLs
  * to actual RSS feed URLs.
+ *
+ * All resolution uses free, unauthenticated APIs:
+ * - Spotify: oEmbed for show name → iTunes Search API → feedUrl
+ * - Apple: iTunes Lookup API → feedUrl
+ * - Direct RSS: passthrough
  */
 
-import { searchByTerm } from './podcast-index.client';
+/**
+ * Search iTunes for a podcast by name and return matching feed URLs.
+ * The iTunes Search API is free, requires no authentication, and indexes
+ * nearly all public podcasts worldwide.
+ */
+export async function searchItunesPodcasts(
+  query: string
+): Promise<Array<{ feedUrl: string; trackId: number; trackName: string }>> {
+  const url = new URL('https://itunes.apple.com/search');
+  url.searchParams.set('term', query);
+  url.searchParams.set('media', 'podcast');
+  url.searchParams.set('entity', 'podcast');
+  url.searchParams.set('limit', '5');
+
+  const response = await fetch(url.toString());
+
+  if (!response.ok) {
+    throw new Error(`iTunes Search API failed: ${response.status} ${response.statusText}`);
+  }
+
+  const data = (await response.json()) as {
+    resultCount: number;
+    results: Array<{ feedUrl?: string; trackId: number; trackName: string }>;
+  };
+
+  return (data.results ?? [])
+    .filter((r) => !!r.feedUrl)
+    .map((r) => ({
+      feedUrl: r.feedUrl!,
+      trackId: r.trackId,
+      trackName: r.trackName,
+    }));
+}
 
 /**
  * Resolve a Spotify show URL to an RSS feed URL.
  *
- * Flow: Extract show ID → Spotify oEmbed for show name → PodcastIndex search → feedUrl
+ * Flow: Spotify oEmbed for show name → iTunes Search API → feedUrl
+ * No API keys required.
  */
 export async function resolveSpotifyToRss(spotifyUrl: string): Promise<string> {
   // Extract show name via Spotify's oEmbed endpoint
@@ -26,11 +64,11 @@ export async function resolveSpotifyToRss(spotifyUrl: string): Promise<string> {
     throw new Error('Could not extract show name from Spotify oEmbed');
   }
 
-  // Search PodcastIndex for the show name
-  const results = await searchByTerm(showName);
+  // Search iTunes for the show name (free, no auth needed)
+  const results = await searchItunesPodcasts(showName);
 
   if (results.length === 0) {
-    throw new Error(`No podcast found in PodcastIndex for: "${showName}"`);
+    throw new Error(`No podcast found in iTunes for: "${showName}"`);
   }
 
   // Return the first match's feed URL
@@ -110,6 +148,7 @@ export function isApplePodcastUrl(url: string): boolean {
 /**
  * Resolve any supported podcast URL to an RSS feed URL.
  * Routes to the appropriate resolver based on URL pattern.
+ * No API keys required — all resolution uses free Apple/Spotify APIs.
  */
 export async function resolveToRssFeed(url: string): Promise<string> {
   if (isSpotifyShowUrl(url)) {

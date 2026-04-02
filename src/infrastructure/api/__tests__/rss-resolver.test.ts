@@ -3,16 +3,11 @@ import {
   resolveSpotifyToRss,
   resolveAppleToRss,
   resolveToRssFeed,
+  searchItunesPodcasts,
   isDirectRssUrl,
   isSpotifyShowUrl,
   isApplePodcastUrl,
 } from '../rss-resolver';
-
-vi.mock('../podcast-index.client', () => ({
-  searchByTerm: vi.fn(),
-}));
-
-import { searchByTerm } from '../podcast-index.client';
 
 describe('isSpotifyShowUrl', () => {
   it('matches Spotify show URLs', () => {
@@ -56,20 +51,84 @@ describe('isDirectRssUrl', () => {
   });
 });
 
+describe('searchItunesPodcasts', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('returns parsed results from iTunes Search API', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          resultCount: 1,
+          results: [
+            { feedUrl: 'https://feeds.example.com/show.xml', trackId: 123, trackName: 'Test Show' },
+          ],
+        }),
+    } as Response);
+
+    const results = await searchItunesPodcasts('test');
+    expect(results).toHaveLength(1);
+    expect(results[0].feedUrl).toBe('https://feeds.example.com/show.xml');
+  });
+
+  it('filters out results without feedUrl', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          resultCount: 2,
+          results: [
+            { trackId: 1, trackName: 'No Feed' },
+            { feedUrl: 'https://feeds.example.com/show.xml', trackId: 2, trackName: 'Has Feed' },
+          ],
+        }),
+    } as Response);
+
+    const results = await searchItunesPodcasts('test');
+    expect(results).toHaveLength(1);
+    expect(results[0].trackName).toBe('Has Feed');
+  });
+
+  it('throws on API error', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+      ok: false,
+      status: 503,
+      statusText: 'Service Unavailable',
+    } as Response);
+
+    await expect(searchItunesPodcasts('test')).rejects.toThrow('iTunes Search API failed');
+  });
+});
+
 describe('resolveSpotifyToRss', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
-  it('resolves via oEmbed + PodcastIndex', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ title: '股癌 Gooaye' }),
-    } as Response);
-
-    vi.mocked(searchByTerm).mockResolvedValue([
-      { feedUrl: 'https://feeds.example.com/gooaye.xml', podcastGuid: 'g1', title: '股癌' },
-    ]);
+  it('resolves via oEmbed + iTunes Search', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      // First call: Spotify oEmbed
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ title: '股癌 Gooaye' }),
+      } as Response)
+      // Second call: iTunes Search
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            resultCount: 1,
+            results: [
+              {
+                feedUrl: 'https://feeds.example.com/gooaye.xml',
+                trackId: 123,
+                trackName: '股癌',
+              },
+            ],
+          }),
+      } as Response);
 
     const result = await resolveSpotifyToRss('https://open.spotify.com/show/abc123');
     expect(result).toBe('https://feeds.example.com/gooaye.xml');
@@ -87,16 +146,19 @@ describe('resolveSpotifyToRss', () => {
     );
   });
 
-  it('throws when PodcastIndex returns no results', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ title: 'Unknown Show' }),
-    } as Response);
-
-    vi.mocked(searchByTerm).mockResolvedValue([]);
+  it('throws when iTunes returns no results', async () => {
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ title: 'Unknown Show' }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ resultCount: 0, results: [] }),
+      } as Response);
 
     await expect(resolveSpotifyToRss('https://open.spotify.com/show/abc')).rejects.toThrow(
-      'No podcast found in PodcastIndex'
+      'No podcast found in iTunes'
     );
   });
 });
@@ -146,14 +208,21 @@ describe('resolveToRssFeed', () => {
   });
 
   it('routes Spotify URLs to resolveSpotifyToRss', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ title: 'Test Show' }),
-    } as Response);
-
-    vi.mocked(searchByTerm).mockResolvedValue([
-      { feedUrl: 'https://feed.example.com/test.xml', podcastGuid: 'g1', title: 'Test' },
-    ]);
+    vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ title: 'Test Show' }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            resultCount: 1,
+            results: [
+              { feedUrl: 'https://feed.example.com/test.xml', trackId: 1, trackName: 'Test' },
+            ],
+          }),
+      } as Response);
 
     const result = await resolveToRssFeed('https://open.spotify.com/show/abc');
     expect(result).toBe('https://feed.example.com/test.xml');
