@@ -37,10 +37,10 @@ import {
   extractArguments,
   extractAtHandles,
 } from '@/domain/services/ai.service';
-import { getAiModelVersion, geminiTranscribeShort } from '@/infrastructure/api/gemini.client';
-import { downloadYoutubeAudio } from '@/infrastructure/api/youtube-audio.client';
+import { getAiModelVersion } from '@/infrastructure/api/gemini.client';
 import { isLikelyInvestmentContent } from '@/domain/services/content-filter';
-import { deepgramTranscribe, extractActualDuration } from '@/infrastructure/api/deepgram.client';
+import { extractActualDuration } from '@/infrastructure/api/deepgram.client';
+import { transcribeAudio } from '@/domain/services/transcription.service';
 import { composeCost, type Recipe } from '@/domain/models/credit-blocks';
 
 // Per-minute long-video transcription marginal recipe (download + transcribe).
@@ -290,51 +290,15 @@ export async function processUrl(
           }
         }
 
-        let transcriptText: string;
-
-        if (isShort) {
-          // Shorts: try Gemini file_uri first, fall back to Deepgram
-          try {
-            console.log(
-              `[Pipeline] Captionless Short (${durationSeconds}s) — trying Gemini file_uri transcription`
-            );
-            transcriptText = await geminiTranscribeShort(fetchResult.sourceUrl);
-          } catch (geminiErr) {
-            console.warn(
-              `[Pipeline] Gemini file_uri failed for Short, falling back to Deepgram:`,
-              geminiErr instanceof Error ? geminiErr.message : String(geminiErr)
-            );
-            try {
-              const audio = await downloadYoutubeAudio(fetchResult.sourceUrl, {
-                maxDurationSeconds: MAX_VIDEO_DURATION_SECONDS,
-              });
-              transcriptText = await deepgramTranscribe(audio.buffer, audio.mimeType);
-            } catch (deepgramErr) {
-              console.error(
-                `[Transcription failed] URL: ${fetchResult.sourceUrl} | pipeline=deepgram-fallback | Error: ${deepgramErr instanceof Error ? deepgramErr.message : String(deepgramErr)}`
-              );
-              throw deepgramErr;
-            }
-          }
-        } else {
-          // Long videos: Deepgram only
-          try {
-            console.log(
-              `[Pipeline] Captionless video (${durationSeconds ? Math.ceil(durationSeconds / 60) + 'min' : 'unknown duration'}) — using Deepgram transcription`
-            );
-
-            const audio = await downloadYoutubeAudio(fetchResult.sourceUrl, {
-              maxDurationSeconds: MAX_VIDEO_DURATION_SECONDS,
-            });
-
-            transcriptText = await deepgramTranscribe(audio.buffer, audio.mimeType);
-          } catch (transcribeErr) {
-            console.error(
-              `[Transcription failed] URL: ${fetchResult.sourceUrl} | pipeline=deepgram | Error: ${transcribeErr instanceof Error ? transcribeErr.message : String(transcribeErr)}`
-            );
-            throw transcribeErr;
-          }
-        }
+        // Single transcription entry point — Deepgram primary, Gemini failover
+        // (Shorts only). User is charged the same `transcribe.audio` block
+        // regardless of which vendor ran.
+        const transcription = await transcribeAudio({
+          sourceUrl: fetchResult.sourceUrl,
+          isShort,
+          maxDurationSeconds: MAX_VIDEO_DURATION_SECONDS,
+        });
+        const transcriptText = transcription.text;
         contentForAnalysis = transcriptText;
 
         // Post-transcription credit reconciliation (skip for flat-rate Shorts)
@@ -356,12 +320,11 @@ export async function processUrl(
           }
         }
 
-        // Save to transcript cache
-        const transcriptSource = isShort ? 'gemini' : 'deepgram';
+        // Save to transcript cache — use the actual vendor that ran for audit.
         await saveTranscript({
           sourceUrl: fetchResult.sourceUrl,
           content: transcriptText,
-          source: transcriptSource,
+          source: transcription.source,
           durationSeconds: durationSeconds ?? undefined,
         }).catch((err) => console.error('Failed to cache transcript:', err));
       }
