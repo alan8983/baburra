@@ -99,13 +99,35 @@ Extractors that produce transcripts estimate token count as
 cutoff between `ai.analyze.short` (flat 1) and `ai.analyze.long` — at
 exactly 2k tokens, both produce 1 credit.
 
-### D7: Deepgram vs Gemini audio are separate blocks
+### D7: Single `transcribe.audio` block, Deepgram primary, Gemini failover
 
-**Decision:** `transcribe.deepgram` and `transcribe.gemini_audio` are
-distinct block IDs. Extractors pick one based on length / routing policy.
+**Decision:** Collapse transcription into a single user-facing block
+`transcribe.audio` priced at `1.5` credits per minute. Vendor selection is an
+internal routing detail of the transcription service: **Deepgram is the
+primary path** for all captionless audio regardless of length; **Gemini audio
+is a failover** invoked only when Deepgram errors out, is rate-limited, or
+returns unsupported-language. The failover path is not exposed to users and
+does not have its own credit price — the user is always charged
+`transcribe.audio` regardless of which vendor actually ran.
 
-**Rationale:** Vendors have different unit economics and we already route
-between them. Separate blocks let us tune one without touching the other.
+**Rationale:**
+- Deepgram is consistently cheaper than Gemini audio for anything ≥2–3 minutes
+  (~$0.0043/min nova-2 vs. token-priced Gemini audio that scales badly with
+  length). For Shorts the two are roughly tied; the simplification is worth
+  the small loss.
+- Predictable per-minute cost makes the lego model honest — one formula, no
+  "long analyze inflates unexpectedly" surprises.
+- One block in the catalogue is simpler for users (single line on the
+  itemised breakdown) and lets us swap vendors later without a pricing
+  change or a spec revision.
+- Keeping Gemini audio as failover preserves availability without polluting
+  the price catalogue.
+
+**Alternative considered:** Two separate blocks (`transcribe.deepgram` and
+`transcribe.gemini_audio`) with extractor-level routing. Rejected because
+vendor choice is an infrastructure concern, not a product concern, and
+exposing it as two prices forces every recipe consumer to know about the
+routing rules.
 
 ### D8: `CREDIT_COSTS` stays as a deprecated shim for one release
 
@@ -142,6 +164,36 @@ before rollout.
 exact for CJK text, which Baburra handles heavily (zh-TW users). Mitigation:
 use `charCount / 2` for CJK-dominant text, or accept the approximation and
 iterate.
+
+## Out of scope (tracked separately)
+
+The Deepgram-everywhere decision surfaced two narrow follow-ups that are
+**not** part of this change. Each is a small, isolated fix worth its own
+proposal so this change stays focused on the credit model.
+
+1. **Podcast duration probe for feeds missing `<itunes:duration>`.** Today
+   `podcast-profile.extractor.estimateCreditCost` falls back to a fixed
+   "assume 30 minutes" when an RSS feed omits or mis-formats the duration tag.
+   Under all-Deepgram pricing the discovery quote shown to the user comes
+   directly from this estimate, so a wrong fallback turns into a real billing
+   surprise on the small set of feeds that lack the tag. Fix: send a HEAD
+   request to the audio enclosure URL during discovery, divide
+   `Content-Length` by an assumed bitrate (~128 kbps) for a duration
+   estimate. If even that fails, refuse to auto-quote and surface a "unknown
+   duration — confirm to import up to N credits cap" UI affordance instead
+   of guessing. **Track as a separate proposal**: `podcast-duration-probe`.
+
+2. **Deepgram keyword boosting for tickers and KOL names.** Deepgram nova-2
+   accepts a keyword list that materially improves recognition on
+   domain-specific terms — exactly the surface area where transcription
+   matters most for Baburra (US/TW ticker symbols, KOL channel names,
+   zh-TW financial jargon like 殖利率 / 權證 / 融資餘額). Building and
+   maintaining this list is a separate concern from the credit model and is
+   gated on moving to Deepgram's Growth plan. **Track as a separate
+   proposal**: `deepgram-keyword-boost`.
+
+These are noted here so the rationale for keeping the current change scoped
+is on record. Neither blocks `rework-credit-cost-lego`.
 
 ## Open Questions
 

@@ -43,8 +43,7 @@ comparison (see `src/domain/models/user.ts` `CREDIT_COSTS`).
 | `scrape.apify.post` | Apify actor — single post / item payload | 1 item | 0.5 | bundled in `1` | **~$0.002–$0.01** per item | Scales linearly in batch imports |
 | `download.audio.short` | yt-dlp / podcast MP3 download ≤ 60s | 1 file | 0.3 | bundled | egress + temp disk | |
 | `download.audio.long` | yt-dlp / podcast MP3 download > 60s | per minute | 0.1 / min | bundled | egress + temp disk | |
-| `transcribe.deepgram` | Deepgram STT | per minute | 1.5 / min | bundled in `5/min` | **~$0.0043 / min** (nova-2) | Primary long-audio path |
-| `transcribe.gemini_audio` | Gemini audio transcription | per minute | 2.0 / min | bundled in `5/min` | token-based, higher for long audio | Fallback / short path |
+| `transcribe.audio` | Audio STT (any length). Deepgram primary, Gemini audio failover. | per minute | 1.5 / min | bundled in `5/min` | **~$0.0043 / min** (Deepgram nova-2) | Single user-facing block; vendor routing is internal |
 | `transcribe.cached_transcript` | Use a transcript we already have (podcast:transcript, YT captions) | 1 doc | 0.2 | bundled | ~0 | |
 | `ai.analyze.short` | Gemini sentiment/argument analysis on ≤ 2k tokens | 1 call | 1.0 | `1` | Gemini input+output tokens | Covers text posts, article, short video |
 | `ai.analyze.long` | Gemini analyze on > 2k tokens (long video / podcast transcript) | per 2k tokens | 1.0 / 2k tok | flat `2` or `5/min` | Gemini tokens | Prevents long transcripts from under-paying |
@@ -79,12 +78,12 @@ All examples assume the lego prices above.
 | **Facebook post** | `scrape.apify.post` + `ai.analyze.short` | 1.5 | 1 |
 | **Threads post** | `scrape.apify.post` + `ai.analyze.short` | 1.5 | 1 |
 | **YouTube — has captions** | `scrape.youtube_meta` + `scrape.youtube_captions` + `ai.analyze.long × ⌈tokens/2k⌉` | ~1.7 + analyze | 2 |
-| **YouTube Short, no captions** | `scrape.youtube_meta` + `download.audio.short` + `transcribe.gemini_audio × 1min` + `ai.analyze.short` | ~3.5 | 3 |
-| **YouTube long video, no captions** | `scrape.youtube_meta` + `download.audio.long × min` + `transcribe.deepgram × min` + `ai.analyze.long × ⌈tokens/2k⌉` | 0.2 + 1.6·min + analyze | 5·min |
+| **YouTube Short, no captions** | `scrape.youtube_meta` + `download.audio.short` + `transcribe.audio × 1` + `ai.analyze.short` | ~3.5 | 3 |
+| **YouTube long video, no captions** | `scrape.youtube_meta` + `download.audio.long × min` + `transcribe.audio × min` + `ai.analyze.long × ⌈tokens/2k⌉` | 0.2 + 1.6·min + analyze | 5·min |
 | **Podcast episode — has `<podcast:transcript>`** | `scrape.rss` + `transcribe.cached_transcript` + `ai.analyze.long × ⌈tokens/2k⌉` | ~0.5 + analyze | 2 |
-| **Podcast episode — no transcript** | `scrape.rss` + `download.audio.long × min` + `transcribe.deepgram × min` + `ai.analyze.long × ⌈tokens/2k⌉` | 0.3 + 1.6·min + analyze | 5·min |
+| **Podcast episode — no transcript** | `scrape.rss` + `download.audio.long × min` + `transcribe.audio × min` + `ai.analyze.long × ⌈tokens/2k⌉` | 0.3 + 1.6·min + analyze | 5·min |
 | **TikTok — caption only** | `scrape.apify.post` + `ai.analyze.short` | 1.5 | 1 |
-| **TikTok — needs transcription** | `scrape.apify.post` + `download.audio.short` + `transcribe.gemini_audio × min` + `ai.analyze.short` | ~3.8 | 5·min |
+| **TikTok — needs transcription** | `scrape.apify.post` + `download.audio.short` + `transcribe.audio × ⌈min⌉` + `ai.analyze.short` | ~3.8 | 5·min |
 | **Re-roll existing post** | `ai.reroll` | 2 | 3 |
 
 ### Profile / batch imports
@@ -110,9 +109,13 @@ credits and every profile discovery pays for its own actor run.
 
 1. **Apify** — biggest leak today. Discovery should stop being free. Per-item
    block price must exceed Apify per-result cost.
-2. **Deepgram vs Gemini audio** — different unit economics. Routing logic
-   should pick the cheaper path per clip length; lego prices should reflect
-   whichever is actually used.
+2. **Deepgram is the single primary transcription vendor** for all
+   captionless audio regardless of clip length — predictable per-minute cost
+   and consistently cheaper than Gemini audio for anything ≥2–3 minutes.
+   Gemini audio remains as a **failover only** path (Deepgram 5xx, rate
+   limit, unsupported language); it is not a separate user-facing block.
+   The single `transcribe.audio` block insulates users from vendor routing
+   so we can swap or rebalance later without a price change.
 3. **Gemini analyze on long transcripts** — flat `2` for podcast transcript
    analysis under-recovers for 2-hour episodes with 40k+ tokens. Per-2k-token
    pricing fixes this.

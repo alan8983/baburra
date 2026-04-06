@@ -1,14 +1,14 @@
 ## ADDED Requirements
 
 ### Requirement: Credit block catalogue defines per-step prices
-The system SHALL provide a `CREDIT_BLOCKS` constant in `src/domain/models/credit-blocks.ts` that maps every billable step in the import pipeline to a unit credit price and a unit kind (`fixed | per_minute | per_2k_tokens | per_item`). The catalogue SHALL include, at minimum: `scrape.html`, `scrape.youtube_meta`, `scrape.youtube_captions`, `scrape.rss`, `scrape.apify.profile`, `scrape.apify.post`, `download.audio.short`, `download.audio.long`, `transcribe.deepgram`, `transcribe.gemini_audio`, `transcribe.cached_transcript`, `ai.analyze.short`, `ai.analyze.long`, `ai.reroll`.
+The system SHALL provide a `CREDIT_BLOCKS` constant in `src/domain/models/credit-blocks.ts` that maps every billable step in the import pipeline to a unit credit price and a unit kind (`fixed | per_minute | per_2k_tokens | per_item`). The catalogue SHALL include, at minimum: `scrape.html`, `scrape.youtube_meta`, `scrape.youtube_captions`, `scrape.rss`, `scrape.apify.profile`, `scrape.apify.post`, `download.audio.short`, `download.audio.long`, `transcribe.audio`, `transcribe.cached_transcript`, `ai.analyze.short`, `ai.analyze.long`, `ai.reroll`. The catalogue SHALL contain exactly one transcription block (`transcribe.audio`) — vendor selection (Deepgram primary, Gemini audio failover) is an internal routing concern and SHALL NOT be exposed as separate blocks.
 
 #### Scenario: Reading a fixed block
 - **WHEN** a caller reads `CREDIT_BLOCKS['ai.analyze.short']`
 - **THEN** it SHALL return a record with `credits: 1.0` and `unit: 'fixed'`
 
-#### Scenario: Reading a per-minute block
-- **WHEN** a caller reads `CREDIT_BLOCKS['transcribe.deepgram']`
+#### Scenario: Reading the transcription block
+- **WHEN** a caller reads `CREDIT_BLOCKS['transcribe.audio']`
 - **THEN** it SHALL return a record with `credits: 1.5` and `unit: 'per_minute'`
 
 #### Scenario: Reading the Apify profile discovery block
@@ -27,11 +27,11 @@ The system SHALL provide a pure function `composeCost(recipe: Recipe): number` t
 - **THEN** it SHALL return `1`
 
 #### Scenario: Per-minute transcription
-- **WHEN** `composeCost([{ block: 'transcribe.deepgram', units: 12 }])` is called
+- **WHEN** `composeCost([{ block: 'transcribe.audio', units: 12 }])` is called
 - **THEN** it SHALL return `18` (12 × 1.5, ceiling applied at total)
 
 #### Scenario: Composite recipe
-- **WHEN** `composeCost([{ block: 'scrape.youtube_meta', units: 1 }, { block: 'download.audio.long', units: 10 }, { block: 'transcribe.deepgram', units: 10 }, { block: 'ai.analyze.long', units: 5 }])` is called
+- **WHEN** `composeCost([{ block: 'scrape.youtube_meta', units: 1 }, { block: 'download.audio.long', units: 10 }, { block: 'transcribe.audio', units: 10 }, { block: 'ai.analyze.long', units: 5 }])` is called
 - **THEN** it SHALL return `22` (0.2 + 1.0 + 15.0 + 5.0 = 21.2, ceiling → 22)
 
 ### Requirement: Extractors return a recipe alongside the total cost
@@ -47,7 +47,18 @@ Every extractor in `src/infrastructure/extractors/` that produces a cost estimat
 
 #### Scenario: Podcast episode with cached transcript
 - **WHEN** `podcast.extractor` processes an episode whose RSS item has `<podcast:transcript>`
-- **THEN** the recipe SHALL include `scrape.rss`, `transcribe.cached_transcript`, and `ai.analyze.long`, and SHALL NOT include any `transcribe.deepgram` or `transcribe.gemini_audio` entry
+- **THEN** the recipe SHALL include `scrape.rss`, `transcribe.cached_transcript`, and `ai.analyze.long`, and SHALL NOT include any `transcribe.audio` entry
+
+### Requirement: Transcription routes Deepgram primary, Gemini audio failover
+The system SHALL transcribe captionless audio (Shorts, long video, podcasts without `<podcast:transcript>`) by attempting Deepgram first regardless of clip length. If Deepgram returns an error, is rate-limited, or reports an unsupported language, the system SHALL fall back to Gemini audio for that single request. The user SHALL be charged exactly `composeCost([{ block: 'transcribe.audio', units: ⌈minutes⌉ }])` regardless of which vendor actually completed the transcription.
+
+#### Scenario: Deepgram succeeds
+- **WHEN** the transcription service is invoked for a 10-minute clip and Deepgram returns a successful transcript
+- **THEN** the user SHALL be charged for `transcribe.audio` × 10 and Gemini audio SHALL NOT be invoked
+
+#### Scenario: Deepgram fails, Gemini audio takes over
+- **WHEN** the transcription service is invoked for a 10-minute clip, Deepgram returns a 5xx or rate-limit error, and Gemini audio successfully transcribes the same clip
+- **THEN** the user SHALL still be charged for `transcribe.audio` × 10 (not a separate Gemini block)
 
 ### Requirement: Apify profile discovery is charged up-front
 The system SHALL charge the `scrape.apify.profile` block to the user's credit balance before dispatching an Apify actor run for Facebook, Twitter/X, Threads, or TikTok profile discovery. The charge SHALL NOT be refunded if the user imports zero items from the discovery result.

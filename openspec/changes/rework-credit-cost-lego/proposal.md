@@ -30,8 +30,16 @@ This change lands that model in code.
 - **New block catalogue (`CREDIT_BLOCKS`)** — typed constant mapping block IDs
   (`scrape.html`, `scrape.youtube_meta`, `scrape.apify.profile`,
   `scrape.apify.post`, `download.audio.short`, `download.audio.long`,
-  `transcribe.deepgram`, `transcribe.gemini_audio`, `transcribe.cached_transcript`,
+  `transcribe.audio`, `transcribe.cached_transcript`,
   `ai.analyze.short`, `ai.analyze.long`, `ai.reroll`) to unit credit prices.
+- **Single transcription block.** All captionless audio transcription
+  (Shorts, long video, podcasts without `<podcast:transcript>`) routes through
+  one user-facing block `transcribe.audio` priced at `1.5` credits per minute.
+  Internally, **Deepgram is the primary vendor** (predictable per-minute cost,
+  cheaper than Gemini audio for anything ≥2–3 minutes, simpler routing).
+  Gemini audio remains available as a **failover-only** path (Deepgram 5xx,
+  rate-limited, unsupported language) — it is not user-visible and is not its
+  own credit block.
 - **Recipe helper (`composeCost`)** — pure function taking a list of `{ block,
   units }` items and returning total credits. All cost estimates flow through
   this helper.

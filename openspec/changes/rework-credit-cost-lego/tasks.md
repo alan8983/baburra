@@ -1,24 +1,24 @@
 ## 1. Domain layer: block catalogue and helper
 
-- [ ] 1.1 Create `src/domain/models/credit-blocks.ts` with `BlockId` union, `CreditBlock` type (`{ credits, unit }`), `CREDIT_BLOCKS` constant matching the prices in `docs/CREDIT_COST_BREAKDOWN.md`, `Recipe` type (`Array<{ block: BlockId, units: number }>`), and `composeCost(recipe): number` helper.
+- [ ] 1.1 Create `src/domain/models/credit-blocks.ts` with `BlockId` union, `CreditBlock` type (`{ credits, unit }`), `CREDIT_BLOCKS` constant matching the prices in `docs/CREDIT_COST_BREAKDOWN.md`, `Recipe` type (`Array<{ block: BlockId, units: number }>`), and `composeCost(recipe): number` helper. The catalogue SHALL contain a single transcription block `transcribe.audio` (1.5 credits/min), no separate Deepgram/Gemini-audio entries.
 - [ ] 1.2 Unit tests `src/domain/models/credit-blocks.test.ts`: per-block price sanity, empty recipe = 0, additive composition, fractional blocks round up to nearest integer at final total only.
 - [ ] 1.3 Add `@deprecated` JSDoc to `CREDIT_COSTS` in `src/domain/models/user.ts` and rewrite its values to be derived from `composeCost` on the canonical recipes (`text_analysis`, `youtube_caption_analysis`, `video_transcription_per_min`, `short_transcription`, `reroll_analysis`, `podcast_transcript_analysis`). Verify no numeric change larger than ±1 for single-unit cases; document any deltas in the PR.
 
 ## 2. Extractor refactor: return recipes
 
 - [ ] 2.1 Extend `ExtractorResult` / discovery result types in `src/infrastructure/extractors/types.ts` with an optional `recipe: Recipe` field. Keep `estimatedCreditCost: number` computed from the recipe.
-- [ ] 2.2 `youtube.extractor.ts` — `checkCaptionAvailability` and full-import paths produce a recipe: `scrape.youtube_meta` always, plus `scrape.youtube_captions` | `download.audio.short + transcribe.gemini_audio` | `download.audio.long + transcribe.deepgram` based on branch, plus `ai.analyze.short` or `ai.analyze.long × ⌈tokens/2k⌉`.
+- [ ] 2.2 `youtube.extractor.ts` — `checkCaptionAvailability` and full-import paths produce a recipe: `scrape.youtube_meta` always, plus `scrape.youtube_captions` (caption branch) or `download.audio.short + transcribe.audio × 1` (Short branch) or `download.audio.long + transcribe.audio × ⌈min⌉` (long-video branch), plus `ai.analyze.short` or `ai.analyze.long × ⌈tokens/2k⌉`.
 - [ ] 2.3 `youtube-channel.extractor.ts` — discovery recipe charges `scrape.rss` (or `scrape.youtube_meta × N` if we list via HTML), then per-video recipes from 2.2.
-- [ ] 2.4 `podcast.extractor.ts` + `podcast-profile.extractor.ts` — discovery charges `scrape.rss`; per-episode recipe uses `transcribe.cached_transcript` if `<podcast:transcript>` exists else `download.audio.long + transcribe.deepgram`, plus `ai.analyze.long × ⌈tokens/2k⌉`.
+- [ ] 2.4 `podcast.extractor.ts` + `podcast-profile.extractor.ts` — discovery charges `scrape.rss`; per-episode recipe uses `transcribe.cached_transcript` if `<podcast:transcript>` exists else `download.audio.long + transcribe.audio × ⌈min⌉`, plus `ai.analyze.long × ⌈tokens/2k⌉`. The "assume 30 minutes" fallback remains for now; the duration-probe fix is tracked separately as `podcast-duration-probe`.
 - [ ] 2.5 `facebook.extractor.ts` + `facebook-profile.extractor.ts` — single post = `scrape.apify.post + ai.analyze.short`. Profile discovery = `scrape.apify.profile` (up-front charge) + per-item `scrape.apify.post + ai.analyze.short`.
 - [ ] 2.6 `twitter.extractor.ts` + `twitter-profile.extractor.ts` — same pattern as Facebook.
 - [ ] 2.7 `threads.extractor.ts` — same pattern as Facebook (no separate profile extractor file today; handle if present, otherwise inline).
-- [ ] 2.8 `tiktok.extractor.ts` + `tiktok-profile.extractor.ts` — caption branch = `scrape.apify.post + ai.analyze.short`; transcribe branch = `scrape.apify.post + download.audio.short + transcribe.gemini_audio × min + ai.analyze.short`.
+- [ ] 2.8 `tiktok.extractor.ts` + `tiktok-profile.extractor.ts` — caption branch = `scrape.apify.post + ai.analyze.short`; transcribe branch = `scrape.apify.post + download.audio.short + transcribe.audio × ⌈min⌉ + ai.analyze.short`.
 - [ ] 2.9 Generic HTML / article extractor (if a dedicated one exists; otherwise update the import pipeline's inline fetch) — recipe `scrape.html + ai.analyze.short`.
 
 ## 3. Pipeline and API routes
 
-- [ ] 3.1 `src/domain/services/import-pipeline.service.ts` — replace direct `CREDIT_COSTS` lookups with extractor-provided recipes. All charges go through `composeCost`. Refund-on-failure behaviour preserved.
+- [ ] 3.1 `src/domain/services/import-pipeline.service.ts` — replace direct `CREDIT_COSTS` lookups with extractor-provided recipes. All charges go through `composeCost`. Refund-on-failure behaviour preserved. Transcription calls go through a single `transcribeAudio()` service that internally tries Deepgram first and falls back to Gemini audio on Deepgram failure; the user-facing charge is always `transcribe.audio` regardless of which vendor ran.
 - [ ] 3.2 `src/domain/services/profile-scrape.service.ts` — charge `scrape.apify.profile` up-front before triggering the Apify actor for FB/X/Threads/TikTok profiles. No charge for RSS-based discovery beyond `scrape.rss`.
 - [ ] 3.3 `src/app/api/ai/analyze/route.ts` — re-roll charge switches from `CREDIT_COSTS.reroll_analysis` to `composeCost([{ block: 'ai.reroll', units: 1 }])`.
 - [ ] 3.4 Any other API route that reads `CREDIT_COSTS` directly — migrate to `composeCost` with an explicit recipe.
@@ -49,6 +49,11 @@
   - Add an "Implementation" section linking to `src/domain/models/credit-blocks.ts` and calling out the deprecation of `CREDIT_COSTS`.
   - Lock the block price table (remove the "proposed" caveat).
 - [ ] 6.5 Add a short entry to `docs/BACKLOG.md` noting the lego credit system shipped (if a "Completed" section exists).
+
+## 6b. Follow-up proposals (out of scope here, file as separate changes)
+
+- [ ] 6b.1 File `openspec/changes/podcast-duration-probe/` — `Content-Length`-based duration estimate for podcast feeds missing `<itunes:duration>`, plus a "unknown duration, capped quote" UI affordance when even that fails. Motivated by all-Deepgram pricing making the discovery quote billing-relevant.
+- [ ] 6b.2 File `openspec/changes/deepgram-keyword-boost/` — build and maintain a Deepgram keyword-boost list (US/TW tickers, KOL channel names, common zh-TW financial jargon). Gated on moving to Deepgram Growth plan.
 
 ## 7. Rollout checks
 
