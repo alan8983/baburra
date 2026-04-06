@@ -26,3 +26,14 @@ The `ScrapeProgress` component likely caches local state derived from the first 
 ## Impact
 
 Medium — users must reload the page to see scrape results. The backend works correctly.
+
+## Resolution (2026-04-06)
+
+**Already fixed** — no implementation needed under this change. Verified by code review of `src/components/scrape/scrape-progress.tsx`:
+
+- `isActive` / `isFinished` are derived directly from `job.status` on every render (lines 104-106); no cached local state.
+- When `job.status` becomes `completed`/`failed`, the component returns a completely different Completion Summary Card (line 131) that bypasses the "排隊中" progress UI entirely.
+- `prevStatusRef` is only used to fire the completion toast once; it does not affect render output, so a skipped `queued → completed` transition cannot cause stale UI.
+
+The fix was delivered incidentally by commit `3333b0d` ("fix: scrape credits bypass, batch timeout, and progress UI bugs"), landed after the 2026-03-18 QA session. Archiving without implementation.
+
