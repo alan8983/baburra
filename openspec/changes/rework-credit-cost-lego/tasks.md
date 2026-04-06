@@ -44,6 +44,7 @@
 - [ ] 6.1 Write `openspec/changes/rework-credit-cost-lego/specs/credit-cost/spec.md` with `## ADDED Requirements` for the block catalogue, `composeCost` helper, extractor recipe contract, and Apify discovery charging rule.
 - [ ] 6.2 Update `openspec/specs/data-models/spec.md` if it references `CREDIT_COSTS` directly — point to `CREDIT_BLOCKS`.
 - [ ] 6.3 Update `openspec/specs/ai-pipeline/spec.md` to mention recipes as the cost contract between extractors and the pipeline.
+- [ ] 6.3a Apply the qa-standards delta from `specs/qa-standards/spec.md` in this change to `openspec/specs/qa-standards/spec.md`: rework A4, B1–B5 to assert recipes and `composeCost` totals, and remove C1 (the 45-minute cap). Verify B3 numbers reconcile (the existing spec said `7/min` while code said `5/min` — both go away).
 - [ ] 6.4 Update `docs/CREDIT_COST_BREAKDOWN.md`:
   - Mark the "Next steps" section items 2 and 3 as done.
   - Add an "Implementation" section linking to `src/domain/models/credit-blocks.ts` and calling out the deprecation of `CREDIT_COSTS`.

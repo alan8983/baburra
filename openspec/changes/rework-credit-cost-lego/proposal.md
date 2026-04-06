@@ -77,6 +77,9 @@ This change lands that model in code.
   source of truth for credit pricing.
 - `ai-pipeline`: Extractors and the import pipeline charge per-block instead
   of per-flat-cost.
+- `qa-standards`: Requirements A4, B1–B5 are reworded to assert recipe shape
+  + `composeCost` totals instead of hard-coded credit numbers; the 45-minute
+  video cap (C1) is removed because Deepgram handles long audio reliably.
 
 ## Impact
 
