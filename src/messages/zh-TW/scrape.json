@@ -3,7 +3,7 @@
   "description": "輸入 KOL 的頻道 URL，系統自動擷取個人資料並建立追蹤",
   "hero": {
     "title": "追蹤你的第一個投資 KOL",
-    "subtitle": "貼上 YouTube 頻道連結，AI 自動分析觀點勝率",
+    "subtitle": "貼上 KOL 頻道或 Podcast 連結，AI 自動分析觀點勝率",
     "freeBadge": "首次完全免費，不需信用卡",
     "presetHint": "不確定要貼什麼？試試看：",
     "preset1Name": "股癌 Gooaye",
@@ -15,11 +15,11 @@
   },
   "form": {
     "urlLabel": "KOL 頻道 URL",
-    "urlPlaceholder": "貼上 YouTube 頻道 URL",
-    "supportedPlatforms": "支援: YouTube 頻道",
+    "urlPlaceholder": "貼上 KOL 頻道 / Podcast URL",
+    "supportedPlatforms": "支援: YouTube、X、TikTok、Facebook、Podcast (Spotify / Apple / RSS)",
     "submit": "探索內容",
     "submitting": "探索中...",
-    "invalidUrl": "請輸入有效的 YouTube 頻道 URL",
+    "invalidUrl": "請輸入有效的 KOL 頻道或 Podcast URL",
     "platformYouTube": "YouTube"
   },
   "flowChart": {

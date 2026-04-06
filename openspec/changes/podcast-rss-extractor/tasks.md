@@ -72,3 +72,17 @@
 - [x] 10.1 Run `npm run type-check` to verify all type changes compile cleanly.
 - [x] 10.2 Run `npm test` to verify all new and existing unit tests pass.
 - [ ] 10.3 Manual smoke test: paste a known podcast RSS feed URL (e.g., a public investment podcast) into the scrape page, verify episode discovery, select an episode with a transcript, verify content extraction and AI analysis flow.
+  - **Partially completed 2026-04-06 on `claude/sharp-dewdney`:** Verified end-to-end against `https://feeds.transistor.fm/acquired`:
+    - ✅ Frontend `detectPlatform()` accepts the RSS URL and renders the Headphones icon.
+    - ✅ `POST /api/scrape/discover` → 200 with 10 episodes (titles, durations, credit estimates, `contentType: 'podcast_episode'`).
+    - ✅ Step-2 selection UI renders the KOL header, episode list, per-episode credit costs, and select/deselect controls.
+    - ❌ `POST /api/scrape/profile` → 500 (`scrape_jobs_job_type_check` violation). **Blocked by an unrelated pre-existing schema-drift bug, not specific to podcast.** New-KOL scrapes write `'validation_scrape'` but the DB CHECK constraint only allows `'initial_scrape' | 'incremental_check'`. Tracked in [alan8983/investment-idea-monitor#51](https://github.com/alan8983/investment-idea-monitor/issues/51). Re-run this smoke test after #51 lands to verify the import-pipeline portion (RSS transcript handling, AI analysis, post creation).
+
+## 11. Frontend Wiring Fixes (from Layer 1 Test Report 2026-04-03)
+
+The backend was fully wired but the frontend scrape form did not recognize Podcast URLs, blocking the entire feature. Fixes:
+
+- [x] 11.1 BUG-001: Add `SPOTIFY_SHOW_PATTERN`, `APPLE_PODCAST_PATTERN`, and inline `isDirectRssUrl()` to `detectPlatform()` in `src/components/scrape/profile-scrape-form.tsx`. Add `podcast: 'Podcast'` to `PLATFORM_LABELS`. (Backend logic mirrored from `src/infrastructure/api/rss-resolver.ts` to keep this client component free of server-only deps.)
+- [x] 11.2 BUG-003: Add Podcast URL host/path patterns to `getPlatformIconByUrl()` in `src/components/ui/platform-icons.tsx` so RSS / Spotify / Apple URLs render the Headphones icon instead of the generic Link fallback. Also add `'podcast'` to the `PlatformName` union.
+- [x] 11.3 BUG-002: Update `urlPlaceholder`, `supportedPlatforms`, `invalidUrl`, and `hero.subtitle` in both `src/messages/zh-TW/scrape.json` and `src/messages/en/scrape.json` to mention all supported platforms (YouTube, X, TikTok, Facebook, Podcast).
+- [x] 11.4 BUG-004: Add `APIFY_API_TOKEN` missing-key handling to `src/app/api/scrape/discover/route.ts` so TikTok / Facebook config errors return a friendly `API_KEY_MISSING` 400 instead of a generic 500.

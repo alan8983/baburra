@@ -14,8 +14,32 @@ const YOUTUBE_CHANNEL_PATTERN = /^https?:\/\/(www\.)?youtube\.com\/(channel\/|c\
 const TWITTER_PROFILE_PATTERN = /^https?:\/\/(www\.)?(twitter|x)\.com\/[\w]+\/?$/;
 const TIKTOK_PROFILE_PATTERN = /^https?:\/\/(www\.)?tiktok\.com\/@[\w.-]+\/?$/;
 const FACEBOOK_PROFILE_PATTERN = /^https?:\/\/(www\.)?facebook\.com\/[\w.-]+\/?$/;
+const SPOTIFY_SHOW_PATTERN = /^https?:\/\/(open\.)?spotify\.com\/show\//;
+const APPLE_PODCAST_PATTERN = /^https?:\/\/podcasts\.apple\.com\//;
 
 const FACEBOOK_POST_EXCLUSIONS = /\/(posts|permalink|share|videos|photo|events|groups)\//;
+
+// Mirrors isDirectRssUrl() in src/infrastructure/api/rss-resolver.ts.
+// Kept inline (rather than imported) so this client component doesn't pull in
+// server-only fetch code from the backend resolver module.
+function isDirectRssUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname.toLowerCase();
+    return (
+      path.endsWith('.xml') ||
+      path.endsWith('.rss') ||
+      path.endsWith('.atom') ||
+      path.includes('/feed') ||
+      path.includes('/rss') ||
+      parsed.hostname.includes('feeds.') ||
+      parsed.hostname.includes('anchor.fm') ||
+      parsed.hostname.includes('feedburner')
+    );
+  } catch {
+    return false;
+  }
+}
 
 function detectPlatform(url: string): PlatformName | null {
   const trimmed = url.trim();
@@ -24,6 +48,9 @@ function detectPlatform(url: string): PlatformName | null {
   if (TIKTOK_PROFILE_PATTERN.test(trimmed) && !/\/video\//.test(trimmed)) return 'tiktok';
   if (FACEBOOK_PROFILE_PATTERN.test(trimmed) && !FACEBOOK_POST_EXCLUSIONS.test(trimmed))
     return 'facebook';
+  if (SPOTIFY_SHOW_PATTERN.test(trimmed)) return 'podcast';
+  if (APPLE_PODCAST_PATTERN.test(trimmed)) return 'podcast';
+  if (isDirectRssUrl(trimmed)) return 'podcast';
   return null;
 }
 
@@ -32,6 +59,7 @@ const PLATFORM_LABELS: Record<string, string> = {
   twitter: 'Twitter/X',
   tiktok: 'TikTok',
   facebook: 'Facebook',
+  podcast: 'Podcast',
 };
 
 interface ProfileScrapeFormProps {
