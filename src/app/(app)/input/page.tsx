@@ -20,7 +20,19 @@ import {
   formatTimeEstimate,
   type UrlEstimateInput,
 } from '@/lib/utils/estimate-import-time';
-import { CREDIT_COSTS } from '@/domain/models/user';
+import { composeCost, type Recipe } from '@/domain/models/credit-blocks';
+
+const TEXT_RECIPE: Recipe = [
+  { block: 'scrape.html', units: 1 },
+  { block: 'ai.analyze.short', units: 1 },
+];
+// Default 10-minute captionless YouTube long-video estimate.
+const YOUTUBE_DEFAULT_RECIPE: Recipe = [
+  { block: 'scrape.youtube_meta', units: 1 },
+  { block: 'download.audio.long', units: 10 },
+  { block: 'transcribe.audio', units: 10 },
+  { block: 'ai.analyze.short', units: 1 },
+];
 import { toast } from 'sonner';
 
 const YOUTUBE_URL_PATTERN = /youtube\.com|youtu\.be/i;
@@ -129,10 +141,7 @@ export default function InputPage() {
     const { batch } = estimateImportTime(urlInputs);
     let credits = 0;
     for (const input of urlInputs) {
-      credits +=
-        input.platform === 'youtube'
-          ? Math.ceil(600 / 60) * CREDIT_COSTS.video_transcription_per_min
-          : CREDIT_COSTS.text_analysis;
+      credits += composeCost(input.platform === 'youtube' ? YOUTUBE_DEFAULT_RECIPE : TEXT_RECIPE);
     }
     return { credits, time: formatTimeEstimate(batch) };
   }, [parsed]);

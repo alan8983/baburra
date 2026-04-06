@@ -37,11 +37,51 @@ import {
   extractArguments,
   extractAtHandles,
 } from '@/domain/services/ai.service';
-import { getAiModelVersion, geminiTranscribeShort } from '@/infrastructure/api/gemini.client';
-import { downloadYoutubeAudio } from '@/infrastructure/api/youtube-audio.client';
+import { getAiModelVersion } from '@/infrastructure/api/gemini.client';
 import { isLikelyInvestmentContent } from '@/domain/services/content-filter';
-import { deepgramTranscribe, extractActualDuration } from '@/infrastructure/api/deepgram.client';
-import { CREDIT_COSTS } from '@/domain/models/user';
+import { extractActualDuration } from '@/infrastructure/api/deepgram.client';
+import { transcribeAudio } from '@/domain/services/transcription.service';
+import { composeCost, type Recipe } from '@/domain/models/credit-blocks';
+
+// Per-minute long-video transcription marginal recipe (download + transcribe).
+// composeCost is computed per total to allow correct fractional rounding.
+function longVideoTranscriptionCost(minutes: number): number {
+  const recipe: Recipe = [
+    { block: 'download.audio.long', units: minutes },
+    { block: 'transcribe.audio', units: minutes },
+  ];
+  return composeCost(recipe);
+}
+
+// Flat-rate Short transcription recipe (download.audio.short + transcribe.audio×1
+// + ai.analyze.short, plus the up-front youtube_meta scrape that's already paid
+// in the discovery step but billed as part of the Short flow).
+const SHORT_TRANSCRIPTION_RECIPE: Recipe = [
+  { block: 'scrape.youtube_meta', units: 1 },
+  { block: 'download.audio.short', units: 1 },
+  { block: 'transcribe.audio', units: 1 },
+  { block: 'ai.analyze.short', units: 1 },
+];
+const SHORT_TRANSCRIPTION_COST = composeCost(SHORT_TRANSCRIPTION_RECIPE);
+
+// Per-minute marginal block cost (used by reconcileTranscriptionCredits).
+const PER_MINUTE_TRANSCRIBE_COST = composeCost([
+  { block: 'download.audio.long', units: 1 },
+  { block: 'transcribe.audio', units: 1 },
+]);
+
+const YOUTUBE_CAPTION_ANALYSIS_RECIPE: Recipe = [
+  { block: 'scrape.youtube_meta', units: 1 },
+  { block: 'scrape.youtube_captions', units: 1 },
+  { block: 'ai.analyze.short', units: 1 },
+];
+const YOUTUBE_CAPTION_ANALYSIS_COST = composeCost(YOUTUBE_CAPTION_ANALYSIS_RECIPE);
+
+const TEXT_ANALYSIS_RECIPE: Recipe = [
+  { block: 'scrape.html', units: 1 },
+  { block: 'ai.analyze.short', units: 1 },
+];
+const TEXT_ANALYSIS_COST = composeCost(TEXT_ANALYSIS_RECIPE);
 import type { Sentiment, SourcePlatform } from '@/domain/models/post';
 import type { DraftAiArguments } from '@/domain/models/draft';
 
@@ -227,10 +267,10 @@ export async function processUrl(
       if (cachedTranscript) {
         contentForAnalysis = cachedTranscript.content;
       } else {
-        // Determine credit cost: flat rate for Shorts, per-minute for long videos
+        // Determine credit cost: flat-rate Short recipe, or per-minute long-video recipe.
         const transcriptionCost = isShort
-          ? CREDIT_COSTS.short_transcription
-          : Math.ceil((durationSeconds || 60) / 60) * CREDIT_COSTS.video_transcription_per_min;
+          ? SHORT_TRANSCRIPTION_COST
+          : longVideoTranscriptionCost(Math.ceil((durationSeconds || 60) / 60));
 
         // Consume credits for transcription (unless exempt)
         if (!quotaExempt) {
@@ -250,51 +290,15 @@ export async function processUrl(
           }
         }
 
-        let transcriptText: string;
-
-        if (isShort) {
-          // Shorts: try Gemini file_uri first, fall back to Deepgram
-          try {
-            console.log(
-              `[Pipeline] Captionless Short (${durationSeconds}s) — trying Gemini file_uri transcription`
-            );
-            transcriptText = await geminiTranscribeShort(fetchResult.sourceUrl);
-          } catch (geminiErr) {
-            console.warn(
-              `[Pipeline] Gemini file_uri failed for Short, falling back to Deepgram:`,
-              geminiErr instanceof Error ? geminiErr.message : String(geminiErr)
-            );
-            try {
-              const audio = await downloadYoutubeAudio(fetchResult.sourceUrl, {
-                maxDurationSeconds: MAX_VIDEO_DURATION_SECONDS,
-              });
-              transcriptText = await deepgramTranscribe(audio.buffer, audio.mimeType);
-            } catch (deepgramErr) {
-              console.error(
-                `[Transcription failed] URL: ${fetchResult.sourceUrl} | pipeline=deepgram-fallback | Error: ${deepgramErr instanceof Error ? deepgramErr.message : String(deepgramErr)}`
-              );
-              throw deepgramErr;
-            }
-          }
-        } else {
-          // Long videos: Deepgram only
-          try {
-            console.log(
-              `[Pipeline] Captionless video (${durationSeconds ? Math.ceil(durationSeconds / 60) + 'min' : 'unknown duration'}) — using Deepgram transcription`
-            );
-
-            const audio = await downloadYoutubeAudio(fetchResult.sourceUrl, {
-              maxDurationSeconds: MAX_VIDEO_DURATION_SECONDS,
-            });
-
-            transcriptText = await deepgramTranscribe(audio.buffer, audio.mimeType);
-          } catch (transcribeErr) {
-            console.error(
-              `[Transcription failed] URL: ${fetchResult.sourceUrl} | pipeline=deepgram | Error: ${transcribeErr instanceof Error ? transcribeErr.message : String(transcribeErr)}`
-            );
-            throw transcribeErr;
-          }
-        }
+        // Single transcription entry point — Deepgram primary, Gemini failover
+        // (Shorts only). User is charged the same `transcribe.audio` block
+        // regardless of which vendor ran.
+        const transcription = await transcribeAudio({
+          sourceUrl: fetchResult.sourceUrl,
+          isShort,
+          maxDurationSeconds: MAX_VIDEO_DURATION_SECONDS,
+        });
+        const transcriptText = transcription.text;
         contentForAnalysis = transcriptText;
 
         // Post-transcription credit reconciliation (skip for flat-rate Shorts)
@@ -308,7 +312,7 @@ export async function processUrl(
                 userId,
                 estimatedMinutes,
                 actualMinutes,
-                CREDIT_COSTS.video_transcription_per_min
+                PER_MINUTE_TRANSCRIBE_COST
               );
             }
           } catch (reconErr) {
@@ -316,12 +320,11 @@ export async function processUrl(
           }
         }
 
-        // Save to transcript cache
-        const transcriptSource = isShort ? 'gemini' : 'deepgram';
+        // Save to transcript cache — use the actual vendor that ran for audit.
         await saveTranscript({
           sourceUrl: fetchResult.sourceUrl,
           content: transcriptText,
-          source: transcriptSource,
+          source: transcription.source,
           durationSeconds: durationSeconds ?? undefined,
         }).catch((err) => console.error('Failed to cache transcript:', err));
       }
@@ -331,9 +334,7 @@ export async function processUrl(
       // Determine credit cost based on platform
       const isYouTube =
         fetchResult.sourcePlatform === 'youtube' || fetchResult.sourcePlatform === 'youtube_short';
-      const creditCost = isYouTube
-        ? CREDIT_COSTS.youtube_caption_analysis
-        : CREDIT_COSTS.text_analysis;
+      const creditCost = isYouTube ? YOUTUBE_CAPTION_ANALYSIS_COST : TEXT_ANALYSIS_COST;
 
       // Consume credits (unless exempt)
       if (!quotaExempt) {

@@ -11,12 +11,44 @@
 
 import { SocialMediaExtractor, UrlFetchResult, ExtractorConfig, ExtractorError } from './types';
 import { YoutubeTranscript } from 'youtube-transcript-plus';
-import { CREDIT_COSTS } from '@/domain/models/user';
+import { composeCost, type Recipe } from '@/domain/models/credit-blocks';
 
 export interface CaptionAvailabilityResult {
   hasCaptions: boolean;
   estimatedDurationSeconds: number | null;
   estimatedCreditCost: number;
+  recipe: Recipe;
+}
+
+/**
+ * Build the lego recipe for a YouTube URL given its caption/length state.
+ * Three branches:
+ *   - has captions:           scrape.youtube_meta + scrape.youtube_captions + ai.analyze.short
+ *   - Short, no captions:     scrape.youtube_meta + download.audio.short + transcribe.audio×1 + ai.analyze.short
+ *   - long video, no caps:    scrape.youtube_meta + download.audio.long×min + transcribe.audio×min + ai.analyze.short
+ */
+export function buildYoutubeRecipe(input: {
+  hasCaptions: boolean;
+  durationSeconds: number | null;
+}): Recipe {
+  const recipe: Recipe = [{ block: 'scrape.youtube_meta', units: 1 }];
+  if (input.hasCaptions) {
+    recipe.push({ block: 'scrape.youtube_captions', units: 1 });
+    recipe.push({ block: 'ai.analyze.short', units: 1 });
+    return recipe;
+  }
+  const isShort = (input.durationSeconds ?? 0) > 0 && input.durationSeconds! <= 60;
+  if (isShort) {
+    recipe.push({ block: 'download.audio.short', units: 1 });
+    recipe.push({ block: 'transcribe.audio', units: 1 });
+    recipe.push({ block: 'ai.analyze.short', units: 1 });
+    return recipe;
+  }
+  const minutes = Math.ceil((input.durationSeconds || 60) / 60);
+  recipe.push({ block: 'download.audio.long', units: minutes });
+  recipe.push({ block: 'transcribe.audio', units: minutes });
+  recipe.push({ block: 'ai.analyze.short', units: 1 });
+  return recipe;
 }
 
 /** Shape of the YouTube oEmbed API JSON response */
@@ -93,10 +125,13 @@ export class YouTubeExtractor extends SocialMediaExtractor {
   async checkCaptionAvailability(url: string): Promise<CaptionAvailabilityResult> {
     const videoId = this.extractVideoId(url);
     if (!videoId) {
+      // Unknown video — assume caption branch as the cheap default.
+      const recipe = buildYoutubeRecipe({ hasCaptions: true, durationSeconds: null });
       return {
         hasCaptions: false,
         estimatedDurationSeconds: null,
-        estimatedCreditCost: CREDIT_COSTS.youtube_caption_analysis,
+        estimatedCreditCost: composeCost(recipe),
+        recipe,
       };
     }
 
@@ -107,23 +142,13 @@ export class YouTubeExtractor extends SocialMediaExtractor {
     ]);
 
     const durationSeconds = pageData.durationSeconds;
-
-    const isShort = (durationSeconds ?? 0) > 0 && durationSeconds! <= 60;
-
-    let estimatedCreditCost: number;
-    if (hasCaptions) {
-      estimatedCreditCost = CREDIT_COSTS.youtube_caption_analysis;
-    } else if (isShort) {
-      estimatedCreditCost = CREDIT_COSTS.short_transcription;
-    } else {
-      const minutes = Math.ceil((durationSeconds || 60) / 60);
-      estimatedCreditCost = minutes * CREDIT_COSTS.video_transcription_per_min;
-    }
+    const recipe = buildYoutubeRecipe({ hasCaptions, durationSeconds });
 
     return {
       hasCaptions,
       estimatedDurationSeconds: durationSeconds,
-      estimatedCreditCost,
+      estimatedCreditCost: composeCost(recipe),
+      recipe,
     };
   }
 
@@ -192,6 +217,10 @@ export class YouTubeExtractor extends SocialMediaExtractor {
     }
 
     const isShort = (pageData.durationSeconds ?? 0) > 0 && pageData.durationSeconds! <= 60;
+    const recipe = buildYoutubeRecipe({
+      hasCaptions: captionSource === 'caption',
+      durationSeconds: pageData.durationSeconds,
+    });
 
     return {
       content,
@@ -204,6 +233,8 @@ export class YouTubeExtractor extends SocialMediaExtractor {
       kolAvatarUrl: null,
       captionSource,
       durationSeconds: pageData.durationSeconds ?? undefined,
+      recipe,
+      estimatedCreditCost: composeCost(recipe),
     };
   }
 
