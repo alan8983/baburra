@@ -1,8 +1,8 @@
 ## 1. Domain layer: block catalogue and helper
 
-- [ ] 1.1 Create `src/domain/models/credit-blocks.ts` with `BlockId` union, `CreditBlock` type (`{ credits, unit }`), `CREDIT_BLOCKS` constant matching the prices in `docs/CREDIT_COST_BREAKDOWN.md`, `Recipe` type (`Array<{ block: BlockId, units: number }>`), and `composeCost(recipe): number` helper. The catalogue SHALL contain a single transcription block `transcribe.audio` (1.5 credits/min), no separate Deepgram/Gemini-audio entries.
-- [ ] 1.2 Unit tests `src/domain/models/credit-blocks.test.ts`: per-block price sanity, empty recipe = 0, additive composition, fractional blocks round up to nearest integer at final total only.
-- [ ] 1.3 Add `@deprecated` JSDoc to `CREDIT_COSTS` in `src/domain/models/user.ts` and rewrite its values to be derived from `composeCost` on the canonical recipes (`text_analysis`, `youtube_caption_analysis`, `video_transcription_per_min`, `short_transcription`, `reroll_analysis`, `podcast_transcript_analysis`). Verify no numeric change larger than ±1 for single-unit cases; document any deltas in the PR.
+- [x] 1.1 Create `src/domain/models/credit-blocks.ts` with `BlockId` union, `CreditBlock` type (`{ credits, unit }`), `CREDIT_BLOCKS` constant matching the prices in `docs/CREDIT_COST_BREAKDOWN.md`, `Recipe` type (`Array<{ block: BlockId, units: number }>`), and `composeCost(recipe): number` helper. The catalogue SHALL contain a single transcription block `transcribe.audio` (1.5 credits/min), no separate Deepgram/Gemini-audio entries.
+- [x] 1.2 Unit tests `src/domain/models/credit-blocks.test.ts`: per-block price sanity, empty recipe = 0, additive composition, fractional blocks round up to nearest integer at final total only.
+- [x] 1.3 Add `@deprecated` JSDoc to `CREDIT_COSTS` in `src/domain/models/user.ts` and rewrite its values to be derived from `composeCost` on the canonical recipes (`text_analysis`, `youtube_caption_analysis`, `video_transcription_per_min`, `short_transcription`, `reroll_analysis`, `podcast_transcript_analysis`). Verify no numeric change larger than ±1 for single-unit cases; document any deltas in the PR.
 
 ## 2. Extractor refactor: return recipes
 
