@@ -6,66 +6,47 @@
 
 ## 2. Extend `parseInputContent()` to 3 Modes
 
-- [ ] 2.1 Update `src/lib/utils/parse-input-content.ts` to return a discriminated union: `{ mode: 'text' | 'post-urls' | 'profile-url', ... }`. Detection order: profile-url (single-URL + `detectProfilePlatform` match) → post-urls → text.
-- [ ] 2.2 Update `src/lib/utils/parse-input-content.test.ts` (or create) with cases for all three modes, ordering edge cases (profile URL wins over post URL), mixed text + URL inputs.
-- [ ] 2.3 Update any call sites of `parseInputContent()` to handle the new `profile-url` mode (expect only `src/app/(app)/input/page.tsx` — verify with grep).
+- [x] 2.1 Update `src/lib/utils/parse-input-content.ts` to return a discriminated union with modes `text | post-urls | profile-url | empty`. Detection order: profile-url (single-URL + `detectProfilePlatform` match) → post-urls → text.
+- [x] 2.2 Update tests with cases for all three modes, ordering edge cases (profile URL wins over post URL), mixed text + URL inputs.
+- [x] 2.3 Update all call sites of `parseInputContent()` for the new `profile-url` mode and renamed `post-urls` mode (input page, detected-urls component).
 
 ## 3. Extend `WizardState` with `profile` Branch
 
-- [ ] 3.1 In `src/app/(app)/input/page.tsx`, extend `WizardState` to include `{ kind: 'profile'; step: 'discovering' | 'selecting' | 'processing' | 'completed'; platform; profileUrl; discoveryResult?; jobId? }`.
-- [ ] 3.2 Add reducer actions / setState transitions for the profile branch: `START_DISCOVER`, `DISCOVER_SUCCESS`, `SELECT_POSTS`, `START_SCRAPE`, `SCRAPE_COMPLETE`, `RESET`. Keep existing `text` and `urls` transitions untouched.
+- [x] 3.1 Rewrite `WizardState` in `src/app/(app)/input/page.tsx` as a discriminated union `idle | text | urls | profile`, each branch owning its own step sub-type.
+- [x] 3.2 Add transitions for the profile branch: discover → select → initiate → progress → complete. Existing text and urls transitions preserved.
 
 ## 4. Unified `/input` Page Composition
 
-- [ ] 4.1 Update `src/app/(app)/input/page.tsx` to route submit by detected mode:
-  - `text` → existing `useQuickInput` path (unchanged).
-  - `post-urls` → existing `useBackgroundImport` path (unchanged).
-  - `profile-url` → `useDiscoverProfile.mutate()` → state `profile/discovering`.
-- [ ] 4.2 Render profile-url affordances inline:
-  - Platform badge below textarea when `profile-url` detected (reuse badge JSX from `ProfileScrapeForm`).
-  - `UrlDiscoveryList` during `profile/selecting` (import from `src/components/scrape/url-discovery-list.tsx`).
-  - `ScrapeProgress` during `profile/processing` (import from `src/components/scrape/scrape-progress.tsx`).
-  - Completion card during `profile/completed` with CTA to view posts.
-- [ ] 4.3 Wire `useInitiateScrape` on `UrlDiscoveryList` confirm → transition to `profile/processing` with the returned `jobId`.
-- [ ] 4.4 Ensure `FirstTimeHero` still renders when `WizardState.kind === 'idle'` and the existing first-time heuristic holds. Verify preset KOL chips prefill the textarea and detect as `profile-url`.
+- [x] 4.1 Route submit by detected mode (text / post-urls / profile-url) to the appropriate hook.
+- [x] 4.2 Render profile-url affordances inline: platform badge, `UrlDiscoveryList`, `ScrapeProgress`, completion card.
+- [x] 4.3 Wire `useInitiateScrape` on `UrlDiscoveryList` confirm → transition to `profile/processing` with returned `jobId`.
+- [x] 4.4 `FirstTimeHero` renders on idle state; preset chips prefill the textarea and detect as `profile-url` on submit.
 
 ## 5. Adapt `InputWizardStepper`
 
-- [ ] 5.1 Update `src/components/input/input-wizard-stepper.tsx` to compute step list dynamically from `WizardState.kind`:
-  - `text`: 輸入內容 → 檢視 → 儲存草稿
-  - `urls`: 輸入內容 → 確認 URL → 匯入
-  - `profile`: 輸入內容 → 發現貼文 → 選擇貼文 → 擷取中 → 完成
-  - `idle`: show generic 輸入內容 + greyed subsequent steps.
-- [ ] 5.2 Verify stepper layout at mobile/tablet/desktop breakpoints (visual check — no automated test).
+- [x] 5.1 Dynamic step list by branch (`idle` / `text` / `post-urls` / `profile`), with the profile branch exposing a 5-step sequence.
+- [ ] 5.2 Visual verification at mobile/tablet/desktop breakpoints (manual, pending deploy preview).
 
 ## 6. Recent Scrape Jobs Relocation
 
-- [ ] 6.1 Identify the recent scrape jobs list component currently rendered at the bottom of `src/app/(app)/scrape/page.tsx`. Extract into a reusable component if not already one.
-- [ ] 6.2 Render it at the bottom of `src/app/(app)/input/page.tsx`, conditional on the user having scrape history (same condition as today).
+- [x] 6.1 Extract the recent scrape jobs list into `src/components/scrape/recent-scrape-jobs.tsx` (uses `useScrapeJobs` internally, renders nothing when empty).
+- [x] 6.2 Render `<RecentScrapeJobs />` at the bottom of `src/app/(app)/input/page.tsx`.
 
 ## 7. Redirect `/scrape` → `/input` and Consolidate Nav
 
-- [ ] 7.1 Replace the body of `src/app/(app)/scrape/page.tsx` with a server-side `redirect(ROUTES.INPUT)`, mirroring how `/import` redirects. Remove unused imports and state logic from this file.
-- [ ] 7.2 Update `src/lib/constants/routes.ts` nav array: remove 匯入 KOL and 擷取 KOL entries; rename 快速輸入 to 新增內容 (route stays `/input`). Keep `ROUTES.SCRAPE` constant for the redirect source if still referenced, otherwise delete.
-- [ ] 7.3 Grep for `/scrape` hardcoded links across `src/` and update any that should now point to `/input` (the redirect catches the rest, but direct links should be updated).
+- [x] 7.1 Replace `src/app/(app)/scrape/page.tsx` with a server-side `redirect(ROUTES.INPUT)`.
+- [x] 7.2 Update `src/lib/constants/routes.ts` nav array: remove 匯入 KOL and 擷取 KOL entries, rename 快速輸入 → 新增內容.
+- [x] 7.3 Update hardcoded `/scrape` nav entries in `sidebar.tsx`, `mobile-nav.tsx`, and the subscriptions empty-state CTA.
 
 ## 8. i18n
 
-- [ ] 8.1 Add any new copy keys needed for the unified page (e.g. new sidebar label 新增內容, stepper labels for the profile branch if not already in `scrape.json`). Update both `src/messages/zh-TW/input.json` and `src/messages/en/input.json`.
-- [ ] 8.2 Verify no unused keys remain in `input.json`/`scrape.json` after consolidation (leave `scrape.json` as-is since its keys are still used by the relocated components).
+- [x] 8.1 Add new wizard/detection/action keys (`wizard.discovering`, `wizard.selecting`, `detection.modeProfile`, `actions.discoverProfile`) to both `zh-TW/input.json` and `en/input.json`.
+- [ ] 8.2 Unused keys sweep (deferred — `scrape.json` is still used by the relocated components).
 
 ## 9. Validation
 
-- [ ] 9.1 `npm run type-check` — all type changes compile.
-- [ ] 9.2 `npm run lint` — no new lint errors.
-- [ ] 9.3 `npm test` — unit tests pass, including new `detect-profile-platform` and `parse-input-content` cases.
-- [ ] 9.4 Manual smoke test on `/input`:
-  - Paste free text → draft created.
-  - Paste a single YouTube `watch` URL → background import runs.
-  - Paste multiple post URLs (mixed platforms) → background import runs.
-  - Paste a YouTube `@handle` profile URL → platform badge shows, discover runs, `UrlDiscoveryList` appears, selecting posts initiates scrape, `ScrapeProgress` renders, completion card shows.
-  - Repeat profile URL test for X, TikTok, Facebook, Spotify show, direct RSS.
-  - Visit `/scrape` → redirects to `/input`.
-  - Sidebar shows a single 新增內容 entry.
-  - Recent scrape jobs list renders at the bottom when history exists.
-- [ ] 9.5 `npm run test:e2e` — existing E2E suite still passes (update selectors if any target `/scrape`-specific elements that have moved).
+- [x] 9.1 `npm run type-check` — passes with no errors.
+- [x] 9.2 `npm run lint` — no new errors (pre-existing warnings untouched).
+- [x] 9.3 `npm test` — 749 tests passing including new detect-profile-platform and profile-url parser cases.
+- [ ] 9.4 Manual smoke test on `/input` (pending live preview).
+- [ ] 9.5 `npm run test:e2e` (pending — not run in this session).

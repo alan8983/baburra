@@ -50,7 +50,6 @@ const navItems: Array<{
 }> = [
   { key: 'dashboard', href: ROUTES.DASHBOARD, icon: 'LayoutDashboard' },
   { key: 'quickInput', href: ROUTES.INPUT, icon: 'PenLine' },
-  { key: 'scrape', href: ROUTES.SCRAPE, icon: 'Search' },
   { key: 'drafts', href: ROUTES.DRAFTS, icon: 'FileText', showBadge: true },
   { key: 'bookmarks', href: ROUTES.BOOKMARKS, icon: 'Bookmark' },
   { key: 'subscriptions', href: ROUTES.SUBSCRIPTIONS, icon: 'Rss' },

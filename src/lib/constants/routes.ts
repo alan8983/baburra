@@ -119,9 +119,7 @@ export const API_ROUTES = {
 // 導航項目
 export const NAV_ITEMS = [
   { label: 'Dashboard', href: ROUTES.DASHBOARD, icon: 'LayoutDashboard' },
-  { label: '快速輸入', href: ROUTES.INPUT, icon: 'PenLine' },
-  { label: '匯入 KOL', href: ROUTES.IMPORT, icon: 'Import' },
-  { label: '擷取 KOL', href: ROUTES.SCRAPE, icon: 'Search' },
+  { label: '新增內容', href: ROUTES.INPUT, icon: 'PenLine' },
   { label: '草稿', href: ROUTES.DRAFTS, icon: 'FileText', showBadge: true },
   { label: 'KOL 列表', href: ROUTES.KOLS, icon: 'Users' },
   { label: '投資標的', href: ROUTES.STOCKS, icon: 'TrendingUp' },
