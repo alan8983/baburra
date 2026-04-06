@@ -1,8 +1,8 @@
 ## 1. Shared Platform Detection Helper
 
-- [ ] 1.1 Create `src/lib/utils/detect-profile-platform.ts` exporting `ProfilePlatform` type and `detectProfilePlatform(url: string): ProfilePlatform | null`. Port regex patterns from `ProfileScrapeForm.detectPlatform()` (YouTube `@handle`/`/channel/`/`/c/`, X/Twitter handle, TikTok `@handle`, Facebook handle, Spotify show, Apple Podcasts, direct RSS `.xml`/`.rss`).
-- [ ] 1.2 Add unit tests `src/lib/utils/__tests__/detect-profile-platform.test.ts` covering each platform pattern, post-URL non-matches (e.g. `youtube.com/watch`, `x.com/user/status/...`), and invalid inputs.
-- [ ] 1.3 Refactor `src/components/scrape/profile-scrape-form.tsx` to import from the new helper. Remove the inlined `detectPlatform()`.
+- [x] 1.1 Create `src/lib/utils/detect-profile-platform.ts` exporting `ProfilePlatform` type and `detectProfilePlatform(url: string): ProfilePlatform | null`. Port regex patterns from `ProfileScrapeForm.detectPlatform()` (YouTube `@handle`/`/channel/`/`/c/`, X/Twitter handle, TikTok `@handle`, Facebook handle, Spotify show, Apple Podcasts, direct RSS `.xml`/`.rss`).
+- [x] 1.2 Add unit tests `src/lib/utils/__tests__/detect-profile-platform.test.ts` covering each platform pattern, post-URL non-matches (e.g. `youtube.com/watch`, `x.com/user/status/...`), and invalid inputs.
+- [x] 1.3 Refactor `src/components/scrape/profile-scrape-form.tsx` to import from the new helper. Remove the inlined `detectPlatform()`.
 
 ## 2. Extend `parseInputContent()` to 3 Modes
 
