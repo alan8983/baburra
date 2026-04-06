@@ -16,7 +16,7 @@ export function DetectedUrls({ parsed }: DetectedUrlsProps) {
 
   if (urlSegments.length === 0) return null;
 
-  const tooManyUrls = parsed.mode === 'urls' && parsed.urls.length > MAX_URLS;
+  const tooManyUrls = parsed.mode === 'post-urls' && parsed.urls.length > MAX_URLS;
 
   return (
     <div className="space-y-2">
@@ -36,7 +36,7 @@ export function DetectedUrls({ parsed }: DetectedUrlsProps) {
 
       {/* Mode indicator */}
       <p className="text-muted-foreground text-xs">
-        {parsed.mode === 'urls' ? t('detection.modeUrls') : t('detection.modeText')}
+        {parsed.mode === 'post-urls' ? t('detection.modeUrls') : t('detection.modeText')}
       </p>
 
       {/* Warnings */}

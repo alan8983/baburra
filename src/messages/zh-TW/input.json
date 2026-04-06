@@ -3,6 +3,8 @@
   "description": "貼上文章內容或網址，AI 自動分析並建立追蹤記錄",
   "wizard": {
     "input": "輸入",
+    "discovering": "探索內容",
+    "selecting": "選擇貼文",
     "processing": "處理中",
     "review": "審閱結果",
     "complete": "完成",
@@ -27,6 +29,7 @@
   "actions": {
     "createDraft": "建立草稿",
     "importPosts": "匯入文章",
+    "discoverProfile": "探索 KOL 內容",
     "analyzing": "AI 分析中..."
   },
   "tips": {
@@ -35,6 +38,7 @@
   "detection": {
     "modeUrls": "偵測到網址 — 將直接匯入為已發布文章",
     "modeText": "偵測到文字內容 — 將建立草稿供審閱",
+    "modeProfile": "偵測到 KOL 頻道 — 將探索並擷取貼文",
     "unsupportedUrl": "部分網址來自不支援的平台（僅支援 Twitter/X 及 YouTube）",
     "tooManyUrls": "每次最多匯入 {max} 個網址"
   },
@@ -57,6 +61,22 @@
     "sectionTitle": "或透過 URL 匯入",
     "sectionDescription": "貼上 Twitter/X 或 YouTube 網址，直接匯入為已發布的文章",
     "viewPosts": "查看文章"
+  },
+  "quickNav": {
+    "dashboard": {
+      "title": "儀表板",
+      "description": "檢視你追蹤的 KOL 組合、勝率與最近動態"
+    },
+    "kols": {
+      "title": "KOL",
+      "description": "探索你追蹤的 KOL 表現",
+      "empty": "尚未追蹤任何 KOL — 從上方開始新增"
+    },
+    "stocks": {
+      "title": "投資標的",
+      "description": "看看大家對各個標的的觀點",
+      "empty": "尚無追蹤的標的 — 新增貼文後會自動出現"
+    }
   },
   "errors": {
     "createDraftFailed": "建立草稿失敗",

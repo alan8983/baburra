@@ -21,16 +21,16 @@ describe('parseInputContent', () => {
   });
 
   describe('single URL input', () => {
-    it('returns mode "urls" for a supported Twitter URL', () => {
+    it('returns mode "post-urls" for a supported Twitter URL', () => {
       const result = parseInputContent('https://x.com/user/status/123');
-      expect(result.mode).toBe('urls');
+      expect(result.mode).toBe('post-urls');
       expect(result.urls).toEqual(['https://x.com/user/status/123']);
       expect(result.hasUnsupportedUrls).toBe(false);
     });
 
-    it('returns mode "urls" for a supported YouTube URL', () => {
+    it('returns mode "post-urls" for a supported YouTube URL', () => {
       const result = parseInputContent('https://youtube.com/watch?v=abc');
-      expect(result.mode).toBe('urls');
+      expect(result.mode).toBe('post-urls');
       expect(result.urls).toEqual(['https://youtube.com/watch?v=abc']);
     });
 
@@ -50,10 +50,10 @@ describe('parseInputContent', () => {
   });
 
   describe('multiple URLs separated by semicolons', () => {
-    it('returns mode "urls" when all are supported platforms', () => {
+    it('returns mode "post-urls" when all are supported platforms', () => {
       const input = 'https://x.com/user/status/1;https://youtube.com/watch?v=abc';
       const result = parseInputContent(input);
-      expect(result.mode).toBe('urls');
+      expect(result.mode).toBe('post-urls');
       expect(result.urls).toHaveLength(2);
     });
 
@@ -67,10 +67,10 @@ describe('parseInputContent', () => {
   });
 
   describe('multiple URLs separated by newlines', () => {
-    it('returns mode "urls" when all are supported', () => {
+    it('returns mode "post-urls" when all are supported', () => {
       const input = 'https://x.com/user/status/1\nhttps://youtube.com/watch?v=abc';
       const result = parseInputContent(input);
-      expect(result.mode).toBe('urls');
+      expect(result.mode).toBe('post-urls');
       expect(result.urls).toHaveLength(2);
     });
 
@@ -136,10 +136,48 @@ describe('parseInputContent', () => {
     });
   });
 
+  describe('profile URL mode', () => {
+    it('detects a YouTube channel URL as profile-url', () => {
+      const result = parseInputContent('https://youtube.com/@somehandle');
+      expect(result.mode).toBe('profile-url');
+      expect(result.profilePlatform).toBe('youtube');
+      expect(result.profileUrl).toBe('https://youtube.com/@somehandle');
+    });
+
+    it('detects an X handle URL as profile-url', () => {
+      const result = parseInputContent('https://x.com/elonmusk');
+      expect(result.mode).toBe('profile-url');
+      expect(result.profilePlatform).toBe('twitter');
+    });
+
+    it('detects a direct RSS feed as profile-url podcast', () => {
+      const result = parseInputContent('https://feeds.transistor.fm/acquired');
+      expect(result.mode).toBe('profile-url');
+      expect(result.profilePlatform).toBe('podcast');
+    });
+
+    it('does NOT detect youtube.com/watch as profile-url', () => {
+      const result = parseInputContent('https://youtube.com/watch?v=abc');
+      expect(result.mode).toBe('post-urls');
+    });
+
+    it('does NOT detect x.com/user/status/... as profile-url', () => {
+      const result = parseInputContent('https://x.com/elonmusk/status/123');
+      expect(result.mode).toBe('post-urls');
+    });
+
+    it('does NOT detect profile URL when input has multiple segments', () => {
+      const result = parseInputContent(
+        'https://youtube.com/@handle\nhttps://youtube.com/watch?v=abc'
+      );
+      expect(result.mode).not.toBe('profile-url');
+    });
+  });
+
   describe('edge cases', () => {
     it('handles trailing semicolons', () => {
       const result = parseInputContent('https://x.com/user/status/1;');
-      expect(result.mode).toBe('urls');
+      expect(result.mode).toBe('post-urls');
       expect(result.urls).toHaveLength(1);
     });
 

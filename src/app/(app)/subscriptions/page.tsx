@@ -120,7 +120,7 @@ export default function SubscriptionsPage() {
           icon={<Rss className="h-12 w-12" />}
           title={t('empty.title')}
           description={t('empty.description')}
-          primaryAction={{ label: t('empty.action'), href: ROUTES.SCRAPE }}
+          primaryAction={{ label: t('empty.action'), href: ROUTES.INPUT }}
         />
       )}
     </div>
