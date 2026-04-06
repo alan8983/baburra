@@ -29,6 +29,7 @@ import { FirstTimeHero } from '@/components/scrape/first-time-hero';
 import { UrlDiscoveryList } from '@/components/scrape/url-discovery-list';
 import { ScrapeProgress } from '@/components/scrape/scrape-progress';
 import { RecentScrapeJobs } from '@/components/scrape/recent-scrape-jobs';
+import { InputPageQuickNav } from '@/components/input/input-page-quick-nav';
 import { getPlatformIconByName } from '@/components/ui/platform-icons';
 import { parseInputContent } from '@/lib/utils/parse-input-content';
 import {
@@ -268,165 +269,178 @@ export default function InputPage() {
   const showFirstTimeHero = showInputPane && isFirstTimeUser && !content.trim();
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] flex-col items-center px-4 pt-8">
-      <div className="w-full max-w-2xl space-y-8">
+    <div className="min-h-[calc(100vh-8rem)] px-4 pt-8">
+      <div className="mx-auto w-full max-w-6xl space-y-8">
         <InputWizardStepper currentStep={step} branch={branch} />
 
-        {showInputPane && (
-          <div className="space-y-6">
-            <div className="text-center">
-              <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
-              <p className="text-muted-foreground mt-1 text-sm">{t('description')}</p>
-            </div>
-
-            {showFirstTimeHero && <FirstTimeHero onSelectPreset={(url) => setContent(url)} />}
-
-            <div className="space-y-3">
-              <Textarea
-                placeholder={t('inputCard.placeholder')}
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                className="min-h-[200px] resize-none"
-              />
-
-              {/* Profile URL platform badge */}
-              {parsed.mode === 'profile-url' && parsed.profilePlatform && (
-                <div className="flex items-center gap-2">
-                  {getPlatformIconByName(parsed.profilePlatform, 'h-4 w-4')}
-                  <Badge variant="secondary" className="text-xs">
-                    {PLATFORM_LABELS[parsed.profilePlatform] ?? parsed.profilePlatform}
-                  </Badge>
-                  <span className="text-muted-foreground text-xs">
-                    {t('detection.modeProfile')}
-                  </span>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="space-y-8 lg:col-span-2">
+            {showInputPane && (
+              <div className="space-y-6">
+                <div className="text-center">
+                  <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
+                  <p className="text-muted-foreground mt-1 text-sm">{t('description')}</p>
                 </div>
-              )}
 
-              {/* Detected post URLs (also shown in text mode with mixed URLs) */}
-              {parsed.mode !== 'profile-url' && <DetectedUrls parsed={parsed} />}
+                {showFirstTimeHero && <FirstTimeHero onSelectPreset={(url) => setContent(url)} />}
 
-              {urlEstimate && canSubmit && (
-                <p className="text-muted-foreground text-center text-sm">
-                  {urlEstimate.credits} credits &middot; {urlEstimate.time}
-                </p>
-              )}
+                <div className="space-y-3">
+                  <Textarea
+                    placeholder={t('inputCard.placeholder')}
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    className="min-h-[200px] resize-none"
+                  />
 
-              <div className="flex items-center justify-between">
-                <p className="text-muted-foreground text-xs">{t('tips.hint')}</p>
-                <Button onClick={handleSubmit} disabled={!canSubmit} size="lg">
-                  {isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      {submitLabel}
-                    </>
-                  ) : (
-                    <>
-                      {submitLabel}
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </>
+                  {/* Profile URL platform badge */}
+                  {parsed.mode === 'profile-url' && parsed.profilePlatform && (
+                    <div className="flex items-center gap-2">
+                      {getPlatformIconByName(parsed.profilePlatform, 'h-4 w-4')}
+                      <Badge variant="secondary" className="text-xs">
+                        {PLATFORM_LABELS[parsed.profilePlatform] ?? parsed.profilePlatform}
+                      </Badge>
+                      <span className="text-muted-foreground text-xs">
+                        {t('detection.modeProfile')}
+                      </span>
+                    </div>
                   )}
-                </Button>
+
+                  {/* Detected post URLs (also shown in text mode with mixed URLs) */}
+                  {parsed.mode !== 'profile-url' && <DetectedUrls parsed={parsed} />}
+
+                  {urlEstimate && canSubmit && (
+                    <p className="text-muted-foreground text-center text-sm">
+                      {urlEstimate.credits} credits &middot; {urlEstimate.time}
+                    </p>
+                  )}
+
+                  <div className="flex items-center justify-between">
+                    <p className="text-muted-foreground text-xs">{t('tips.hint')}</p>
+                    <Button onClick={handleSubmit} disabled={!canSubmit} size="lg">
+                      {isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {submitLabel}
+                        </>
+                      ) : (
+                        <>
+                          {submitLabel}
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        )}
+            )}
 
-        {/* text branch: processing state (overlay handles the UI) */}
-        {wizard.kind === 'text' && wizard.step === 'processing' && (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-16">
-              <Loader2 className="text-primary h-8 w-8 animate-spin" />
-              <h2 className="mt-4 text-lg font-semibold">{t('wizard.processingTitle')}</h2>
-              <p className="text-muted-foreground mt-1 text-sm">
-                {t('wizard.processingDescription')}
-              </p>
-            </CardContent>
-          </Card>
-        )}
+            {/* text branch: processing state (overlay handles the UI) */}
+            {wizard.kind === 'text' && wizard.step === 'processing' && (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-16">
+                  <Loader2 className="text-primary h-8 w-8 animate-spin" />
+                  <h2 className="mt-4 text-lg font-semibold">{t('wizard.processingTitle')}</h2>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    {t('wizard.processingDescription')}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
 
-        {/* text branch: done */}
-        {wizard.kind === 'text' && wizard.step === 'done' && (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <CheckCircle2 className="h-12 w-12 text-green-500" />
-              <h2 className="mt-4 text-xl font-semibold">{t('wizard.completeTitle')}</h2>
-              <p className="text-muted-foreground mt-1 text-sm">
-                {t('wizard.completeDescription')}
-              </p>
-              <p className="mt-4 text-sm">{t('wizard.summaryDraft')}</p>
-              <div className="mt-6 flex gap-3">
-                {wizard.draftId && (
-                  <Button onClick={() => router.push(ROUTES.DRAFT_DETAIL(wizard.draftId!))}>
-                    {t('wizard.viewDraft')}
-                    <ArrowRight className="ml-1 h-4 w-4" />
-                  </Button>
-                )}
-                <Button variant="outline" onClick={handleReset}>
-                  <RotateCcw className="mr-1 h-4 w-4" />
-                  {t('wizard.importMore')}
-                </Button>
+            {/* text branch: done */}
+            {wizard.kind === 'text' && wizard.step === 'done' && (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                  <CheckCircle2 className="h-12 w-12 text-green-500" />
+                  <h2 className="mt-4 text-xl font-semibold">{t('wizard.completeTitle')}</h2>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    {t('wizard.completeDescription')}
+                  </p>
+                  <p className="mt-4 text-sm">{t('wizard.summaryDraft')}</p>
+                  <div className="mt-6 flex gap-3">
+                    {wizard.draftId && (
+                      <Button onClick={() => router.push(ROUTES.DRAFT_DETAIL(wizard.draftId!))}>
+                        {t('wizard.viewDraft')}
+                        <ArrowRight className="ml-1 h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button variant="outline" onClick={handleReset}>
+                      <RotateCcw className="mr-1 h-4 w-4" />
+                      {t('wizard.importMore')}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* urls branch: review (legacy path — currently unused since import runs in background) */}
+            {wizard.kind === 'urls' && wizard.step === 'review' && wizard.importResult && (
+              <div className="space-y-6">
+                <div className="text-center">
+                  <h2 className="text-xl font-semibold">{t('wizard.reviewTitle')}</h2>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    {t('wizard.reviewDescription')}
+                  </p>
+                </div>
+                <ImportResult
+                  result={wizard.importResult}
+                  onImportMore={handleReset}
+                  onProceed={handleReset}
+                  proceedLabel={t('wizard.viewPosts')}
+                />
               </div>
-            </CardContent>
-          </Card>
-        )}
+            )}
 
-        {/* urls branch: review (legacy path — currently unused since import runs in background) */}
-        {wizard.kind === 'urls' && wizard.step === 'review' && wizard.importResult && (
-          <div className="space-y-6">
-            <div className="text-center">
-              <h2 className="text-xl font-semibold">{t('wizard.reviewTitle')}</h2>
-              <p className="text-muted-foreground mt-1 text-sm">{t('wizard.reviewDescription')}</p>
-            </div>
-            <ImportResult
-              result={wizard.importResult}
-              onImportMore={handleReset}
-              onProceed={handleReset}
-              proceedLabel={t('wizard.viewPosts')}
-            />
+            {/* profile branch: discovering */}
+            {wizard.kind === 'profile' && wizard.step === 'discovering' && (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center gap-3 py-12">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                  <p className="text-muted-foreground text-sm">
+                    {t('wizard.processingDescription')}
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* profile branch: selecting */}
+            {wizard.kind === 'profile' && wizard.step === 'selecting' && wizard.discoveryResult && (
+              <UrlDiscoveryList
+                kolName={wizard.discoveryResult.kolName}
+                kolAvatarUrl={wizard.discoveryResult.kolAvatarUrl}
+                platform={wizard.discoveryResult.platform}
+                discoveredUrls={wizard.discoveryResult.discoveredUrls}
+                onConfirm={handleConfirmScrapeSelection}
+                onBack={handleReset}
+                isSubmitting={initiateScrape.isPending}
+                firstImportFree={isFirstTimeUser}
+              />
+            )}
+
+            {/* profile branch: processing / completed */}
+            {wizard.kind === 'profile' &&
+              (wizard.step === 'processing' || wizard.step === 'completed') &&
+              wizard.jobId && (
+                <ScrapeProgress
+                  jobId={wizard.jobId}
+                  onReset={handleReset}
+                  onComplete={() =>
+                    setWizard((prev) =>
+                      prev.kind === 'profile' ? { ...prev, step: 'completed' } : prev
+                    )
+                  }
+                />
+              )}
+
+            {/* Recent scrape jobs (bottom of main column, only when history exists) */}
+            <RecentScrapeJobs />
           </div>
-        )}
 
-        {/* profile branch: discovering */}
-        {wizard.kind === 'profile' && wizard.step === 'discovering' && (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center gap-3 py-12">
-              <Loader2 className="h-8 w-8 animate-spin" />
-              <p className="text-muted-foreground text-sm">{t('wizard.processingDescription')}</p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* profile branch: selecting */}
-        {wizard.kind === 'profile' && wizard.step === 'selecting' && wizard.discoveryResult && (
-          <UrlDiscoveryList
-            kolName={wizard.discoveryResult.kolName}
-            kolAvatarUrl={wizard.discoveryResult.kolAvatarUrl}
-            platform={wizard.discoveryResult.platform}
-            discoveredUrls={wizard.discoveryResult.discoveredUrls}
-            onConfirm={handleConfirmScrapeSelection}
-            onBack={handleReset}
-            isSubmitting={initiateScrape.isPending}
-            firstImportFree={isFirstTimeUser}
-          />
-        )}
-
-        {/* profile branch: processing / completed */}
-        {wizard.kind === 'profile' &&
-          (wizard.step === 'processing' || wizard.step === 'completed') &&
-          wizard.jobId && (
-            <ScrapeProgress
-              jobId={wizard.jobId}
-              onReset={handleReset}
-              onComplete={() =>
-                setWizard((prev) =>
-                  prev.kind === 'profile' ? { ...prev, step: 'completed' } : prev
-                )
-              }
-            />
-          )}
-
-        {/* Recent scrape jobs (bottom of page, only when history exists) */}
-        <RecentScrapeJobs />
+          {/* Right rail: quick nav to dashboard / kols / stocks */}
+          <aside className="lg:col-span-1">
+            <InputPageQuickNav />
+          </aside>
+        </div>
       </div>
 
       <AnalysisLoadingOverlay isVisible={wizard.kind === 'text' && wizard.step === 'processing'} />

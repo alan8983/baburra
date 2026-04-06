@@ -62,6 +62,22 @@
     "sectionDescription": "貼上 Twitter/X 或 YouTube 網址，直接匯入為已發布的文章",
     "viewPosts": "查看文章"
   },
+  "quickNav": {
+    "dashboard": {
+      "title": "儀表板",
+      "description": "檢視你追蹤的 KOL 組合、勝率與最近動態"
+    },
+    "kols": {
+      "title": "KOL",
+      "description": "探索你追蹤的 KOL 表現",
+      "empty": "尚未追蹤任何 KOL — 從上方開始新增"
+    },
+    "stocks": {
+      "title": "投資標的",
+      "description": "看看大家對各個標的的觀點",
+      "empty": "尚無追蹤的標的 — 新增貼文後會自動出現"
+    }
+  },
   "errors": {
     "createDraftFailed": "建立草稿失敗",
     "tryAgain": "請稍後再試",

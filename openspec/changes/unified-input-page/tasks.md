@@ -25,7 +25,7 @@
 ## 5. Adapt `InputWizardStepper`
 
 - [x] 5.1 Dynamic step list by branch (`idle` / `text` / `post-urls` / `profile`), with the profile branch exposing a 5-step sequence.
-- [ ] 5.2 Visual verification at mobile/tablet/desktop breakpoints (manual, pending deploy preview).
+- [x] 5.2 Visual verification at mobile/tablet/desktop breakpoints — verified on local preview; stepper shows 4-step idle sequence at all sizes (horizontally scrollable on mobile).
 
 ## 6. Recent Scrape Jobs Relocation
 
@@ -41,12 +41,12 @@
 ## 8. i18n
 
 - [x] 8.1 Add new wizard/detection/action keys (`wizard.discovering`, `wizard.selecting`, `detection.modeProfile`, `actions.discoverProfile`) to both `zh-TW/input.json` and `en/input.json`.
-- [ ] 8.2 Unused keys sweep (deferred — `scrape.json` is still used by the relocated components).
+- [x] 8.2 Unused keys sweep — deleted dead `profile-scrape-form.tsx` + `scrape-flow-chart.tsx`, pruned unused `title`/`description`/`form`/`flowChart`/`errors` groups and stray keys (`queue.estimatedWait`, `progress.earlyNudge`, `progress.viewKolEarly`, `progress.stats`, `progress.processed`, `jobs.empty`, `discover.title`, `discover.loading`, `notifications.dismiss`) from both `scrape.json` locales.
 
 ## 9. Validation
 
 - [x] 9.1 `npm run type-check` — passes with no errors.
 - [x] 9.2 `npm run lint` — no new errors (pre-existing warnings untouched).
 - [x] 9.3 `npm test` — 749 tests passing including new detect-profile-platform and profile-url parser cases.
-- [ ] 9.4 Manual smoke test on `/input` (pending live preview).
+- [x] 9.4 Manual smoke test on `/input` — verified all three flows detect correctly: text input → "建立草稿" button, post URLs → "匯入文章" button, profile URL (`youtube.com/@Gooaye`) → YouTube badge + "探索 KOL 內容" button. Recent scrape jobs list renders at the bottom.
 - [ ] 9.5 `npm run test:e2e` (pending — not run in this session).

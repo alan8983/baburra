@@ -62,6 +62,22 @@
     "sectionDescription": "Paste Twitter/X or YouTube URLs to directly import as published posts",
     "viewPosts": "View Posts"
   },
+  "quickNav": {
+    "dashboard": {
+      "title": "Dashboard",
+      "description": "Overview of your KOL portfolio, win rates, and recent activity"
+    },
+    "kols": {
+      "title": "KOLs",
+      "description": "Explore performance of the KOLs you're tracking",
+      "empty": "No KOLs yet — track your first one above"
+    },
+    "stocks": {
+      "title": "Stocks",
+      "description": "Explore what people are saying about each ticker",
+      "empty": "No stocks yet — they appear as you add tracked posts"
+    }
+  },
   "errors": {
     "createDraftFailed": "Failed to create draft",
     "tryAgain": "Please try again later",
