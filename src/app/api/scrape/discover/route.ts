@@ -37,6 +37,12 @@ export async function POST(request: NextRequest) {
     if (err instanceof Error && err.message.includes('TWITTERAPI_IO_KEY')) {
       return badRequestError('Twitter API key is not configured', 'API_KEY_MISSING');
     }
+    if (err instanceof Error && err.message.includes('APIFY_API_TOKEN')) {
+      return badRequestError(
+        'Apify API token is not configured (required for TikTok / Facebook)',
+        'API_KEY_MISSING'
+      );
+    }
     return internalError(err, 'Failed to discover profile URLs');
   }
 }

@@ -3,7 +3,7 @@
   "description": "Enter a KOL channel URL to auto-scrape their profile and start tracking",
   "hero": {
     "title": "Track Your First Investment KOL",
-    "subtitle": "Paste a YouTube channel URL — AI analyzes opinion accuracy automatically",
+    "subtitle": "Paste a KOL channel or Podcast URL — AI analyzes opinion accuracy automatically",
     "freeBadge": "First import completely free, no credit card needed",
     "presetHint": "Not sure what to paste? Try these:",
     "preset1Name": "Gooaye 股癌",
@@ -15,11 +15,11 @@
   },
   "form": {
     "urlLabel": "KOL Channel URL",
-    "urlPlaceholder": "Paste a YouTube channel URL",
-    "supportedPlatforms": "Supports: YouTube channels",
+    "urlPlaceholder": "Paste a KOL channel or Podcast URL",
+    "supportedPlatforms": "Supports: YouTube, X, TikTok, Facebook, Podcast (Spotify / Apple / RSS)",
     "submit": "Discover Content",
     "submitting": "Discovering...",
-    "invalidUrl": "Please enter a valid YouTube channel URL",
+    "invalidUrl": "Please enter a valid KOL channel or Podcast URL",
     "platformYouTube": "YouTube"
   },
   "flowChart": {

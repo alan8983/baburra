@@ -21,8 +21,16 @@ const TIKTOK_PATTERN = /tiktok\.com/i;
 const FACEBOOK_PATTERN = /facebook\.com|fb\.com/i;
 const TWITTER_PATTERN = /twitter\.com|x\.com/i;
 const YOUTUBE_PATTERN = /youtube\.com|youtu\.be/i;
+const PODCAST_HOST_PATTERN =
+  /spotify\.com\/show\/|podcasts\.apple\.com|feeds\.|anchor\.fm|feedburner/i;
+const PODCAST_PATH_PATTERN = /\.(xml|rss|atom)(\?|$)|\/feed|\/rss/i;
 
-export type PlatformName = 'youtube' | 'twitter' | 'tiktok' | 'facebook' | string;
+function isPodcastUrl(url: string): boolean {
+  if (PODCAST_HOST_PATTERN.test(url)) return true;
+  return PODCAST_PATH_PATTERN.test(url);
+}
+
+export type PlatformName = 'youtube' | 'twitter' | 'tiktok' | 'facebook' | 'podcast' | string;
 
 export function getPlatformIconByUrl(url: string, className: string = 'h-4 w-4') {
   if (YOUTUBE_PATTERN.test(url)) return <Youtube className={`${className} text-red-500`} />;
@@ -30,6 +38,7 @@ export function getPlatformIconByUrl(url: string, className: string = 'h-4 w-4')
   if (TIKTOK_PATTERN.test(url))
     return <TikTokIcon className={`${className} text-black dark:text-white`} />;
   if (FACEBOOK_PATTERN.test(url)) return <FacebookIcon className={`${className} text-blue-600`} />;
+  if (isPodcastUrl(url)) return <Headphones className={`${className} text-emerald-500`} />;
   return <Link className={`${className} text-muted-foreground`} />;
 }
 
