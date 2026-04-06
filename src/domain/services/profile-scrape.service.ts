@@ -14,7 +14,35 @@ import {
   podcastProfileExtractor,
 } from '@/infrastructure/extractors';
 import type { ProfileExtractor, DiscoveredUrl } from '@/infrastructure/extractors';
-import { CREDIT_COSTS } from '@/domain/models/user';
+import { composeCost, type Recipe } from '@/domain/models/credit-blocks';
+import { consumeCredits } from '@/infrastructure/repositories/ai-usage.repository';
+
+// Per-item recipes used to enrich DiscoveredUrl[].
+const APIFY_POST_RECIPE: Recipe = [
+  { block: 'scrape.apify.post', units: 1 },
+  { block: 'ai.analyze.short', units: 1 },
+];
+const APIFY_POST_COST = composeCost(APIFY_POST_RECIPE);
+
+// Up-front Apify profile discovery charge.
+const APIFY_PROFILE_DISCOVERY_RECIPE: Recipe = [{ block: 'scrape.apify.profile', units: 1 }];
+const APIFY_PROFILE_DISCOVERY_COST = composeCost(APIFY_PROFILE_DISCOVERY_RECIPE);
+
+const APIFY_DISCOVERY_PLATFORMS = new Set(['facebook', 'twitter', 'threads', 'tiktok']);
+
+function tiktokRecipe(durationSeconds?: number): Recipe {
+  // TikTok caption-only is the apify post path; transcription branch adds
+  // download.audio.short + transcribe.audio×min. We don't know caption state
+  // up-front during discovery, so assume the (more expensive) transcribe path
+  // for the estimate, matching prior behaviour.
+  const minutes = Math.ceil((durationSeconds || 60) / 60);
+  return [
+    { block: 'scrape.apify.post', units: 1 },
+    { block: 'download.audio.short', units: 1 },
+    { block: 'transcribe.audio', units: minutes },
+    { block: 'ai.analyze.short', units: 1 },
+  ];
+}
 import {
   findKolByName,
   createKol,
@@ -95,19 +123,30 @@ function getProfileExtractor(url: string): ProfileExtractor | null {
 
 // ── Public Functions ──
 
-export async function discoverProfileUrls(profileUrl: string): Promise<DiscoverResult> {
+export async function discoverProfileUrls(
+  profileUrl: string,
+  userId?: string
+): Promise<DiscoverResult> {
   const extractor = getProfileExtractor(profileUrl);
   if (!extractor) {
     throw new Error(`Unsupported profile URL: ${profileUrl}`);
+  }
+
+  // Charge the Apify discovery block UP-FRONT for FB/X/Threads/TikTok before
+  // triggering the actor run. Not refunded if 0 items are imported — reflects
+  // real Apify spend. RSS-based discovery (YouTube channel, podcast) is NOT
+  // billed here; it's covered by the per-item recipe.
+  if (userId && APIFY_DISCOVERY_PLATFORMS.has(extractor.platform)) {
+    await consumeCredits(userId, APIFY_PROFILE_DISCOVERY_COST, 'apify_profile_discovery');
   }
 
   const profile = await extractor.extractProfile(profileUrl);
   let discoveredUrls: DiscoveredUrl[] =
     profile.discoveredUrls ?? profile.postUrls.map((url) => ({ url }));
 
-  // Enrich URLs with credit cost estimates
+  // Enrich URLs with credit cost recipes + estimates.
   if (extractor.platform === 'youtube') {
-    // Check caption availability for each YouTube URL (parallel, with concurrency limit)
+    // Check caption availability for each YouTube URL (parallel).
     const enriched = await Promise.all(
       discoveredUrls.map(async (item) => {
         try {
@@ -117,43 +156,47 @@ export async function discoverProfileUrls(profileUrl: string): Promise<DiscoverR
             captionAvailable: availability.hasCaptions,
             durationSeconds: availability.estimatedDurationSeconds ?? undefined,
             estimatedCreditCost: availability.estimatedCreditCost,
+            recipe: availability.recipe,
           };
         } catch {
-          // On error, assume caption available (cheaper default)
+          // On error, assume caption branch (cheaper default).
+          const fallback: Recipe = [
+            { block: 'scrape.youtube_meta', units: 1 },
+            { block: 'scrape.youtube_captions', units: 1 },
+            { block: 'ai.analyze.short', units: 1 },
+          ];
           return {
             ...item,
-            estimatedCreditCost: CREDIT_COSTS.youtube_caption_analysis,
+            estimatedCreditCost: composeCost(fallback),
+            recipe: fallback,
           };
         }
       })
     );
     discoveredUrls = enriched;
   } else if (extractor.platform === 'tiktok') {
-    // TikTok videos: same cost as captionless YouTube (transcription required)
     discoveredUrls = discoveredUrls.map((item) => {
-      const durationMin = Math.ceil((item.durationSeconds || 60) / 60);
+      const recipe = tiktokRecipe(item.durationSeconds);
       return {
         ...item,
-        estimatedCreditCost:
-          durationMin <= 1 ? 3 : durationMin * CREDIT_COSTS.video_transcription_per_min,
+        estimatedCreditCost: composeCost(recipe),
+        recipe,
       };
     });
-  } else if (extractor.platform === 'facebook') {
-    // Facebook text posts: 1 credit per post
+  } else if (
+    extractor.platform === 'facebook' ||
+    extractor.platform === 'twitter' ||
+    extractor.platform === 'threads'
+  ) {
     discoveredUrls = discoveredUrls.map((item) => ({
       ...item,
-      estimatedCreditCost: CREDIT_COSTS.text_analysis,
+      estimatedCreditCost: APIFY_POST_COST,
+      recipe: APIFY_POST_RECIPE,
     }));
   } else if (extractor.platform === 'podcast') {
-    // Podcast URLs: credit estimates already computed by PodcastProfileExtractor
-    // (2 credits with transcript, duration × 5 without)
-    // No additional enrichment needed — pass through as-is
+    // Podcast URLs: recipes already computed by PodcastProfileExtractor.
   } else {
-    // Other platforms: 1 credit per post
-    discoveredUrls = discoveredUrls.map((item) => ({
-      ...item,
-      estimatedCreditCost: CREDIT_COSTS.text_analysis,
-    }));
+    // Other platforms (e.g. youtube_short surfaced via discovery): leave as-is.
   }
 
   return {

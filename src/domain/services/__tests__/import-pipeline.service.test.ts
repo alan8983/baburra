@@ -195,8 +195,8 @@ describe('executeBatchImport', () => {
 
     await executeBatchImport({ urls: ['https://x.com/trader/status/1'] }, USER_ID);
 
-    // text_analysis costs 1 credit
-    expect(mocks.consumeCredits).toHaveBeenCalledWith(USER_ID, 1, 'text_analysis');
+    // text_analysis recipe = scrape.html(0.2) + ai.analyze.short(1.0) = 1.2 -> 2
+    expect(mocks.consumeCredits).toHaveBeenCalledWith(USER_ID, 2, 'text_analysis');
   });
 
   it('skips credit consumption for first-import-free users', async () => {
@@ -255,8 +255,8 @@ describe('executeBatchImport', () => {
 
     await executeBatchImport({ urls: ['https://x.com/fail/status/1'] }, USER_ID);
 
-    // 1 credit consumed for text_analysis, then refunded
-    expect(mocks.refundCredits).toHaveBeenCalledWith(USER_ID, 1);
+    // 2 credits consumed for text_analysis recipe, then refunded
+    expect(mocks.refundCredits).toHaveBeenCalledWith(USER_ID, 2);
   });
 
   it('refunds credits when zero tickers are identified', async () => {
@@ -267,7 +267,7 @@ describe('executeBatchImport', () => {
 
     expect(result.urlResults[0].status).toBe('error');
     expect(result.urlResults[0].error).toBe('no_tickers_identified');
-    expect(mocks.refundCredits).toHaveBeenCalledWith(USER_ID, 1);
+    expect(mocks.refundCredits).toHaveBeenCalledWith(USER_ID, 2);
   });
 
   it('does not refund credits for first-import-free users on zero tickers', async () => {

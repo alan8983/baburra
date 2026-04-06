@@ -2,7 +2,24 @@
  * Social Media Content Extraction Types
  */
 
+import type { Recipe } from '@/domain/models/credit-blocks';
+
 export interface UrlFetchResult {
+  /**
+   * Optional credit "lego" recipe describing the blocks consumed by this
+   * extraction. When present, the import pipeline charges via
+   * `composeCost(recipe)` instead of falling back to flat `CREDIT_COSTS`.
+   * Extractors that don't yet emit a recipe leave this undefined and the
+   * pipeline keeps its legacy behaviour (which is itself derived from the
+   * same block prices via `CREDIT_COSTS`).
+   */
+  recipe?: Recipe;
+  /**
+   * Total credits for this extraction, derived from `recipe` when set.
+   * Provided for callers that just want a single number.
+   */
+  estimatedCreditCost?: number;
+
   // Required fields
   content: string | null; // Plain text, 10-50,000 characters; null when captions unavailable (YouTube)
   sourceUrl: string; // Complete URL

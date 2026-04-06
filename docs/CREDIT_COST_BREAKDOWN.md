@@ -2,10 +2,13 @@
 
 Internal reference for pricing, cost estimation, and future re-balancing.
 
-Status: **proposed** — landing via OpenSpec change
-`rework-credit-cost-lego` (see `openspec/changes/rework-credit-cost-lego/`).
-This doc is the product-facing reference; the spec under that change is the
-normative contract.
+Status: **implemented** via OpenSpec change `rework-credit-cost-lego`. The
+block catalogue and `composeCost` helper live in
+`src/domain/models/credit-blocks.ts`; `CREDIT_COSTS` in
+`src/domain/models/user.ts` is now `@deprecated` and derives its values from
+`composeCost` on the canonical recipes (kept as a shim for one release while
+call sites finish migrating). The spec under
+`openspec/changes/rework-credit-cost-lego/specs/` is the normative contract.
 Owner: product / eng
 Last updated: 2026-04-06
 
@@ -29,9 +32,10 @@ Benefits:
 ## Lego blocks
 
 Each block has: a user-facing credit price, an estimated unit vendor cost, and
-a note on which vendor/API point it maps to. Credit prices are **proposals**,
-not current code. Current code values are listed in the "Today" column for
-comparison (see `src/domain/models/user.ts` `CREDIT_COSTS`).
+a note on which vendor/API point it maps to. Credit prices below are **locked**
+and live in `src/domain/models/credit-blocks.ts` as `CREDIT_BLOCKS`. The "Today"
+column reflects the legacy flat constants that the lego model superseded and
+is kept for historical reference only.
 
 | Block ID | Description | Unit | Proposed credits | Today | Vendor / our $ per unit | Notes |
 |---|---|---|---|---|---|---|
@@ -143,13 +147,12 @@ credits and every profile discovery pays for its own actor run.
 ## Next steps
 
 1. Benchmark actual vendor costs per block (Apify runs, Deepgram minutes,
-   Gemini token costs for typical transcripts). **Pending** — needed to
-   validate / tune the block prices above before merge.
-2. Lock block prices with a margin target (suggest 2–3× vendor cost).
-   **Tracked in** `openspec/changes/rework-credit-cost-lego/tasks.md`.
-3. Refactor `CREDIT_COSTS` into block constants + `composeCost(recipe)`.
-   **Proposed** in `openspec/changes/rework-credit-cost-lego/` — run
-   `/opsx:apply rework-credit-cost-lego` to implement.
+   Gemini token costs for typical transcripts). **Pending** — to be re-run
+   periodically as vendor prices shift.
+2. ~~Lock block prices with a margin target.~~ **Done** — see
+   `src/domain/models/credit-blocks.ts`.
+3. ~~Refactor `CREDIT_COSTS` into block constants + `composeCost(recipe)`.~~
+   **Done** — `CREDIT_COSTS` is `@deprecated` and derives from `composeCost`.
 4. Update the pricing page and weekly-credit tier allocations if the lego
    model meaningfully changes typical-user spend. **Follow-up change** — out
    of scope for `rework-credit-cost-lego`.

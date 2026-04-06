@@ -94,10 +94,16 @@ vi.mock('@/domain/services/import-pipeline.service', () => ({
   processUrl: mocks.processUrl,
 }));
 
+const aiUsageMocks = vi.hoisted(() => ({ consumeCredits: vi.fn() }));
+vi.mock('@/infrastructure/repositories/ai-usage.repository', () => ({
+  consumeCredits: aiUsageMocks.consumeCredits,
+}));
+
 import {
   initiateProfileScrape,
   processJobBatch,
   checkForNewContent,
+  discoverProfileUrls,
 } from '../profile-scrape.service';
 
 // ── Helpers ──
@@ -529,5 +535,83 @@ describe('backward compatibility', () => {
 
     expect(mocks.handleValidationCompletion).not.toHaveBeenCalled();
     expect(mocks.updateValidationStatus).not.toHaveBeenCalled();
+  });
+});
+
+// ── Apify discovery up-front charge ──
+
+describe('discoverProfileUrls — Apify discovery charging', () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    aiUsageMocks.consumeCredits.mockResolvedValue({
+      balance: 100,
+      weeklyLimit: 700,
+      resetAt: null,
+    });
+    mocks.youtubeChannelExtractor.isValidProfileUrl.mockReturnValue(false);
+    mocks.twitterProfileExtractor.isValidProfileUrl.mockReturnValue(false);
+    mocks.podcastProfileExtractor.isValidProfileUrl.mockReturnValue(false);
+    const { facebookProfileExtractor, tiktokProfileExtractor } =
+      await import('@/infrastructure/extractors');
+    vi.mocked(facebookProfileExtractor.isValidProfileUrl).mockReturnValue(false);
+    vi.mocked(tiktokProfileExtractor.isValidProfileUrl).mockReturnValue(false);
+  });
+
+  it('charges scrape.apify.profile (3 credits) up-front for Facebook discovery', async () => {
+    // Patch the facebookProfileExtractor mock from the extractors module mock above.
+    const { facebookProfileExtractor } = await import('@/infrastructure/extractors');
+    vi.mocked(facebookProfileExtractor.isValidProfileUrl).mockReturnValue(true);
+    vi.mocked(facebookProfileExtractor.extractProfile).mockResolvedValue({
+      kolName: 'TraderJoe',
+      kolAvatarUrl: null,
+      platformId: 'fb-123',
+      platformUrl: 'https://facebook.com/traderjoe',
+      postUrls: ['https://facebook.com/traderjoe/posts/1'],
+      discoveredUrls: [{ url: 'https://facebook.com/traderjoe/posts/1' }],
+    });
+
+    const result = await discoverProfileUrls('https://facebook.com/traderjoe', USER_ID);
+
+    // composeCost([{ scrape.apify.profile, 1 }]) = 2.0 -> 2
+    expect(aiUsageMocks.consumeCredits).toHaveBeenCalledWith(USER_ID, 2, 'apify_profile_discovery');
+    // Per-item recipe attached: scrape.apify.post(0.5) + ai.analyze.short(1.0) = 1.5 -> 2
+    expect(result.discoveredUrls[0].estimatedCreditCost).toBe(2);
+    expect(result.discoveredUrls[0].recipe).toEqual([
+      { block: 'scrape.apify.post', units: 1 },
+      { block: 'ai.analyze.short', units: 1 },
+    ]);
+  });
+
+  it('does NOT charge Apify discovery for podcast (RSS) profile', async () => {
+    mocks.podcastProfileExtractor.isValidProfileUrl.mockReturnValue(true);
+    mocks.podcastProfileExtractor.extractProfile.mockResolvedValue({
+      kolName: 'PodcastShow',
+      kolAvatarUrl: null,
+      platformId: 'rss',
+      platformUrl: 'https://feeds.example.com/show.xml',
+      postUrls: [],
+      discoveredUrls: [],
+    });
+
+    await discoverProfileUrls('https://feeds.example.com/show.xml', USER_ID);
+
+    expect(aiUsageMocks.consumeCredits).not.toHaveBeenCalled();
+  });
+
+  it('does NOT charge when no userId is provided (anonymous discovery)', async () => {
+    const { facebookProfileExtractor } = await import('@/infrastructure/extractors');
+    vi.mocked(facebookProfileExtractor.isValidProfileUrl).mockReturnValue(true);
+    vi.mocked(facebookProfileExtractor.extractProfile).mockResolvedValue({
+      kolName: 'TraderJoe',
+      kolAvatarUrl: null,
+      platformId: 'fb-123',
+      platformUrl: 'https://facebook.com/traderjoe',
+      postUrls: [],
+      discoveredUrls: [],
+    });
+
+    await discoverProfileUrls('https://facebook.com/traderjoe');
+
+    expect(aiUsageMocks.consumeCredits).not.toHaveBeenCalled();
   });
 });
