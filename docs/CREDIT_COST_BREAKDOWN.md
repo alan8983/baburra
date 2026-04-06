@@ -2,7 +2,10 @@
 
 Internal reference for pricing, cost estimation, and future re-balancing.
 
-Status: draft — for internal cost modeling, not yet reflected in code.
+Status: **proposed** — landing via OpenSpec change
+`rework-credit-cost-lego` (see `openspec/changes/rework-credit-cost-lego/`).
+This doc is the product-facing reference; the spec under that change is the
+normative contract.
 Owner: product / eng
 Last updated: 2026-04-06
 
@@ -137,10 +140,27 @@ credits and every profile discovery pays for its own actor run.
 ## Next steps
 
 1. Benchmark actual vendor costs per block (Apify runs, Deepgram minutes,
-   Gemini token costs for typical transcripts).
+   Gemini token costs for typical transcripts). **Pending** — needed to
+   validate / tune the block prices above before merge.
 2. Lock block prices with a margin target (suggest 2–3× vendor cost).
-3. Propose an OpenSpec change (`rework-credit-cost-lego`) to refactor
-   `CREDIT_COSTS` into block constants + a `composeCost(recipe)` helper used by
-   all extractors and the import pipeline.
-4. Update the pricing page and weekly-credit tier allocations if the lego model
-   meaningfully changes typical-user spend.
+   **Tracked in** `openspec/changes/rework-credit-cost-lego/tasks.md`.
+3. Refactor `CREDIT_COSTS` into block constants + `composeCost(recipe)`.
+   **Proposed** in `openspec/changes/rework-credit-cost-lego/` — run
+   `/opsx:apply rework-credit-cost-lego` to implement.
+4. Update the pricing page and weekly-credit tier allocations if the lego
+   model meaningfully changes typical-user spend. **Follow-up change** — out
+   of scope for `rework-credit-cost-lego`.
+
+## Implementation reference (post-apply)
+
+Once `rework-credit-cost-lego` is applied, the canonical code locations will
+be:
+
+- `src/domain/models/credit-blocks.ts` — `CREDIT_BLOCKS`, `BlockId`, `Recipe`,
+  `composeCost`.
+- `src/domain/models/user.ts` — `CREDIT_COSTS` kept as a `@deprecated` shim
+  derived from `composeCost` for one release.
+- Each extractor in `src/infrastructure/extractors/` returns a `recipe` field
+  alongside `estimatedCreditCost`.
+- `src/domain/services/import-pipeline.service.ts` and
+  `profile-scrape.service.ts` charge via `composeCost(recipe)` only.
