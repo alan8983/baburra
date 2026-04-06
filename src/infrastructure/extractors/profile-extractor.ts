@@ -6,6 +6,8 @@
  * - ProfileExtractor: discovers post URLs from a profile/channel URL
  */
 
+import type { Recipe } from '@/domain/models/credit-blocks';
+
 export type ContentType = 'long_video' | 'short' | 'live_stream' | 'text_post' | 'podcast_episode';
 
 export interface DiscoveredUrl {
@@ -17,6 +19,11 @@ export interface DiscoveredUrl {
   captionAvailable?: boolean;
   durationSeconds?: number;
   estimatedCreditCost?: number;
+  /**
+   * Lego recipe for this URL. When present, callers prefer this over
+   * `estimatedCreditCost` and route charges through `composeCost`.
+   */
+  recipe?: Recipe;
 }
 
 export interface ProfileExtractResult {

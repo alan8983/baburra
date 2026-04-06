@@ -25,46 +25,50 @@ The system SHALL prevent duplicate posts for the same `(source_url, kol_id)` pai
 - **THEN** `SELECT count(*) FROM posts WHERE source_url = '<url>' AND kol_id = '<kolId>'` returns exactly 1, second scrape job shows `duplicate_count >= 1`, no unhandled error
 
 ### Requirement: Content type tags in discovery (A4)
-The scrape discovery step SHALL show per-URL caption availability and estimated credit cost.
+The scrape discovery step SHALL show per-URL caption availability and an estimated credit cost computed via `composeCost(recipe)` from the extractor's returned recipe.
 
 #### Scenario: YouTube channel discovery shows cost info
 - **WHEN** user enters a YouTube channel URL and reaches the URL discovery list
-- **THEN** API response includes `captionAvailable` (boolean), `durationSeconds` (number), `estimatedCreditCost` (1, 2, or ceil(duration/60)*7) per URL, UI shows caption icon + credit badge per URL, footer shows total cost vs remaining balance
+- **THEN** API response includes `captionAvailable` (boolean), `durationSeconds` (number), `recipe` (Recipe), and `estimatedCreditCost` = `composeCost(recipe)` per URL; UI shows caption icon + credit badge per URL; footer shows total cost vs remaining balance
 
-### Requirement: Text post costs 1 credit (B1)
-Scraping a text-based post (tweet, article) SHALL consume exactly 1 credit (`CREDIT_COSTS.text_analysis`).
+### Requirement: Text post recipe (B1)
+Scraping a text-based post (tweet, article, FB/Threads post) SHALL charge `composeCost([{ block: 'scrape.apify.post', units: 1 }, { block: 'ai.analyze.short', units: 1 }])` for Apify-sourced posts, or `composeCost([{ block: 'scrape.html', units: 1 }, { block: 'ai.analyze.short', units: 1 }])` for generic HTML articles.
 
 #### Scenario: Scrape a tweet mentioning a stock ticker
 - **WHEN** user scrapes a tweet URL that mentions a stock ticker, with initial `credit_balance = X`
-- **THEN** `SELECT credit_balance FROM profiles WHERE id = '<userId>'` returns `X - 1`, `SELECT id FROM posts WHERE source_url = '<url>'` returns 1 row
+- **THEN** `credit_balance` returns `X - composeCost([{ block: 'scrape.apify.post', units: 1 }, { block: 'ai.analyze.short', units: 1 }])`, and one row exists in `posts` for that `source_url`
 
-### Requirement: YouTube with captions costs 2 credits (B2)
-Scraping a YouTube video that HAS captions SHALL consume exactly 2 credits (`CREDIT_COSTS.youtube_caption_analysis`) and cache the caption transcript.
+### Requirement: YouTube with captions recipe (B2)
+Scraping a YouTube video that HAS captions SHALL charge a recipe containing `scrape.youtube_meta`, `scrape.youtube_captions`, and an `ai.analyze.short` or `ai.analyze.long` block sized to the transcript token count, and SHALL cache the caption transcript.
 
 #### Scenario: Scrape YouTube video with captions
-- **WHEN** user scrapes a YouTube video that has captions available, with initial `credit_balance = X`
-- **THEN** `credit_balance` = `X - 2`, `SELECT source FROM transcripts WHERE source_url = '<url>'` returns `'caption'`, server logs show NO `[Gemini] Video transcription` activity
+- **WHEN** user scrapes a YouTube video with captions, with initial `credit_balance = X`
+- **THEN** `credit_balance` decrements by `composeCost(recipe)`; `transcripts.source = 'caption'`; server logs show no transcription vendor activity
 
-### Requirement: Captionless YouTube costs 7/min via Gemini (B3)
-Scraping a YouTube video WITHOUT captions SHALL invoke Gemini transcription, consume `ceil(duration/60) * 7` credits, and cache the transcript.
+### Requirement: Captionless YouTube uses transcribe.audio block (B3)
+Scraping a YouTube video WITHOUT captions SHALL invoke the transcription service (Deepgram primary, Gemini audio failover) and charge a recipe containing `scrape.youtube_meta`, `download.audio.short` or `download.audio.long`, `transcribe.audio × ⌈minutes⌉`, and an `ai.analyze.*` block. The user SHALL be charged `composeCost(recipe)` regardless of which vendor actually transcribed.
 
 #### Scenario: Scrape captionless YouTube video (~3 min)
 - **WHEN** user scrapes a ~3 min YouTube video without captions, with initial `credit_balance = X`
-- **THEN** `credit_balance` = `X - 21` (ceil(3)*7), `SELECT source, duration_seconds, length(content) FROM transcripts WHERE source_url = '<url>'` returns `source = 'gemini'`, non-empty content, duration_seconds matching video, `SELECT id FROM posts WHERE source_url = '<url>'` returns 1 row
+- **THEN** `credit_balance` decrements by `composeCost([{ block: 'scrape.youtube_meta', units: 1 }, { block: 'download.audio.long', units: 3 }, { block: 'transcribe.audio', units: 3 }, { block: 'ai.analyze.short', units: 1 }])`; `transcripts` row exists with non-empty content; one `posts` row exists
 
-### Requirement: Transcript cache prevents duplicate Gemini calls (B4)
-When a transcript already exists in the `transcripts` table, the system SHALL use the cached version and NOT call Gemini again.
+#### Scenario: Deepgram failover to Gemini audio
+- **WHEN** the same scrape occurs but Deepgram returns an error and Gemini audio completes the transcription
+- **THEN** the credit charge is identical to the success case (vendor routing is internal); `transcripts.source` MAY indicate the failover vendor
+
+### Requirement: Transcript cache prevents duplicate transcription (B4)
+When a transcript already exists in the `transcripts` table, the system SHALL use the cached version and SHALL NOT invoke any transcription vendor. The credit charge SHALL omit any `transcribe.audio` and `download.audio.*` blocks for cache hits.
 
 #### Scenario: Re-scrape same captionless video after deleting post
-- **WHEN** user deletes the post from B3 (`DELETE FROM posts WHERE source_url = '<url>'`) and re-scrapes the same URL
-- **THEN** `SELECT count(*) FROM transcripts WHERE source_url = '<url>'` returns 1 (not 2), new post created, credits consumed = 2 (youtube_caption_analysis for cached content, NOT 7/min again), server logs show NO Gemini transcription API call
+- **WHEN** user deletes the post from B3 and re-scrapes the same URL
+- **THEN** no new transcript row is created; the recipe charged on re-scrape contains only `scrape.youtube_meta`, `transcribe.cached_transcript`, and `ai.analyze.*` (no `transcribe.audio`); no transcription vendor is called
 
-### Requirement: Re-roll analysis costs 3 credits (B5)
-Re-analyzing a post's sentiment via `POST /api/ai/analyze` SHALL consume exactly 3 credits (`CREDIT_COSTS.reroll_analysis`).
+### Requirement: Re-roll analysis recipe (B5)
+Re-analyzing a post via `POST /api/ai/analyze` SHALL charge `composeCost([{ block: 'ai.reroll', units: 1 }])`.
 
 #### Scenario: Re-roll analysis on existing post
 - **WHEN** user calls `POST /api/ai/analyze` with post content, with initial `credit_balance = X`
-- **THEN** `credit_balance` = `X - 3`, API response includes `usage.remaining` = `X - 3`
+- **THEN** `credit_balance = X - composeCost([{ block: 'ai.reroll', units: 1 }])`; API response `usage.remaining` reflects the new balance
 
 ### Requirement: Insufficient credits blocks operation (B6)
 When credit balance is insufficient for an operation, the system SHALL return `INSUFFICIENT_CREDITS` error and NOT create any post or consume any credits.
@@ -79,11 +83,4 @@ When AI analysis identifies no stock tickers, the system SHALL refund all consum
 #### Scenario: Scrape URL with no stock mentions
 - **WHEN** user scrapes a URL whose content mentions no stock tickers, with initial `credit_balance = X`
 - **THEN** `credit_balance` returns to `X` (full refund), `SELECT count(*) FROM posts WHERE source_url = '<url>'` returns 0, `scrape_jobs.filtered_count >= 1`
-
-### Requirement: Video >45 min rejected (C1)
-The system SHALL reject YouTube videos longer than 45 minutes without consuming credits or calling Gemini.
-
-#### Scenario: Attempt to scrape 60-minute video
-- **WHEN** user scrapes a YouTube video that is >45 minutes, with initial `credit_balance = X`
-- **THEN** `credit_balance` = `X` (unchanged), no transcript row, no post row, error message contains "Video too long" and "Maximum is 45 minutes"
 

@@ -41,7 +41,47 @@ import { getAiModelVersion, geminiTranscribeShort } from '@/infrastructure/api/g
 import { downloadYoutubeAudio } from '@/infrastructure/api/youtube-audio.client';
 import { isLikelyInvestmentContent } from '@/domain/services/content-filter';
 import { deepgramTranscribe, extractActualDuration } from '@/infrastructure/api/deepgram.client';
-import { CREDIT_COSTS } from '@/domain/models/user';
+import { composeCost, type Recipe } from '@/domain/models/credit-blocks';
+
+// Per-minute long-video transcription marginal recipe (download + transcribe).
+// composeCost is computed per total to allow correct fractional rounding.
+function longVideoTranscriptionCost(minutes: number): number {
+  const recipe: Recipe = [
+    { block: 'download.audio.long', units: minutes },
+    { block: 'transcribe.audio', units: minutes },
+  ];
+  return composeCost(recipe);
+}
+
+// Flat-rate Short transcription recipe (download.audio.short + transcribe.audio×1
+// + ai.analyze.short, plus the up-front youtube_meta scrape that's already paid
+// in the discovery step but billed as part of the Short flow).
+const SHORT_TRANSCRIPTION_RECIPE: Recipe = [
+  { block: 'scrape.youtube_meta', units: 1 },
+  { block: 'download.audio.short', units: 1 },
+  { block: 'transcribe.audio', units: 1 },
+  { block: 'ai.analyze.short', units: 1 },
+];
+const SHORT_TRANSCRIPTION_COST = composeCost(SHORT_TRANSCRIPTION_RECIPE);
+
+// Per-minute marginal block cost (used by reconcileTranscriptionCredits).
+const PER_MINUTE_TRANSCRIBE_COST = composeCost([
+  { block: 'download.audio.long', units: 1 },
+  { block: 'transcribe.audio', units: 1 },
+]);
+
+const YOUTUBE_CAPTION_ANALYSIS_RECIPE: Recipe = [
+  { block: 'scrape.youtube_meta', units: 1 },
+  { block: 'scrape.youtube_captions', units: 1 },
+  { block: 'ai.analyze.short', units: 1 },
+];
+const YOUTUBE_CAPTION_ANALYSIS_COST = composeCost(YOUTUBE_CAPTION_ANALYSIS_RECIPE);
+
+const TEXT_ANALYSIS_RECIPE: Recipe = [
+  { block: 'scrape.html', units: 1 },
+  { block: 'ai.analyze.short', units: 1 },
+];
+const TEXT_ANALYSIS_COST = composeCost(TEXT_ANALYSIS_RECIPE);
 import type { Sentiment, SourcePlatform } from '@/domain/models/post';
 import type { DraftAiArguments } from '@/domain/models/draft';
 
@@ -227,10 +267,10 @@ export async function processUrl(
       if (cachedTranscript) {
         contentForAnalysis = cachedTranscript.content;
       } else {
-        // Determine credit cost: flat rate for Shorts, per-minute for long videos
+        // Determine credit cost: flat-rate Short recipe, or per-minute long-video recipe.
         const transcriptionCost = isShort
-          ? CREDIT_COSTS.short_transcription
-          : Math.ceil((durationSeconds || 60) / 60) * CREDIT_COSTS.video_transcription_per_min;
+          ? SHORT_TRANSCRIPTION_COST
+          : longVideoTranscriptionCost(Math.ceil((durationSeconds || 60) / 60));
 
         // Consume credits for transcription (unless exempt)
         if (!quotaExempt) {
@@ -308,7 +348,7 @@ export async function processUrl(
                 userId,
                 estimatedMinutes,
                 actualMinutes,
-                CREDIT_COSTS.video_transcription_per_min
+                PER_MINUTE_TRANSCRIBE_COST
               );
             }
           } catch (reconErr) {
@@ -331,9 +371,7 @@ export async function processUrl(
       // Determine credit cost based on platform
       const isYouTube =
         fetchResult.sourcePlatform === 'youtube' || fetchResult.sourcePlatform === 'youtube_short';
-      const creditCost = isYouTube
-        ? CREDIT_COSTS.youtube_caption_analysis
-        : CREDIT_COSTS.text_analysis;
+      const creditCost = isYouTube ? YOUTUBE_CAPTION_ANALYSIS_COST : TEXT_ANALYSIS_COST;
 
       // Consume credits (unless exempt)
       if (!quotaExempt) {

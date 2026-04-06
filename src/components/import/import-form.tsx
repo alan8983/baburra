@@ -13,7 +13,23 @@ import {
   formatTimeEstimate,
   type UrlEstimateInput,
 } from '@/lib/utils/estimate-import-time';
-import { CREDIT_COSTS } from '@/domain/models/user';
+import { composeCost, type Recipe } from '@/domain/models/credit-blocks';
+
+const TEXT_RECIPE: Recipe = [
+  { block: 'scrape.html', units: 1 },
+  { block: 'ai.analyze.short', units: 1 },
+];
+
+function youtubeEstimateRecipe(durationSeconds: number): Recipe {
+  // Without metadata, assume captionless long video at the given (default 10min) duration.
+  const minutes = Math.ceil(durationSeconds / 60);
+  return [
+    { block: 'scrape.youtube_meta', units: 1 },
+    { block: 'download.audio.long', units: minutes },
+    { block: 'transcribe.audio', units: minutes },
+    { block: 'ai.analyze.short', units: 1 },
+  ];
+}
 import { getPlatformIconByUrl } from '@/components/ui/platform-icons';
 
 const MAX_URLS = 5;
@@ -64,14 +80,13 @@ export function ImportForm({ onSubmit, isLoading }: ImportFormProps) {
 
     const timeEst = estimateImportTime(urlInputs);
 
-    // Estimate credits: YouTube videos = default 10min × cost/min, text = 1
+    // Estimate credits via lego recipes (defaults: 10min YouTube, text post).
     let credits = 0;
     for (const input of urlInputs) {
       if (input.platform === 'youtube') {
-        const minutes = Math.ceil((input.durationSeconds || 600) / 60);
-        credits += minutes * CREDIT_COSTS.video_transcription_per_min;
+        credits += composeCost(youtubeEstimateRecipe(input.durationSeconds || 600));
       } else {
-        credits += CREDIT_COSTS.text_analysis;
+        credits += composeCost(TEXT_RECIPE);
       }
     }
 

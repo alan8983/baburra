@@ -9,7 +9,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUserId } from '@/infrastructure/supabase/server';
 import { analyzeSentiment } from '@/domain/services/ai.service';
 import { consumeCredits } from '@/infrastructure/repositories/ai-usage.repository';
-import { CREDIT_COSTS } from '@/domain/models/user';
+import { composeCost } from '@/domain/models/credit-blocks';
+
+const REROLL_RECIPE = [{ block: 'ai.reroll' as const, units: 1 }];
+const REROLL_COST = composeCost(REROLL_RECIPE);
 import { unauthorizedError, internalError, errorResponse } from '@/lib/api/error';
 import { aiContentSchema, parseBody } from '@/lib/api/validation';
 
@@ -25,7 +28,7 @@ export async function POST(request: NextRequest) {
     // Consume credits for re-roll analysis (3 credits)
     let creditInfo;
     try {
-      creditInfo = await consumeCredits(userId, CREDIT_COSTS.reroll_analysis, 'reroll_analysis');
+      creditInfo = await consumeCredits(userId, REROLL_COST, 'reroll_analysis');
     } catch (quotaErr) {
       if (
         quotaErr &&
