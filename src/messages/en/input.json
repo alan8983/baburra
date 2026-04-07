@@ -3,6 +3,8 @@
   "description": "Paste article content or URLs, AI auto-analyzes and creates tracking records",
   "wizard": {
     "input": "Input",
+    "discovering": "Discover",
+    "selecting": "Select Posts",
     "processing": "Processing",
     "review": "Review",
     "complete": "Complete",
@@ -27,6 +29,7 @@
   "actions": {
     "createDraft": "Create Draft",
     "importPosts": "Import Posts",
+    "discoverProfile": "Discover KOL Content",
     "analyzing": "Analyzing..."
   },
   "tips": {
@@ -35,6 +38,7 @@
   "detection": {
     "modeUrls": "Detected URLs — will import as published posts",
     "modeText": "Text detected — will create as draft for review",
+    "modeProfile": "Detected KOL profile — will discover and scrape posts",
     "unsupportedUrl": "Some URLs are from unsupported platforms (only Twitter/X and YouTube are supported)",
     "tooManyUrls": "Maximum {max} URLs per import"
   },
@@ -57,6 +61,22 @@
     "sectionTitle": "Or import by URL",
     "sectionDescription": "Paste Twitter/X or YouTube URLs to directly import as published posts",
     "viewPosts": "View Posts"
+  },
+  "quickNav": {
+    "dashboard": {
+      "title": "Dashboard",
+      "description": "Overview of your KOL portfolio, win rates, and recent activity"
+    },
+    "kols": {
+      "title": "KOLs",
+      "description": "Explore performance of the KOLs you're tracking",
+      "empty": "No KOLs yet — track your first one above"
+    },
+    "stocks": {
+      "title": "Stocks",
+      "description": "Explore what people are saying about each ticker",
+      "empty": "No stocks yet — they appear as you add tracked posts"
+    }
   },
   "errors": {
     "createDraftFailed": "Failed to create draft",

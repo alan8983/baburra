@@ -99,17 +99,32 @@ describe('PodcastProfileExtractor', () => {
       const result = await extractor.extractProfile('https://feeds.example.com/podcast.xml');
       const urls = result.discoveredUrls!;
 
-      // EP50 has transcript → 2 credits
+      // EP50 has transcript → recipe = scrape.rss + transcribe.cached_transcript + ai.analyze.short
+      //   = 0.3 + 0.2 + 1.0 = 1.5 -> ceil -> 2
       expect(urls[0].captionAvailable).toBe(true);
       expect(urls[0].estimatedCreditCost).toBe(2);
+      expect(urls[0].recipe).toEqual([
+        { block: 'scrape.rss', units: 1 },
+        { block: 'transcribe.cached_transcript', units: 1 },
+        { block: 'ai.analyze.short', units: 1 },
+      ]);
 
-      // EP49 no transcript, 45:30 → 46 min × 5 credits = 230
+      // EP49 no transcript, 45:30 → 46 min
+      //   recipe = scrape.rss + download.audio.long×46 + transcribe.audio×46 + ai.analyze.short
+      //   = 0.3 + 4.6 + 69 + 1.0 = 74.9 -> 75
       expect(urls[1].captionAvailable).toBe(false);
-      expect(urls[1].estimatedCreditCost).toBe(46 * 5);
+      expect(urls[1].estimatedCreditCost).toBe(75);
+      expect(urls[1].recipe).toEqual([
+        { block: 'scrape.rss', units: 1 },
+        { block: 'download.audio.long', units: 46 },
+        { block: 'transcribe.audio', units: 46 },
+        { block: 'ai.analyze.short', units: 1 },
+      ]);
 
-      // EP48 no transcript, 1:15:00 = 75 min → 75 × 5 = 375
+      // EP48 no transcript, 1:15:00 = 75 min
+      //   = 0.3 + 7.5 + 112.5 + 1.0 = 121.3 -> 122
       expect(urls[2].captionAvailable).toBe(false);
-      expect(urls[2].estimatedCreditCost).toBe(75 * 5);
+      expect(urls[2].estimatedCreditCost).toBe(122);
     });
 
     it('parses various duration formats', async () => {

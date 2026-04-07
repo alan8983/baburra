@@ -1,6 +1,4 @@
 {
-  "title": "擷取 KOL 資料",
-  "description": "輸入 KOL 的頻道 URL，系統自動擷取個人資料並建立追蹤",
   "hero": {
     "title": "追蹤你的第一個投資 KOL",
     "subtitle": "貼上 KOL 頻道或 Podcast 連結，AI 自動分析觀點勝率",
@@ -13,30 +11,13 @@
     "preset3Name": "財報狗",
     "preset3Url": "https://www.youtube.com/@statementdog"
   },
-  "form": {
-    "urlLabel": "KOL 頻道 URL",
-    "urlPlaceholder": "貼上 KOL 頻道 / Podcast URL",
-    "supportedPlatforms": "支援: YouTube、X、TikTok、Facebook、Podcast (Spotify / Apple / RSS)",
-    "submit": "探索內容",
-    "submitting": "探索中...",
-    "invalidUrl": "請輸入有效的 KOL 頻道或 Podcast URL",
-    "platformYouTube": "YouTube"
-  },
-  "flowChart": {
-    "step1": "輸入 URL",
-    "step2": "探索與選擇",
-    "step3": "處理中",
-    "step4": "完成"
-  },
   "discover": {
-    "title": "探索到的內容",
     "found": "找到 {count} 個項目",
     "selected": "已選擇 {count} 個",
     "selectAll": "全選",
     "deselectAll": "取消全選",
     "confirm": "開始擷取",
     "back": "返回",
-    "loading": "正在探索內容...",
     "captionAvailable": "有字幕",
     "captionUnavailable": "無字幕 (需要 AI 轉錄)",
     "estimatedCredits": "預估消耗點數",
@@ -60,8 +41,7 @@
     "transcriptUnavailable": "需轉錄"
   },
   "queue": {
-    "position": "您的佇列位置: 第 {position} 位",
-    "estimatedWait": "預計等待: ~{minutes} 分鐘"
+    "position": "您的佇列位置: 第 {position} 位"
   },
   "progress": {
     "title": "正在擷取 KOL 資料",
@@ -69,11 +49,8 @@
     "statusProcessing": "處理中",
     "statusCompleted": "完成",
     "statusFailed": "失敗",
-    "processed": "已處理 {processed} / {total}",
     "detailedCounts": "{processed}/{total} 已分析 \u2022 {imported} 已匯入 \u2022 {duplicates} 重複 \u2022 {errors} 錯誤",
     "eta": "預計還需 ~{minutes} 分鐘",
-    "earlyNudge": "初步結果已就緒！您可以先瀏覽，剩餘的正在處理中。",
-    "viewKolEarly": "查看 {kolName} 的資料 \u2192",
     "completeToast": "擷取完成！已為 {kolName} 匯入 {count} 篇文章",
     "viewKol": "查看 KOL",
     "scrapeAnother": "擷取其他 KOL",
@@ -85,17 +62,10 @@
     "summaryErrors": "{count} 錯誤",
     "summaryFiltered": "{count} 已過濾 (未識別標的)",
     "summaryDuplicates": "{count} 重複",
-    "noCreditsConsumed": "未匯入任何文章 — 未消耗點數。",
-    "stats": {
-      "videosFound": "找到 {count} 部影片",
-      "postsCreated": "已建立 {count} 篇文章",
-      "duplicates": "{count} 個重複",
-      "errors": "{count} 個錯誤"
-    }
+    "noCreditsConsumed": "未匯入任何文章 — 未消耗點數。"
   },
   "jobs": {
     "title": "最近的任務",
-    "empty": "尚無擷取任務",
     "importedCount": "{count} 已匯入",
     "errorCount": "{count} 錯誤"
   },
@@ -103,13 +73,6 @@
     "title": "通知",
     "empty": "沒有通知",
     "scrapeComplete": "已為 {kolName} 匯入 {count} 篇文章",
-    "dismiss": "關閉",
     "dismissAll": "清除全部"
-  },
-  "errors": {
-    "scrapeFailed": "擷取失敗，請稍後再試",
-    "jobNotFound": "找不到擷取任務",
-    "rateLimited": "已達每日擷取上限 ({used}/{limit})，請明天再試。",
-    "rateLimitedTitle": "超出速率限制"
   }
 }

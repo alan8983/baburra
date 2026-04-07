@@ -1,6 +1,4 @@
 {
-  "title": "Scrape KOL Profile",
-  "description": "Enter a KOL channel URL to auto-scrape their profile and start tracking",
   "hero": {
     "title": "Track Your First Investment KOL",
     "subtitle": "Paste a KOL channel or Podcast URL — AI analyzes opinion accuracy automatically",
@@ -13,30 +11,13 @@
     "preset3Name": "Statement Dog",
     "preset3Url": "https://www.youtube.com/@statementdog"
   },
-  "form": {
-    "urlLabel": "KOL Channel URL",
-    "urlPlaceholder": "Paste a KOL channel or Podcast URL",
-    "supportedPlatforms": "Supports: YouTube, X, TikTok, Facebook, Podcast (Spotify / Apple / RSS)",
-    "submit": "Discover Content",
-    "submitting": "Discovering...",
-    "invalidUrl": "Please enter a valid KOL channel or Podcast URL",
-    "platformYouTube": "YouTube"
-  },
-  "flowChart": {
-    "step1": "Input URL",
-    "step2": "Discover & Select",
-    "step3": "Processing",
-    "step4": "Complete"
-  },
   "discover": {
-    "title": "Discovered Content",
     "found": "{count} items found",
     "selected": "{count} selected",
     "selectAll": "Select All",
     "deselectAll": "Deselect All",
     "confirm": "Start Scraping",
     "back": "Back",
-    "loading": "Discovering content...",
     "captionAvailable": "Captions available",
     "captionUnavailable": "No captions (AI transcription required)",
     "estimatedCredits": "Estimated credits",
@@ -60,8 +41,7 @@
     "transcriptUnavailable": "Transcription required"
   },
   "queue": {
-    "position": "Position #{position} in your queue",
-    "estimatedWait": "Estimated wait: ~{minutes} min"
+    "position": "Position #{position} in your queue"
   },
   "progress": {
     "title": "Scraping KOL Profile",
@@ -69,11 +49,8 @@
     "statusProcessing": "Processing",
     "statusCompleted": "Completed",
     "statusFailed": "Failed",
-    "processed": "{processed} / {total} processed",
     "detailedCounts": "{processed}/{total} analyzed \u2022 {imported} imported \u2022 {duplicates} duplicates \u2022 {errors} errors",
     "eta": "~{minutes} min remaining",
-    "earlyNudge": "First results ready! You can start exploring while we process the rest.",
-    "viewKolEarly": "View {kolName}'s profile \u2192",
     "completeToast": "Scrape complete! {count} posts imported for {kolName}",
     "viewKol": "View KOL",
     "scrapeAnother": "Scrape Another",
@@ -85,17 +62,10 @@
     "summaryErrors": "{count} errors",
     "summaryFiltered": "{count} filtered (no tickers)",
     "summaryDuplicates": "{count} duplicates",
-    "noCreditsConsumed": "No posts were imported — no credits were consumed.",
-    "stats": {
-      "videosFound": "{count} videos found",
-      "postsCreated": "{count} posts created",
-      "duplicates": "{count} duplicates",
-      "errors": "{count} errors"
-    }
+    "noCreditsConsumed": "No posts were imported — no credits were consumed."
   },
   "jobs": {
     "title": "Recent Jobs",
-    "empty": "No scrape jobs yet",
     "importedCount": "{count} imported",
     "errorCount": "{count} errors"
   },
@@ -103,13 +73,6 @@
     "title": "Notifications",
     "empty": "No notifications",
     "scrapeComplete": "{count} posts imported for {kolName}",
-    "dismiss": "Dismiss",
     "dismissAll": "Clear all"
-  },
-  "errors": {
-    "scrapeFailed": "Scrape failed, please try again",
-    "jobNotFound": "Scrape job not found",
-    "rateLimited": "Daily scrape limit reached ({used}/{limit}). Try again tomorrow.",
-    "rateLimitedTitle": "Rate Limit Exceeded"
   }
 }

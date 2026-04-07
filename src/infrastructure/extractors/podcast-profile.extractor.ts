@@ -14,7 +14,7 @@ import {
   isApplePodcastUrl,
   isDirectRssUrl,
 } from '@/infrastructure/api/rss-resolver';
-import { CREDIT_COSTS } from '@/domain/models/user';
+import { composeCost, type Recipe } from '@/domain/models/credit-blocks';
 import { encodeEpisodeUrl } from './podcast.extractor';
 
 /** Default number of recent episodes to discover */
@@ -216,7 +216,7 @@ export class PodcastProfileExtractor extends ProfileExtractor {
 
       const hasTranscript = this.hasTranscriptTag(item);
       const durationSeconds = this.parseDuration(item['itunes:duration']);
-      const estimatedCreditCost = this.estimateCreditCost(hasTranscript, durationSeconds);
+      const recipe = this.buildEpisodeRecipe(hasTranscript, durationSeconds);
 
       results.push({
         url: encodeEpisodeUrl(feedUrl, guid),
@@ -225,7 +225,8 @@ export class PodcastProfileExtractor extends ProfileExtractor {
         contentType: 'podcast_episode',
         captionAvailable: hasTranscript,
         durationSeconds,
-        estimatedCreditCost,
+        estimatedCreditCost: composeCost(recipe),
+        recipe,
       });
     }
     return results;
@@ -261,16 +262,25 @@ export class PodcastProfileExtractor extends ProfileExtractor {
     return undefined;
   }
 
-  private estimateCreditCost(hasTranscript: boolean, durationSeconds?: number): number {
+  /**
+   * Lego recipe for a podcast episode.
+   *  - cached transcript:   scrape.rss + transcribe.cached_transcript + ai.analyze.short
+   *  - no transcript:       scrape.rss + download.audio.long×min + transcribe.audio×min + ai.analyze.short
+   *  - unknown duration:    falls back to a 30-minute estimate (tracked separately
+   *                         by the podcast-duration-probe change).
+   */
+  private buildEpisodeRecipe(hasTranscript: boolean, durationSeconds?: number): Recipe {
+    const recipe: Recipe = [{ block: 'scrape.rss', units: 1 }];
     if (hasTranscript) {
-      return CREDIT_COSTS.podcast_transcript_analysis;
+      recipe.push({ block: 'transcribe.cached_transcript', units: 1 });
+      recipe.push({ block: 'ai.analyze.short', units: 1 });
+      return recipe;
     }
-    if (durationSeconds) {
-      const minutes = Math.ceil(durationSeconds / 60);
-      return minutes * CREDIT_COSTS.video_transcription_per_min;
-    }
-    // Unknown duration without transcript — estimate conservatively (30 min episode)
-    return 30 * CREDIT_COSTS.video_transcription_per_min;
+    const minutes = durationSeconds ? Math.ceil(durationSeconds / 60) : 30;
+    recipe.push({ block: 'download.audio.long', units: minutes });
+    recipe.push({ block: 'transcribe.audio', units: minutes });
+    recipe.push({ block: 'ai.analyze.short', units: 1 });
+    return recipe;
   }
 }
 

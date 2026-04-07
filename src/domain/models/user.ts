@@ -1,5 +1,7 @@
 // User 領域模型
 
+import { composeCost } from './credit-blocks';
+
 export type SubscriptionTier = 'free' | 'pro' | 'max';
 export type ColorPalette = 'american' | 'asian';
 
@@ -34,13 +36,56 @@ export const MONTHLY_CREDIT_LIMITS = {
 // Deprecated alias kept to minimise blast radius; prefer MONTHLY_CREDIT_LIMITS.
 export const CREDIT_LIMITS = MONTHLY_CREDIT_LIMITS;
 
+/**
+ * @deprecated Use `composeCost` from `./credit-blocks` with an explicit recipe
+ * instead. This constant is kept as a thin shim for one release while call
+ * sites migrate to the lego model. Values are derived from `composeCost` on
+ * the canonical recipes for each legacy input type.
+ *
+ * Numeric deltas vs. the previous flat values (documented in the
+ * `rework-credit-cost-lego` change):
+ *   text_analysis:                1  -> 2  (+1)
+ *   youtube_caption_analysis:     2  -> 2
+ *   video_transcription_per_min:  5  -> 3  (-2)  per-minute marginal cost
+ *   short_transcription:          3  -> 3
+ *   reroll_analysis:              3  -> 2  (-1)
+ *   podcast_transcript_analysis:  2  -> 2
+ */
 export const CREDIT_COSTS = {
-  text_analysis: 1,
-  youtube_caption_analysis: 2,
-  video_transcription_per_min: 5,
-  short_transcription: 3,
-  reroll_analysis: 3,
-  podcast_transcript_analysis: 2,
+  // scrape.html(0.2) + ai.analyze.short(1.0) -> ceil -> 2
+  text_analysis: composeCost([
+    { block: 'scrape.html', units: 1 },
+    { block: 'ai.analyze.short', units: 1 },
+  ]),
+  // scrape.youtube_meta(0.2) + scrape.youtube_captions(0.5) + ai.analyze.short(1.0) -> ceil -> 2
+  youtube_caption_analysis: composeCost([
+    { block: 'scrape.youtube_meta', units: 1 },
+    { block: 'scrape.youtube_captions', units: 1 },
+    { block: 'ai.analyze.short', units: 1 },
+  ]),
+  // download.audio.long(0.1) + transcribe.audio(1.5) per minute, plus a flat
+  // ai.analyze.short amortised in. Per-minute marginal recipe:
+  //   download.audio.long*1 + transcribe.audio*1 = 1.6 -> 2
+  // Legacy callers multiply by minutes themselves, so this is per-minute only.
+  video_transcription_per_min: composeCost([
+    { block: 'download.audio.long', units: 1 },
+    { block: 'transcribe.audio', units: 1 },
+  ]),
+  // scrape.youtube_meta(0.2) + download.audio.short(0.3) + transcribe.audio(1.5) + ai.analyze.short(1.0) = 3
+  short_transcription: composeCost([
+    { block: 'scrape.youtube_meta', units: 1 },
+    { block: 'download.audio.short', units: 1 },
+    { block: 'transcribe.audio', units: 1 },
+    { block: 'ai.analyze.short', units: 1 },
+  ]),
+  // ai.reroll(2.0) -> 2
+  reroll_analysis: composeCost([{ block: 'ai.reroll', units: 1 }]),
+  // scrape.rss(0.3) + transcribe.cached_transcript(0.2) + ai.analyze.short(1.0) -> ceil -> 2
+  podcast_transcript_analysis: composeCost([
+    { block: 'scrape.rss', units: 1 },
+    { block: 'transcribe.cached_transcript', units: 1 },
+    { block: 'ai.analyze.short', units: 1 },
+  ]),
 } as const;
 
 // Unlock costs (credits deducted on unlock, persistent per user)
