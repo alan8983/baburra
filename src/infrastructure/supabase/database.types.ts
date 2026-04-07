@@ -118,6 +118,33 @@ export type Database = {
           },
         ];
       };
+      content_unlocks: {
+        Row: {
+          id: string;
+          user_id: string;
+          unlock_type: string;
+          target_key: string;
+          credits_paid: number;
+          unlocked_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          unlock_type: string;
+          target_key: string;
+          credits_paid?: number;
+          unlocked_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          unlock_type?: string;
+          target_key?: string;
+          credits_paid?: number;
+          unlocked_at?: string;
+        };
+        Relationships: [];
+      };
       drafts: {
         Row: {
           ai_arguments: Json | null;

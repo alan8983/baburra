@@ -20,6 +20,7 @@ export function useFeatureGate(feature: Feature) {
     isLocked: access.gate === 'pro_badge' || access.gate === 'locked',
     previewLimit: access.previewLimit ?? null,
     requiredTier: access.requiredTier,
+    layer: access.layer,
   };
 }
 

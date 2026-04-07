@@ -67,6 +67,11 @@ export const API_ROUTES = {
   BOOKMARKS: '/api/bookmarks',
   BOOKMARK_STATUS: (postId: string) => `/api/bookmarks/${postId}`,
 
+  // Content unlocks (layer 2/3)
+  UNLOCKS: '/api/unlocks',
+  UNLOCK_LAYER2: '/api/unlocks/layer2',
+  UNLOCK_LAYER3: '/api/unlocks/layer3',
+
   // Dashboard
   DASHBOARD: '/api/dashboard',
 

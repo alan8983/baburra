@@ -39,6 +39,8 @@ import {
   useKolFollowerCount,
 } from '@/hooks';
 import { SubscriptionToggle } from '@/components/kol/subscription-toggle';
+import { useUnlockChecks } from '@/hooks/use-unlocks';
+import { UnlockCta } from '@/components/paywall/unlock-cta';
 import { formatReturnRate, getReturnRateColorClass } from '@/domain/calculators';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { KolScorecard } from './_components/kol-scorecard';
@@ -113,11 +115,14 @@ function calcPeriodStats(posts: StockPost[], period: 'day5' | 'day30' | 'day90' 
 
 // ─── Per-stock row sub-component ──────────────────────────────────────────────
 
-function KolStockSection({ stock }: { stock: StockGroup }) {
+function KolStockSection({ stock, kolId }: { stock: StockGroup; kolId: string }) {
   const t = useTranslations('kols');
   const tCommon = useTranslations('common');
   const router = useRouter();
   const { palette, colors } = useColorPalette();
+
+  const unlockChecks = useUnlockChecks();
+  const isL2Unlocked = unlockChecks.hasLayer2(kolId, stock.stockId);
 
   const { data: chartData, isLoading: chartLoading } = useStockPricesForChart(stock.ticker);
 
@@ -144,6 +149,29 @@ function KolStockSection({ stock }: { stock: StockGroup }) {
     return p.sentiment > 0 ? change > 0 : change < 0;
   }).length;
   const winRate = nonNeutral.length > 0 ? (winCount / nonNeutral.length) * 100 : null;
+
+  // Layer-2 gate: Free users see a compact preview + UnlockCta until they unlock this
+  // (kolId, stockId) pair. Pro/Max users bypass via unlockChecks.hasLayer2.
+  if (!isL2Unlocked) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Link
+            href={ROUTES.STOCK_DETAIL(stock.ticker)}
+            className="text-lg font-bold hover:underline"
+          >
+            {stock.ticker}
+          </Link>
+          <span className="text-muted-foreground">—</span>
+          <span className="text-sm font-medium">{stock.name}</span>
+          <Badge variant="secondary" className="ml-auto text-xs">
+            {t('detail.postsByStock.total', { count: stock.posts.length })}
+          </Badge>
+        </div>
+        <UnlockCta variant={{ kind: 'layer2', kolId, stockId: stock.stockId }} />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -511,7 +539,7 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
           {postsByStock.map((stock, i) => (
             <div key={stock.stockId}>
               {i > 0 && <Separator className="my-8" />}
-              <KolStockSection stock={stock} />
+              <KolStockSection stock={stock} kolId={id} />
             </div>
           ))}
         </div>

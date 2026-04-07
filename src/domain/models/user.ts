@@ -26,12 +26,15 @@ export interface UpdateProfileInput {
   colorPalette?: ColorPalette;
 }
 
-// Credit system constants
-export const CREDIT_LIMITS = {
-  free: 700,
-  pro: 4200,
-  max: 21000,
+// Credit system constants — monthly allotments (calibrated 2026-04-08, tasks.md 0.2)
+export const MONTHLY_CREDIT_LIMITS = {
+  free: 500,
+  pro: 5000,
+  max: 25000,
 } as const;
+
+// Deprecated alias kept to minimise blast radius; prefer MONTHLY_CREDIT_LIMITS.
+export const CREDIT_LIMITS = MONTHLY_CREDIT_LIMITS;
 
 /**
  * @deprecated Use `composeCost` from `./credit-blocks` with an explicit recipe
@@ -85,8 +88,8 @@ export const CREDIT_COSTS = {
   ]),
 } as const;
 
-// Backward compatibility alias (deprecated — use CREDIT_LIMITS)
-export const AI_QUOTA = {
-  FREE_WEEKLY_LIMIT: CREDIT_LIMITS.free,
-  PREMIUM_WEEKLY_LIMIT: CREDIT_LIMITS.pro,
+// Unlock costs (credits deducted on unlock, persistent per user)
+// Calibrated: 100 credits at Pro 5000/mo = 50 L3 unlocks max, creates visible Max upsell pressure.
+export const UNLOCK_COSTS = {
+  layer3_stock_page: 100,
 } as const;
