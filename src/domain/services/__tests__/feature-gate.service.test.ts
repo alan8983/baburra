@@ -1,77 +1,66 @@
 import { describe, it, expect } from 'vitest';
-import { getFeatureAccess, type Feature } from '../feature-gate.service';
+import { getFeatureAccess } from '../feature-gate.service';
 
-describe('getFeatureAccess', () => {
-  describe('blur gate features', () => {
-    it('returns blur_gate with previewLimit 2 for free user on argument_cards', () => {
+describe('getFeatureAccess (layer-based)', () => {
+  describe('layer1', () => {
+    it.each(['free', 'pro', 'max'] as const)('grants full access to %s', (tier) => {
+      const result = getFeatureAccess('layer1', tier);
+      expect(result.gate).toBe('full_access');
+      expect(result.layer).toBe('layer1');
+    });
+  });
+
+  describe('layer2', () => {
+    it('returns blur_gate for free users', () => {
+      const result = getFeatureAccess('layer2', 'free');
+      expect(result.gate).toBe('blur_gate');
+      expect(result.requiredTier).toBe('pro');
+    });
+
+    it('returns full_access for pro users', () => {
+      expect(getFeatureAccess('layer2', 'pro').gate).toBe('full_access');
+    });
+
+    it('returns full_access for max users', () => {
+      expect(getFeatureAccess('layer2', 'max').gate).toBe('full_access');
+    });
+  });
+
+  describe('layer3', () => {
+    it('returns locked for free users with requiredTier=pro', () => {
+      const result = getFeatureAccess('layer3', 'free');
+      expect(result.gate).toBe('locked');
+      expect(result.requiredTier).toBe('pro');
+    });
+
+    it('returns locked for pro users (tier-level — per-stock unlock decides actual visibility)', () => {
+      const result = getFeatureAccess('layer3', 'pro');
+      expect(result.gate).toBe('locked');
+      expect(result.requiredTier).toBe('max');
+    });
+
+    it('returns full_access for max users', () => {
+      expect(getFeatureAccess('layer3', 'max').gate).toBe('full_access');
+    });
+  });
+
+  describe('legacy feature name → layer mapping', () => {
+    it('argument_cards maps to layer2', () => {
       const result = getFeatureAccess('argument_cards', 'free');
-      expect(result).toEqual({ gate: 'blur_gate', previewLimit: 2, requiredTier: 'pro' });
+      expect(result.layer).toBe('layer2');
+      expect(result.gate).toBe('blur_gate');
     });
 
-    it('returns blur_gate with previewLimit 1 for free user on win_rate_breakdown', () => {
-      const result = getFeatureAccess('win_rate_breakdown', 'free');
-      expect(result).toEqual({ gate: 'blur_gate', previewLimit: 1, requiredTier: 'pro' });
+    it('win_rate_breakdown maps to layer2', () => {
+      expect(getFeatureAccess('win_rate_breakdown', 'free').layer).toBe('layer2');
     });
 
-    it('returns full_access for pro user on argument_cards', () => {
-      const result = getFeatureAccess('argument_cards', 'pro');
-      expect(result).toEqual({ gate: 'full_access', requiredTier: 'pro' });
+    it('kol_comparison maps to layer3', () => {
+      expect(getFeatureAccess('kol_comparison', 'free').layer).toBe('layer3');
     });
-  });
 
-  describe('pro badge features', () => {
-    const proBadgeFeatures: Feature[] = ['kol_comparison', 'argument_timeline', 'csv_export'];
-
-    proBadgeFeatures.forEach((feature) => {
-      it(`returns pro_badge for free user on ${feature}`, () => {
-        const result = getFeatureAccess(feature, 'free');
-        expect(result).toEqual({ gate: 'pro_badge', requiredTier: 'pro' });
-      });
-
-      it(`returns full_access for pro user on ${feature}`, () => {
-        const result = getFeatureAccess(feature, 'pro');
-        expect(result).toEqual({ gate: 'full_access', requiredTier: 'pro' });
-      });
-    });
-  });
-
-  describe('max-only features', () => {
-    const maxFeatures: Feature[] = ['api_access', 'portfolio_simulation'];
-
-    maxFeatures.forEach((feature) => {
-      it(`returns locked for free user on ${feature}`, () => {
-        const result = getFeatureAccess(feature, 'free');
-        expect(result).toEqual({ gate: 'locked', requiredTier: 'max' });
-      });
-
-      it(`returns locked for pro user on ${feature}`, () => {
-        const result = getFeatureAccess(feature, 'pro');
-        expect(result).toEqual({ gate: 'locked', requiredTier: 'max' });
-      });
-
-      it(`returns full_access for max user on ${feature}`, () => {
-        const result = getFeatureAccess(feature, 'max');
-        expect(result).toEqual({ gate: 'full_access', requiredTier: 'max' });
-      });
-    });
-  });
-
-  describe('max tier gets full access to everything', () => {
-    const allFeatures: Feature[] = [
-      'argument_cards',
-      'win_rate_breakdown',
-      'kol_comparison',
-      'argument_timeline',
-      'csv_export',
-      'api_access',
-      'portfolio_simulation',
-    ];
-
-    allFeatures.forEach((feature) => {
-      it(`returns full_access for max user on ${feature}`, () => {
-        const result = getFeatureAccess(feature, 'max');
-        expect(result.gate).toBe('full_access');
-      });
+    it('api_access maps to layer3', () => {
+      expect(getFeatureAccess('api_access', 'free').layer).toBe('layer3');
     });
   });
 });

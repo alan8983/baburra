@@ -40,10 +40,10 @@ describe('ai-usage.repository', () => {
       const resetAt = '2025-02-01T00:00:00Z';
       mockRpc.mockResolvedValue({
         data: {
-          credit_balance: 697,
+          credit_balance: 497,
           credit_reset_at: resetAt,
           subscription_tier: 'free',
-          weekly_limit: 700,
+          weekly_limit: 500,
         },
         error: null,
       });
@@ -57,8 +57,8 @@ describe('ai-usage.repository', () => {
       });
       expect(result).toEqual({
         usageCount: 3,
-        weeklyLimit: 700,
-        remaining: 697,
+        weeklyLimit: 500,
+        remaining: 497,
         resetAt: new Date(resetAt),
         subscriptionTier: 'free',
       });
@@ -125,10 +125,10 @@ describe('ai-usage.repository', () => {
     it('should handle object RPC response', async () => {
       mockRpc.mockResolvedValue({
         data: {
-          credit_balance: 699,
+          credit_balance: 499,
           credit_reset_at: '2025-02-01T00:00:00Z',
           subscription_tier: 'free',
-          weekly_limit: 700,
+          weekly_limit: 500,
         },
         error: null,
       });
@@ -136,16 +136,16 @@ describe('ai-usage.repository', () => {
       const result = await consumeAiQuota(USER_ID);
 
       expect(result.usageCount).toBe(1);
-      expect(result.remaining).toBe(699);
+      expect(result.remaining).toBe(499);
     });
 
     it('should handle null resetAt in RPC response', async () => {
       mockRpc.mockResolvedValue({
         data: {
-          credit_balance: 699,
+          credit_balance: 499,
           credit_reset_at: null,
           subscription_tier: 'free',
-          weekly_limit: 700,
+          weekly_limit: 500,
         },
         error: null,
       });
@@ -167,7 +167,7 @@ describe('ai-usage.repository', () => {
     it('refunds credits when actual is significantly shorter than estimated', async () => {
       // Estimated 60min, actual 42min → delta = (42 - 60) × 5 = -90
       mockRpc.mockResolvedValue({
-        data: { credit_balance: 790, refunded: 90 },
+        data: { credit_balance: 490, refunded: 90 },
         error: null,
       });
 
@@ -187,7 +187,7 @@ describe('ai-usage.repository', () => {
           credit_balance: 525,
           credit_reset_at: null,
           subscription_tier: 'free',
-          weekly_limit: 700,
+          weekly_limit: 500,
           consumed: 175,
           operation: 'transcription_reconciliation',
         },
@@ -228,7 +228,7 @@ describe('ai-usage.repository', () => {
     it('should return usage info from profile', async () => {
       const futureReset = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
       setupProfileMock({
-        credit_balance: 695,
+        credit_balance: 495,
         credit_reset_at: futureReset,
         subscription_tier: 'free',
       });
@@ -236,8 +236,8 @@ describe('ai-usage.repository', () => {
       const result = await getAiUsage(USER_ID);
 
       expect(result.usageCount).toBe(5);
-      expect(result.remaining).toBe(695);
-      expect(result.weeklyLimit).toBe(700);
+      expect(result.remaining).toBe(495);
+      expect(result.weeklyLimit).toBe(500);
     });
 
     it('should reset effective usage count when past reset date', async () => {
@@ -251,7 +251,7 @@ describe('ai-usage.repository', () => {
       const result = await getAiUsage(USER_ID);
 
       expect(result.usageCount).toBe(0);
-      expect(result.remaining).toBe(700);
+      expect(result.remaining).toBe(500);
     });
 
     it('should return defaults for missing user (PGRST116)', async () => {
@@ -260,8 +260,8 @@ describe('ai-usage.repository', () => {
       const result = await getAiUsage(USER_ID);
 
       expect(result.usageCount).toBe(0);
-      expect(result.weeklyLimit).toBe(700);
-      expect(result.remaining).toBe(700);
+      expect(result.weeklyLimit).toBe(500);
+      expect(result.remaining).toBe(500);
       expect(result.subscriptionTier).toBe('free');
     });
   });

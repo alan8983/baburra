@@ -80,6 +80,14 @@ All API routes live in `src/app/api/` and return `NextResponse.json()`.
 | POST | /api/scrape/profile | Initiate profile scrape |
 | GET | /api/scrape/status/[jobId] | Scrape job status |
 
+### Content Unlocks (Layer 2/3 gating)
+
+| Method | Path | Description |
+| --- | --- | --- |
+| GET | /api/unlocks | List current user's L2/L3 unlocks |
+| POST | /api/unlocks/layer2 | Unlock `(kolId, stockId)` deep dive — Free uses monthly quota, Pro/Max no-op |
+| POST | /api/unlocks/layer3 | Unlock `stockId` stock page — Pro pays credits, Free 402, Max no-op |
+
 ### Cron (Vercel Cron Functions)
 
 | Method | Path | Description |

@@ -20,6 +20,7 @@
 | `kol_sources` | Shared | KOL platform identity + scrape state |
 | `kol_subscriptions` | Private | User subscriptions to KOLs |
 | `scrape_jobs` | Shared | Background scrape job queue |
+| `content_unlocks` | Private | Persistent per-user Layer 2/3 content unlocks |
 
 ## Domain Model Conventions
 
