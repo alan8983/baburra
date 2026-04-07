@@ -33,12 +33,70 @@ export interface GeminiGenerateOptions {
 }
 
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
-const DEFAULT_MODEL = process.env.AI_SENTIMENT_MODEL || 'gemini-2.5-flash-lite';
 const DEFAULT_TIMEOUT_MS = 30_000;
 
-/** Return the currently configured AI model name (for version tracking). */
+/**
+ * Model fallback chain. Tried in order; quota errors (429 / RESOURCE_EXHAUSTED)
+ * roll over to the next model. Non-quota errors propagate immediately.
+ *
+ * Default chain prefers Gemma 4 (free quota) and falls back to Gemini 2.5 Flash Lite.
+ * Override with AI_MODEL_CHAIN env var (comma-separated).
+ * Legacy AI_SENTIMENT_MODEL pins to a single model with no fallback.
+ */
+const DEFAULT_MODEL_CHAIN: string[] = [
+  'gemma-4-31b-it',
+  'gemma-4-26b-a4b-it',
+  'gemini-2.5-flash-lite',
+];
+
+function buildEffectiveChain(): string[] {
+  if (process.env.AI_SENTIMENT_MODEL) {
+    return [process.env.AI_SENTIMENT_MODEL];
+  }
+  if (process.env.AI_MODEL_CHAIN) {
+    const parsed = process.env.AI_MODEL_CHAIN.split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (parsed.length > 0) return parsed;
+  }
+  return DEFAULT_MODEL_CHAIN;
+}
+
+const EFFECTIVE_CHAIN = buildEffectiveChain();
+
+/**
+ * Return the primary configured AI model name (for DB version tracking).
+ * Note: this returns the *intended* primary model, not the actual model used
+ * if a fallback fired. The DB column is informational.
+ */
 export function getAiModelVersion(): string {
-  return DEFAULT_MODEL;
+  return EFFECTIVE_CHAIN[0];
+}
+
+function isQuotaError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message;
+  return msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('quota');
+}
+
+async function withModelFallback<T>(
+  fn: (model: string) => Promise<T>,
+  explicitModel?: string
+): Promise<T> {
+  const chain = explicitModel ? [explicitModel] : EFFECTIVE_CHAIN;
+  let lastErr: unknown;
+  for (const model of chain) {
+    try {
+      return await fn(model);
+    } catch (err) {
+      lastErr = err;
+      if (!isQuotaError(err)) throw err;
+      console.warn(
+        `[gemini.client] Model "${model}" hit quota, falling back to next model in chain`
+      );
+    }
+  }
+  throw lastErr;
 }
 
 function getApiKey(): string {
@@ -55,7 +113,15 @@ function getApiKey(): string {
 export async function generateContent(
   prompt: string,
   options?: GeminiGenerateOptions,
-  model: string = DEFAULT_MODEL
+  model?: string
+): Promise<string> {
+  return withModelFallback((m) => generateContentWithModel(prompt, options, m), model);
+}
+
+async function generateContentWithModel(
+  prompt: string,
+  options: GeminiGenerateOptions | undefined,
+  model: string
 ): Promise<string> {
   const apiKey = getApiKey();
 
@@ -125,7 +191,19 @@ export async function generateStructuredJson<T>(
   prompt: string,
   schema: Record<string, unknown>,
   options?: GeminiGenerateOptions,
-  model: string = DEFAULT_MODEL
+  model?: string
+): Promise<T> {
+  return withModelFallback(
+    (m) => generateStructuredJsonWithModel<T>(prompt, schema, options, m),
+    model
+  );
+}
+
+async function generateStructuredJsonWithModel<T>(
+  prompt: string,
+  schema: Record<string, unknown>,
+  options: GeminiGenerateOptions | undefined,
+  model: string
 ): Promise<T> {
   const apiKey = getApiKey();
 
@@ -197,7 +275,7 @@ export async function generateStructuredJson<T>(
 export async function generateJson<T>(
   prompt: string,
   options?: GeminiGenerateOptions,
-  model: string = DEFAULT_MODEL
+  model?: string
 ): Promise<T> {
   const text = await generateContent(prompt, options, model);
 
