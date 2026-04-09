@@ -1,16 +1,4 @@
 {
-  "hero": {
-    "title": "Track Your First Investment KOL",
-    "subtitle": "Paste a KOL channel or Podcast URL — AI analyzes opinion accuracy automatically",
-    "freeBadge": "First import completely free, no credit card needed",
-    "presetHint": "Not sure what to paste? Try these:",
-    "preset1Name": "Gooaye 股癌",
-    "preset1Url": "https://www.youtube.com/@Gooaye",
-    "preset2Name": "ZRBros 柴鼠兄弟",
-    "preset2Url": "https://www.youtube.com/@ZRBros",
-    "preset3Name": "Statement Dog",
-    "preset3Url": "https://www.youtube.com/@statementdog"
-  },
   "discover": {
     "found": "{count} items found",
     "selected": "{count} selected",

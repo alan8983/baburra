@@ -43,7 +43,7 @@ export function InputWizardStepper({ currentStep, branch = 'idle' }: InputWizard
   const keys = keysFor(branch);
 
   return (
-    <div className="flex items-center justify-center gap-0">
+    <div className="flex items-center justify-start gap-0">
       {keys.map((key, index) => {
         const stepNumber = (index + 1) as WizardStep;
         const isCompleted = stepNumber < currentStep;
