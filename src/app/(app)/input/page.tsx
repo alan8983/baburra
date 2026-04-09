@@ -25,7 +25,6 @@ import {
   type WizardBranch,
 } from '@/components/input/input-wizard-stepper';
 import { DetectedUrls } from '@/components/input/detected-urls';
-import { FirstTimeHero } from '@/components/scrape/first-time-hero';
 import { UrlDiscoveryList } from '@/components/scrape/url-discovery-list';
 import { ScrapeProgress } from '@/components/scrape/scrape-progress';
 import { RecentScrapeJobs } from '@/components/scrape/recent-scrape-jobs';
@@ -266,23 +265,20 @@ export default function InputPage() {
 
   const { branch, step } = stepperStateFor(wizard);
   const showInputPane = wizard.kind === 'idle';
-  const showFirstTimeHero = showInputPane && isFirstTimeUser && !content.trim();
 
   return (
     <div className="min-h-[calc(100vh-8rem)] px-4 pt-8">
-      <div className="mx-auto w-full max-w-6xl space-y-8">
-        <InputWizardStepper currentStep={step} branch={branch} />
-
+      <div className="mx-auto w-full max-w-6xl">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="space-y-8 lg:col-span-2">
+            <InputWizardStepper currentStep={step} branch={branch} />
+
             {showInputPane && (
               <div className="space-y-6">
                 <div className="text-center">
                   <h1 className="text-2xl font-bold tracking-tight">{t('title')}</h1>
                   <p className="text-muted-foreground mt-1 text-sm">{t('description')}</p>
                 </div>
-
-                {showFirstTimeHero && <FirstTimeHero onSelectPreset={(url) => setContent(url)} />}
 
                 <div className="space-y-3">
                   <Textarea
