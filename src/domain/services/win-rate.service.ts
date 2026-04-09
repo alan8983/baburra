@@ -15,6 +15,7 @@
 import {
   aggregateBucket,
   classifyOutcome,
+  computeExcessReturn,
   emptyStats,
   getVolatilityThreshold,
   type ClassifiedSample,
@@ -74,7 +75,11 @@ export async function computeWinRateStats(args: ComputeWinRateArgs): Promise<Win
 
         // Excluded short-circuit: skip σ lookup entirely.
         if (effectiveSentiment === 0 || priceChange === null) {
-          samplesByPeriod[period].push({ outcome: 'excluded', threshold: null });
+          samplesByPeriod[period].push({
+            outcome: 'excluded',
+            threshold: null,
+            excessReturn: null,
+          });
           continue;
         }
 
@@ -90,7 +95,11 @@ export async function computeWinRateStats(args: ComputeWinRateArgs): Promise<Win
         } catch (err) {
           if (err instanceof UnsupportedMarketError) {
             // HK / unknown markets can't be classified — treat as excluded.
-            samplesByPeriod[period].push({ outcome: 'excluded', threshold: null });
+            samplesByPeriod[period].push({
+              outcome: 'excluded',
+              threshold: null,
+              excessReturn: null,
+            });
             continue;
           }
           throw err;
@@ -98,16 +107,22 @@ export async function computeWinRateStats(args: ComputeWinRateArgs): Promise<Win
 
         if (threshold === null || threshold.value === 0) {
           // Degenerate threshold (no history at all) — exclude.
-          samplesByPeriod[period].push({ outcome: 'excluded', threshold: null });
+          samplesByPeriod[period].push({
+            outcome: 'excluded',
+            threshold: null,
+            excessReturn: null,
+          });
           continue;
         }
 
-        const outcome = classifyOutcome({
+        const classifyArgs = {
           sentiment: effectiveSentiment,
           priceChange,
           threshold: threshold.value,
-        });
-        samplesByPeriod[period].push({ outcome, threshold });
+        };
+        const outcome = classifyOutcome(classifyArgs);
+        const excessReturn = outcome === 'excluded' ? null : computeExcessReturn(classifyArgs);
+        samplesByPeriod[period].push({ outcome, threshold, excessReturn });
       }
     }
   }

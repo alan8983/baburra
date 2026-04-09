@@ -322,7 +322,14 @@ const B4_aiAnalysisMustHaveSentiment = (result: AIAnalysisResult): boolean => {
 
 `Neutral` 或 `priceChange === null` → `excluded`。
 
-**勝率公式：** `winRate = winCount / (winCount + loseCount)`，分母為 0 時為 `null`。Noise 不計入分母。
+**Per-period performance metrics（`WinRateBucket` / `PeriodMetrics`）：**
+
+- `hitRate = wins / (wins + noise + loses)` — 主要 UI 指標，Noise 納入分母。
+- `precision = wins / (wins + loses)` — 經典勝率定義；`winRate` 為 `precision` 的 `@deprecated` 別名，過渡期保留。
+- `avgExcessWin` / `avgExcessLose` — σ-normalized excess return 的均值：`sign * priceChange / threshold`，bearish 時 sign 翻轉使 winning 永為正值；lose 保留負號。
+- `sqr`（Signal Quality Ratio）= `mean(excessReturn) / stdev(excessReturn)`，對所有非 excluded 樣本（含 Noise）計算，使用 Bessel-corrected 樣本標準差；< 2 樣本或 stdev=0 時為 `null`。這是離散事件上的 Information Ratio 類比：`> 1.0` 優秀、`0.5–1.0` 不錯、`< 0.5` 不穩定。
+- **最低樣本門檻**：`MIN_RESOLVED_POSTS_PER_PERIOD = 10`，以 `(wins + loses)` 計；未達時 `sufficientData = false`，`hitRate` / `precision` / `avgExcessWin` / `avgExcessLose` / `sqr` 皆為 `null`，但原始計數仍回傳。
+- **Per-period independence**：每個 period（5/30/90/365d）獨立計算 `sufficientData`，不做跨 period 平均或繼承。
 
 **唯一實作位置：** `src/domain/calculators/win-rate.calculator.ts` + `src/domain/services/win-rate.service.ts`。所有 consumer surface（KOL scorecard、dashboard pulse、KOL leaderboard、stock detail）皆透過 `/api/kols/[id]/win-rate`、`/api/stocks/[ticker]/win-rate` 或 `/api/dashboard` 取得勝率，**不得**內聯重新實作分類邏輯。
 
