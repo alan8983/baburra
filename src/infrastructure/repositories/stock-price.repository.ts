@@ -210,6 +210,44 @@ function transformTiingoRows(tiingoRows: Awaited<ReturnType<typeof fetchTiingoPr
   return { candles, volumes, rowsForCache };
 }
 
+/** A single (date, close) point — used by σ/win-rate computations. */
+export interface PriceSeriesPoint {
+  date: string; // YYYY-MM-DD
+  close: number;
+}
+
+/**
+ * Fetch a flat (date, close) series for a ticker over a calendar range.
+ * Reuses `getStockPrices` (and therefore the Supabase cache + Tiingo/TWSE backfill).
+ *
+ * Used by the volatility calculator, which needs raw close prices not chart shapes.
+ * Returns an empty array on any failure (caller decides how to react).
+ */
+export async function getStockPriceSeries(
+  ticker: string,
+  opts: { from: string; to: string }
+): Promise<PriceSeriesPoint[]> {
+  try {
+    const { candles } = await getStockPrices(ticker, {
+      startDate: opts.from,
+      endDate: opts.to,
+    });
+    return candles.map((c) => ({ date: c.time, close: c.close }));
+  } catch (err) {
+    console.warn(
+      `[getStockPriceSeries] failed for ${ticker} ${opts.from}..${opts.to}:`,
+      err instanceof Error ? err.message : err
+    );
+    return [];
+  }
+}
+
+/** Resolve a ticker's market label, used by the volatility provider. */
+export async function getStockMarket(ticker: string): Promise<string | null> {
+  const stock = await resolveStock(ticker);
+  return stock?.market ?? null;
+}
+
 /**
  * 取得標的股價（K 線 + 成交量），優先從 Supabase 快取回傳。
  *

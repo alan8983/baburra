@@ -6,53 +6,43 @@ import { TrendingUp, TrendingDown, Minus, Activity } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AnimatedNumber } from '@/components/ui/animated-number';
 import { useColorPalette } from '@/lib/colors/color-palette-context';
+import { calculateReturnRateStats, type PostForReturnRate } from '@/domain/calculators';
 import type { PostWithPriceChanges } from '@/domain/models';
+import type { WinRateBucket } from '@/domain/calculators';
+import type { Sentiment } from '@/domain/models/post';
 
 interface PortfolioPulseProps {
   posts: PostWithPriceChanges[];
+  /** Server-computed day30 win-rate bucket from the dashboard endpoint. */
+  pulseStats: WinRateBucket;
 }
 
-export function PortfolioPulse({ posts }: PortfolioPulseProps) {
+export function PortfolioPulse({ posts, pulseStats }: PortfolioPulseProps) {
   const t = useTranslations('dashboard');
   const { colors } = useColorPalette();
 
-  const metrics = useMemo(() => {
-    const nonNeutral = posts.filter((p) => p.sentiment !== 0);
-    let winCount = 0;
-    let totalWithResult = 0;
-    const returns: number[] = [];
-
-    for (const post of nonNeutral) {
-      for (const stock of post.stocks) {
-        const pc = post.priceChanges?.[stock.id];
-        if (!pc) continue;
-        const change = pc.day30 ?? pc.day5 ?? null;
-        if (change === null) continue;
-        totalWithResult++;
-        const effectiveSentiment = stock.sentiment ?? post.sentiment;
-        const isBullish = effectiveSentiment > 0;
-        const isBearish = effectiveSentiment < 0;
-        const directedReturn = isBullish ? change : isBearish ? -change : 0;
-        returns.push(directedReturn);
-        if ((isBullish && change > 0) || (isBearish && change < 0)) {
-          winCount++;
-        }
-      }
-    }
-
-    const winRate = totalWithResult > 0 ? (winCount / totalWithResult) * 100 : null;
-    const avgReturn =
-      returns.length > 0 ? returns.reduce((a, b) => a + b, 0) / returns.length : null;
-
-    // Trend direction based on average return
-    const trend =
-      avgReturn !== null ? (avgReturn > 0.5 ? 'up' : avgReturn < -0.5 ? 'down' : 'flat') : 'flat';
-
-    return { winRate, avgReturn, totalWithResult, trend };
+  // Average return — still computed locally from existing return-rate calculator.
+  const avgReturn = useMemo(() => {
+    if (posts.length === 0) return null;
+    const forReturn: PostForReturnRate[] = posts.map((p) => {
+      const stockSentiments: Record<string, Sentiment> = {};
+      for (const s of p.stocks) if (s.sentiment !== null) stockSentiments[s.id] = s.sentiment;
+      return {
+        id: p.id,
+        sentiment: p.sentiment,
+        ...(Object.keys(stockSentiments).length > 0 && { stockSentiments }),
+        priceChanges: p.priceChanges ?? {},
+      };
+    });
+    return calculateReturnRateStats(forReturn).day30.avgReturn;
   }, [posts]);
 
-  const TrendIcon =
-    metrics.trend === 'up' ? TrendingUp : metrics.trend === 'down' ? TrendingDown : Minus;
+  const winRate = pulseStats.winRate != null ? pulseStats.winRate * 100 : null;
+  const totalWithResult = pulseStats.winCount + pulseStats.loseCount + pulseStats.noiseCount;
+
+  const trend =
+    avgReturn !== null ? (avgReturn > 0.5 ? 'up' : avgReturn < -0.5 ? 'down' : 'flat') : 'flat';
+  const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
 
   return (
     <Card className="animate-fade-up border-2">
@@ -63,7 +53,7 @@ export function PortfolioPulse({ posts }: PortfolioPulseProps) {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {metrics.totalWithResult === 0 ? (
+        {totalWithResult === 0 ? (
           <p className="text-muted-foreground py-2 text-sm">{t('pulse.noData')}</p>
         ) : (
           <div className="grid grid-cols-3 gap-4">
@@ -72,17 +62,21 @@ export function PortfolioPulse({ posts }: PortfolioPulseProps) {
               <p className="text-muted-foreground mb-1 text-xs">{t('pulse.winRate')}</p>
               <p
                 className={`text-2xl font-bold ${
-                  metrics.winRate !== null && metrics.winRate >= 50
-                    ? colors.bullish.text
-                    : colors.bearish.text
+                  winRate !== null && winRate >= 50 ? colors.bullish.text : colors.bearish.text
                 }`}
               >
-                {metrics.winRate !== null ? (
-                  <AnimatedNumber value={metrics.winRate} decimals={1} suffix="%" />
+                {winRate !== null ? (
+                  <AnimatedNumber value={winRate} decimals={1} suffix="%" />
                 ) : (
                   '—'
                 )}
               </p>
+              {pulseStats.threshold && (
+                <p className="text-muted-foreground text-[10px]">
+                  ±{(pulseStats.threshold.value * 100).toFixed(1)}% σ
+                  {pulseStats.threshold.source === 'index-fallback' && ' (idx)'}
+                </p>
+              )}
             </div>
 
             {/* Avg Return */}
@@ -90,16 +84,14 @@ export function PortfolioPulse({ posts }: PortfolioPulseProps) {
               <p className="text-muted-foreground mb-1 text-xs">{t('pulse.avgReturn')}</p>
               <p
                 className={`text-2xl font-bold ${
-                  metrics.avgReturn !== null && metrics.avgReturn >= 0
-                    ? colors.bullish.text
-                    : colors.bearish.text
+                  avgReturn !== null && avgReturn >= 0 ? colors.bullish.text : colors.bearish.text
                 }`}
               >
-                {metrics.avgReturn !== null ? (
+                {avgReturn !== null ? (
                   <AnimatedNumber
-                    value={metrics.avgReturn}
+                    value={avgReturn}
                     decimals={1}
-                    prefix={metrics.avgReturn >= 0 ? '+' : ''}
+                    prefix={avgReturn >= 0 ? '+' : ''}
                     suffix="%"
                   />
                 ) : (
@@ -114,9 +106,9 @@ export function PortfolioPulse({ posts }: PortfolioPulseProps) {
               <div className="flex items-center justify-center gap-1">
                 <TrendIcon
                   className={`h-6 w-6 ${
-                    metrics.trend === 'up'
+                    trend === 'up'
                       ? colors.bullish.text
-                      : metrics.trend === 'down'
+                      : trend === 'down'
                         ? colors.bearish.text
                         : 'text-muted-foreground'
                   }`}
