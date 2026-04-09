@@ -300,32 +300,31 @@ const B4_aiAnalysisMustHaveSentiment = (result: AIAnalysisResult): boolean => {
 
 ## 四、勝率計算不變量
 
-### W1: 勝率門檻
+### W1: 勝率門檻（動態 1σ）
 
-**描述**：勝率判定使用 ±2% 門檻。
+**描述**：勝率判定使用 **per-(ticker, period, postedAt)** 的 1 個標準差（1σ）作為動態門檻，由 `volatility.calculator.ts` 計算，並由 `win-rate.calculator.ts` + `win-rate.service.ts` 統一分類。先前的固定 ±2% 規則為示例，已被取代。
 
-```typescript
-const WIN_RATE_THRESHOLD = 0.02; // 2%
+**核心規則：**
 
-const W1_evaluatePrediction = (
-  sentiment: Sentiment,
-  priceChangePercent: number
-): 'win' | 'loss' | 'excluded' => {
-  // Neutral 不計入
-  if (sentiment === 'Neutral') {
-    return 'excluded';
-  }
+- σ = N 日重疊報酬序列（`r_i = p[i+N]/p[i] - 1`）的樣本標準差。**不**使用 √T 縮放。
+- Lookback：5d/30d → 1 年；90d → 2 年；365d → 3 年。
+- **無前視偏差（no look-ahead）**：σ 僅使用 `date < postedAt` 的價格列。
+- **IPO fallback**：若標的歷史不足 lookback，改用同市場指數（TW → `^TWII`，US/CRYPTO → `SPY`）。`HK` 市場不支援，會丟出 `UnsupportedMarketError`。
+- 結果以記憶體 LRU 快取，key = `(ticker, periodDays, asOfDate-YYYY-MM-DD)`。
 
-  // 震盪區間不計入
-  if (Math.abs(priceChangePercent) <= WIN_RATE_THRESHOLD) {
-    return 'excluded';
-  }
+**分類（Bullish: sentiment > 0, Bearish: sentiment < 0, Neutral: sentiment === 0）：**
 
-  // 判斷勝負
-  const actualDirection = priceChangePercent > 0 ? 'Bullish' : 'Bearish';
-  return sentiment === actualDirection ? 'win' : 'loss';
-};
-```
+| Bullish 報酬 | Bearish 報酬 | 結果 |
+| --- | --- | --- |
+| `> +1σ` | `< -1σ` | `win` |
+| `[-1σ, +1σ]` | `[-1σ, +1σ]` | `noise` |
+| `< -1σ` | `> +1σ` | `lose` |
+
+`Neutral` 或 `priceChange === null` → `excluded`。
+
+**勝率公式：** `winRate = winCount / (winCount + loseCount)`，分母為 0 時為 `null`。Noise 不計入分母。
+
+**唯一實作位置：** `src/domain/calculators/win-rate.calculator.ts` + `src/domain/services/win-rate.service.ts`。所有 consumer surface（KOL scorecard、dashboard pulse、KOL leaderboard、stock detail）皆透過 `/api/kols/[id]/win-rate`、`/api/stocks/[ticker]/win-rate` 或 `/api/dashboard` 取得勝率，**不得**內聯重新實作分類邏輯。
 
 ---
 
@@ -404,7 +403,8 @@ export const CacheInvariants = {
 };
 
 export const WinRateInvariants = {
-  W1_evaluatePrediction,
+  // W1 is now implemented by classifyOutcome + getVolatilityThreshold
+  // (see src/domain/calculators/{win-rate,volatility}.calculator.ts).
   W2_calculatePriceChange,
 };
 
@@ -485,7 +485,7 @@ describe('Post Invariants', () => {
 | B2  | 業務 | 免費用戶KOL ≤ 5位          | KOL建立   | API Route    |
 | B3  | 業務 | 用戶資料隔離               | 所有CRUD  | RLS          |
 | B4  | 業務 | AI結果必須有sentiment      | AI回應    | Service      |
-| W1  | 勝率 | ±2%門檻判定                | 計算時    | Calculator   |
+| W1  | 勝率 | 動態 1σ 門檻判定（無前視）  | 計算時    | Calculator + Service |
 | W2  | 勝率 | 以posted_at為基準          | 計算時    | Calculator   |
 
 ---

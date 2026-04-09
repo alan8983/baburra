@@ -4,3 +4,5 @@
 export * from './price-change.calculator';
 export * from './return-rate.calculator';
 export * from './argument-summary.calculator';
+export * from './volatility.calculator';
+export * from './win-rate.calculator';

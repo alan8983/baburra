@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useColorPalette } from '@/lib/colors/color-palette-context';
 import { formatReturnRate, getReturnRateColorClass } from '@/domain/calculators';
+import { useKolWinRate } from '@/hooks/use-kols';
 import { WinRateRing } from './win-rate-ring';
 import { SubscriptionToggle } from '@/components/kol/subscription-toggle';
 import { BlurGate } from '@/components/paywall/blur-gate';
@@ -81,21 +82,16 @@ export function KolScorecard({
   hasInferredTickers,
 }: KolScorecardProps) {
   const t = useTranslations('kols');
-  const { palette, colors } = useColorPalette();
+  const { palette } = useColorPalette();
 
-  // Calculate overall win rate from all stock posts
-  const { winRate, winCount, totalCalls } = useMemo(() => {
-    const nonNeutral = stockPosts.filter((p) => p.sentiment !== 0 && p.priceChanges.day30 != null);
-    const wins = nonNeutral.filter((p) => {
-      const change = p.priceChanges.day30!;
-      return p.sentiment > 0 ? change > 0 : change < 0;
-    }).length;
-    return {
-      winRate: nonNeutral.length > 0 ? (wins / nonNeutral.length) * 100 : null,
-      winCount: wins,
-      totalCalls: nonNeutral.length,
-    };
-  }, [stockPosts]);
+  // Server-computed win rate (dynamic 1σ classifier).
+  const { data: winRateStats } = useKolWinRate(kolId);
+  const day30Bucket = winRateStats?.day30;
+  const winRate = day30Bucket && day30Bucket.winRate != null ? day30Bucket.winRate * 100 : null;
+  const winCount = day30Bucket?.winCount ?? 0;
+  const totalCalls = day30Bucket ? day30Bucket.winCount + day30Bucket.loseCount : 0;
+  const noiseCount = day30Bucket?.noiseCount ?? 0;
+  const thresholdRef = day30Bucket?.threshold ?? null;
 
   // Period stats
   const periodStats = useMemo(
@@ -108,25 +104,9 @@ export function KolScorecard({
     [stockPosts]
   );
 
-  // Sector breakdown (group by stock ticker)
-  const sectorBreakdown = useMemo(() => {
-    const map = new Map<string, { ticker: string; wins: number; total: number }>();
-    for (const post of stockPosts) {
-      if (post.sentiment === 0 || post.priceChanges.day30 == null) continue;
-      if (!map.has(post.stockTicker)) {
-        map.set(post.stockTicker, { ticker: post.stockTicker, wins: 0, total: 0 });
-      }
-      const entry = map.get(post.stockTicker)!;
-      entry.total++;
-      const change = post.priceChanges.day30!;
-      if ((post.sentiment > 0 && change > 0) || (post.sentiment < 0 && change < 0)) {
-        entry.wins++;
-      }
-    }
-    return Array.from(map.values())
-      .map((e) => ({ ...e, winRate: (e.wins / e.total) * 100 }))
-      .sort((a, b) => b.winRate - a.winRate);
-  }, [stockPosts]);
+  // Sector breakdown removed: per-stock win-rate aggregation belongs in a follow-up
+  // change that adds a per-ticker bucket to the win-rate API. Inline classification
+  // is no longer permitted (see openspec/changes/dynamic-volatility-threshold).
 
   const periods = [
     { key: 'day5' as const, label: t('detail.returnRate.periods.5d'), data: periodStats.day5 },
@@ -206,6 +186,13 @@ export function KolScorecard({
               {totalCalls > 0 && (
                 <p className="text-muted-foreground mt-1 text-xs">
                   {winCount}/{totalCalls} {t('detail.scorecard.correct')}
+                  {noiseCount > 0 && ` · ${noiseCount} noise`}
+                </p>
+              )}
+              {thresholdRef && (
+                <p className="text-muted-foreground mt-0.5 text-[10px]">
+                  ±{(thresholdRef.value * 100).toFixed(1)}% σ
+                  {thresholdRef.source === 'index-fallback' && ' (index)'}
                 </p>
               )}
               {hasInferredTickers && totalCalls > 0 && (
@@ -237,43 +224,6 @@ export function KolScorecard({
                     </div>
                   ))}
                 </div>
-
-                {/* Sector breakdown */}
-                {sectorBreakdown.length > 0 && (
-                  <div className="rounded-lg border p-3">
-                    <p className="text-muted-foreground mb-2 text-xs font-medium">
-                      {t('detail.scorecard.sectorPerformance')}
-                    </p>
-                    <div className="space-y-1.5">
-                      {sectorBreakdown.slice(0, 5).map((sector) => (
-                        <div
-                          key={sector.ticker}
-                          className="flex items-center justify-between text-xs"
-                        >
-                          <span className="font-medium">{sector.ticker}</span>
-                          <div className="flex items-center gap-2">
-                            {/* Mini bar */}
-                            <div className="bg-muted h-1.5 w-16 overflow-hidden rounded-full">
-                              <div
-                                className={`h-full rounded-full ${
-                                  sector.winRate >= 50 ? 'bg-emerald-500' : 'bg-red-500'
-                                }`}
-                                style={{ width: `${Math.min(sector.winRate, 100)}%` }}
-                              />
-                            </div>
-                            <span
-                              className={`min-w-[36px] text-right font-bold ${
-                                sector.winRate >= 50 ? colors.bullish.text : colors.bearish.text
-                              }`}
-                            >
-                              {sector.winRate.toFixed(0)}%
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             </BlurGate>
           </div>

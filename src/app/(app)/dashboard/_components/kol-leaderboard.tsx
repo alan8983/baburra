@@ -9,77 +9,33 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ROUTES } from '@/lib/constants';
 import { useColorPalette } from '@/lib/colors/color-palette-context';
 import { getStaggerClass } from '@/lib/animations';
-import type { PostWithPriceChanges } from '@/domain/models';
+import type { KolWinRateEntry } from '@/hooks/use-dashboard';
 
 interface KolLeaderboardProps {
-  posts: PostWithPriceChanges[];
+  /** Server-computed per-KOL day30 win-rate buckets. */
+  kolWinRates: KolWinRateEntry[];
 }
 
-interface KolRank {
-  id: string;
-  name: string;
-  avatarUrl: string | null;
-  winRate: number | null;
-  totalCalls: number;
-  winCount: number;
-}
-
-export function KolLeaderboard({ posts }: KolLeaderboardProps) {
+export function KolLeaderboard({ kolWinRates }: KolLeaderboardProps) {
   const t = useTranslations('dashboard');
   const { colors } = useColorPalette();
 
   const rankings = useMemo(() => {
-    const kolMap = new Map<
-      string,
-      {
-        id: string;
-        name: string;
-        avatarUrl: string | null;
-        wins: number;
-        total: number;
-      }
-    >();
-
-    for (const post of posts) {
-      if (post.sentiment === 0) continue;
-      for (const stock of post.stocks) {
-        const pc = post.priceChanges?.[stock.id];
-        if (!pc) continue;
-        const change = pc.day30 ?? pc.day5 ?? null;
-        if (change === null) continue;
-
-        if (!kolMap.has(post.kol.id)) {
-          kolMap.set(post.kol.id, {
-            id: post.kol.id,
-            name: post.kol.name,
-            avatarUrl: post.kol.avatarUrl,
-            wins: 0,
-            total: 0,
-          });
-        }
-        const entry = kolMap.get(post.kol.id)!;
-        entry.total++;
-        const effectiveSentiment = stock.sentiment ?? post.sentiment;
-        if ((effectiveSentiment > 0 && change > 0) || (effectiveSentiment < 0 && change < 0)) {
-          entry.wins++;
-        }
-      }
-    }
-
-    const result: KolRank[] = [];
-    for (const [, entry] of kolMap) {
-      result.push({
-        id: entry.id,
-        name: entry.name,
-        avatarUrl: entry.avatarUrl,
-        winRate: entry.total > 0 ? (entry.wins / entry.total) * 100 : null,
-        totalCalls: entry.total,
-        winCount: entry.wins,
-      });
-    }
-
-    return result.sort((a, b) => (b.winRate ?? -1) - (a.winRate ?? -1)).slice(0, 5);
-  }, [posts]);
+    return [...kolWinRates]
+      .map((k) => {
+        const totalCalls = k.bucket.winCount + k.bucket.loseCount;
+        return {
+          id: k.id,
+          name: k.name,
+          avatarUrl: k.avatarUrl,
+          winRate: k.bucket.winRate != null ? k.bucket.winRate * 100 : null,
+          totalCalls,
+          winCount: k.bucket.winCount,
+        };
+      })
+      .sort((a, b) => (b.winRate ?? -1) - (a.winRate ?? -1))
+      .slice(0, 5);
+  }, [kolWinRates]);
 
   return (
     <Card>

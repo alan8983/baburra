@@ -6,6 +6,10 @@ import { createAdminClient } from '@/infrastructure/supabase/admin';
 import { listPosts } from '@/infrastructure/repositories/post.repository';
 import { enrichPostsWithPriceChanges } from '@/lib/api/enrich-price-changes';
 import { unauthorizedError, internalError } from '@/lib/api/error';
+import { emptyBucket } from '@/domain/calculators';
+import { computeWinRateStats, type PostForWinRate } from '@/domain/services/win-rate.service';
+import { StockPriceVolatilityProvider } from '@/infrastructure/providers/stock-price-volatility.provider';
+import type { Sentiment } from '@/domain/models';
 
 // 計算本月開始時間（UTC）
 function getMonthStart(): Date {
@@ -140,6 +144,66 @@ export async function GET() {
     const recentPosts = recentPostsResult.data ?? [];
     await enrichPostsWithPriceChanges(recentPosts);
 
+    // Compute server-side win-rate aggregates over the recent post sample so the
+    // dashboard widgets can drop their inline classification logic.
+    const provider = new StockPriceVolatilityProvider();
+    const buildPostForWinRate = (post: (typeof recentPosts)[number]): PostForWinRate => {
+      const tickerByStockId: Record<string, string> = {};
+      const stockSentiments: Record<string, Sentiment> = {};
+      for (const s of post.stocks) {
+        tickerByStockId[s.id] = s.ticker;
+        if (s.sentiment !== null) stockSentiments[s.id] = s.sentiment;
+      }
+      return {
+        id: post.id,
+        sentiment: post.sentiment,
+        postedAt: new Date(post.postedAt),
+        ...(Object.keys(stockSentiments).length > 0 && { stockSentiments }),
+        tickerByStockId,
+        priceChanges: post.priceChanges ?? {},
+      };
+    };
+
+    let pulseBucket = emptyBucket();
+    const kolWinRates: Array<{
+      id: string;
+      name: string;
+      avatarUrl: string | null;
+      bucket: ReturnType<typeof emptyBucket>;
+    }> = [];
+
+    try {
+      const allForWinRate = recentPosts.map(buildPostForWinRate);
+      const pulseStats = await computeWinRateStats({ posts: allForWinRate, provider });
+      pulseBucket = pulseStats.day30;
+
+      // Group by KOL and compute per-KOL day30 buckets
+      const postsByKolId = new Map<
+        string,
+        { name: string; avatarUrl: string | null; posts: PostForWinRate[] }
+      >();
+      for (const post of recentPosts) {
+        const entry = postsByKolId.get(post.kol.id) ?? {
+          name: post.kol.name,
+          avatarUrl: post.kol.avatarUrl,
+          posts: [],
+        };
+        entry.posts.push(buildPostForWinRate(post));
+        postsByKolId.set(post.kol.id, entry);
+      }
+      for (const [kolId, entry] of postsByKolId) {
+        const stats = await computeWinRateStats({ posts: entry.posts, provider });
+        kolWinRates.push({
+          id: kolId,
+          name: entry.name,
+          avatarUrl: entry.avatarUrl,
+          bucket: stats.day30,
+        });
+      }
+    } catch (err) {
+      console.warn('[dashboard] win-rate aggregation failed', err);
+    }
+
     return NextResponse.json({
       stats: {
         kolCount: kolTotalResult.count ?? 0,
@@ -153,6 +217,8 @@ export async function GET() {
       },
       recentPosts,
       topKols,
+      pulseStats: pulseBucket,
+      kolWinRates,
     });
   } catch (err) {
     return internalError(err, 'Failed to fetch dashboard data');

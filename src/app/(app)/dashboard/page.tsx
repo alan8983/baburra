@@ -106,7 +106,7 @@ export default function DashboardPage() {
     return null;
   }
 
-  const { stats, recentPosts, topKols } = data;
+  const { stats, recentPosts, pulseStats, kolWinRates } = data;
 
   const isEmpty =
     stats.kolCount === 0 &&
@@ -186,7 +186,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Portfolio Pulse */}
-      <PortfolioPulse posts={recentPosts} />
+      <PortfolioPulse posts={recentPosts} pulseStats={pulseStats} />
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -218,7 +218,7 @@ export default function DashboardPage() {
 
       {/* Leaderboard + Community */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <KolLeaderboard posts={recentPosts} />
+        <KolLeaderboard kolWinRates={kolWinRates} />
 
         {/* Community Insights: Trending Stocks */}
         <Card>

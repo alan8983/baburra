@@ -13,7 +13,7 @@ import type {
 import { API_ROUTES } from '@/lib/constants';
 import { throwIfNotOk } from '@/lib/api/fetch-error';
 
-import type { ReturnRateStats } from '@/domain/calculators';
+import type { ReturnRateStats, WinRateStats } from '@/domain/calculators';
 
 // Query Keys
 export const kolKeys = {
@@ -24,6 +24,7 @@ export const kolKeys = {
   detail: (id: string) => [...kolKeys.details(), id] as const,
   posts: (id: string) => [...kolKeys.detail(id), 'posts'] as const,
   returnRate: (id: string) => [...kolKeys.detail(id), 'return-rate'] as const,
+  winRate: (id: string) => [...kolKeys.detail(id), 'win-rate'] as const,
   search: (query: string) => [...kolKeys.all, 'search', query] as const,
 };
 
@@ -138,6 +139,21 @@ export function useKolReturnRate(id: string) {
     },
     enabled: !!id,
     staleTime: 5 * 60 * 1000, // 5 分鐘內不重新請求
+    gcTime: 10 * 60 * 1000,
+  });
+}
+
+// 取得 KOL 勝率統計（動態 1σ 門檻）
+export function useKolWinRate(id: string) {
+  return useQuery({
+    queryKey: kolKeys.winRate(id),
+    queryFn: async (): Promise<WinRateStats> => {
+      const res = await fetch(API_ROUTES.KOL_WIN_RATE(id));
+      await throwIfNotOk(res);
+      return res.json();
+    },
+    enabled: !!id,
+    staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
 }

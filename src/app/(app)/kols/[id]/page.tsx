@@ -137,13 +137,10 @@ function KolStockSection({ stock }: { stock: StockGroup }) {
     [stock.posts]
   );
 
-  // Win rate: % of non-neutral posts with positive return (using 30d as primary window)
-  const nonNeutral = stock.posts.filter((p) => p.sentiment !== 0 && p.priceChanges.day30 != null);
-  const winCount = nonNeutral.filter((p) => {
-    const change = p.priceChanges.day30!;
-    return p.sentiment > 0 ? change > 0 : change < 0;
-  }).length;
-  const winRate = nonNeutral.length > 0 ? (winCount / nonNeutral.length) * 100 : null;
+  // Per-(kol,stock) win rate display removed: the dynamic 1σ classifier requires
+  // server-side σ lookup, and we don't yet expose a per-stock bucket on the KOL
+  // win-rate route. Inline classification is no longer permitted.
+  // Follow-up: add per-stock bucket to /api/kols/[id]/win-rate.
 
   return (
     <div className="space-y-4">
@@ -268,21 +265,6 @@ function KolStockSection({ stock }: { stock: StockGroup }) {
                   </div>
                 ))}
               </div>
-
-              {/* Win rate */}
-              {winRate != null && (
-                <div className="flex items-center justify-between rounded-lg border p-2">
-                  <span className="text-muted-foreground text-xs">{t('detail.winRate')}</span>
-                  <span
-                    className={`text-sm font-bold ${winRate >= 50 ? colors.bullish.text : colors.bearish.text}`}
-                  >
-                    {winRate.toFixed(1)}%
-                    <span className="text-muted-foreground ml-1 text-xs font-normal">
-                      ({winCount}/{nonNeutral.length})
-                    </span>
-                  </span>
-                </div>
-              )}
             </CardContent>
           </Card>
         </div>
