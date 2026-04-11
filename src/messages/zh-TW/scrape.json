@@ -50,7 +50,16 @@
     "summaryErrors": "{count} 錯誤",
     "summaryFiltered": "{count} 已過濾 (未識別標的)",
     "summaryDuplicates": "{count} 重複",
-    "noCreditsConsumed": "未匯入任何文章 — 未消耗點數。"
+    "noCreditsConsumed": "未匯入任何文章 — 未消耗點數。",
+    "stageQueued": "等待中",
+    "stageDiscovering": "擷取資訊",
+    "stageDownloading": "下載音訊",
+    "stageTranscribing": "語音轉文字",
+    "stageAnalyzing": "AI 分析",
+    "stageDone": "完成",
+    "stageFailed": "失敗",
+    "downloadBytes": "{downloaded} / {total}",
+    "downloadBytesUnknown": "下載中…"
   },
   "jobs": {
     "title": "最近的任務",

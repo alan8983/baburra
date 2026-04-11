@@ -24,7 +24,11 @@ export interface KolSubscription {
   createdAt: Date;
 }
 
-export type ScrapeJobType = 'initial_scrape' | 'incremental_check' | 'validation_scrape';
+export type ScrapeJobType =
+  | 'initial_scrape'
+  | 'incremental_check'
+  | 'validation_scrape'
+  | 'batch_import';
 export type ScrapeJobStatus =
   | 'queued'
   | 'processing'
@@ -34,7 +38,12 @@ export type ScrapeJobStatus =
 
 export interface ScrapeJob {
   id: string;
-  kolSourceId: string;
+  /**
+   * KOL source backing this job. NULL for batch-import jobs (user-supplied
+   * URLs with no single backing source) and otherwise the source that was
+   * discovered.
+   */
+  kolSourceId: string | null;
   jobType: ScrapeJobType;
   status: ScrapeJobStatus;
   triggeredBy: string | null;

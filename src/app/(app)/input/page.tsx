@@ -10,7 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ROUTES } from '@/lib/constants';
 import { useQuickInput } from '@/hooks';
-import { useBackgroundImport, type ImportBatchResult } from '@/hooks/use-import';
+import { useBackgroundImport } from '@/hooks/use-import';
 import {
   useDiscoverProfile,
   useInitiateScrape,
@@ -18,7 +18,6 @@ import {
 } from '@/hooks/use-scrape';
 import { useProfile } from '@/hooks/use-profile';
 import { AnalysisLoadingOverlay } from '@/components/loading/analysis-loading-overlay';
-import { ImportResult } from '@/components/import/import-result';
 import {
   InputWizardStepper,
   type WizardStep,
@@ -81,7 +80,6 @@ const MAX_URLS = 5;
 type WizardState =
   | { kind: 'idle' }
   | { kind: 'text'; step: 'processing' | 'done'; draftId: string | null }
-  | { kind: 'urls'; step: 'review' | 'done'; importResult: ImportBatchResult | null }
   | {
       kind: 'profile';
       step: 'discovering' | 'selecting' | 'processing' | 'completed';
@@ -102,9 +100,6 @@ function stepperStateFor(state: WizardState): { branch: WizardBranch; step: Wiza
     case 'text':
       if (state.step === 'processing') return { branch: 'text', step: 2 };
       return { branch: 'text', step: 4 };
-    case 'urls':
-      if (state.step === 'review') return { branch: 'post-urls', step: 3 };
-      return { branch: 'post-urls', step: 4 };
     case 'profile':
       if (state.step === 'discovering') return { branch: 'profile', step: 2 };
       if (state.step === 'selecting') return { branch: 'profile', step: 3 };
@@ -367,24 +362,6 @@ export default function InputPage() {
                   </div>
                 </CardContent>
               </Card>
-            )}
-
-            {/* urls branch: review (legacy path — currently unused since import runs in background) */}
-            {wizard.kind === 'urls' && wizard.step === 'review' && wizard.importResult && (
-              <div className="space-y-6">
-                <div className="text-center">
-                  <h2 className="text-xl font-semibold">{t('wizard.reviewTitle')}</h2>
-                  <p className="text-muted-foreground mt-1 text-sm">
-                    {t('wizard.reviewDescription')}
-                  </p>
-                </div>
-                <ImportResult
-                  result={wizard.importResult}
-                  onImportMore={handleReset}
-                  onProceed={handleReset}
-                  proceedLabel={t('wizard.viewPosts')}
-                />
-              </div>
             )}
 
             {/* profile branch: discovering */}

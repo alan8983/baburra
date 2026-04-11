@@ -107,6 +107,8 @@ import {
   updateScrapeJobProgress,
   completeScrapeJob,
   failScrapeJob,
+  getScrapeJobItems,
+  updateScrapeJobItemStage,
 } from '@/infrastructure/repositories';
 import {
   getUserTimezone,
@@ -115,6 +117,7 @@ import {
 } from '@/infrastructure/repositories/profile.repository';
 import { processUrl } from '@/domain/services/import-pipeline.service';
 import type { KolCacheEntry } from '@/domain/services/import-pipeline.service';
+import type { ScrapeJobItemStage, ScrapeStageMeta } from '@/domain/models';
 import type { ScrapeJobType } from '@/domain/models';
 import { updateValidationStatus } from '@/infrastructure/repositories/kol.repository';
 import { handleValidationCompletion } from '@/domain/services/kol-validation.service';
@@ -354,21 +357,27 @@ export async function processJobBatch(
     await startScrapeJob(jobId);
   }
 
-  // Get the KOL ID from the source
-  const source = await getSourceById(job.kolSourceId);
-  if (!source) {
-    await failScrapeJob(jobId, 'KOL source not found');
-    throw new Error(`KOL source not found: ${job.kolSourceId}`);
+  // Resolve KOL source — only present for profile-scrape / validation jobs.
+  // Batch-import jobs carry user-supplied URLs with no backing source, so
+  // they run with `source = null` and let processUrl auto-detect the KOL
+  // per URL (same behavior as /api/import/batch's legacy synchronous path).
+  let source: Awaited<ReturnType<typeof getSourceById>> | null = null;
+  if (job.kolSourceId) {
+    source = await getSourceById(job.kolSourceId);
+    if (!source) {
+      await failScrapeJob(jobId, 'KOL source not found');
+      throw new Error(`KOL source not found: ${job.kolSourceId}`);
+    }
   }
 
-  const kolId = source.kolId;
+  const kolId = source?.kolId;
   const userId = job.triggeredBy ?? 'system';
   const timezone = job.triggeredBy ? await getUserTimezone(job.triggeredBy) : 'UTC';
 
   const isValidationScrape = job.jobType === 'validation_scrape';
 
   // Validation scrapes set the KOL to 'validating' status
-  if (isValidationScrape && job.status === 'queued') {
+  if (isValidationScrape && job.status === 'queued' && kolId) {
     await updateValidationStatus(kolId, 'validating');
   }
 
@@ -396,6 +405,31 @@ export async function processJobBatch(
 
   const remaining = job.discoveredUrls.slice(processedUrls);
   const limit = createLimiter(effectiveConcurrency);
+
+  // Per-URL item rows power the new progress UI. When this job was created
+  // without seeded items (legacy path, or a migration hasn't landed yet)
+  // we simply skip the per-URL updates and the UI falls back to the
+  // aggregate progress bar.
+  let urlToItemId = new Map<string, string>();
+  try {
+    const items = await getScrapeJobItems(jobId);
+    urlToItemId = new Map(items.map((item) => [item.url, item.id]));
+  } catch (err) {
+    console.warn('[profile-scrape] scrape_job_items lookup failed (non-blocking):', err);
+  }
+  // Serialize stage writes per item so mid-stream byte progress updates
+  // can't race with the stage transitions fired around them.
+  const itemWriteChains = new Map<string, Promise<void>>();
+  const scheduleItemWrite = (itemId: string, work: () => Promise<void>) => {
+    const prev = itemWriteChains.get(itemId) ?? Promise.resolve();
+    const next = prev
+      .catch(() => {})
+      .then(work)
+      .catch((err) => {
+        console.warn(`[profile-scrape] item stage update failed for ${itemId}:`, err);
+      });
+    itemWriteChains.set(itemId, next);
+  };
 
   // Serialize progress writes so near-simultaneous task completions can't
   // race last-write-wins. Each write carries a complete snapshot of the
@@ -430,8 +464,23 @@ export async function processJobBatch(
           return;
         }
 
+        const itemId = urlToItemId.get(url);
+        const itemStageCallback = itemId
+          ? (stage: ScrapeJobItemStage, meta?: ScrapeStageMeta) => {
+              scheduleItemWrite(itemId, () => updateScrapeJobItemStage(itemId, stage, meta));
+            }
+          : undefined;
+
         try {
-          const value = await processUrl(url, userId, timezone, isFirstImportFree, kolCache, kolId);
+          const value = await processUrl(
+            url,
+            userId,
+            timezone,
+            isFirstImportFree,
+            kolCache,
+            kolId,
+            itemStageCallback
+          );
           if (value.status === 'success') {
             importedCount++;
           } else if (value.status === 'duplicate') {
@@ -441,8 +490,17 @@ export async function processJobBatch(
           } else {
             errorCount++;
           }
-        } catch {
+        } catch (err) {
           errorCount++;
+          // processUrl already emits 'failed' on throws, but the catch
+          // here guarantees a terminal stage even if the callback itself
+          // threw earlier in the pipeline.
+          if (itemId) {
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            scheduleItemWrite(itemId, () =>
+              updateScrapeJobItemStage(itemId, 'failed', { errorMessage })
+            );
+          }
         }
 
         processedUrls++;
@@ -454,6 +512,9 @@ export async function processJobBatch(
   // Ensure the last progress snapshot lands before we read back for the
   // final status decision.
   await progressInFlight;
+  // Drain any pending per-item stage writes so the UI reflects final state
+  // before we flip the job to `completed` / `processing`.
+  await Promise.all(Array.from(itemWriteChains.values()).map((p) => p.catch(() => {})));
 
   // Mark first import as used if this was the free first import
   if (isFirstImportFree && importedCount > 0 && userId !== 'system') {
@@ -471,10 +532,13 @@ export async function processJobBatch(
       errorCount,
       filteredCount,
     });
-    await updateScrapeStatus(source.id, 'completed', importedCount);
+    // Batch-import jobs have no backing source to mark as completed.
+    if (source) {
+      await updateScrapeStatus(source.id, 'completed', importedCount);
+    }
 
     // Trigger validation scoring for validation scrape jobs
-    if (isValidationScrape) {
+    if (isValidationScrape && kolId) {
       try {
         await handleValidationCompletion(kolId);
       } catch (validationErr) {

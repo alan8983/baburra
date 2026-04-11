@@ -5,7 +5,7 @@ import type { ScrapeJob, ScrapeJobType } from '@/domain/models';
 
 type DbScrapeJob = {
   id: string;
-  kol_source_id: string;
+  kol_source_id: string | null;
   job_type: string;
   status: string;
   triggered_by: string | null;
@@ -48,7 +48,7 @@ function mapDbToScrapeJob(row: DbScrapeJob): ScrapeJob {
 }
 
 export async function createScrapeJob(
-  sourceId: string,
+  sourceId: string | null,
   jobType: ScrapeJobType,
   triggeredBy: string | null,
   discoveredUrls: string[]

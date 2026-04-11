@@ -105,6 +105,7 @@ export const API_ROUTES = {
   SCRAPE_DISCOVER: '/api/scrape/discover',
   SCRAPE_PROFILE: '/api/scrape/profile',
   SCRAPE_JOB: (id: string) => `/api/scrape/jobs/${id}`,
+  SCRAPE_JOB_ITEMS: (id: string) => `/api/scrape/jobs/${id}/items`,
   SCRAPE_JOB_CONTINUE: (id: string) => `/api/scrape/jobs/${id}/continue`,
   SCRAPE_JOBS: '/api/scrape/jobs',
 

@@ -10,19 +10,12 @@ beforeEach(() => {
   fetchMock.mockReset();
 });
 
-describe('useImportBatch', () => {
-  it('sends POST with urls and returns batch result', async () => {
-    const batchResult = {
-      kols: [{ kolId: 'kol-1', kolName: 'TraderJoe', kolCreated: true, postCount: 1 }],
-      urlResults: [{ url: 'https://x.com/a/status/1', status: 'success', postId: 'post-1' }],
-      totalImported: 1,
-      totalDuplicate: 0,
-      totalError: 0,
-      firstImportFreeUsed: false,
-    };
+describe('useImportBatch (async job)', () => {
+  it('sends POST with urls and returns { jobId, totalUrls }', async () => {
+    const jobResponse = { jobId: 'job-abc', totalUrls: 1 };
     fetchMock.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve(batchResult),
+      json: () => Promise.resolve(jobResponse),
     });
 
     const { wrapper } = createWrapper();
@@ -32,7 +25,7 @@ describe('useImportBatch', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(result.current.data).toEqual(batchResult);
+    expect(result.current.data).toEqual(jobResponse);
 
     const [url, opts] = fetchMock.mock.calls[0];
     expect(url).toBe('/api/import/batch');
@@ -40,18 +33,10 @@ describe('useImportBatch', () => {
     expect(JSON.parse(opts.body)).toEqual({ urls: ['https://x.com/a/status/1'] });
   });
 
-  it('sends multiple urls in a single request', async () => {
+  it('forwards multiple urls in a single request', async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
-      json: () =>
-        Promise.resolve({
-          kols: [],
-          urlResults: [],
-          totalImported: 0,
-          totalDuplicate: 0,
-          totalError: 0,
-          firstImportFreeUsed: false,
-        }),
+      json: () => Promise.resolve({ jobId: 'job-xyz', totalUrls: 3 }),
     });
 
     const { wrapper } = createWrapper();
@@ -68,20 +53,13 @@ describe('useImportBatch', () => {
 
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body.urls).toHaveLength(3);
+    expect(result.current.data).toEqual({ jobId: 'job-xyz', totalUrls: 3 });
   });
 
-  it('invalidates kol, post, and ai-usage queries on success', async () => {
+  it('invalidates scrape job lists on success so the new job appears immediately', async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
-      json: () =>
-        Promise.resolve({
-          kols: [],
-          urlResults: [],
-          totalImported: 1,
-          totalDuplicate: 0,
-          totalError: 0,
-          firstImportFreeUsed: false,
-        }),
+      json: () => Promise.resolve({ jobId: 'job-1', totalUrls: 1 }),
     });
 
     const { wrapper, queryClient } = createWrapper();
@@ -92,13 +70,11 @@ describe('useImportBatch', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
+    // The new flow relies on the scrape-jobs list (not kol/post lists) —
+    // the per-URL UI will drive kol/post invalidation as items finish.
     expect(invalidateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ queryKey: ['kols', 'list'] })
+      expect.objectContaining({ queryKey: ['scrape', 'jobs'] })
     );
-    expect(invalidateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ queryKey: ['posts', 'list'] })
-    );
-    expect(invalidateSpy).toHaveBeenCalledWith(expect.objectContaining({ queryKey: ['ai-usage'] }));
   });
 
   it('handles API error responses', async () => {

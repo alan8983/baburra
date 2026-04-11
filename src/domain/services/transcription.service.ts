@@ -16,11 +16,21 @@
  *
  * Callers ALWAYS pay the same `transcribe.audio` charge regardless of
  * which vendor returned the transcript.
+ *
+ * Streaming & stage progress:
+ *   The Deepgram primary path uses `downloadYoutubeAudioStream` +
+ *   `deepgramTranscribe(stream)` so the download and transcription
+ *   stages overlap. Callers may pass an `onStage` callback to receive
+ *   `downloading` (with byte progress) and `transcribing` transitions.
  */
 
-import { downloadYoutubeAudio } from '@/infrastructure/api/youtube-audio.client';
+import { Transform, type Readable } from 'stream';
+import { downloadYoutubeAudioStream } from '@/infrastructure/api/youtube-audio.client';
 import { deepgramTranscribe } from '@/infrastructure/api/deepgram.client';
 import { geminiTranscribeShort } from '@/infrastructure/api/gemini.client';
+import type { ScrapeJobItemStage, ScrapeStageMeta } from '@/domain/models';
+
+export type StageCallback = (stage: ScrapeJobItemStage, meta?: ScrapeStageMeta) => void;
 
 export interface TranscribeAudioInput {
   /** Source URL of the audio (currently always a YouTube URL). */
@@ -29,25 +39,115 @@ export interface TranscribeAudioInput {
   isShort: boolean;
   /** Max duration safety guard passed to the audio downloader. */
   maxDurationSeconds: number;
+  /**
+   * Optional stage callback. When provided, the service emits:
+   *   - `downloading` with `{ bytesTotal }` at start and periodic
+   *     `{ bytesDownloaded }` updates (throttled to ~1 MB)
+   *   - `transcribing` once the audio stream has been fully consumed
+   */
+  onStage?: StageCallback;
 }
 
 export interface TranscribeAudioResult {
   text: string;
   /** Which vendor produced the transcript. For audit/cache provenance only. */
   source: 'deepgram' | 'gemini';
+  /** Duration from the downloader, if known (used for credit reconciliation). */
+  durationSeconds?: number;
+}
+
+// Safely invoke a stage callback — never let a throwing callback break the
+// transcription pipeline.
+function safeEmit(
+  onStage: StageCallback | undefined,
+  stage: ScrapeJobItemStage,
+  meta?: ScrapeStageMeta
+): void {
+  if (!onStage) return;
+  try {
+    onStage(stage, meta);
+  } catch (err) {
+    console.warn('[transcribeAudio] stage callback threw:', err);
+  }
+}
+
+/**
+ * Wrap a Readable stream in a byte-counting Transform. Fires `onProgress`
+ * with the running byte total at ~1 MB intervals and once more on flush.
+ * The returned stream forwards all data unchanged.
+ */
+function wrapWithByteCounter(
+  source: Readable,
+  onProgress: (bytesDownloaded: number) => void,
+  minIntervalBytes = 1_000_000
+): Readable {
+  let total = 0;
+  let lastReported = 0;
+  const counter = new Transform({
+    transform(chunk: Buffer, _enc, callback) {
+      total += chunk.length;
+      if (total - lastReported >= minIntervalBytes) {
+        lastReported = total;
+        try {
+          onProgress(total);
+        } catch (err) {
+          console.warn('[transcribeAudio] progress callback threw:', err);
+        }
+      }
+      callback(null, chunk);
+    },
+    flush(callback) {
+      try {
+        onProgress(total);
+      } catch (err) {
+        console.warn('[transcribeAudio] flush progress callback threw:', err);
+      }
+      callback();
+    },
+  });
+  return source.pipe(counter);
 }
 
 export async function transcribeAudio(input: TranscribeAudioInput): Promise<TranscribeAudioResult> {
-  const { sourceUrl, isShort, maxDurationSeconds } = input;
+  const { sourceUrl, isShort, maxDurationSeconds, onStage } = input;
 
-  // Primary: Deepgram via downloaded audio.
+  // Primary: Deepgram via streaming audio download. Download and transcription
+  // stages overlap — the Readable is consumed by fetch() with duplex: 'half'.
   try {
     console.log(
       `[transcribeAudio] Primary path: Deepgram (${isShort ? 'Short' : 'long video'}) ${sourceUrl}`
     );
-    const audio = await downloadYoutubeAudio(sourceUrl, { maxDurationSeconds });
-    const text = await deepgramTranscribe(audio.buffer, audio.mimeType);
-    return { text, source: 'deepgram' };
+
+    const audio = await downloadYoutubeAudioStream(sourceUrl, { maxDurationSeconds });
+    safeEmit(onStage, 'downloading', {
+      bytesTotal: audio.bytesTotal,
+      durationSeconds: audio.durationSeconds,
+    });
+
+    let transcribingEmitted = false;
+    const counting = wrapWithByteCounter(audio.stream, (bytesDownloaded) => {
+      safeEmit(onStage, 'downloading', {
+        bytesDownloaded,
+        bytesTotal: audio.bytesTotal,
+      });
+    });
+    // When the source stream ends we've shipped every byte to Deepgram —
+    // the pipeline is no longer "downloading", it's "transcribing" while we
+    // wait for Deepgram to finish processing and respond.
+    audio.stream.once('end', () => {
+      if (!transcribingEmitted) {
+        transcribingEmitted = true;
+        safeEmit(onStage, 'transcribing', { durationSeconds: audio.durationSeconds });
+      }
+    });
+
+    const text = await deepgramTranscribe(counting, audio.mimeType);
+    // Defensive: ensure we don't leave the UI stuck in `downloading` if the
+    // stream finished without an `end` event reaching us (very rare).
+    if (!transcribingEmitted) {
+      safeEmit(onStage, 'transcribing', { durationSeconds: audio.durationSeconds });
+    }
+    return { text, source: 'deepgram', durationSeconds: audio.durationSeconds };
   } catch (deepgramErr) {
     const errMsg = deepgramErr instanceof Error ? deepgramErr.message : String(deepgramErr);
 
@@ -57,6 +157,7 @@ export async function transcribeAudio(input: TranscribeAudioInput): Promise<Tran
         `[transcribeAudio] Deepgram failed for Short, failing over to Gemini file_uri: ${errMsg}`
       );
       try {
+        safeEmit(onStage, 'transcribing');
         const text = await geminiTranscribeShort(sourceUrl);
         return { text, source: 'gemini' };
       } catch (geminiErr) {

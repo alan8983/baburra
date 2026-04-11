@@ -50,7 +50,16 @@
     "summaryErrors": "{count} errors",
     "summaryFiltered": "{count} filtered (no tickers)",
     "summaryDuplicates": "{count} duplicates",
-    "noCreditsConsumed": "No posts were imported — no credits were consumed."
+    "noCreditsConsumed": "No posts were imported — no credits were consumed.",
+    "stageQueued": "Waiting",
+    "stageDiscovering": "Fetching metadata",
+    "stageDownloading": "Downloading audio",
+    "stageTranscribing": "Transcribing",
+    "stageAnalyzing": "Analyzing",
+    "stageDone": "Done",
+    "stageFailed": "Failed",
+    "downloadBytes": "{downloaded} / {total}",
+    "downloadBytesUnknown": "Downloading…"
   },
   "jobs": {
     "title": "Recent Jobs",

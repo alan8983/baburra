@@ -8,3 +8,4 @@ export * from './draft';
 export * from './user';
 export * from './bookmark';
 export * from './kol-source';
+export * from './scrape-job-item';

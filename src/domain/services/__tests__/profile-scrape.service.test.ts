@@ -58,6 +58,11 @@ vi.mock('@/infrastructure/repositories', () => ({
   updateScrapeJobProgress: mocks.updateScrapeJobProgress,
   completeScrapeJob: mocks.completeScrapeJob,
   failScrapeJob: mocks.failScrapeJob,
+  getScrapeJobItems: vi.fn().mockResolvedValue([]),
+  updateScrapeJobItemStage: vi.fn().mockResolvedValue(undefined),
+  createScrapeJobItems: vi.fn().mockResolvedValue([]),
+  failScrapeJobItem: vi.fn().mockResolvedValue(undefined),
+  updateScrapeJobItemDownloadProgress: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@/infrastructure/repositories/profile.repository', () => ({
