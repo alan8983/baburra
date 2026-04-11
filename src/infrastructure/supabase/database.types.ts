@@ -566,6 +566,7 @@ export type Database = {
           created_at: string | null;
           credit_balance: number | null;
           credit_reset_at: string | null;
+          default_win_rate_period: string;
           display_name: string | null;
           first_import_free: boolean | null;
           id: string;
@@ -580,6 +581,7 @@ export type Database = {
           created_at?: string | null;
           credit_balance?: number | null;
           credit_reset_at?: string | null;
+          default_win_rate_period?: string;
           display_name?: string | null;
           first_import_free?: boolean | null;
           id?: string;
@@ -594,6 +596,7 @@ export type Database = {
           created_at?: string | null;
           credit_balance?: number | null;
           credit_reset_at?: string | null;
+          default_win_rate_period?: string;
           display_name?: string | null;
           first_import_free?: boolean | null;
           id?: string;

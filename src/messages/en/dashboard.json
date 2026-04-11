@@ -54,6 +54,7 @@
   "pulse": {
     "title": "Portfolio Pulse",
     "winRate": "Win Rate",
+    "hitRate": "Hit Rate",
     "avgReturn": "Avg Return",
     "trend": "30d Trend",
     "noData": "Track some KOL predictions to see your portfolio pulse."
@@ -69,7 +70,12 @@
   "leaderboard": {
     "title": "KOL Leaderboard",
     "noData": "No resolved predictions yet.",
-    "calls": "calls"
+    "insufficientDataEmpty": "Gathering more samples… (each KOL needs at least 10 resolved posts)",
+    "calls": "calls",
+    "tabs": {
+      "accuracy": "Accuracy",
+      "signalQuality": "Signal Quality"
+    }
   },
   "insights": {
     "trendingStocks": {

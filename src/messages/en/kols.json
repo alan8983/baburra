@@ -75,6 +75,7 @@
     },
     "scorecard": {
       "winRate": "Win Rate",
+      "hitRate": "Hit Rate",
       "correct": "correct",
       "sectorPerformance": "Performance by Stock"
     },

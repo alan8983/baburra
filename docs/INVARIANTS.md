@@ -324,8 +324,8 @@ const B4_aiAnalysisMustHaveSentiment = (result: AIAnalysisResult): boolean => {
 
 **Per-period performance metrics（`WinRateBucket` / `PeriodMetrics`）：**
 
-- `hitRate = wins / (wins + noise + loses)` — 主要 UI 指標，Noise 納入分母。
-- `precision = wins / (wins + loses)` — 經典勝率定義；`winRate` 為 `precision` 的 `@deprecated` 別名，過渡期保留。
+- `hitRate = wins / (wins + noise + loses)` — 主要 UI 指標，Noise 納入分母。所有 UI 消費端（KOL scorecard、dashboard pulse、stock detail）均綁定此欄位。
+- `precision = wins / (wins + loses)` — 經典勝率定義；作為次要指標，透過 `<PerformanceMetricsPopover>` 呈現。先前的 `winRate` 別名已於 `kol-performance-metrics-ui` 移除（發布前無使用者需要過渡期）。
 - `avgExcessWin` / `avgExcessLose` — σ-normalized excess return 的均值：`sign * priceChange / threshold`，bearish 時 sign 翻轉使 winning 永為正值；lose 保留負號。
 - `sqr`（Signal Quality Ratio）= `mean(excessReturn) / stdev(excessReturn)`，對所有非 excluded 樣本（含 Noise）計算，使用 Bessel-corrected 樣本標準差；< 2 樣本或 stdev=0 時為 `null`。這是離散事件上的 Information Ratio 類比：`> 1.0` 優秀、`0.5–1.0` 不錯、`< 0.5` 不穩定。
 - **最低樣本門檻**：`MIN_RESOLVED_POSTS_PER_PERIOD = 10`，以 `(wins + loses)` 計；未達時 `sufficientData = false`，`hitRate` / `precision` / `avgExcessWin` / `avgExcessLose` / `sqr` 皆為 `null`，但原始計數仍回傳。

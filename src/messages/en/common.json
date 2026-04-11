@@ -139,6 +139,30 @@
     "pending": "Period not yet elapsed",
     "noData": "No price data available"
   },
+  "period": {
+    "5d": "5D",
+    "30d": "30D",
+    "90d": "90D",
+    "365d": "1Y"
+  },
+  "metrics": {
+    "title": "Performance Metrics",
+    "detailsTrigger": "View detailed metrics",
+    "precision": "Precision",
+    "sqr": "SQR",
+    "sqrLabel": {
+      "excellent": "Excellent",
+      "decent": "Decent",
+      "unstable": "Unstable",
+      "none": "—"
+    },
+    "avgExcessWin": "Avg Win",
+    "avgExcessLose": "Avg Loss",
+    "threshold": "Threshold",
+    "insufficientData": "More data needed",
+    "insufficientDataTooltip": "At least {min} resolved posts (wins + losses) are required before derived metrics are shown.",
+    "sqrExplainer": "SQR (Signal Quality Ratio) measures how consistently a KOL's signals beat noise. SQR > 1.0 is excellent."
+  },
   "errors": {
     "generic": "An error occurred, please try again later",
     "network": "Network connection error, please try again later",

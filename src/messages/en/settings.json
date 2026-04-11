@@ -55,6 +55,16 @@
     "asian": "Asian (Red = Up)",
     "american": "American (Green = Up)"
   },
+  "defaultPeriod": {
+    "label": "Default Performance Period",
+    "description": "Default period used by hit-rate rings and leaderboards across the app. You can still change it per card.",
+    "options": {
+      "5d": "5 days",
+      "30d": "30 days",
+      "90d": "90 days",
+      "365d": "1 year"
+    }
+  },
   "aiModel": {
     "title": "AI Model Management",
     "currentVersion": "Current model version",

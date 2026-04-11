@@ -3,9 +3,16 @@
  */
 
 import { createAdminClient } from '@/infrastructure/supabase/admin';
-import type { UpdateProfileInput, ColorPalette } from '@/domain/models/user';
+import type { UpdateProfileInput, ColorPalette, WinRatePeriod } from '@/domain/models/user';
+import { DEFAULT_WIN_RATE_PERIOD, WIN_RATE_PERIODS } from '@/domain/models/user';
 
 const DEFAULT_TIMEZONE = 'Asia/Taipei';
+
+function coerceWinRatePeriod(value: unknown): WinRatePeriod {
+  return typeof value === 'string' && (WIN_RATE_PERIODS as readonly string[]).includes(value)
+    ? (value as WinRatePeriod)
+    : DEFAULT_WIN_RATE_PERIOD;
+}
 
 import type { SubscriptionTier } from '@/domain/models/user';
 
@@ -58,13 +65,14 @@ export async function getProfile(userId: string) {
       displayName: null,
       timezone: DEFAULT_TIMEZONE,
       colorPalette: 'asian' as ColorPalette,
+      defaultWinRatePeriod: DEFAULT_WIN_RATE_PERIOD,
       firstImportFree: true,
     };
   }
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('display_name, timezone, color_palette, first_import_free')
+    .select('display_name, timezone, color_palette, default_win_rate_period, first_import_free')
     .eq('id', userId)
     .single();
 
@@ -74,6 +82,7 @@ export async function getProfile(userId: string) {
         displayName: null,
         timezone: DEFAULT_TIMEZONE,
         colorPalette: 'asian' as ColorPalette,
+        defaultWinRatePeriod: DEFAULT_WIN_RATE_PERIOD,
         firstImportFree: true,
       };
     }
@@ -84,6 +93,7 @@ export async function getProfile(userId: string) {
     displayName: data.display_name as string | null,
     timezone: (data.timezone as string) || DEFAULT_TIMEZONE,
     colorPalette: ((data.color_palette as string) || 'asian') as ColorPalette,
+    defaultWinRatePeriod: coerceWinRatePeriod(data.default_win_rate_period),
     firstImportFree: data.first_import_free === true,
   };
 }
@@ -106,6 +116,9 @@ export async function updateProfile(userId: string, input: UpdateProfileInput): 
   }
   if (input.colorPalette !== undefined) {
     updateData.color_palette = input.colorPalette;
+  }
+  if (input.defaultWinRatePeriod !== undefined) {
+    updateData.default_win_rate_period = input.defaultWinRatePeriod;
   }
 
   if (Object.keys(updateData).length === 0) return;

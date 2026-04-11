@@ -139,6 +139,30 @@
     "pending": "期間尚未到期",
     "noData": "無股價資料"
   },
+  "period": {
+    "5d": "5日",
+    "30d": "30日",
+    "90d": "90日",
+    "365d": "1年"
+  },
+  "metrics": {
+    "title": "表現指標",
+    "detailsTrigger": "查看詳細指標",
+    "precision": "精準度",
+    "sqr": "信號品質",
+    "sqrLabel": {
+      "excellent": "優秀",
+      "decent": "良好",
+      "unstable": "不穩定",
+      "none": "—"
+    },
+    "avgExcessWin": "平均超額勝幅",
+    "avgExcessLose": "平均超額虧幅",
+    "threshold": "閾值",
+    "insufficientData": "需要更多樣本",
+    "insufficientDataTooltip": "至少需要 {min} 筆已解析貼文（勝+敗），才會顯示衍生指標。",
+    "sqrExplainer": "信號品質（SQR）衡量 KOL 的訊號相對於雜訊的穩定度。SQR > 1.0 為優秀。"
+  },
   "errors": {
     "generic": "發生錯誤，請稍後再試",
     "network": "網路連線錯誤，請稍後再試",

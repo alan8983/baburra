@@ -149,6 +149,7 @@ export const updateProfileSchema = z.object({
   displayName: z.string().max(200).optional(),
   timezone: z.string().max(100).optional(),
   colorPalette: z.enum(['american', 'asian']).optional(),
+  defaultWinRatePeriod: z.enum(['5d', '30d', '90d', '365d']).optional(),
 });
 
 // ─── AI schemas ──────────────────────────────────────────────────

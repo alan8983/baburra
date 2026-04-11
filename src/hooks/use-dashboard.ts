@@ -4,7 +4,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import type { PostWithPriceChanges } from '@/domain/models';
-import type { WinRateBucket } from '@/domain/calculators';
+import type { WinRateStats } from '@/domain/calculators';
 import { API_ROUTES } from '@/lib/constants';
 import { throwIfNotOk } from '@/lib/api/fetch-error';
 
@@ -31,16 +31,17 @@ export interface KolWinRateEntry {
   id: string;
   name: string;
   avatarUrl: string | null;
-  bucket: WinRateBucket;
+  /** Full per-period stats; consumers pick a bucket based on the user's selected period. */
+  stats: WinRateStats;
 }
 
 export interface DashboardData {
   stats: DashboardStats;
   recentPosts: PostWithPriceChanges[];
   topKols: TopKol[];
-  /** day30 win-rate bucket aggregated across recentPosts. */
-  pulseStats: WinRateBucket;
-  /** Per-KOL day30 win-rate buckets, computed across recentPosts. */
+  /** Full per-period win-rate stats aggregated across recentPosts. */
+  pulseStats: WinRateStats;
+  /** Per-KOL full per-period win-rate stats, computed across recentPosts. */
   kolWinRates: KolWinRateEntry[];
 }
 

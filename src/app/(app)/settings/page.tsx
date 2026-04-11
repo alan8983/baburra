@@ -21,7 +21,12 @@ import { useAuth } from '@/hooks/use-auth';
 import { useProfile, useUpdateProfile } from '@/hooks/use-profile';
 import { useStalePostCount, useReanalyzeBatch } from '@/hooks/use-reanalyze';
 import { createClient } from '@/infrastructure/supabase/client';
-import type { ColorPalette } from '@/domain/models/user';
+import {
+  DEFAULT_WIN_RATE_PERIOD,
+  WIN_RATE_PERIODS,
+  type ColorPalette,
+  type WinRatePeriod,
+} from '@/domain/models/user';
 
 const TIMEZONE_OPTION_KEYS = [
   { value: 'Asia/Taipei', key: 'taipei' },
@@ -108,6 +113,8 @@ export default function SettingsPage() {
   const [displayName, setDisplayName] = useState('');
   const [timezone, setTimezone] = useState('Asia/Taipei');
   const [colorPalette, setColorPalette] = useState<ColorPalette>('asian');
+  const [defaultWinRatePeriod, setDefaultWinRatePeriod] =
+    useState<WinRatePeriod>(DEFAULT_WIN_RATE_PERIOD);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -124,6 +131,7 @@ export default function SettingsPage() {
       if (profile.displayName) setDisplayName(profile.displayName);
       setTimezone(profile.timezone);
       setColorPalette(profile.colorPalette ?? 'asian');
+      setDefaultWinRatePeriod(profile.defaultWinRatePeriod ?? DEFAULT_WIN_RATE_PERIOD);
     }
   }, [profile]);
 
@@ -145,8 +153,13 @@ export default function SettingsPage() {
 
       if (error) throw error;
 
-      // 更新 profiles 表（displayName + timezone + colorPalette）
-      await updateProfile.mutateAsync({ displayName, timezone, colorPalette });
+      // 更新 profiles 表（displayName + timezone + colorPalette + defaultWinRatePeriod）
+      await updateProfile.mutateAsync({
+        displayName,
+        timezone,
+        colorPalette,
+        defaultWinRatePeriod,
+      });
 
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
@@ -285,6 +298,27 @@ export default function SettingsPage() {
               </Button>
             </div>
             <p className="text-muted-foreground text-xs">{t('colorPalette.description')}</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="defaultWinRatePeriod">{t('defaultPeriod.label')}</Label>
+            <Select
+              value={defaultWinRatePeriod}
+              onValueChange={(v) => setDefaultWinRatePeriod(v as WinRatePeriod)}
+              disabled={isSaving}
+            >
+              <SelectTrigger id="defaultWinRatePeriod">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {WIN_RATE_PERIODS.map((period) => (
+                  <SelectItem key={period} value={period}>
+                    {t(`defaultPeriod.options.${period}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-muted-foreground text-xs">{t('defaultPeriod.description')}</p>
           </div>
 
           <Button onClick={handleSave} disabled={isSaving}>

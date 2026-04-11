@@ -68,8 +68,8 @@ describe('computeWinRateStats', () => {
   it('returns empty stats for empty posts', async () => {
     const stats = await computeWinRateStats({ posts: [], provider: fakeProvider([]) });
     expect(stats.day30.total).toBe(0);
-    expect(stats.day30.winRate).toBeNull();
     expect(stats.day30.hitRate).toBeNull();
+    expect(stats.day30.precision).toBeNull();
     expect(stats.day30.sufficientData).toBe(false);
   });
 
@@ -82,7 +82,6 @@ describe('computeWinRateStats', () => {
     expect(stats.day30.sufficientData).toBe(false);
     expect(stats.day30.hitRate).toBeNull();
     expect(stats.day30.precision).toBeNull();
-    expect(stats.day30.winRate).toBeNull();
   });
 
   it('meets the floor with >= MIN resolved wins', async () => {
@@ -94,7 +93,6 @@ describe('computeWinRateStats', () => {
     expect(stats.day30.winCount).toBe(MIN_RESOLVED_POSTS_PER_PERIOD);
     expect(stats.day30.precision).toBe(1);
     expect(stats.day30.hitRate).toBe(1);
-    expect(stats.day30.winRate).toBe(1); // legacy alias equals precision
     expect(stats.day30.avgExcessWin).not.toBeNull();
   });
 

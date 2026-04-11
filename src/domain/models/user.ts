@@ -5,12 +5,34 @@ import { composeCost } from './credit-blocks';
 export type SubscriptionTier = 'free' | 'pro' | 'max';
 export type ColorPalette = 'american' | 'asian';
 
+/**
+ * Period key used by the performance metrics UI. Matches the four buckets on
+ * `WinRateStats` (`day5` / `day30` / `day90` / `day365`), but keyed by the
+ * human-readable short form so it can round-trip through URL params, settings
+ * UI, and the `profiles.default_win_rate_period` column.
+ */
+export type WinRatePeriod = '5d' | '30d' | '90d' | '365d';
+export const WIN_RATE_PERIODS: readonly WinRatePeriod[] = ['5d', '30d', '90d', '365d'] as const;
+export const DEFAULT_WIN_RATE_PERIOD: WinRatePeriod = '30d';
+
+/** Maps a UI period key to the corresponding `WinRateStats` bucket key. */
+export const WIN_RATE_PERIOD_TO_BUCKET: Record<
+  WinRatePeriod,
+  'day5' | 'day30' | 'day90' | 'day365'
+> = {
+  '5d': 'day5',
+  '30d': 'day30',
+  '90d': 'day90',
+  '365d': 'day365',
+};
+
 export interface Profile {
   id: string;
   displayName: string | null;
   avatarUrl: string | null;
   timezone: string;
   colorPalette: ColorPalette;
+  defaultWinRatePeriod: WinRatePeriod;
   creditBalance: number;
   creditResetAt: Date | null;
   subscriptionTier: SubscriptionTier;
@@ -24,6 +46,7 @@ export interface UpdateProfileInput {
   avatarUrl?: string;
   timezone?: string;
   colorPalette?: ColorPalette;
+  defaultWinRatePeriod?: WinRatePeriod;
 }
 
 // Credit system constants — monthly allotments (calibrated 2026-04-08, tasks.md 0.2)
