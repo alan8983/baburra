@@ -30,6 +30,55 @@ const APIFY_PROFILE_DISCOVERY_COST = composeCost(APIFY_PROFILE_DISCOVERY_RECIPE)
 
 const APIFY_DISCOVERY_PLATFORMS = new Set(['facebook', 'twitter', 'threads', 'tiktok']);
 
+// YouTube scrape concurrency — bounded parallelism for the long-video path.
+// See .env.example comment for the tuning rationale.
+const YT_CONC_DEFAULT = 3;
+const YT_CONC_MIN = 1;
+const YT_CONC_MAX = 5;
+
+export function getYoutubeScrapeConcurrency(): number {
+  const raw = process.env.YOUTUBE_SCRAPE_CONCURRENCY;
+  if (!raw) return YT_CONC_DEFAULT;
+  const parsed = parseInt(raw, 10);
+  if (!Number.isFinite(parsed)) return YT_CONC_DEFAULT;
+  return Math.max(YT_CONC_MIN, Math.min(YT_CONC_MAX, parsed));
+}
+
+/**
+ * Minimal p-limit-style semaphore. Starts up to `concurrency` tasks at once
+ * and releases a slot as each task settles, so new tasks begin as soon as
+ * any running one finishes (unlike chunked `Promise.all` which waits for the
+ * slowest task in each batch).
+ */
+function createLimiter(concurrency: number) {
+  const queue: Array<() => void> = [];
+  let active = 0;
+  const tryNext = () => {
+    if (active >= concurrency || queue.length === 0) return;
+    active++;
+    const run = queue.shift()!;
+    run();
+  };
+  return <T>(fn: () => Promise<T>): Promise<T> =>
+    new Promise<T>((resolve, reject) => {
+      queue.push(() => {
+        fn().then(
+          (v) => {
+            active--;
+            resolve(v);
+            tryNext();
+          },
+          (e) => {
+            active--;
+            reject(e);
+            tryNext();
+          }
+        );
+      });
+      tryNext();
+    });
+}
+
 function tiktokRecipe(durationSeconds?: number): Recipe {
   // TikTok caption-only is the apify post path; transcription branch adds
   // download.audio.short + transcribe.audio×min. We don't know caption state
@@ -335,64 +384,76 @@ export async function processJobBatch(
   let processedUrls = job.processedUrls;
   const kolCache = new Map<string, KolCacheEntry>();
 
-  // YouTube URLs may need Gemini transcription (up to 10 min for long videos),
-  // so process them one at a time. Non-YouTube URLs use the caller-provided
-  // batchSize for parallel throughput.
+  // YouTube URLs now run with bounded concurrency (default 3 in-flight) via a
+  // p-limit-style semaphore, instead of the old effectiveBatchSize=1 serial
+  // branch. Tunable via YOUTUBE_SCRAPE_CONCURRENCY (range 1..5). Non-YouTube
+  // platforms keep the caller-supplied batchSize for parallel throughput.
   const isYouTube = job.discoveredUrls.some((u) => u.includes('youtube.com/watch'));
-  const effectiveBatchSize = isYouTube ? 1 : batchSize;
+  const effectiveConcurrency = isYouTube ? getYoutubeScrapeConcurrency() : batchSize;
   // YouTube transcription can take up to 600s per video + overhead;
   // use a longer timeout safeguard so we don't cut off mid-transcription.
   const effectiveTimeout = isYouTube ? 650_000 : timeoutMs;
 
-  // Process URLs in parallel batches with timeout safeguard
   const remaining = job.discoveredUrls.slice(processedUrls);
+  const limit = createLimiter(effectiveConcurrency);
 
-  for (let i = 0; i < remaining.length; i += effectiveBatchSize) {
-    // Timeout safeguard: stop if elapsed time exceeds limit
-    if (Date.now() - startTime > effectiveTimeout) {
-      break;
-    }
-
-    const batch = remaining.slice(i, i + effectiveBatchSize);
-
-    const results = await Promise.allSettled(
-      batch.map((url) => processUrl(url, userId, timezone, isFirstImportFree, kolCache, kolId))
-    );
-
-    for (const result of results) {
-      if (result.status === 'fulfilled') {
-        if (result.value.status === 'success') {
-          importedCount++;
-        } else if (result.value.status === 'duplicate') {
-          duplicateCount++;
-        } else if (
-          result.value.status === 'error' &&
-          result.value.error === 'no_tickers_identified'
-        ) {
-          filteredCount++;
-        } else {
-          errorCount++;
-        }
-      } else {
-        errorCount++;
-      }
-      processedUrls++;
-    }
-
-    // Update progress after each parallel batch
-    await updateScrapeJobProgress(jobId, {
+  // Serialize progress writes so near-simultaneous task completions can't
+  // race last-write-wins. Each write carries a complete snapshot of the
+  // counters at the moment `flushProgress` was called, preserving monotonic
+  // ordering at the DB.
+  let progressInFlight: Promise<void> = Promise.resolve();
+  const flushProgress = () => {
+    const snapshot = {
       processedUrls,
       importedCount,
       duplicateCount,
       errorCount,
       filteredCount,
-    });
+    };
+    progressInFlight = progressInFlight
+      .catch(() => {})
+      .then(() => updateScrapeJobProgress(jobId, snapshot))
+      .catch((err) => {
+        console.warn('[profile-scrape] progress update failed:', err);
+      });
+  };
 
-    // Check timeout again after batch completes
-    if (Date.now() - startTime > timeoutMs) {
-      break;
-    }
-  }
+  let aborted = false;
+
+  await Promise.all(
+    remaining.map((url) =>
+      limit(async () => {
+        // Timeout safeguard: stop scheduling new work once budget is exhausted.
+        if (aborted) return;
+        if (Date.now() - startTime > effectiveTimeout) {
+          aborted = true;
+          return;
+        }
+
+        try {
+          const value = await processUrl(url, userId, timezone, isFirstImportFree, kolCache, kolId);
+          if (value.status === 'success') {
+            importedCount++;
+          } else if (value.status === 'duplicate') {
+            duplicateCount++;
+          } else if (value.status === 'error' && value.error === 'no_tickers_identified') {
+            filteredCount++;
+          } else {
+            errorCount++;
+          }
+        } catch {
+          errorCount++;
+        }
+
+        processedUrls++;
+        flushProgress();
+      })
+    )
+  );
+
+  // Ensure the last progress snapshot lands before we read back for the
+  // final status decision.
+  await progressInFlight;
 
   // Mark first import as used if this was the free first import
   if (isFirstImportFree && importedCount > 0 && userId !== 'system') {

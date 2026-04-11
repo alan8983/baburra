@@ -10,26 +10,26 @@
 
 ## 2. Audio download: low-bitrate preference + streaming
 
-- [ ] 2.1 In `src/infrastructure/api/youtube-audio.client.ts`, replace the descending-bitrate sort with a filter + ascending sort: keep formats with `audioBitrate >= 32` and prefer `webm`/`opus` containers; fall back to `m4a`, then to whatever has the lowest bitrate above the floor.
-- [ ] 2.2 Add `downloadYoutubeAudioStream(url, options): Promise<{ stream: Readable, mimeType, durationSeconds, bytesTotal? }>`. Does NOT buffer. `bytesTotal` is best-effort from ytdl-core format metadata (may be undefined).
-- [ ] 2.3 Keep `downloadYoutubeAudio` (buffer variant) as a thin wrapper over the stream version, used by tests and any fallback path.
-- [ ] 2.4 Unit test: format selection picks the lowest-bitrate Opus ≥ 32 kbps from a fixture list; falls back correctly when no Opus exists.
+- [x] 2.1 In `src/infrastructure/api/youtube-audio.client.ts`, replace the descending-bitrate sort with a filter + ascending sort: keep formats with `audioBitrate >= 32` and prefer `webm`/`opus` containers; fall back to `m4a`, then to whatever has the lowest bitrate above the floor.
+- [x] 2.2 Add `downloadYoutubeAudioStream(url, options): Promise<{ stream: Readable, mimeType, durationSeconds, bytesTotal? }>`. Does NOT buffer. `bytesTotal` is best-effort from ytdl-core format metadata (may be undefined).
+- [x] 2.3 Keep `downloadYoutubeAudio` (buffer variant) as a thin wrapper over the stream version, used by tests and any fallback path.
+- [x] 2.4 Unit test: format selection picks the lowest-bitrate Opus ≥ 32 kbps from a fixture list; falls back correctly when no Opus exists.
 
 ## 3. Deepgram client: streaming body support
 
-- [ ] 3.1 Update `deepgramTranscribe` signature to accept `Buffer | Readable` as the body.
-- [ ] 3.2 When the body is a `Readable`, convert via `ReadableStream.from(...)` (or the Node stream → web stream helper) and POST with `body: webStream, duplex: 'half'`.
-- [ ] 3.3 Add env flag `DEEPGRAM_STREAMING_BODY` (default `true`). When `false`, silently drain the stream into a buffer first (safety fallback).
-- [ ] 3.4 Unit test (using `undici` `MockAgent`): streaming body path sends a chunked request and parses the response identically to the buffer path.
-- [ ] 3.5 Keep the existing retry logic unchanged — retries still apply; on retry after a streaming failure, fall back to buffer mode for that attempt (streams are single-use).
+- [x] 3.1 Update `deepgramTranscribe` signature to accept `Buffer | Readable` as the body.
+- [x] 3.2 When the body is a `Readable`, convert via `ReadableStream.from(...)` (or the Node stream → web stream helper) and POST with `body: webStream, duplex: 'half'`.
+- [x] 3.3 Add env flag `DEEPGRAM_STREAMING_BODY` (default `true`). When `false`, silently drain the stream into a buffer first (safety fallback).
+- [x] 3.4 Unit test (using `undici` `MockAgent`): streaming body path sends a chunked request and parses the response identically to the buffer path.
+- [x] 3.5 Keep the existing retry logic unchanged — retries still apply; on retry after a streaming failure, fall back to buffer mode for that attempt (streams are single-use).
 
 ## 4. Pipeline concurrency semaphore
 
-- [ ] 4.1 Add `YOUTUBE_SCRAPE_CONCURRENCY` to `.env.example` with a default of `3` and a comment explaining the memory trade-off.
-- [ ] 4.2 In `src/domain/services/profile-scrape.service.ts`, delete the `effectiveBatchSize = 1` branch. Replace with a lightweight semaphore: process `remaining` URLs using a per-job `p-limit(concurrency)` (prefer a local ~10-line implementation over a new dep, unless `p-limit` is already present).
-- [ ] 4.3 Clamp `concurrency` to `[1, 5]`. Default from env, overridable per-call for tests.
-- [ ] 4.4 Update `src/domain/services/__tests__/profile-scrape-performance.test.ts` to assert that a 10-URL YouTube batch now runs with concurrency > 1.
-- [ ] 4.5 Update the existing "one-at-a-time" inline comment (`profile-scrape.service.ts:338`) to describe the new bounded-concurrency behavior and cite `YOUTUBE_SCRAPE_CONCURRENCY`.
+- [x] 4.1 Add `YOUTUBE_SCRAPE_CONCURRENCY` to `.env.example` with a default of `3` and a comment explaining the memory trade-off.
+- [x] 4.2 In `src/domain/services/profile-scrape.service.ts`, delete the `effectiveBatchSize = 1` branch. Replace with a lightweight semaphore: process `remaining` URLs using a per-job `p-limit(concurrency)` (prefer a local ~10-line implementation over a new dep, unless `p-limit` is already present).
+- [x] 4.3 Clamp `concurrency` to `[1, 5]`. Default from env, overridable per-call for tests.
+- [x] 4.4 Update `src/domain/services/__tests__/profile-scrape-performance.test.ts` to assert that a 10-URL YouTube batch now runs with concurrency > 1.
+- [x] 4.5 Update the existing "one-at-a-time" inline comment (`profile-scrape.service.ts:338`) to describe the new bounded-concurrency behavior and cite `YOUTUBE_SCRAPE_CONCURRENCY`.
 
 ## 5. Stage callback threading
 

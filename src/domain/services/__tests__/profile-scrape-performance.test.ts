@@ -227,4 +227,96 @@ describe('Profile Scrape Performance', () => {
     expect(result.importedCount).toBe(50);
     expect(result.status).toBe('completed');
   });
+
+  it('runs YouTube URLs with bounded concurrency (default 3), not serially', async () => {
+    const ytUrls = Array.from({ length: 10 }, (_, i) => `https://youtube.com/watch?v=video${i}`);
+    const job = makeJob({ totalUrls: 10, discoveredUrls: ytUrls });
+    mockGetScrapeJobById.mockResolvedValue(job);
+
+    const original = process.env.YOUTUBE_SCRAPE_CONCURRENCY;
+    delete process.env.YOUTUBE_SCRAPE_CONCURRENCY; // use default (3)
+
+    let maxConcurrent = 0;
+    let currentConcurrent = 0;
+
+    mockProcessUrl.mockImplementation(async () => {
+      currentConcurrent++;
+      maxConcurrent = Math.max(maxConcurrent, currentConcurrent);
+      await new Promise((r) => setTimeout(r, 20));
+      currentConcurrent--;
+      return { url: 'test', status: 'success' as const };
+    });
+
+    try {
+      const result = await processJobBatch('job-1', 10, 60_000);
+
+      expect(result.processedUrls).toBe(10);
+      expect(result.importedCount).toBe(10);
+      expect(result.status).toBe('completed');
+      // Concurrency must exceed the old "1 at a time" behavior but stay bounded
+      expect(maxConcurrent).toBeGreaterThan(1);
+      expect(maxConcurrent).toBeLessThanOrEqual(3);
+    } finally {
+      if (original === undefined) delete process.env.YOUTUBE_SCRAPE_CONCURRENCY;
+      else process.env.YOUTUBE_SCRAPE_CONCURRENCY = original;
+    }
+  });
+
+  it('honors YOUTUBE_SCRAPE_CONCURRENCY=1 as a rollback to serial behavior', async () => {
+    const ytUrls = Array.from({ length: 5 }, (_, i) => `https://youtube.com/watch?v=video${i}`);
+    const job = makeJob({ totalUrls: 5, discoveredUrls: ytUrls });
+    mockGetScrapeJobById.mockResolvedValue(job);
+
+    const original = process.env.YOUTUBE_SCRAPE_CONCURRENCY;
+    process.env.YOUTUBE_SCRAPE_CONCURRENCY = '1';
+
+    let maxConcurrent = 0;
+    let currentConcurrent = 0;
+
+    mockProcessUrl.mockImplementation(async () => {
+      currentConcurrent++;
+      maxConcurrent = Math.max(maxConcurrent, currentConcurrent);
+      await new Promise((r) => setTimeout(r, 10));
+      currentConcurrent--;
+      return { url: 'test', status: 'success' as const };
+    });
+
+    try {
+      const result = await processJobBatch('job-1', 10, 60_000);
+      expect(result.processedUrls).toBe(5);
+      expect(maxConcurrent).toBe(1);
+    } finally {
+      if (original === undefined) delete process.env.YOUTUBE_SCRAPE_CONCURRENCY;
+      else process.env.YOUTUBE_SCRAPE_CONCURRENCY = original;
+    }
+  });
+
+  it('clamps YOUTUBE_SCRAPE_CONCURRENCY to the max of 5', async () => {
+    const ytUrls = Array.from({ length: 20 }, (_, i) => `https://youtube.com/watch?v=video${i}`);
+    const job = makeJob({ totalUrls: 20, discoveredUrls: ytUrls });
+    mockGetScrapeJobById.mockResolvedValue(job);
+
+    const original = process.env.YOUTUBE_SCRAPE_CONCURRENCY;
+    process.env.YOUTUBE_SCRAPE_CONCURRENCY = '99';
+
+    let maxConcurrent = 0;
+    let currentConcurrent = 0;
+
+    mockProcessUrl.mockImplementation(async () => {
+      currentConcurrent++;
+      maxConcurrent = Math.max(maxConcurrent, currentConcurrent);
+      await new Promise((r) => setTimeout(r, 15));
+      currentConcurrent--;
+      return { url: 'test', status: 'success' as const };
+    });
+
+    try {
+      await processJobBatch('job-1', 10, 60_000);
+      expect(maxConcurrent).toBeLessThanOrEqual(5);
+      expect(maxConcurrent).toBeGreaterThan(1);
+    } finally {
+      if (original === undefined) delete process.env.YOUTUBE_SCRAPE_CONCURRENCY;
+      else process.env.YOUTUBE_SCRAPE_CONCURRENCY = original;
+    }
+  });
 });
