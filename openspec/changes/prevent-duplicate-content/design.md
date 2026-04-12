@@ -122,11 +122,16 @@ Store as `TEXT` in `posts.content_fingerprint`.
 
 **Rationale:** The stated Gooaye case is intra-KOL. Cross-KOL reposts are a different problem (attribution, quoting, fair-use considerations) and out of scope. Forward-only avoids a risky batch migration over historical data and avoids any rewrite of already-computed analysis.
 
-### D10: Win-rate calculator audit is out of scope
+### D10: Win-rate calculators are safe; patch the three direct-count queries
 
-**Decision:** This change does **not** update `src/domain/calculators/` or dashboard queries to filter `WHERE primary_post_id IS NULL`. A follow-up GitHub issue will be filed after merge.
+**Decision:** Win-rate/return-rate calculators (`src/domain/calculators/`, `/api/kols/[id]/win-rate`, `/api/stocks/[ticker]/win-rate`, `/api/kols/[id]/return-rate`, `/api/stocks/[ticker]/return-rate`) do NOT need changes. They all flow through `listPosts()` which INNER JOINs `post_stocks` — since mirrors have no `post_stocks` rows, they are automatically excluded from all performance metrics (Hit Rate, SQR, Precision, Avg Excess, etc.).
 
-**Rationale:** Win-rate work is happening on a parallel branch; touching those files here would cause merge conflicts. Until the follow-up issue lands, mirrors will be counted in win-rate math — a known regression that's narrower than the pre-change situation because mirrors carry no `post_stocks` and most calculators already join through `post_stocks`. Any calculator that counts raw `posts` rows remains affected until the audit; the follow-up issue documents this.
+Three direct-count queries on the `posts` table DO need `.is('primary_post_id', null)` filtering — these are included in this change:
+1. `src/app/api/dashboard/route.ts` — total post count (`select('id', { count: 'exact', head: true })`)
+2. `src/app/api/dashboard/route.ts` — KOL-ID aggregation for leaderboard ranking (`select('kol_id')`)
+3. `src/app/api/posts/unread-count/route.ts` — unread badge count
+
+**Rationale:** The `kol-performance-metrics-ui` change has already merged to main. A fresh audit confirms all performance-metric paths join through `post_stocks`. The three count queries are small, localized fixes (one `.is()` filter each) that prevent mirrors from inflating dashboard stats and unread badges.
 
 ### D11: No feature flag
 
@@ -142,7 +147,7 @@ Store as `TEXT` in `posts.content_fingerprint`.
 
 **[Risk] Delete-promotion bug corrupts analysis data.** Promotion moves child rows between posts. A bug could orphan them or double-count them. Mitigation: `ON DELETE SET NULL` safety net; integration tests for the delete path with (0, 1, 2, 3) mirror counts; run the promotion inside a transaction.
 
-**[Trade-off] Mirrors still count in raw `COUNT(*) FROM posts` queries until the calculator audit ships.** Known. Documented in the follow-up issue. The mirror rows have no `post_stocks`, so `COUNT(DISTINCT post_id) FROM post_stocks` and similar join-based counts already Do The Right Thing.
+**[Resolved] Mirrors in raw `COUNT(*) FROM posts` queries.** Three direct-count queries are patched in this change (see D10). All join-based queries (win-rate, return-rate, validation) are safe by virtue of the `post_stocks` INNER JOIN.
 
 **[Trade-off] Forward-only means historical bleed persists.** Users with existing triplicated imports keep those triplicates. Acceptable per product decision; a future backfill change can address it.
 

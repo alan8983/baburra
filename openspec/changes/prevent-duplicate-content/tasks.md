@@ -66,20 +66,28 @@
   - No credit refund — charge same fee per D8.
 - [ ] 5.2 Any other API routes that surface `ProcessUrlResult` (search for call sites): update to pass through the new status.
 
-## 6. Integration tests
+## 6. Direct-count query patches
 
-- [ ] 6.1 Integration test: import URL-A (primary is created, fingerprint stored, full AI pipeline runs).
-- [ ] 6.2 Integration test: import URL-B with identical transcript (mirror is created, AI calls NOT made — mock Gemini client and assert zero invocations from the second import).
-- [ ] 6.3 Integration test: import URL-A then URL-B then URL-C (one primary, two mirrors; primary has all post_stocks, mirrors have none).
-- [ ] 6.4 Integration test: delete the primary from a (primary, mirror) pair — confirm the mirror is promoted, inherits `post_stocks`/`post_arguments`/`content_fingerprint`, and has `primary_post_id = NULL`.
-- [ ] 6.5 Integration test: delete a mirror from a (primary, mirror, mirror) set — confirm the primary and other mirror are untouched.
-- [ ] 6.6 Integration test: `findPostBySourceUrl()` with a mirror's URL returns the mirror row (not the primary).
+- [ ] 6.1 `src/app/api/dashboard/route.ts`:
+  - Add `.is('primary_post_id', null)` to the total-post-count query (`select('id', { count: 'exact', head: true })`).
+  - Add `.is('primary_post_id', null)` to the KOL-ID aggregation query (`select('kol_id')`) used for leaderboard ranking.
+- [ ] 6.2 `src/app/api/posts/unread-count/route.ts`:
+  - Add `.is('primary_post_id', null)` to the unread-count query.
+- [ ] 6.3 Search for any other direct `from('posts').select(...)` queries that don't join `post_stocks` (grep for `.from('posts')` across `src/app/api/`). Patch any additional count/aggregation queries found.
 
-## 7. Spec + rollout
+## 7. Integration tests
 
-- [ ] 7.1 Write `specs/content-deduplication/spec.md` describing the deduplication requirements, the primary/mirror model, and the delete-promotion rule.
-- [ ] 7.2 Run `npm run type-check`, `npm run lint`, and `npm test` — all green.
-- [ ] 7.3 Deploy to staging (or local preview), import the same Gooaye episode via three real platform URLs (YouTube, Apple Podcast, Spotify), verify in the database: one primary + two mirrors, mirrors have no `post_stocks`, billing log shows full charges on all three.
-- [ ] 7.4 Merge to main.
-- [ ] 7.5 **Follow-up issue:** file a GitHub issue titled `Audit win-rate calculators for primary_post_id IS NULL filtering` against `alan8983/investment-idea-monitor`. Link it back to this change. List the files under `src/domain/calculators/` and any dashboard query files that need review.
-- [ ] 7.6 Archive with `/opsx:archive prevent-duplicate-content`.
+- [ ] 7.1 Integration test: import URL-A (primary is created, fingerprint stored, full AI pipeline runs).
+- [ ] 7.2 Integration test: import URL-B with identical transcript (mirror is created, AI calls NOT made — mock Gemini client and assert zero invocations from the second import).
+- [ ] 7.3 Integration test: import URL-A then URL-B then URL-C (one primary, two mirrors; primary has all post_stocks, mirrors have none).
+- [ ] 7.4 Integration test: delete the primary from a (primary, mirror) pair — confirm the mirror is promoted, inherits `post_stocks`/`post_arguments`/`content_fingerprint`, and has `primary_post_id = NULL`.
+- [ ] 7.5 Integration test: delete a mirror from a (primary, mirror, mirror) set — confirm the primary and other mirror are untouched.
+- [ ] 7.6 Integration test: `findPostBySourceUrl()` with a mirror's URL returns the mirror row (not the primary).
+
+## 8. Spec + rollout
+
+- [ ] 8.1 Write `specs/content-deduplication/spec.md` describing the deduplication requirements, the primary/mirror model, and the delete-promotion rule.
+- [ ] 8.2 Run `npm run type-check`, `npm run lint`, and `npm test` — all green.
+- [ ] 8.3 Deploy to staging (or local preview), import the same Gooaye episode via three real platform URLs (YouTube, Apple Podcast, Spotify), verify in the database: one primary + two mirrors, mirrors have no `post_stocks`, billing log shows full charges on all three.
+- [ ] 8.4 Merge to main.
+- [ ] 8.5 Archive with `/opsx:archive prevent-duplicate-content`.

@@ -5,7 +5,7 @@ KOLs frequently publish the same content across multiple platforms — e.g., Goo
 Consequences we're seeing:
 
 - **AI cost bleed.** Every duplicate URL triggers a fresh `analyzeDraftContent()` Gemini call plus one Gemini argument-extraction call per identified stock. A 5-stock episode imported on three platforms pays the AI bill three times.
-- **Inflated win-rate math.** The same prediction is counted as three data points in any query that counts posts directly — KOL accuracy scores, per-stock win rates, dashboard aggregates.
+- **Inflated dashboard & count metrics.** Mirror posts inflate total-post counts, KOL leaderboard ranking (by post count), and unread-post badges. Win-rate/return-rate calculators are unaffected because they INNER JOIN through `post_stocks` (which mirrors lack), but three direct-count queries on the `posts` table need explicit mirror exclusion.
 - **Duplicated post rows in the feed.** A user who scrapes the same KOL across platforms sees the same idea three times with no indication they're linked.
 
 Transcription cost is a smaller concern: the existing `transcripts` table cache keyed by resolved `source_url` already collapses the Spotify/Apple/direct-RSS case (all three resolve to the same RSS enclosure URL), and cross-transcriber cases are rare. The prize here is **protecting AI analysis spend and the integrity of the analytical data**.
@@ -20,8 +20,11 @@ Transcription cost is a smaller concern: the existing `transcripts` table cache 
 - **Charge-same billing.** Mirror imports are billed at the same rate as full imports. Keeps billing UX simple and removes any incentive to game platform selection.
 - **Forward-only, intra-KOL.** No historical backfill. Fingerprint lookup is scoped to `(kol_id, content_fingerprint)` on primary rows.
 
+- **Direct-count query patching.** Three queries that count `posts` rows directly (not joining `post_stocks`) need `.is('primary_post_id', null)` filters: dashboard total-post count, dashboard KOL-ID aggregation for leaderboard, and unread-post count. These are included in this change because they are small, localized additions.
+
+Win-rate / return-rate / performance metric calculations (Hit Rate, SQR, Precision, etc.) are **already safe** — they all flow through `listPosts()` which INNER JOINs `post_stocks`. Since mirrors have no `post_stocks` rows, they are automatically excluded from every performance metric. No changes needed to `src/domain/calculators/` or to the win-rate/return-rate API routes.
+
 Explicitly **out of scope:**
-- Win-rate calculator audit (win-rate work is on a separate branch — a follow-up GitHub issue will track adding `WHERE primary_post_id IS NULL` filters to calculators and dashboard queries).
 - Profile-discovery-time dedup (belongs to a future system-design effort on cross-platform post aggregation).
 - Cross-transcriber fuzzy matching (YouTube captions ↔ Deepgram etc.) — deferred as a potential v2 using simhash.
 - Backfilling historical duplicates.
@@ -39,7 +42,7 @@ Explicitly **out of scope:**
 - **Import pipeline**: `src/domain/services/import-pipeline.service.ts` adds the post-transcription fingerprint gate. Mirror-creation path bypasses `analyzeDraftContent()` and per-stock argument extraction.
 - **Repository**: `src/infrastructure/repositories/post.repository.ts` gains `findPrimaryPostByFingerprint(kolId, fingerprint)` and a mirror-creation helper. `findPostBySourceUrl()` semantics unchanged.
 - **API**: `src/app/api/import/batch/route.ts` handles a new `mirror_linked` import status in its response shape.
+- **Direct-count queries**: `src/app/api/dashboard/route.ts` (two queries: post count and KOL-ID aggregation) and `src/app/api/posts/unread-count/route.ts` get `.is('primary_post_id', null)` filters to exclude mirrors from non-join-based counts.
 - **Tests**: Unit tests for fingerprint normalization and hashing; integration tests for the mirror-creation path (primary first, then mirror, confirm no AI calls fire on the mirror); delete-promotion test.
-- **Follow-up issue (post-merge)**: GitHub issue tracking the win-rate calculator audit for `primary_post_id IS NULL` filtering.
 - **No backwards-compatibility break.** Existing posts get `primary_post_id = NULL` and `content_fingerprint = NULL` and are treated as primaries by default. New posts start populating `content_fingerprint`.
 - **No feature flag.** The gate is always on once shipped; failure mode is "fingerprint lookup misses → behaves like today".
