@@ -24,6 +24,8 @@ function makePost(overrides: Partial<PostWithRelations> & { id?: string } = {}):
     createdAt: new Date(),
     updatedAt: new Date(),
     createdBy: null,
+    primaryPostId: null,
+    contentFingerprint: null,
     kol: { id: 'kol-1', name: 'Test KOL', avatarUrl: null },
     stocks: overrides.stocks ?? [],
   };

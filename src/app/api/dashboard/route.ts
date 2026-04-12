@@ -64,12 +64,16 @@ export async function GET() {
         .from('stocks')
         .select('id', { count: 'exact', head: true })
         .gte('created_at', monthStart.toISOString()),
-      // 文章總數
-      supabase.from('posts').select('id', { count: 'exact', head: true }),
-      // 文章本週新增
+      // 文章總數 (exclude mirrors)
       supabase
         .from('posts')
         .select('id', { count: 'exact', head: true })
+        .is('primary_post_id', null),
+      // 文章本週新增 (exclude mirrors)
+      supabase
+        .from('posts')
+        .select('id', { count: 'exact', head: true })
+        .is('primary_post_id', null)
         .gte('created_at', weekStart.toISOString()),
       // 草稿統計（需要 user_id）
       supabase
@@ -80,8 +84,8 @@ export async function GET() {
         .limit(1),
       // 最近 5 篇文章
       listPosts({ limit: 5 }),
-      // 取得所有文章的 kol_id（輕量查詢，只取一欄）
-      supabase.from('posts').select('kol_id'),
+      // 取得所有文章的 kol_id（輕量查詢，只取一欄，exclude mirrors）
+      supabase.from('posts').select('kol_id').is('primary_post_id', null),
     ]);
 
     // 處理錯誤
@@ -120,6 +124,7 @@ export async function GET() {
           .from('posts')
           .select('kol_id, posted_at')
           .in('kol_id', topKolIds)
+          .is('primary_post_id', null)
           .order('posted_at', { ascending: false }),
       ]);
 

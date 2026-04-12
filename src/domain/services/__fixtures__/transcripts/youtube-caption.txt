@@ -1,0 +1,45 @@
+[Music]
+Hello everyone and welcome back to the show.
+Today we're going to be talking about some
+really exciting developments in the semiconductor space.
+TSMC has reported absolutely stellar earnings
+this quarter, beating analyst expectations
+by a wide margin. The company's revenue
+grew by twenty-three percent year over year,
+driven primarily by strong demand for
+advanced packaging and three-nanometer
+process technology.
+[Music]
+Now what's really interesting here is that
+TSMC's management has raised their full-year
+guidance, suggesting that the AI infrastructure
+buildout is not slowing down anytime soon.
+They're seeing continued strong demand from
+all the major hyperscalers — Microsoft, Google,
+Amazon — they're all ramping up their capital
+expenditure plans for next year. And that's
+great news for semiconductor equipment makers
+like ASML as well.
+
+Now let me talk about the valuation for a moment.
+At the current price, TSMC is trading at about
+eighteen times forward earnings, which historically
+is actually pretty reasonable for a company with
+this kind of growth profile. The question is whether
+the AI demand cycle is sustainable or if we're
+approaching some kind of plateau.
+
+My view is that we're still early in this cycle.
+The transition from training workloads to inference
+workloads is going to drive another wave of demand.
+And TSMC is uniquely positioned to capture that
+because nobody else can manufacture at the cutting
+edge with the same yield rates.
+
+Now switching gears to another name I've been
+watching closely. Nvidia's recent pullback presents
+an interesting opportunity, in my opinion.
+[Applause]
+The stock has corrected about fifteen percent from
+its highs and I think the risk-reward is starting
+to look attractive again.
