@@ -48,6 +48,8 @@ export interface Post {
   createdAt: Date;
   updatedAt: Date;
   createdBy: string | null;
+  primaryPostId: string | null;
+  contentFingerprint: string | null;
 }
 
 export type TickerSource = 'explicit' | 'inferred';
@@ -107,6 +109,7 @@ export interface CreatePostInput {
   aiModelVersion?: string;
   postedAt: Date;
   draftAiArguments?: DraftAiArguments[];
+  contentFingerprint?: string;
 }
 
 export interface UpdatePostInput {

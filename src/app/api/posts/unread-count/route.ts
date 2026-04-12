@@ -33,11 +33,12 @@ export async function GET() {
       return NextResponse.json({ count: 0 });
     }
 
-    // Count posts from subscribed KOLs created after last viewed
+    // Count posts from subscribed KOLs created after last viewed (exclude mirrors)
     const { count, error: countError } = await supabase
       .from('posts')
       .select('id', { count: 'exact', head: true })
       .in('kol_id', kolIds)
+      .is('primary_post_id', null)
       .gt('created_at', lastViewed.toISOString());
 
     if (countError) throw countError;

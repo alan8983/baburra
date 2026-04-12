@@ -9,6 +9,7 @@ import type {
   CreatePostInput,
   UpdatePostInput,
   PriceChangeByPeriod,
+  SourcePlatform,
 } from '@/domain/models';
 
 type DbPost = {
@@ -26,6 +27,8 @@ type DbPost = {
   created_at: string;
   updated_at: string;
   created_by: string | null;
+  primary_post_id: string | null;
+  content_fingerprint: string | null;
 };
 
 type DbStock = {
@@ -58,6 +61,8 @@ function mapDbToPost(row: DbPost): Post {
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
     createdBy: row.created_by ?? null,
+    primaryPostId: row.primary_post_id ?? null,
+    contentFingerprint: row.content_fingerprint ?? null,
   };
 }
 
@@ -246,6 +251,7 @@ export async function createPost(input: CreatePostInput, createdBy: string | nul
     p_stocks: stocksParam,
     p_arguments: argumentsParam,
     p_ai_model_version: input.aiModelVersion ?? null,
+    p_content_fingerprint: input.contentFingerprint ?? null,
   });
 
   if (rpcError) throw new Error(rpcError.message);
@@ -339,8 +345,11 @@ export async function deletePost(id: string, userId: string): Promise<boolean> {
     .eq('created_by', userId)
     .maybeSingle();
   if (!post) return false;
-  await supabase.from('post_stocks').delete().eq('post_id', id);
-  const { error } = await supabase.from('posts').delete().eq('id', id);
+  // Use the promotion RPC so that if this is a primary with mirrors,
+  // the oldest mirror is promoted and inherits post_stocks/post_arguments.
+  const { error } = await supabase.rpc('delete_post_and_promote_mirror', {
+    p_post_id: id,
+  });
   if (error) throw new Error(error.message);
   return true;
 }
@@ -425,4 +434,57 @@ export async function findPostBySourceUrl(sourceUrl: string): Promise<PostWithRe
       : { id: post.kolId, name: '', avatarUrl: null },
     stocks,
   };
+}
+
+// ── Content dedup: fingerprint lookup + mirror creation ──
+
+export async function findPrimaryPostByFingerprint(
+  kolId: string,
+  fingerprint: string
+): Promise<Post | null> {
+  const supabase = createAdminClient();
+  const { data: row, error } = await supabase
+    .from('posts')
+    .select('*')
+    .eq('kol_id', kolId)
+    .eq('content_fingerprint', fingerprint)
+    .is('primary_post_id', null)
+    .maybeSingle();
+  if (error || !row) return null;
+  return mapDbToPost(row as DbPost);
+}
+
+export interface CreateMirrorPostInput {
+  sourceUrl: string;
+  sourcePlatform: SourcePlatform | string;
+  title: string | null;
+  postedAt: Date;
+  kolId: string;
+  primaryPostId: string;
+  createdBy: string | null;
+  contentFingerprint: string | null;
+}
+
+export async function createMirrorPost(input: CreateMirrorPostInput): Promise<Post> {
+  const supabase = createAdminClient();
+  const { data: row, error } = await supabase
+    .from('posts')
+    .insert({
+      kol_id: input.kolId,
+      title: input.title,
+      content: '', // mirrors don't carry analysis content
+      source_url: input.sourceUrl,
+      source_platform: input.sourcePlatform,
+      images: [],
+      sentiment: 0, // placeholder; mirrors aren't used for analysis
+      sentiment_ai_generated: false,
+      posted_at: input.postedAt.toISOString(),
+      created_by: input.createdBy,
+      primary_post_id: input.primaryPostId,
+      content_fingerprint: input.contentFingerprint,
+    })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return mapDbToPost(row as DbPost);
 }
