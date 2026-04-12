@@ -10,6 +10,8 @@ const mocks = vi.hoisted(() => ({
   createPost: vi.fn(),
   getStockByTicker: vi.fn(),
   createStock: vi.fn(),
+  findPrimaryPostByFingerprint: vi.fn(),
+  createMirrorPost: vi.fn(),
   consumeCredits: vi.fn(),
   refundCredits: vi.fn(),
   checkFirstImportFree: vi.fn(),
@@ -36,6 +38,8 @@ vi.mock('@/infrastructure/repositories', () => ({
   createPost: mocks.createPost,
   getStockByTicker: mocks.getStockByTicker,
   createStock: mocks.createStock,
+  findPrimaryPostByFingerprint: mocks.findPrimaryPostByFingerprint,
+  createMirrorPost: mocks.createMirrorPost,
 }));
 
 vi.mock('@/infrastructure/repositories/ai-usage.repository', () => ({
@@ -126,6 +130,8 @@ function setupSuccessfulImport() {
   mocks.getAiModelVersion.mockReturnValue('gemini-2.0-flash');
   mocks.findTranscriptByUrl.mockResolvedValue(null);
   mocks.saveTranscript.mockResolvedValue(undefined);
+  mocks.findPrimaryPostByFingerprint.mockResolvedValue(null); // no content duplicate
+  mocks.createMirrorPost.mockResolvedValue({ id: 'mirror-1' });
 }
 
 beforeEach(() => {
@@ -559,5 +565,99 @@ describe('executeBatchImport', () => {
 
     const createPostCall = mocks.createPost.mock.calls[0][0];
     expect(createPostCall.postedAt).toEqual(new Date(aiDate));
+  });
+
+  // ── Content fingerprint dedup (Gate C) ─��
+
+  const LONG_CONTENT = Array(100)
+    .fill('TSMC revenue grew by twenty three percent year over year')
+    .join(' ');
+
+  it('creates a mirror and skips AI when fingerprint matches an existing primary', async () => {
+    setupSuccessfulImport();
+    mocks.extractFromUrl.mockResolvedValue(mockFetchResult({ content: LONG_CONTENT }));
+    // Gate C hit: fingerprint matches an existing primary post
+    mocks.findPrimaryPostByFingerprint.mockResolvedValue({
+      id: 'primary-1',
+      kolId: 'kol-1',
+    });
+    mocks.createMirrorPost.mockResolvedValue({ id: 'mirror-1' });
+
+    const result = await executeBatchImport({ urls: ['https://x.com/mirror/status/1'] }, USER_ID);
+
+    expect(result.urlResults[0].status).toBe('mirror_linked');
+    expect(result.urlResults[0].postId).toBe('mirror-1');
+    expect(result.urlResults[0].primaryPostId).toBe('primary-1');
+    // AI analysis should NOT have been called
+    expect(mocks.analyzeDraftContent).not.toHaveBeenCalled();
+    expect(mocks.extractArguments).not.toHaveBeenCalled();
+    // createPost (primary path) should NOT have been called
+    expect(mocks.createPost).not.toHaveBeenCalled();
+    // createMirrorPost SHOULD have been called
+    expect(mocks.createMirrorPost).toHaveBeenCalledWith(
+      expect.objectContaining({
+        primaryPostId: 'primary-1',
+        kolId: 'kol-1',
+      })
+    );
+  });
+
+  it('counts mirror_linked as duplicate in batch totals', async () => {
+    setupSuccessfulImport();
+    mocks.extractFromUrl.mockResolvedValue(mockFetchResult({ content: LONG_CONTENT }));
+    mocks.findPrimaryPostByFingerprint.mockResolvedValue({
+      id: 'primary-1',
+      kolId: 'kol-1',
+    });
+
+    const result = await executeBatchImport({ urls: ['https://x.com/mirror/status/1'] }, USER_ID);
+
+    expect(result.totalDuplicate).toBe(1);
+    expect(result.totalImported).toBe(0);
+  });
+
+  it('falls through to normal pipeline when fingerprint does not match', async () => {
+    setupSuccessfulImport();
+    mocks.extractFromUrl.mockResolvedValue(mockFetchResult({ content: LONG_CONTENT }));
+    // Fingerprint computed but no match in DB
+    mocks.findPrimaryPostByFingerprint.mockResolvedValue(null);
+
+    const result = await executeBatchImport({ urls: ['https://x.com/new/status/1'] }, USER_ID);
+
+    expect(result.urlResults[0].status).toBe('success');
+    expect(mocks.analyzeDraftContent).toHaveBeenCalled();
+    expect(mocks.createPost).toHaveBeenCalledWith(
+      expect.objectContaining({ contentFingerprint: expect.any(String) }),
+      USER_ID
+    );
+  });
+
+  it('skips fingerprint gate when content is too short (below token threshold)', async () => {
+    setupSuccessfulImport();
+    // Short content — computeContentFingerprint returns null
+    mocks.extractFromUrl.mockResolvedValue(mockFetchResult({ content: 'buy AAPL' }));
+
+    const result = await executeBatchImport({ urls: ['https://x.com/short/status/1'] }, USER_ID);
+
+    // Should proceed through normal pipeline
+    expect(result.urlResults[0].status).toBe('success');
+    expect(mocks.findPrimaryPostByFingerprint).not.toHaveBeenCalled();
+    expect(mocks.analyzeDraftContent).toHaveBeenCalled();
+  });
+
+  it('skips fingerprint gate when KOL cannot be resolved early', async () => {
+    setupSuccessfulImport();
+    mocks.extractFromUrl.mockResolvedValue(
+      mockFetchResult({ content: LONG_CONTENT, kolName: null })
+    );
+    // No KOL name from extractor, so early KOL resolution fails
+    mocks.findKolByName.mockResolvedValue(null);
+    mocks.createKol.mockResolvedValue({ id: 'kol-new' });
+
+    const result = await executeBatchImport({ urls: ['https://x.com/noname/status/1'] }, USER_ID);
+
+    // Should proceed through normal pipeline (KOL resolved after AI analysis)
+    expect(result.urlResults[0].status).toBe('success');
+    expect(mocks.analyzeDraftContent).toHaveBeenCalled();
   });
 });

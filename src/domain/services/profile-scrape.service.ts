@@ -483,7 +483,7 @@ export async function processJobBatch(
           );
           if (value.status === 'success') {
             importedCount++;
-          } else if (value.status === 'duplicate') {
+          } else if (value.status === 'duplicate' || value.status === 'mirror_linked') {
             duplicateCount++;
           } else if (value.status === 'error' && value.error === 'no_tickers_identified') {
             filteredCount++;

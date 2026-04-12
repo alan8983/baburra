@@ -17,7 +17,10 @@ import {
   createPost,
   getStockByTicker,
   createStock,
+  findPrimaryPostByFingerprint,
+  createMirrorPost,
 } from '@/infrastructure/repositories';
+import { computeContentFingerprint } from '@/domain/services/content-fingerprint.service';
 import {
   consumeCredits,
   refundCredits,
@@ -95,8 +98,10 @@ export interface ImportBatchInput {
 
 export interface ImportUrlResult {
   url: string;
-  status: 'success' | 'duplicate' | 'error';
+  status: 'success' | 'duplicate' | 'mirror_linked' | 'error';
   postId?: string;
+  primaryPostId?: string;
+  addedAs?: string;
   title?: string;
   sourcePlatform?: string;
   error?: string;
@@ -188,7 +193,9 @@ export async function executeBatchImport(
   }
 
   const totalImported = urlResults.filter((r) => r.status === 'success').length;
-  const totalDuplicate = urlResults.filter((r) => r.status === 'duplicate').length;
+  const totalDuplicate = urlResults.filter(
+    (r) => r.status === 'duplicate' || r.status === 'mirror_linked'
+  ).length;
   const totalError = urlResults.filter((r) => r.status === 'error').length;
 
   return {
@@ -392,6 +399,49 @@ export async function processUrl(
       return { url, status: 'error', error: 'No content available' };
     }
 
+    // 3.5. Content fingerprint gate (Gate C) — detect cross-platform duplicates
+    //       post-transcription, pre-AI-analysis. Skips Gemini costs on mirrors.
+    const fingerprint = computeContentFingerprint(contentForAnalysis);
+    if (fingerprint) {
+      // Resolve KOL early for fingerprint scoping. Use knownKolId (profile scraping)
+      // or fetchResult.kolName (from metadata). If neither is available, skip the
+      // fingerprint check — the normal pipeline will handle it.
+      let earlyKolId: string | undefined = knownKolId;
+      if (!earlyKolId && fetchResult.kolName) {
+        const earlyKol = await findKolByName(fetchResult.kolName);
+        if (earlyKol) earlyKolId = earlyKol.id;
+      }
+
+      if (earlyKolId) {
+        const primaryPost = await findPrimaryPostByFingerprint(earlyKolId, fingerprint);
+        if (primaryPost) {
+          // Create a mirror row — no AI analysis, no argument extraction
+          const mirror = await createMirrorPost({
+            sourceUrl: fetchResult.sourceUrl,
+            sourcePlatform: fetchResult.sourcePlatform,
+            title: fetchResult.title || null,
+            postedAt: fetchResult.postedAt ? new Date(fetchResult.postedAt) : new Date(),
+            kolId: earlyKolId,
+            primaryPostId: primaryPost.id,
+            createdBy: userId,
+            contentFingerprint: fingerprint,
+          });
+          emit('done');
+          return {
+            url,
+            status: 'mirror_linked',
+            postId: mirror.id,
+            primaryPostId: primaryPost.id,
+            addedAs: fetchResult.sourcePlatform,
+            title: fetchResult.title || undefined,
+            sourcePlatform: fetchResult.sourcePlatform,
+            kolId: earlyKolId,
+            kolName: fetchResult.kolName || undefined,
+          };
+        }
+      }
+    }
+
     // 4. AI analysis (sentiment + ticker identification in one call)
     emit('analyzing');
     const analysis = await analyzeDraftContent(contentForAnalysis, timezone);
@@ -540,6 +590,7 @@ export async function processUrl(
               ? new Date(analysis.postedAt)
               : new Date(),
           draftAiArguments,
+          contentFingerprint: fingerprint ?? undefined,
         },
         userId
       );
