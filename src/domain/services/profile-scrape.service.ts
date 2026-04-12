@@ -117,7 +117,7 @@ import {
 } from '@/infrastructure/repositories/profile.repository';
 import { processUrl } from '@/domain/services/import-pipeline.service';
 import type { KolCacheEntry } from '@/domain/services/import-pipeline.service';
-import type { ScrapeJobItemStage, ScrapeStageMeta } from '@/domain/models';
+import type { ScrapeJobItemStage, ScrapeStageMeta, ScrapeOverrides } from '@/domain/models';
 import type { ScrapeJobType } from '@/domain/models';
 import { updateValidationStatus } from '@/infrastructure/repositories/kol.repository';
 import { handleValidationCompletion } from '@/domain/services/kol-validation.service';
@@ -265,7 +265,8 @@ export async function discoverProfileUrls(
 export async function initiateProfileScrape(
   profileUrl: string,
   userId: string,
-  selectedUrls?: string[]
+  selectedUrls?: string[],
+  overrides?: ScrapeOverrides
 ): Promise<InitiateScrapeResult> {
   // 1. Detect platform
   const extractor = getProfileExtractor(profileUrl);
@@ -284,7 +285,7 @@ export async function initiateProfileScrape(
     : await createKolWithValidation({
         name: profile.kolName,
         avatarUrl: profile.kolAvatarUrl ?? undefined,
-        validatedBy: userId,
+        validatedBy: overrides?.ownerUserId ?? userId,
       }).then((k) => ({ id: k.id, name: k.name, created: true }));
 
   // 4. Find or create kol_source
@@ -292,7 +293,8 @@ export async function initiateProfileScrape(
     kol.id,
     extractor.platform,
     profile.platformId,
-    profile.platformUrl
+    profile.platformUrl,
+    overrides?.source
   );
 
   // 5. Update scrape status
@@ -331,7 +333,8 @@ export async function initiateProfileScrape(
 export async function processJobBatch(
   jobId: string,
   batchSize: number = 10,
-  timeoutMs: number = 50_000
+  timeoutMs: number = 50_000,
+  overrides?: ScrapeOverrides
 ): Promise<BatchProgress> {
   const startTime = Date.now();
   const job = await getScrapeJobById(jobId);
@@ -382,9 +385,11 @@ export async function processJobBatch(
   }
 
   // Check first-import-free exemption (matching importBatch behavior)
-  // Validation scrapes are always quota-exempt
+  // Validation scrapes and overrides with quotaExempt are always quota-exempt
   const isFirstImportFree =
-    isValidationScrape || (userId !== 'system' ? await checkFirstImportFree(userId) : false);
+    overrides?.quotaExempt ||
+    isValidationScrape ||
+    (userId !== 'system' ? await checkFirstImportFree(userId) : false);
 
   let importedCount = job.importedCount;
   let duplicateCount = job.duplicateCount;
@@ -517,7 +522,8 @@ export async function processJobBatch(
   await Promise.all(Array.from(itemWriteChains.values()).map((p) => p.catch(() => {})));
 
   // Mark first import as used if this was the free first import
-  if (isFirstImportFree && importedCount > 0 && userId !== 'system') {
+  // Skip for override-exempt calls (e.g. seed script) to avoid touching the platform user profile.
+  if (isFirstImportFree && !overrides?.quotaExempt && importedCount > 0 && userId !== 'system') {
     await markFirstImportUsed(userId);
   }
 

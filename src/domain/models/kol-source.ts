@@ -12,8 +12,16 @@ export interface KolSource {
   monitoringEnabled: boolean;
   monitorFrequencyHours: number;
   nextCheckAt: Date | null;
+  source: string | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+/** Optional overrides for seed / system callers. */
+export interface ScrapeOverrides {
+  ownerUserId?: string;
+  source?: 'seed' | 'user';
+  quotaExempt?: boolean;
 }
 
 export interface KolSubscription {

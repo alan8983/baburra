@@ -235,6 +235,7 @@ export type Database = {
           platform_url: string;
           posts_scraped_count: number;
           scrape_status: string;
+          source: string | null;
           updated_at: string;
         };
         Insert: {
@@ -250,6 +251,7 @@ export type Database = {
           platform_url: string;
           posts_scraped_count?: number;
           scrape_status?: string;
+          source?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -265,6 +267,7 @@ export type Database = {
           platform_url?: string;
           posts_scraped_count?: number;
           scrape_status?: string;
+          source?: string | null;
           updated_at?: string;
         };
         Relationships: [
@@ -500,6 +503,7 @@ export type Database = {
           primary_post_id: string | null;
           sentiment: number;
           sentiment_ai_generated: boolean | null;
+          source: string | null;
           source_platform: string | null;
           source_url: string | null;
           title: string | null;
@@ -518,6 +522,7 @@ export type Database = {
           primary_post_id?: string | null;
           sentiment: number;
           sentiment_ai_generated?: boolean | null;
+          source?: string | null;
           source_platform?: string | null;
           source_url?: string | null;
           title?: string | null;
@@ -536,6 +541,7 @@ export type Database = {
           primary_post_id?: string | null;
           sentiment?: number;
           sentiment_ai_generated?: boolean | null;
+          source?: string | null;
           source_platform?: string | null;
           source_url?: string | null;
           title?: string | null;

@@ -39,6 +39,9 @@ yarn-error.log*
 # claude code
 .claude/worktrees/
 
+# seed scrape logs
+scripts/logs/
+
 # vercel
 .vercel
 

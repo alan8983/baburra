@@ -143,6 +143,7 @@ function mockSource(overrides = {}) {
     lastScrapedAt: null,
     postsScrapedCount: 0,
     nextCheckAt: null,
+    source: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -216,14 +217,15 @@ describe('initiateProfileScrape', () => {
     expect(result.kolId).toBe('kol-existing');
   });
 
-  it('calls findOrCreateSource with correct args', async () => {
+  it('calls findOrCreateSource with correct args (no overrides)', async () => {
     await initiateProfileScrape('https://youtube.com/@traderjoe', USER_ID);
 
     expect(mocks.findOrCreateSource).toHaveBeenCalledWith(
       'kol-new',
       'youtube',
       'UC123',
-      'https://youtube.com/@traderjoe'
+      'https://youtube.com/@traderjoe',
+      undefined
     );
   });
 
@@ -300,6 +302,117 @@ describe('initiateProfileScrape', () => {
       avatarUrl: undefined,
       validatedBy: USER_ID,
     });
+  });
+});
+
+// ── ScrapeOverrides ──
+
+describe('ScrapeOverrides', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.youtubeChannelExtractor.isValidProfileUrl.mockReturnValue(true);
+    mocks.twitterProfileExtractor.isValidProfileUrl.mockReturnValue(false);
+    mocks.youtubeChannelExtractor.extractProfile.mockResolvedValue(mockProfile());
+    mocks.findKolByName.mockResolvedValue(null);
+    mocks.createKolWithValidation.mockResolvedValue({ id: 'kol-new', name: 'TraderJoe' });
+    mocks.findOrCreateSource.mockResolvedValue(mockSource());
+    mocks.updateScrapeStatus.mockResolvedValue(undefined);
+    mocks.createScrapeJob.mockResolvedValue({ id: 'job-1' });
+  });
+
+  it('passes source override to findOrCreateSource', async () => {
+    await initiateProfileScrape('https://youtube.com/@traderjoe', USER_ID, undefined, {
+      source: 'seed',
+    });
+
+    expect(mocks.findOrCreateSource).toHaveBeenCalledWith(
+      'kol-new',
+      'youtube',
+      'UC123',
+      'https://youtube.com/@traderjoe',
+      'seed'
+    );
+  });
+
+  it('passes ownerUserId to createKolWithValidation', async () => {
+    const PLATFORM_ID = 'a0000000-0000-4000-8000-000000000001';
+    await initiateProfileScrape('https://youtube.com/@traderjoe', USER_ID, undefined, {
+      ownerUserId: PLATFORM_ID,
+    });
+
+    expect(mocks.createKolWithValidation).toHaveBeenCalledWith({
+      name: 'TraderJoe',
+      avatarUrl: 'https://img.example.com/avatar.jpg',
+      validatedBy: PLATFORM_ID,
+    });
+  });
+
+  it('quotaExempt override makes processJobBatch skip credit checks', async () => {
+    mocks.getScrapeJobById.mockResolvedValue({
+      id: 'job-seed',
+      kolSourceId: 'source-1',
+      status: 'queued',
+      jobType: 'initial_scrape',
+      discoveredUrls: ['https://youtube.com/watch?v=vid1'],
+      totalUrls: 1,
+      processedUrls: 0,
+      importedCount: 0,
+      duplicateCount: 0,
+      errorCount: 0,
+      filteredCount: 0,
+      triggeredBy: USER_ID,
+      retryCount: 0,
+    });
+    mocks.getSourceById.mockResolvedValue(mockSource({ kolId: 'kol-new' }));
+    mocks.startScrapeJob.mockResolvedValue(undefined);
+    mocks.updateScrapeJobProgress.mockResolvedValue(undefined);
+    mocks.completeScrapeJob.mockResolvedValue(undefined);
+    mocks.getUserTimezone.mockResolvedValue('UTC');
+    mocks.checkFirstImportFree.mockResolvedValue(false);
+    mocks.processUrl.mockResolvedValue({ status: 'success' });
+
+    await processJobBatch('job-seed', 10, 50_000, { quotaExempt: true });
+
+    // processUrl should receive quotaExempt=true (4th arg)
+    expect(mocks.processUrl).toHaveBeenCalledWith(
+      'https://youtube.com/watch?v=vid1',
+      USER_ID,
+      'UTC',
+      true, // quotaExempt
+      expect.any(Map),
+      'kol-new',
+      undefined // no scrape_job_items → no stage callback
+    );
+    // checkFirstImportFree should not be called since quotaExempt shortcuts the check
+    expect(mocks.checkFirstImportFree).not.toHaveBeenCalled();
+  });
+
+  it('quotaExempt override prevents markFirstImportUsed', async () => {
+    mocks.getScrapeJobById.mockResolvedValue({
+      id: 'job-seed',
+      kolSourceId: 'source-1',
+      status: 'queued',
+      jobType: 'initial_scrape',
+      discoveredUrls: ['https://youtube.com/watch?v=vid1'],
+      totalUrls: 1,
+      processedUrls: 0,
+      importedCount: 0,
+      duplicateCount: 0,
+      errorCount: 0,
+      filteredCount: 0,
+      triggeredBy: USER_ID,
+      retryCount: 0,
+    });
+    mocks.getSourceById.mockResolvedValue(mockSource({ kolId: 'kol-new' }));
+    mocks.startScrapeJob.mockResolvedValue(undefined);
+    mocks.updateScrapeJobProgress.mockResolvedValue(undefined);
+    mocks.completeScrapeJob.mockResolvedValue(undefined);
+    mocks.getUserTimezone.mockResolvedValue('UTC');
+    mocks.processUrl.mockResolvedValue({ status: 'success' });
+
+    await processJobBatch('job-seed', 10, 50_000, { quotaExempt: true });
+
+    expect(mocks.markFirstImportUsed).not.toHaveBeenCalled();
   });
 });
 
