@@ -490,12 +490,14 @@ export type Database = {
         Row: {
           ai_model_version: string | null;
           content: string;
+          content_fingerprint: string | null;
           created_at: string | null;
           created_by: string | null;
           id: string;
           images: string[] | null;
           kol_id: string;
           posted_at: string;
+          primary_post_id: string | null;
           sentiment: number;
           sentiment_ai_generated: boolean | null;
           source_platform: string | null;
@@ -506,12 +508,14 @@ export type Database = {
         Insert: {
           ai_model_version?: string | null;
           content: string;
+          content_fingerprint?: string | null;
           created_at?: string | null;
           created_by?: string | null;
           id?: string;
           images?: string[] | null;
           kol_id: string;
           posted_at: string;
+          primary_post_id?: string | null;
           sentiment: number;
           sentiment_ai_generated?: boolean | null;
           source_platform?: string | null;
@@ -522,12 +526,14 @@ export type Database = {
         Update: {
           ai_model_version?: string | null;
           content?: string;
+          content_fingerprint?: string | null;
           created_at?: string | null;
           created_by?: string | null;
           id?: string;
           images?: string[] | null;
           kol_id?: string;
           posted_at?: string;
+          primary_post_id?: string | null;
           sentiment?: number;
           sentiment_ai_generated?: boolean | null;
           source_platform?: string | null;
@@ -555,6 +561,13 @@ export type Database = {
             columns: ['kol_id'];
             isOneToOne: false;
             referencedRelation: 'kols';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'posts_primary_post_id_fkey';
+            columns: ['primary_post_id'];
+            isOneToOne: false;
+            referencedRelation: 'posts';
             referencedColumns: ['id'];
           },
         ];
@@ -858,7 +871,30 @@ export type Database = {
               p_title: string;
             };
             Returns: Json;
+          }
+        | {
+            Args: {
+              p_ai_model_version?: string;
+              p_arguments?: Json;
+              p_content: string;
+              p_content_fingerprint?: string;
+              p_created_by: string;
+              p_images: string[];
+              p_kol_id: string;
+              p_posted_at: string;
+              p_sentiment: number;
+              p_sentiment_ai_generated: boolean;
+              p_source_platform: string;
+              p_source_url: string;
+              p_stocks?: Json;
+              p_title: string;
+            };
+            Returns: Json;
           };
+      delete_post_and_promote_mirror: {
+        Args: { p_post_id: string };
+        Returns: undefined;
+      };
       get_kol_follower_count: { Args: { p_kol_id: string }; Returns: number };
       get_popular_kols: {
         Args: { p_limit?: number };
