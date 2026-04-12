@@ -48,7 +48,9 @@
       "Bash(rm -rf .next)",
       "Bash(node node_modules/next/dist/bin/next dev --webpack --port 3001)",
       "Bash(taskkill //PID 48856 //F)",
-      "Bash(gh pr:*)"
+      "Bash(gh pr:*)",
+      "mcp__4979d5c0-fccb-4998-ad93-552dfff5ee67__apply_migration",
+      "mcp__4979d5c0-fccb-4998-ad93-552dfff5ee67__generate_typescript_types"
     ],
     "additionalDirectories": [
       "c:\\Cursor_Master\\investment-idea-monitor\\src\\app\\api\\kols\\[id]\\win-rate"
