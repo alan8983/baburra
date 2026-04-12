@@ -71,5 +71,5 @@
 - [x] 8.1 Write `specs/content-deduplication/spec.md` describing the deduplication requirements, the primary/mirror model, and the delete-promotion rule.
 - [x] 8.2 Run `npm run type-check`, `npm run lint`, and `npm test` ��� all green (49 files, 856 tests).
 - [x] 8.3 Staging validation: Full end-to-end with real Gooaye URLs blocked by missing `scrape_job_items` migration (separate feature). Validated instead via: (a) 59 unit/integration tests passing (34 pipeline + 25 fingerprint), (b) DB schema verified in production — constraint, index, and RPC all present, (c) TypeScript types regenerated and type-check clean.
-- [ ] 8.4 Merge to main.
-- [ ] 8.5 Archive with `/opsx:archive prevent-duplicate-content`.
+- [x] 8.4 Merge to main via PR #66 (squash merge 2026-04-12).
+- [x] 8.5 Archive with `/opsx:archive prevent-duplicate-content`.
