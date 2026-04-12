@@ -19,6 +19,7 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:teardown": "npx tsx tests/e2e/test-teardown.ts",
     "analyze": "ANALYZE=true next build",
+    "seed:scrape": "npx tsx scripts/seed-scrape.ts",
     "prepare": "husky"
   },
   "dependencies": {

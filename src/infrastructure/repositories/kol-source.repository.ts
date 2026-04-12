@@ -15,6 +15,7 @@ type DbKolSource = {
   monitoring_enabled: boolean;
   monitor_frequency_hours: number;
   next_check_at: string | null;
+  source: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -32,6 +33,7 @@ function mapDbToKolSource(row: DbKolSource): KolSource {
     monitoringEnabled: row.monitoring_enabled,
     monitorFrequencyHours: row.monitor_frequency_hours,
     nextCheckAt: row.next_check_at ? new Date(row.next_check_at) : null,
+    source: row.source,
     createdAt: new Date(row.created_at),
     updatedAt: new Date(row.updated_at),
   };
@@ -41,25 +43,46 @@ export async function findOrCreateSource(
   kolId: string,
   platform: string,
   platformId: string,
-  platformUrl: string
+  platformUrl: string,
+  source?: string | null
 ): Promise<KolSource> {
   const supabase = createAdminClient();
 
+  const upsertData: Record<string, unknown> = {
+    kol_id: kolId,
+    platform,
+    platform_id: platformId,
+    platform_url: platformUrl,
+  };
+  if (source !== undefined) {
+    upsertData.source = source;
+  }
+
   const { data: row, error } = await supabase
     .from('kol_sources')
-    .upsert(
-      {
-        kol_id: kolId,
-        platform,
-        platform_id: platformId,
-        platform_url: platformUrl,
-      },
-      { onConflict: 'platform,platform_id' }
-    )
+    .upsert(upsertData, { onConflict: 'platform,platform_id' })
     .select()
     .single();
 
   if (error) throw new Error(error.message);
+  return mapDbToKolSource(row as DbKolSource);
+}
+
+export async function findSourceByPlatformId(
+  platform: string,
+  platformId: string
+): Promise<KolSource | null> {
+  const supabase = createAdminClient();
+
+  const { data: row, error } = await supabase
+    .from('kol_sources')
+    .select('*')
+    .eq('platform', platform)
+    .eq('platform_id', platformId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  if (!row) return null;
   return mapDbToKolSource(row as DbKolSource);
 }
 

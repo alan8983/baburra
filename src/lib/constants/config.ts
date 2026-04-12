@@ -1,3 +1,7 @@
+// Platform system user UUID — used as owner for seed-ingested KOLs/posts.
+// Must match the UUID in migration 20260412000000_add_source_and_platform_user.sql
+export const PLATFORM_USER_ID = 'a0000000-0000-4000-8000-000000000001';
+
 // 應用程式設定常數
 
 export const APP_CONFIG = {
