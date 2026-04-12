@@ -120,28 +120,28 @@ export type Database = {
       };
       content_unlocks: {
         Row: {
-          id: string;
-          user_id: string;
-          unlock_type: string;
-          target_key: string;
           credits_paid: number;
+          id: string;
+          target_key: string;
+          unlock_type: string;
           unlocked_at: string;
+          user_id: string;
         };
         Insert: {
-          id?: string;
-          user_id: string;
-          unlock_type: string;
-          target_key: string;
           credits_paid?: number;
+          id?: string;
+          target_key: string;
+          unlock_type: string;
           unlocked_at?: string;
+          user_id: string;
         };
         Update: {
-          id?: string;
-          user_id?: string;
-          unlock_type?: string;
-          target_key?: string;
           credits_paid?: number;
+          id?: string;
+          target_key?: string;
+          unlock_type?: string;
           unlocked_at?: string;
+          user_id?: string;
         };
         Relationships: [];
       };
@@ -571,6 +571,7 @@ export type Database = {
           first_import_free: boolean | null;
           id: string;
           posts_last_viewed_at: string | null;
+          status: string;
           subscription_tier: string | null;
           timezone: string | null;
           updated_at: string | null;
@@ -586,6 +587,7 @@ export type Database = {
           first_import_free?: boolean | null;
           id?: string;
           posts_last_viewed_at?: string | null;
+          status?: string;
           subscription_tier?: string | null;
           timezone?: string | null;
           updated_at?: string | null;
@@ -601,6 +603,7 @@ export type Database = {
           first_import_free?: boolean | null;
           id?: string;
           posts_last_viewed_at?: string | null;
+          status?: string;
           subscription_tier?: string | null;
           timezone?: string | null;
           updated_at?: string | null;
