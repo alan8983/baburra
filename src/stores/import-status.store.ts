@@ -1,28 +1,38 @@
 import { create } from 'zustand';
-import type { ImportBatchResult, ImportUrlResult } from '@/hooks/use-import';
 
-export type UrlStatus = 'queued' | 'processing' | 'success' | 'error';
+/**
+ * Zustand store for the non-blocking batch import flow.
+ *
+ * Each entry represents an import triggered from a background flow (e.g.
+ * the input form's "Import in background" button). Once the POST to
+ * `/api/import/batch` returns, the local job is linked to a real
+ * `scrape_jobs` row via `scrapeJobId`, and the toast/status UI subscribes
+ * to that job for per-URL progress.
+ *
+ * The URL-level state here is intentionally coarse — detailed per-URL
+ * progress lives in the `scrape_job_items` Realtime channel consumed by
+ * ScrapeProgress and the import status toast.
+ */
 
-export interface ImportJobUrl {
-  url: string;
-  status: UrlStatus;
-  result?: ImportUrlResult;
-}
+export type JobPhase = 'queued' | 'processing' | 'completed' | 'failed';
 
 export interface ImportJob {
   id: string;
-  urls: ImportJobUrl[];
+  urls: string[];
   startedAt: number;
   estimatedSeconds: number;
+  phase: JobPhase;
+  scrapeJobId?: string;
+  errorMessage?: string;
   completedAt?: number;
-  result?: ImportBatchResult;
 }
 
 interface ImportStatusState {
   jobs: Map<string, ImportJob>;
   addJob: (id: string, urls: string[], estimatedSeconds: number) => void;
   updateJobProcessing: (id: string) => void;
-  completeJob: (id: string, result: ImportBatchResult) => void;
+  attachScrapeJob: (id: string, scrapeJobId: string) => void;
+  completeJob: (id: string) => void;
   failJob: (id: string, error: string) => void;
   dismissJob: (id: string) => void;
   hasActiveJobs: () => boolean;
@@ -42,9 +52,10 @@ export const useImportStatusStore = create<ImportStatusState>((set, get) => ({
       const jobs = new Map(state.jobs);
       jobs.set(id, {
         id,
-        urls: urls.map((url) => ({ url, status: 'queued' })),
+        urls,
         startedAt: Date.now(),
         estimatedSeconds,
+        phase: 'queued',
       });
       return { jobs };
     }),
@@ -54,33 +65,27 @@ export const useImportStatusStore = create<ImportStatusState>((set, get) => ({
       const jobs = new Map(state.jobs);
       const job = jobs.get(id);
       if (job) {
-        jobs.set(id, {
-          ...job,
-          urls: job.urls.map((u) => (u.status === 'queued' ? { ...u, status: 'processing' } : u)),
-        });
+        jobs.set(id, { ...job, phase: 'processing' });
       }
       return { jobs };
     }),
 
-  completeJob: (id, result) =>
+  attachScrapeJob: (id, scrapeJobId) =>
     set((state) => {
       const jobs = new Map(state.jobs);
       const job = jobs.get(id);
       if (job) {
-        const updatedUrls = job.urls.map((u) => {
-          const urlResult = result.urlResults.find((r) => r.url === u.url);
-          return {
-            ...u,
-            status: (urlResult?.status === 'error' ? 'error' : 'success') as UrlStatus,
-            result: urlResult,
-          };
-        });
-        jobs.set(id, {
-          ...job,
-          urls: updatedUrls,
-          completedAt: Date.now(),
-          result,
-        });
+        jobs.set(id, { ...job, scrapeJobId, phase: 'processing' });
+      }
+      return { jobs };
+    }),
+
+  completeJob: (id) =>
+    set((state) => {
+      const jobs = new Map(state.jobs);
+      const job = jobs.get(id);
+      if (job) {
+        jobs.set(id, { ...job, phase: 'completed', completedAt: Date.now() });
       }
       return { jobs };
     }),
@@ -92,11 +97,8 @@ export const useImportStatusStore = create<ImportStatusState>((set, get) => ({
       if (job) {
         jobs.set(id, {
           ...job,
-          urls: job.urls.map((u) => ({
-            ...u,
-            status: 'error' as UrlStatus,
-            result: u.result ?? { url: u.url, status: 'error', error },
-          })),
+          phase: 'failed',
+          errorMessage: error,
           completedAt: Date.now(),
         });
       }

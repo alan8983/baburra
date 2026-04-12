@@ -4,62 +4,32 @@ import { useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { API_ROUTES } from '@/lib/constants';
 import { throwIfNotOk } from '@/lib/api/fetch-error';
-import { kolKeys } from './use-kols';
-import { postKeys } from './use-posts';
+import { scrapeKeys } from './use-scrape';
 import { useImportStatusStore, generateJobId } from '@/stores/import-status.store';
 import { estimateImportTime, type UrlEstimateInput } from '@/lib/utils/estimate-import-time';
-import type { Sentiment } from '@/domain/models/post';
 
 // ── Types (mirroring import-pipeline.service.ts) ──
 
-export interface ImportUrlResult {
-  url: string;
-  status: 'success' | 'duplicate' | 'error';
-  postId?: string;
-  title?: string;
-  sourcePlatform?: string;
-  error?: string;
-  stockTickers?: string[];
-  sentiment?: Sentiment;
-  kolId?: string;
-  kolName?: string;
-  kolCreated?: boolean;
-}
-
-export interface ImportKolSummary {
-  kolId: string;
-  kolName: string;
-  kolCreated: boolean;
-  postCount: number;
-}
-
-export interface ImportBatchResult {
-  kols: ImportKolSummary[];
-  urlResults: ImportUrlResult[];
-  totalImported: number;
-  totalDuplicate: number;
-  totalError: number;
-  firstImportFreeUsed: boolean;
+/**
+ * Response shape from the async batch-import endpoint. The synchronous
+ * `ImportBatchResult` is no longer returned — the UI transitions into the
+ * scrape-progress flow using `jobId` and subscribes to per-URL updates.
+ */
+export interface ImportBatchJobResponse {
+  jobId: string;
+  totalUrls: number;
 }
 
 export interface ImportBatchInput {
   urls: string[];
 }
 
-// ── Query Keys ──
-
-export const importKeys = {
-  all: ['import'] as const,
-};
-
-const YOUTUBE_PATTERN = /youtube\.com|youtu\.be/i;
-
 // ── Mutation Hook ──
 
 export function useImportBatch() {
   const queryClient = useQueryClient();
 
-  return useMutation<ImportBatchResult, Error, ImportBatchInput>({
+  return useMutation<ImportBatchJobResponse, Error, ImportBatchInput>({
     mutationFn: async (input: ImportBatchInput) => {
       const res = await fetch(API_ROUTES.IMPORT_BATCH, {
         method: 'POST',
@@ -71,31 +41,34 @@ export function useImportBatch() {
       return res.json();
     },
     onSuccess: () => {
-      // Invalidate KOL and post lists since we may have created new ones
-      queryClient.invalidateQueries({ queryKey: kolKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: postKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: ['ai-usage'] });
+      // The new job shows up in the scrape-jobs list; UI subscribes to
+      // per-URL items for the live progress view. Kol/post lists will
+      // be refreshed by the scrape-progress flow as items finish.
+      queryClient.invalidateQueries({ queryKey: scrapeKeys.jobs() });
     },
   });
 }
 
+const YOUTUBE_PATTERN = /youtube\.com|youtu\.be/i;
+
 /**
  * Non-blocking import hook.
- * Fires the import mutation in the background and updates the Zustand store.
- * Returns immediately so the caller can close the form.
+ * Fires the import mutation, which returns { jobId } almost immediately.
+ * The Zustand store is updated with the jobId so the scrape-progress UI
+ * can subscribe and render per-URL progress.
  */
 export function useBackgroundImport() {
   const importBatch = useImportBatch();
   const addJob = useImportStatusStore((s) => s.addJob);
   const updateJobProcessing = useImportStatusStore((s) => s.updateJobProcessing);
-  const completeJob = useImportStatusStore((s) => s.completeJob);
   const failJob = useImportStatusStore((s) => s.failJob);
+  const attachScrapeJob = useImportStatusStore((s) => s.attachScrapeJob);
 
   const startImport = useCallback(
     (urls: string[]) => {
-      const jobId = generateJobId();
+      const localJobId = generateJobId();
 
-      // Estimate time
+      // Optimistic ETA estimate for the toast
       const urlInputs: UrlEstimateInput[] = urls.map((url) => ({
         platform: YOUTUBE_PATTERN.test(url) ? 'youtube' : 'twitter',
         hasCaptions: false,
@@ -103,25 +76,26 @@ export function useBackgroundImport() {
       }));
       const { batch } = estimateImportTime(urlInputs);
 
-      // Add to store (shows toast immediately)
-      addJob(jobId, urls, batch);
-
-      // Fire mutation in background
+      addJob(localJobId, urls, batch);
       setTimeout(() => {
-        updateJobProcessing(jobId);
+        updateJobProcessing(localJobId);
       }, 100);
 
       importBatch.mutate(
         { urls },
         {
-          onSuccess: (result) => completeJob(jobId, result),
-          onError: (error) => failJob(jobId, error.message),
+          onSuccess: (response) => {
+            // Hand the scrape job id to the status store so the toast /
+            // status UI can subscribe to it for real-time per-URL updates.
+            attachScrapeJob?.(localJobId, response.jobId);
+          },
+          onError: (error) => failJob(localJobId, error.message),
         }
       );
 
-      return jobId;
+      return localJobId;
     },
-    [importBatch, addJob, updateJobProcessing, completeJob, failJob]
+    [importBatch, addJob, updateJobProcessing, failJob, attachScrapeJob]
   );
 
   return { startImport, isPending: importBatch.isPending };

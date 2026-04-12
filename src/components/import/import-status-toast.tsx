@@ -1,44 +1,35 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, ChevronDown, ChevronUp, CheckCircle2, XCircle, Loader2, Clock } from 'lucide-react';
+import { X, ChevronDown, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/constants';
 import { useImportStatusStore, type ImportJob } from '@/stores/import-status.store';
+import { useScrapeJob } from '@/hooks/use-scrape';
 
 const AUTO_DISMISS_MS = 10_000;
-
-function UrlStatusIcon({ status }: { status: string }) {
-  switch (status) {
-    case 'success':
-      return <CheckCircle2 className="h-4 w-4 text-green-500" />;
-    case 'error':
-      return <XCircle className="h-4 w-4 text-red-500" />;
-    case 'processing':
-      return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
-    default:
-      return <Clock className="h-4 w-4 text-gray-400" />;
-  }
-}
-
-function truncateUrl(url: string, maxLength = 40): string {
-  if (url.length <= maxLength) return url;
-  return url.slice(0, maxLength - 3) + '...';
-}
 
 function JobToast({ job, onDismiss }: { job: ImportJob; onDismiss: () => void }) {
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
-  const completedCount = job.urls.filter(
-    (u) => u.status === 'success' || u.status === 'error'
-  ).length;
-  const progress = job.urls.length > 0 ? (completedCount / job.urls.length) * 100 : 0;
-  const isComplete = !!job.completedAt;
+  // Once we have a real scrape job id, drive progress from the server. Until
+  // then we show an indeterminate "queued" state using the URL count.
+  const { data: scrapeJob } = useScrapeJob(job.scrapeJobId ?? null);
 
-  // Auto-dismiss after completion
+  const totalUrls = scrapeJob?.totalUrls ?? job.urls.length;
+  const processed = scrapeJob?.processedUrls ?? 0;
+  const isComplete =
+    job.phase === 'completed' ||
+    job.phase === 'failed' ||
+    scrapeJob?.status === 'completed' ||
+    scrapeJob?.status === 'failed' ||
+    scrapeJob?.status === 'permanently_failed';
+  const isErrored = job.phase === 'failed' || scrapeJob?.status === 'failed';
+  const progress = totalUrls > 0 ? (processed / totalUrls) * 100 : 0;
+
   useEffect(() => {
     if (!isComplete || isHovered) return;
     const timer = setTimeout(onDismiss, AUTO_DISMISS_MS);
@@ -51,13 +42,15 @@ function JobToast({ job, onDismiss }: { job: ImportJob; onDismiss: () => void })
         onClick={() => setCollapsed(false)}
         className="bg-card text-card-foreground flex items-center gap-2 rounded-lg border px-3 py-2 shadow-lg"
       >
-        {isComplete ? (
+        {isErrored ? (
+          <XCircle className="h-4 w-4 text-red-500" />
+        ) : isComplete ? (
           <CheckCircle2 className="h-4 w-4 text-green-500" />
         ) : (
           <Loader2 className="h-4 w-4 animate-spin text-blue-500" />
         )}
         <span className="text-sm font-medium">
-          {completedCount}/{job.urls.length}
+          {processed}/{totalUrls}
         </span>
       </button>
     );
@@ -69,10 +62,9 @@ function JobToast({ job, onDismiss }: { job: ImportJob; onDismiss: () => void })
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Header */}
       <div className="flex items-center justify-between border-b px-3 py-2">
         <span className="text-sm font-medium">
-          {isComplete ? 'Import Complete' : 'Importing...'}
+          {isErrored ? 'Import Failed' : isComplete ? 'Import Complete' : 'Importing...'}
         </span>
         <div className="flex items-center gap-1">
           <Button
@@ -89,48 +81,50 @@ function JobToast({ job, onDismiss }: { job: ImportJob; onDismiss: () => void })
         </div>
       </div>
 
-      {/* Progress */}
       <div className="px-3 pt-2">
         <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
-          <div
-            className="bg-primary h-full rounded-full transition-all duration-300"
-            style={{ width: `${progress}%` }}
-          />
+          {totalUrls > 0 ? (
+            <div
+              className="bg-primary h-full rounded-full transition-all duration-300"
+              style={{ width: `${progress}%` }}
+            />
+          ) : (
+            <div className="bg-primary h-full w-1/3 animate-pulse rounded-full" />
+          )}
         </div>
         <p className="text-muted-foreground mt-1 text-xs">
-          {completedCount}/{job.urls.length} URLs
+          {processed}/{totalUrls} URLs
           {!isComplete && job.estimatedSeconds > 0 && (
             <> &middot; Est. ~{Math.max(1, Math.ceil(job.estimatedSeconds / 60))} min</>
           )}
         </p>
+        {job.errorMessage && <p className="mt-1 text-xs text-red-500">{job.errorMessage}</p>}
       </div>
 
-      {/* URL list */}
-      <div className="max-h-40 overflow-y-auto px-3 py-2">
-        {job.urls.map((u, i) => (
-          <div key={i} className="flex items-center gap-2 py-1 text-xs">
-            <UrlStatusIcon status={u.status} />
-            <span className="text-muted-foreground truncate">{truncateUrl(u.url)}</span>
-            {u.result?.error && u.result.error !== 'no_tickers_identified' && (
-              <span className="ml-auto text-red-500">{u.result.error}</span>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Footer with View Results */}
-      {isComplete && job.result && (
-        <div className="border-t px-3 py-2">
+      <div className="flex items-center justify-between border-t px-3 py-2">
+        {job.scrapeJobId ? (
+          <Button
+            variant="link"
+            size="sm"
+            className="h-auto p-0 text-xs"
+            onClick={() => router.push(`${ROUTES.INPUT}?jobId=${job.scrapeJobId}`)}
+          >
+            View progress &rarr;
+          </Button>
+        ) : (
+          <span className="text-muted-foreground text-xs">Queued...</span>
+        )}
+        {isComplete && (
           <Button
             variant="link"
             size="sm"
             className="h-auto p-0 text-xs"
             onClick={() => router.push(ROUTES.POSTS)}
           >
-            View Results &rarr;
+            View posts &rarr;
           </Button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

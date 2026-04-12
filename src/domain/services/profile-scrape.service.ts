@@ -30,6 +30,55 @@ const APIFY_PROFILE_DISCOVERY_COST = composeCost(APIFY_PROFILE_DISCOVERY_RECIPE)
 
 const APIFY_DISCOVERY_PLATFORMS = new Set(['facebook', 'twitter', 'threads', 'tiktok']);
 
+// YouTube scrape concurrency — bounded parallelism for the long-video path.
+// See .env.example comment for the tuning rationale.
+const YT_CONC_DEFAULT = 3;
+const YT_CONC_MIN = 1;
+const YT_CONC_MAX = 5;
+
+export function getYoutubeScrapeConcurrency(): number {
+  const raw = process.env.YOUTUBE_SCRAPE_CONCURRENCY;
+  if (!raw) return YT_CONC_DEFAULT;
+  const parsed = parseInt(raw, 10);
+  if (!Number.isFinite(parsed)) return YT_CONC_DEFAULT;
+  return Math.max(YT_CONC_MIN, Math.min(YT_CONC_MAX, parsed));
+}
+
+/**
+ * Minimal p-limit-style semaphore. Starts up to `concurrency` tasks at once
+ * and releases a slot as each task settles, so new tasks begin as soon as
+ * any running one finishes (unlike chunked `Promise.all` which waits for the
+ * slowest task in each batch).
+ */
+function createLimiter(concurrency: number) {
+  const queue: Array<() => void> = [];
+  let active = 0;
+  const tryNext = () => {
+    if (active >= concurrency || queue.length === 0) return;
+    active++;
+    const run = queue.shift()!;
+    run();
+  };
+  return <T>(fn: () => Promise<T>): Promise<T> =>
+    new Promise<T>((resolve, reject) => {
+      queue.push(() => {
+        fn().then(
+          (v) => {
+            active--;
+            resolve(v);
+            tryNext();
+          },
+          (e) => {
+            active--;
+            reject(e);
+            tryNext();
+          }
+        );
+      });
+      tryNext();
+    });
+}
+
 function tiktokRecipe(durationSeconds?: number): Recipe {
   // TikTok caption-only is the apify post path; transcription branch adds
   // download.audio.short + transcribe.audio×min. We don't know caption state
@@ -58,6 +107,8 @@ import {
   updateScrapeJobProgress,
   completeScrapeJob,
   failScrapeJob,
+  getScrapeJobItems,
+  updateScrapeJobItemStage,
 } from '@/infrastructure/repositories';
 import {
   getUserTimezone,
@@ -66,6 +117,7 @@ import {
 } from '@/infrastructure/repositories/profile.repository';
 import { processUrl } from '@/domain/services/import-pipeline.service';
 import type { KolCacheEntry } from '@/domain/services/import-pipeline.service';
+import type { ScrapeJobItemStage, ScrapeStageMeta } from '@/domain/models';
 import type { ScrapeJobType } from '@/domain/models';
 import { updateValidationStatus } from '@/infrastructure/repositories/kol.repository';
 import { handleValidationCompletion } from '@/domain/services/kol-validation.service';
@@ -305,21 +357,27 @@ export async function processJobBatch(
     await startScrapeJob(jobId);
   }
 
-  // Get the KOL ID from the source
-  const source = await getSourceById(job.kolSourceId);
-  if (!source) {
-    await failScrapeJob(jobId, 'KOL source not found');
-    throw new Error(`KOL source not found: ${job.kolSourceId}`);
+  // Resolve KOL source — only present for profile-scrape / validation jobs.
+  // Batch-import jobs carry user-supplied URLs with no backing source, so
+  // they run with `source = null` and let processUrl auto-detect the KOL
+  // per URL (same behavior as /api/import/batch's legacy synchronous path).
+  let source: Awaited<ReturnType<typeof getSourceById>> | null = null;
+  if (job.kolSourceId) {
+    source = await getSourceById(job.kolSourceId);
+    if (!source) {
+      await failScrapeJob(jobId, 'KOL source not found');
+      throw new Error(`KOL source not found: ${job.kolSourceId}`);
+    }
   }
 
-  const kolId = source.kolId;
+  const kolId = source?.kolId;
   const userId = job.triggeredBy ?? 'system';
   const timezone = job.triggeredBy ? await getUserTimezone(job.triggeredBy) : 'UTC';
 
   const isValidationScrape = job.jobType === 'validation_scrape';
 
   // Validation scrapes set the KOL to 'validating' status
-  if (isValidationScrape && job.status === 'queued') {
+  if (isValidationScrape && job.status === 'queued' && kolId) {
     await updateValidationStatus(kolId, 'validating');
   }
 
@@ -335,64 +393,128 @@ export async function processJobBatch(
   let processedUrls = job.processedUrls;
   const kolCache = new Map<string, KolCacheEntry>();
 
-  // YouTube URLs may need Gemini transcription (up to 10 min for long videos),
-  // so process them one at a time. Non-YouTube URLs use the caller-provided
-  // batchSize for parallel throughput.
+  // YouTube URLs now run with bounded concurrency (default 3 in-flight) via a
+  // p-limit-style semaphore, instead of the old effectiveBatchSize=1 serial
+  // branch. Tunable via YOUTUBE_SCRAPE_CONCURRENCY (range 1..5). Non-YouTube
+  // platforms keep the caller-supplied batchSize for parallel throughput.
   const isYouTube = job.discoveredUrls.some((u) => u.includes('youtube.com/watch'));
-  const effectiveBatchSize = isYouTube ? 1 : batchSize;
+  const effectiveConcurrency = isYouTube ? getYoutubeScrapeConcurrency() : batchSize;
   // YouTube transcription can take up to 600s per video + overhead;
   // use a longer timeout safeguard so we don't cut off mid-transcription.
   const effectiveTimeout = isYouTube ? 650_000 : timeoutMs;
 
-  // Process URLs in parallel batches with timeout safeguard
   const remaining = job.discoveredUrls.slice(processedUrls);
+  const limit = createLimiter(effectiveConcurrency);
 
-  for (let i = 0; i < remaining.length; i += effectiveBatchSize) {
-    // Timeout safeguard: stop if elapsed time exceeds limit
-    if (Date.now() - startTime > effectiveTimeout) {
-      break;
-    }
+  // Per-URL item rows power the new progress UI. When this job was created
+  // without seeded items (legacy path, or a migration hasn't landed yet)
+  // we simply skip the per-URL updates and the UI falls back to the
+  // aggregate progress bar.
+  let urlToItemId = new Map<string, string>();
+  try {
+    const items = await getScrapeJobItems(jobId);
+    urlToItemId = new Map(items.map((item) => [item.url, item.id]));
+  } catch (err) {
+    console.warn('[profile-scrape] scrape_job_items lookup failed (non-blocking):', err);
+  }
+  // Serialize stage writes per item so mid-stream byte progress updates
+  // can't race with the stage transitions fired around them.
+  const itemWriteChains = new Map<string, Promise<void>>();
+  const scheduleItemWrite = (itemId: string, work: () => Promise<void>) => {
+    const prev = itemWriteChains.get(itemId) ?? Promise.resolve();
+    const next = prev
+      .catch(() => {})
+      .then(work)
+      .catch((err) => {
+        console.warn(`[profile-scrape] item stage update failed for ${itemId}:`, err);
+      });
+    itemWriteChains.set(itemId, next);
+  };
 
-    const batch = remaining.slice(i, i + effectiveBatchSize);
-
-    const results = await Promise.allSettled(
-      batch.map((url) => processUrl(url, userId, timezone, isFirstImportFree, kolCache, kolId))
-    );
-
-    for (const result of results) {
-      if (result.status === 'fulfilled') {
-        if (result.value.status === 'success') {
-          importedCount++;
-        } else if (result.value.status === 'duplicate') {
-          duplicateCount++;
-        } else if (
-          result.value.status === 'error' &&
-          result.value.error === 'no_tickers_identified'
-        ) {
-          filteredCount++;
-        } else {
-          errorCount++;
-        }
-      } else {
-        errorCount++;
-      }
-      processedUrls++;
-    }
-
-    // Update progress after each parallel batch
-    await updateScrapeJobProgress(jobId, {
+  // Serialize progress writes so near-simultaneous task completions can't
+  // race last-write-wins. Each write carries a complete snapshot of the
+  // counters at the moment `flushProgress` was called, preserving monotonic
+  // ordering at the DB.
+  let progressInFlight: Promise<void> = Promise.resolve();
+  const flushProgress = () => {
+    const snapshot = {
       processedUrls,
       importedCount,
       duplicateCount,
       errorCount,
       filteredCount,
-    });
+    };
+    progressInFlight = progressInFlight
+      .catch(() => {})
+      .then(() => updateScrapeJobProgress(jobId, snapshot))
+      .catch((err) => {
+        console.warn('[profile-scrape] progress update failed:', err);
+      });
+  };
 
-    // Check timeout again after batch completes
-    if (Date.now() - startTime > timeoutMs) {
-      break;
-    }
-  }
+  let aborted = false;
+
+  await Promise.all(
+    remaining.map((url) =>
+      limit(async () => {
+        // Timeout safeguard: stop scheduling new work once budget is exhausted.
+        if (aborted) return;
+        if (Date.now() - startTime > effectiveTimeout) {
+          aborted = true;
+          return;
+        }
+
+        const itemId = urlToItemId.get(url);
+        const itemStageCallback = itemId
+          ? (stage: ScrapeJobItemStage, meta?: ScrapeStageMeta) => {
+              scheduleItemWrite(itemId, () => updateScrapeJobItemStage(itemId, stage, meta));
+            }
+          : undefined;
+
+        try {
+          const value = await processUrl(
+            url,
+            userId,
+            timezone,
+            isFirstImportFree,
+            kolCache,
+            kolId,
+            itemStageCallback
+          );
+          if (value.status === 'success') {
+            importedCount++;
+          } else if (value.status === 'duplicate') {
+            duplicateCount++;
+          } else if (value.status === 'error' && value.error === 'no_tickers_identified') {
+            filteredCount++;
+          } else {
+            errorCount++;
+          }
+        } catch (err) {
+          errorCount++;
+          // processUrl already emits 'failed' on throws, but the catch
+          // here guarantees a terminal stage even if the callback itself
+          // threw earlier in the pipeline.
+          if (itemId) {
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            scheduleItemWrite(itemId, () =>
+              updateScrapeJobItemStage(itemId, 'failed', { errorMessage })
+            );
+          }
+        }
+
+        processedUrls++;
+        flushProgress();
+      })
+    )
+  );
+
+  // Ensure the last progress snapshot lands before we read back for the
+  // final status decision.
+  await progressInFlight;
+  // Drain any pending per-item stage writes so the UI reflects final state
+  // before we flip the job to `completed` / `processing`.
+  await Promise.all(Array.from(itemWriteChains.values()).map((p) => p.catch(() => {})));
 
   // Mark first import as used if this was the free first import
   if (isFirstImportFree && importedCount > 0 && userId !== 'system') {
@@ -410,10 +532,13 @@ export async function processJobBatch(
       errorCount,
       filteredCount,
     });
-    await updateScrapeStatus(source.id, 'completed', importedCount);
+    // Batch-import jobs have no backing source to mark as completed.
+    if (source) {
+      await updateScrapeStatus(source.id, 'completed', importedCount);
+    }
 
     // Trigger validation scoring for validation scrape jobs
-    if (isValidationScrape) {
+    if (isValidationScrape && kolId) {
       try {
         await handleValidationCompletion(kolId);
       } catch (validationErr) {

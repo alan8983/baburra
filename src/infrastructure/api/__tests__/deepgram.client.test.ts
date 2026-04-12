@@ -1,3 +1,4 @@
+import { Readable } from 'stream';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { deepgramTranscribe, formatTranscript, extractActualDuration } from '../deepgram.client';
 
@@ -296,6 +297,87 @@ describe('deepgram.client', () => {
       await expect(deepgramTranscribe(Buffer.from('empty'), 'audio/webm')).rejects.toThrow(
         'Deepgram returned no transcript'
       );
+    });
+
+    describe('streaming body', () => {
+      it('accepts a Readable stream and posts it with duplex: half', async () => {
+        process.env.DEEPGRAM_STREAMING_BODY = 'true';
+
+        const mockResponse = {
+          results: {
+            utterances: [{ speaker: 0, start: 0, end: 10, transcript: 'Streamed hello' }],
+          },
+        };
+        const fetchMock = vi.fn().mockResolvedValue({
+          ok: true,
+          json: () => Promise.resolve(mockResponse),
+        });
+        vi.stubGlobal('fetch', fetchMock);
+
+        const stream = Readable.from([Buffer.from('chunk-1'), Buffer.from('chunk-2')]);
+
+        const result = await deepgramTranscribe(stream, 'audio/webm');
+
+        expect(result).toBe('[Speaker 0, 00:00:00] Streamed hello');
+
+        const init = fetchMock.mock.calls[0][1] as RequestInit & { duplex?: string };
+        expect(init.duplex).toBe('half');
+        // body should be a web ReadableStream, not a Uint8Array
+        expect(init.body).toBeDefined();
+        expect(init.body).not.toBeInstanceOf(Uint8Array);
+      });
+
+      it('drains the stream into a buffer when DEEPGRAM_STREAMING_BODY=false', async () => {
+        process.env.DEEPGRAM_STREAMING_BODY = 'false';
+
+        const mockResponse = {
+          results: {
+            utterances: [{ speaker: 0, start: 0, end: 10, transcript: 'Buffered hello' }],
+          },
+        };
+        const fetchMock = vi.fn().mockResolvedValue({
+          ok: true,
+          json: () => Promise.resolve(mockResponse),
+        });
+        vi.stubGlobal('fetch', fetchMock);
+
+        const stream = Readable.from([Buffer.from('abc'), Buffer.from('def')]);
+        const result = await deepgramTranscribe(stream, 'audio/webm');
+
+        expect(result).toBe('[Speaker 0, 00:00:00] Buffered hello');
+
+        const init = fetchMock.mock.calls[0][1] as RequestInit & { duplex?: string };
+        expect(init.duplex).toBeUndefined();
+        expect(init.body).toBeInstanceOf(Uint8Array);
+        expect((init.body as Uint8Array).byteLength).toBe(6);
+      });
+
+      it('fails on retry when a streaming request hits a transient error', async () => {
+        process.env.DEEPGRAM_STREAMING_BODY = 'true';
+
+        const originalSetTimeout = globalThis.setTimeout;
+        vi.stubGlobal('setTimeout', (fn: (...args: unknown[]) => void, _ms?: number) =>
+          originalSetTimeout(fn, 0)
+        );
+
+        const fetchMock = vi.fn().mockResolvedValue({
+          ok: false,
+          status: 503,
+          statusText: 'Service Unavailable',
+          text: () => Promise.resolve(''),
+        });
+        vi.stubGlobal('fetch', fetchMock);
+
+        const stream = Readable.from([Buffer.from('chunk')]);
+
+        // Stream is single-use: the first 503 exhausts it, the retry can't
+        // replay, and we throw the last recorded error.
+        await expect(deepgramTranscribe(stream, 'audio/webm')).rejects.toThrow(
+          /Deepgram API error 503|stream was already consumed/
+        );
+
+        vi.stubGlobal('setTimeout', originalSetTimeout);
+      });
     });
   });
 });

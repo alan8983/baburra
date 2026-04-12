@@ -40,7 +40,7 @@ import {
 import { getAiModelVersion } from '@/infrastructure/api/gemini.client';
 import { isLikelyInvestmentContent } from '@/domain/services/content-filter';
 import { extractActualDuration } from '@/infrastructure/api/deepgram.client';
-import { transcribeAudio } from '@/domain/services/transcription.service';
+import { transcribeAudio, type StageCallback } from '@/domain/services/transcription.service';
 import { composeCost, type Recipe } from '@/domain/models/credit-blocks';
 
 // Per-minute long-video transcription marginal recipe (download + transcribe).
@@ -209,16 +209,32 @@ export async function processUrl(
   timezone: string,
   quotaExempt: boolean,
   kolCache: Map<string, KolCacheEntry>,
-  knownKolId?: string
+  knownKolId?: string,
+  onStage?: StageCallback
 ): Promise<ImportUrlResult> {
-  // 1. Duplicate check
+  const emit: StageCallback = (stage, meta) => {
+    if (!onStage) return;
+    try {
+      onStage(stage, meta);
+    } catch (err) {
+      console.warn('[processUrl] stage callback threw:', err);
+    }
+  };
+
+  // 1. Duplicate check — emit discovering so a progress UI can leave the
+  // `queued` state immediately even for fast URL paths.
+  emit('discovering');
   const existing = await findPostBySourceUrl(url);
   if (existing) {
+    emit('done');
     return { url, status: 'duplicate', postId: existing.id };
   }
 
   // 2. Extract content from URL first (needed to determine credit cost)
   const fetchResult = await extractorFactory.extractFromUrl(url);
+  if (fetchResult.title) {
+    emit('discovering', { title: fetchResult.title });
+  }
 
   // 3. Determine credit cost and handle YouTube transcription
   let contentForAnalysis: string;
@@ -246,11 +262,9 @@ export async function processUrl(
 
       // Reject videos exceeding max duration
       if (durationSeconds && durationSeconds > MAX_VIDEO_DURATION_SECONDS) {
-        return {
-          url,
-          status: 'error',
-          error: `Video too long (${Math.ceil(durationSeconds / 60)} min). Maximum is ${Math.ceil(MAX_VIDEO_DURATION_SECONDS / 60)} minutes.`,
-        };
+        const errorMessage = `Video too long (${Math.ceil(durationSeconds / 60)} min). Maximum is ${Math.ceil(MAX_VIDEO_DURATION_SECONDS / 60)} minutes.`;
+        emit('failed', { errorMessage });
+        return { url, status: 'error', error: errorMessage };
       }
 
       // Shorts pre-filter: check title/description for investment relevance before transcription
@@ -258,6 +272,7 @@ export async function processUrl(
         const title = fetchResult.title ?? '';
         const description = ''; // description not available on UrlFetchResult
         if (!isLikelyInvestmentContent(title, description)) {
+          emit('failed', { errorMessage: 'filtered_not_investment' });
           return { url, status: 'error', error: 'filtered_not_investment' };
         }
       }
@@ -284,6 +299,7 @@ export async function processUrl(
               'code' in quotaErr &&
               (quotaErr as { code: string }).code === 'INSUFFICIENT_CREDITS'
             ) {
+              emit('failed', { errorMessage: 'Insufficient credits' });
               return { url, status: 'error', error: 'Insufficient credits' };
             }
             throw quotaErr;
@@ -292,11 +308,13 @@ export async function processUrl(
 
         // Single transcription entry point — Deepgram primary, Gemini failover
         // (Shorts only). User is charged the same `transcribe.audio` block
-        // regardless of which vendor ran.
+        // regardless of which vendor ran. Forward the stage callback so the
+        // transcription service can emit downloading / transcribing events.
         const transcription = await transcribeAudio({
           sourceUrl: fetchResult.sourceUrl,
           isShort,
           maxDurationSeconds: MAX_VIDEO_DURATION_SECONDS,
+          onStage: emit,
         });
         const transcriptText = transcription.text;
         contentForAnalysis = transcriptText;
@@ -352,6 +370,7 @@ export async function processUrl(
             'code' in quotaErr &&
             (quotaErr as { code: string }).code === 'INSUFFICIENT_CREDITS'
           ) {
+            emit('failed', { errorMessage: 'Insufficient credits' });
             return { url, status: 'error', error: 'Insufficient credits' };
           }
           throw quotaErr;
@@ -369,10 +388,12 @@ export async function processUrl(
       }
     } else {
       // Non-YouTube content with null content (shouldn't happen, but handle gracefully)
+      emit('failed', { errorMessage: 'No content available' });
       return { url, status: 'error', error: 'No content available' };
     }
 
     // 4. AI analysis (sentiment + ticker identification in one call)
+    emit('analyzing');
     const analysis = await analyzeDraftContent(contentForAnalysis, timezone);
 
     // 5. Zero-ticker rejection — skip post creation if no stocks identified
@@ -383,6 +404,9 @@ export async function processUrl(
           console.error('Credit refund failed (zero tickers):', err)
         );
       }
+      // Treat filtered-out content as done (from the item's perspective) but
+      // carry the filter reason so the UI can distinguish it from a true error.
+      emit('done', { errorMessage: 'no_tickers_identified' });
       return { url, status: 'error', error: 'no_tickers_identified' };
     }
 
@@ -531,6 +555,10 @@ export async function processUrl(
       throw createErr;
     }
 
+    emit('done', {
+      durationSeconds: fetchResult.durationSeconds ?? undefined,
+      title: fetchResult.title ?? undefined,
+    });
     return {
       url,
       status: 'success',
@@ -550,6 +578,9 @@ export async function processUrl(
         console.error('Credit refund failed:', refundErr)
       );
     }
+    emit('failed', {
+      errorMessage: pipelineErr instanceof Error ? pipelineErr.message : String(pipelineErr),
+    });
     throw pipelineErr;
   }
 }

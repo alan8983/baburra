@@ -1,16 +1,27 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { Loader2, XCircle, Clock, Users, CheckCircle2, AlertTriangle } from 'lucide-react';
+import {
+  Loader2,
+  XCircle,
+  Clock,
+  Users,
+  CheckCircle2,
+  AlertTriangle,
+  CircleDashed,
+  FileAudio,
+  Mic,
+  Sparkles,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ROUTES } from '@/lib/constants';
-import { useScrapeJob, useScrapeJobs } from '@/hooks/use-scrape';
-import { useKol } from '@/hooks/use-kols';
+import { useScrapeJob, useScrapeJobs, useScrapeJobItems } from '@/hooks/use-scrape';
+import type { ScrapeJobItem, ScrapeJobItemStage } from '@/domain/models';
 
 interface ScrapeProgressProps {
   jobId: string;
@@ -26,18 +37,121 @@ const statusVariantMap = {
   permanently_failed: 'destructive',
 } as const;
 
+// Stage → static progress fill for non-downloading stages.
+const STAGE_PROGRESS: Record<ScrapeJobItemStage, number> = {
+  queued: 0,
+  discovering: 10,
+  downloading: 35, // overridden by byte-based fill when available
+  transcribing: 70,
+  analyzing: 90,
+  done: 100,
+  failed: 100,
+};
+
+function formatBytes(bytes: number | null): string {
+  if (bytes == null || bytes <= 0) return '0 MB';
+  const mb = bytes / 1_000_000;
+  if (mb < 1) return `${(bytes / 1_000).toFixed(0)} KB`;
+  return `${mb.toFixed(1)} MB`;
+}
+
+function truncateUrl(url: string, maxLength = 52): string {
+  if (url.length <= maxLength) return url;
+  return url.slice(0, maxLength - 3) + '...';
+}
+
+function StageIcon({ stage }: { stage: ScrapeJobItemStage }) {
+  switch (stage) {
+    case 'queued':
+      return <CircleDashed className="h-4 w-4 text-gray-400" />;
+    case 'discovering':
+      return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
+    case 'downloading':
+      return <FileAudio className="h-4 w-4 text-blue-500" />;
+    case 'transcribing':
+      return <Mic className="h-4 w-4 text-indigo-500" />;
+    case 'analyzing':
+      return <Sparkles className="h-4 w-4 text-purple-500" />;
+    case 'done':
+      return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+    case 'failed':
+      return <XCircle className="h-4 w-4 text-red-500" />;
+  }
+}
+
+function computeItemProgress(item: ScrapeJobItem): number {
+  if (item.stage === 'downloading' && item.bytesTotal && item.bytesTotal > 0) {
+    const pct = Math.round(((item.bytesDownloaded ?? 0) / item.bytesTotal) * 100);
+    // Clamp to the downloading slot so the bar never overshoots the
+    // "transcribing" stage on unexpected bytesDownloaded > bytesTotal.
+    return Math.max(5, Math.min(65, pct));
+  }
+  return STAGE_PROGRESS[item.stage];
+}
+
+function ItemRow({ item }: { item: ScrapeJobItem }) {
+  const t = useTranslations('scrape');
+  const progress = computeItemProgress(item);
+  const isIndeterminate = item.stage === 'downloading' && (item.bytesTotal ?? 0) <= 0;
+  const label = (() => {
+    const key = `progress.stage${item.stage.charAt(0).toUpperCase()}${item.stage.slice(1)}`;
+    return t(key);
+  })();
+
+  return (
+    <div className="space-y-1 rounded-md border p-3">
+      <div className="flex items-center gap-2">
+        <StageIcon stage={item.stage} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium">{item.title ?? truncateUrl(item.url)}</p>
+          {item.title && (
+            <p className="text-muted-foreground truncate text-xs">{truncateUrl(item.url)}</p>
+          )}
+        </div>
+        <Badge variant="outline" className="shrink-0 text-xs">
+          {label}
+        </Badge>
+      </div>
+      <div className="bg-secondary h-1.5 w-full overflow-hidden rounded-full">
+        {isIndeterminate ? (
+          <div className="bg-primary h-full w-1/3 animate-pulse rounded-full" />
+        ) : (
+          <div
+            className={`h-full rounded-full transition-all duration-500 ease-out ${
+              item.stage === 'failed' ? 'bg-red-500' : 'bg-primary'
+            }`}
+            style={{ width: `${progress}%` }}
+          />
+        )}
+      </div>
+      {item.stage === 'downloading' && item.bytesTotal && item.bytesTotal > 0 ? (
+        <p className="text-muted-foreground text-xs">
+          {t('progress.downloadBytes', {
+            downloaded: formatBytes(item.bytesDownloaded),
+            total: formatBytes(item.bytesTotal),
+          })}
+        </p>
+      ) : item.stage === 'downloading' ? (
+        <p className="text-muted-foreground text-xs">{t('progress.downloadBytesUnknown')}</p>
+      ) : null}
+      {item.stage === 'failed' && item.errorMessage && (
+        <p className="text-xs text-red-500">{item.errorMessage}</p>
+      )}
+    </div>
+  );
+}
+
 export function ScrapeProgress({ jobId, onReset, onComplete }: ScrapeProgressProps) {
   const t = useTranslations('scrape');
   const router = useRouter();
   const { data: job, isLoading } = useScrapeJob(jobId);
+  const { data: items } = useScrapeJobItems(jobId);
   const { data: allJobs } = useScrapeJobs();
-  const kolId = job?.kolId;
-  const { data: kol } = useKol(kolId ?? '');
   const prevStatusRef = useRef<string | undefined>(undefined);
   const toastShownRef = useRef(false);
   const [etaMinutes, setEtaMinutes] = useState(0);
 
-  // ETA calculation — track start time and update ETA in effects
+  // Start time for ETA calculations
   const startTimestampRef = useRef(0);
   useEffect(() => {
     if (startTimestampRef.current === 0) {
@@ -76,7 +190,6 @@ export function ScrapeProgress({ jobId, onReset, onComplete }: ScrapeProgressPro
       const imported = job.importedCount ?? 0;
       toast.success(t('progress.completeToast', { kolName, count: imported }));
 
-      // Store completion in localStorage for notification bell
       try {
         localStorage.setItem(
           `scrape_completed_${jobId}`,
@@ -86,10 +199,15 @@ export function ScrapeProgress({ jobId, onReset, onComplete }: ScrapeProgressPro
         // localStorage unavailable
       }
 
-      // Notify parent to transition flow chart to step 4
       onComplete?.();
     }
   }, [job, jobId, t, onComplete]);
+
+  // Sort items by ordinal so the checklist matches the original queue order.
+  const sortedItems = useMemo(() => {
+    if (!items) return null;
+    return [...items].sort((a, b) => a.ordinal - b.ordinal);
+  }, [items]);
 
   if (isLoading || !job) {
     return (
@@ -127,7 +245,7 @@ export function ScrapeProgress({ jobId, onReset, onComplete }: ScrapeProgressPro
       ? 'Failed'
       : `${job.status.charAt(0).toUpperCase()}${job.status.slice(1)}`;
 
-  // Completion summary card (tasks 2.1-2.3)
+  // Completion summary card (kept from the legacy component)
   if (isFinished) {
     const allErrored = imported === 0 && errors > 0;
 
@@ -147,7 +265,6 @@ export function ScrapeProgress({ jobId, onReset, onComplete }: ScrapeProgressPro
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Summary counts */}
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-muted rounded-md p-3 text-center">
               <p className="text-2xl font-bold text-green-600">{imported}</p>
@@ -179,7 +296,6 @@ export function ScrapeProgress({ jobId, onReset, onComplete }: ScrapeProgressPro
             )}
           </div>
 
-          {/* No credits consumed message (task 2.3) */}
           {allErrored && (
             <div className="bg-muted flex items-center gap-2 rounded-md p-3">
               <AlertTriangle className="text-muted-foreground h-4 w-4 shrink-0" />
@@ -189,7 +305,6 @@ export function ScrapeProgress({ jobId, onReset, onComplete }: ScrapeProgressPro
             </div>
           )}
 
-          {/* Failed job error message */}
           {(job.status === 'failed' || job.status === 'permanently_failed') && job.errorMessage && (
             <div className="flex items-center gap-2 text-red-600">
               <XCircle className="h-4 w-4 shrink-0" />
@@ -199,7 +314,6 @@ export function ScrapeProgress({ jobId, onReset, onComplete }: ScrapeProgressPro
             </div>
           )}
 
-          {/* Action buttons (task 2.2) */}
           <div className="flex gap-3">
             {job.kolId && (
               <Button onClick={() => router.push(ROUTES.KOL_DETAIL(job.kolId!))}>
@@ -215,6 +329,7 @@ export function ScrapeProgress({ jobId, onReset, onComplete }: ScrapeProgressPro
     );
   }
 
+  // Active job — per-URL checklist.
   return (
     <Card>
       <CardHeader>
@@ -224,7 +339,6 @@ export function ScrapeProgress({ jobId, onReset, onComplete }: ScrapeProgressPro
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Queue position */}
         {queuePosition !== null && queuePosition > 1 && (
           <div className="bg-muted flex items-center gap-2 rounded-md p-3">
             <Users className="text-muted-foreground h-4 w-4" />
@@ -234,7 +348,7 @@ export function ScrapeProgress({ jobId, onReset, onComplete }: ScrapeProgressPro
           </div>
         )}
 
-        {/* Progress bar */}
+        {/* Aggregate job-level progress */}
         {isActive && (
           <div className="space-y-2">
             <div className="bg-secondary h-3 w-full overflow-hidden rounded-full">
@@ -269,87 +383,17 @@ export function ScrapeProgress({ jobId, onReset, onComplete }: ScrapeProgressPro
           </div>
         )}
 
-        {/* Completed state */}
-        {job.status === 'completed' && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-green-600">
-              <CheckCircle2 className="h-5 w-5" />
-              <span className="text-sm">
-                {t('progress.detailedCounts', {
-                  processed,
-                  total,
-                  imported,
-                  duplicates,
-                  errors,
-                })}
-              </span>
-            </div>
-            {/* Validation status indicator */}
-            {kol && kol.validationStatus && kol.validationStatus !== 'active' && (
-              <div
-                className={`rounded-md border p-3 text-sm ${
-                  kol.validationStatus === 'validating'
-                    ? 'border-yellow-200 bg-yellow-50 text-yellow-800'
-                    : kol.validationStatus === 'rejected'
-                      ? 'border-red-200 bg-red-50 text-red-800'
-                      : 'border-blue-200 bg-blue-50 text-blue-800'
-                }`}
-              >
-                {kol.validationStatus === 'validating' && (
-                  <div className="flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>驗證中...</span>
-                  </div>
-                )}
-                {kol.validationStatus === 'rejected' && (
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4" />
-                    <span>未通過驗證：近期內容未發現足夠可追蹤的投資觀點</span>
-                  </div>
-                )}
-                {kol.validationStatus === 'pending' && (
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    <span>等待驗證中</span>
-                  </div>
-                )}
-              </div>
-            )}
-            {kol && kol.validationStatus === 'active' && (
-              <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>已通過，已加入公共資料庫</span>
-                </div>
-              </div>
-            )}
-            {job.kolId && (
-              <Button variant="outline" onClick={() => router.push(ROUTES.KOL_DETAIL(job.kolId!))}>
-                {t('progress.viewKol')}
-              </Button>
-            )}
-            <Button variant="ghost" onClick={onReset}>
-              {t('progress.scrapeAnother')}
-            </Button>
+        {/* Per-URL checklist. Legacy jobs (no items seeded) skip this block
+            and fall back to the aggregate bar above — keeping the component
+            usable for historical scrape jobs. */}
+        {sortedItems && sortedItems.length > 0 && (
+          <div className="max-h-[420px] space-y-2 overflow-y-auto">
+            {sortedItems.map((item) => (
+              <ItemRow key={item.id} item={item} />
+            ))}
           </div>
         )}
 
-        {/* Failed state */}
-        {(job.status === 'failed' || job.status === 'permanently_failed') && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-red-600">
-              <XCircle className="h-5 w-5" />
-              <span className="text-sm">
-                {t('progress.errorMessage', { error: job.errorMessage ?? '' })}
-              </span>
-            </div>
-            <Button variant="outline" onClick={onReset}>
-              {t('progress.scrapeAnother')}
-            </Button>
-          </div>
-        )}
-
-        {/* Cancel during active processing (task 2.5) */}
         {isActive && (
           <Button variant="ghost" size="sm" onClick={onReset}>
             {t('progress.cancel')}

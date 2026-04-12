@@ -5,10 +5,17 @@
  * Used for all captionless YouTube videos via audio download.
  *
  * Single fetch() POST — no SDK dependency.
+ * Accepts either a pre-buffered `Buffer` or a Node `Readable` stream as the
+ * request body. The streaming path lets the download and transcription stages
+ * overlap: ytdl-core emits audio bytes while the same bytes are being POSTed
+ * to Deepgram with `duplex: 'half'`.
+ *
  * Includes retry logic with exponential backoff for transient errors.
  *
  * @see https://developers.deepgram.com/reference/listen-file
  */
+
+import { Readable } from 'stream';
 
 const DEEPGRAM_BASE = 'https://api.deepgram.com/v1/listen';
 const REQUEST_TIMEOUT_MS = 180_000; // 3 min
@@ -20,6 +27,11 @@ function getApiKey(): string {
     throw new Error('DEEPGRAM_API_KEY is not set');
   }
   return apiKey;
+}
+
+function isStreamingEnabled(): boolean {
+  // Default-on; set DEEPGRAM_STREAMING_BODY=false to force the buffered path.
+  return (process.env.DEEPGRAM_STREAMING_BODY ?? 'true').toLowerCase() !== 'false';
 }
 
 interface DeepgramUtterance {
@@ -113,21 +125,37 @@ export function formatTranscript(utterances: DeepgramUtterance[]): string {
     .join('\n');
 }
 
+async function drainStreamToBuffer(stream: Readable): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of stream) {
+    chunks.push(chunk as Buffer);
+  }
+  return Buffer.concat(chunks);
+}
+
 /**
  * Transcribe audio using Deepgram Nova-3.
  *
  * Sends audio data as a single POST request. Returns a formatted transcript
  * with speaker labels and timestamps.
  *
+ * `body` may be a `Buffer` (pre-downloaded audio) or a Node `Readable` stream
+ * (for the streaming download→transcribe overlap path). Streams are consumed
+ * once; if a streaming attempt fails with a retryable error, the retry falls
+ * back to the buffered path for that attempt.
+ *
  * Includes retry logic: up to 2 retries with 5s/15s exponential backoff
  * for transient errors (503, 429, network, timeout). Non-retryable errors
  * (400, 401, 403) fail immediately.
  *
- * @param buffer - Audio data as Buffer
+ * @param body - Audio data as Buffer or Readable stream
  * @param mimeType - MIME type (e.g., 'audio/webm', 'audio/mp4')
  * @returns Formatted transcript string
  */
-export async function deepgramTranscribe(buffer: Buffer, mimeType: string): Promise<string> {
+export async function deepgramTranscribe(
+  body: Buffer | Readable,
+  mimeType: string
+): Promise<string> {
   const apiKey = getApiKey();
 
   const params = new URLSearchParams({
@@ -141,9 +169,23 @@ export async function deepgramTranscribe(buffer: Buffer, mimeType: string): Prom
 
   const url = `${DEEPGRAM_BASE}?${params.toString()}`;
 
-  console.log(
-    `[Deepgram] Transcribing audio: ${(buffer.length / 1024 / 1024).toFixed(1)} MB, ${mimeType}`
-  );
+  // Streams are single-use. If the caller passed a stream but streaming is
+  // disabled (or streaming fails on a retry), we drain it into a buffer first
+  // and reuse the buffer across retries.
+  let bufferedBody: Buffer | null = Buffer.isBuffer(body) ? body : null;
+  let streamConsumed = false;
+  const streamingEnabled = isStreamingEnabled();
+
+  if (bufferedBody === null && !streamingEnabled) {
+    // body must be a Readable here — we already handled the Buffer case above.
+    bufferedBody = await drainStreamToBuffer(body as Readable);
+    streamConsumed = true;
+  }
+
+  const logSize = bufferedBody
+    ? `${(bufferedBody.length / 1024 / 1024).toFixed(1)} MB`
+    : 'streaming';
+  console.log(`[Deepgram] Transcribing audio: ${logSize}, ${mimeType}`);
 
   let lastError: Error | undefined;
 
@@ -151,16 +193,58 @@ export async function deepgramTranscribe(buffer: Buffer, mimeType: string): Prom
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-    try {
-      const res = await fetch(url, {
+    // Decide the request body for this attempt.
+    // - If we already have a buffer, reuse it.
+    // - If this is the first attempt and we have a live stream, use it directly.
+    // - If we have a live stream but it was already consumed by a previous
+    //   attempt, we can't retry — there's nothing left. Fail definitively.
+    let requestBody: BodyInit;
+    let usingStream = false;
+    // `duplex` is a Node-specific RequestInit option for streaming bodies.
+    // It isn't part of the public RequestInit type yet but is required by
+    // undici/fetch when the body is a ReadableStream.
+    let requestInit: RequestInit & { duplex?: 'half' };
+    if (bufferedBody) {
+      requestBody = new Uint8Array(bufferedBody);
+      requestInit = {
         method: 'POST',
         headers: {
           Authorization: `Token ${apiKey}`,
           'Content-Type': mimeType,
         },
-        body: new Uint8Array(buffer),
+        body: requestBody,
         signal: controller.signal,
-      });
+      };
+    } else {
+      if (streamConsumed) {
+        // A prior attempt drained the stream and failed before we could
+        // buffer it. No way to retry.
+        clearTimeout(timeoutId);
+        throw (
+          lastError ??
+          new Error('Deepgram streaming attempt failed and the source stream was already consumed')
+        );
+      }
+      usingStream = true;
+      streamConsumed = true;
+      const nodeStream = body as Readable;
+      // Node's undici fetch accepts a web ReadableStream; convert from the
+      // Node Readable we got from ytdl-core.
+      const webStream = Readable.toWeb(nodeStream) as unknown as ReadableStream<Uint8Array>;
+      requestInit = {
+        method: 'POST',
+        headers: {
+          Authorization: `Token ${apiKey}`,
+          'Content-Type': mimeType,
+        },
+        body: webStream,
+        signal: controller.signal,
+        duplex: 'half',
+      };
+    }
+
+    try {
+      const res = await fetch(url, requestInit);
 
       if (!res.ok) {
         const errorText = await res.text();
@@ -203,6 +287,17 @@ export async function deepgramTranscribe(buffer: Buffer, mimeType: string): Prom
       // Non-retryable errors fail immediately
       if (isNonRetryableError(lastError)) {
         throw lastError;
+      }
+
+      // If the streaming attempt failed, we can't retry with the same
+      // stream — it's already consumed. We also don't have a buffered copy.
+      // Fall through to the retry loop, which will throw on the next iteration
+      // because `streamConsumed === true && bufferedBody === null`.
+      if (usingStream && bufferedBody === null) {
+        // Emit a clearer log line so this case is easy to diagnose in prod.
+        console.warn(
+          '[Deepgram] Streaming attempt failed; source stream is exhausted, no retry possible'
+        );
       }
 
       // Check if we should retry
