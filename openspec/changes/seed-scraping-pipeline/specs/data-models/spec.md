@@ -2,20 +2,24 @@
 
 ### Requirement: Source Marker on Ingested Rows
 
-The `profile_scrapes` and `posts` tables SHALL include a nullable `source TEXT` column with a CHECK constraint restricting values to `'seed'`, `'user'`, or NULL, so platform-seeded data can be distinguished from organic user contributions.
+The `kol_sources` and `posts` tables SHALL include a nullable `source TEXT` column with a CHECK constraint restricting values to `'seed'`, `'user'`, or NULL, so platform-seeded data can be distinguished from organic user contributions.
 
 #### Scenario: Column exists on both tables
 - **WHEN** a developer inspects the schema
-- **THEN** both `profile_scrapes.source` and `posts.source` exist with the CHECK constraint
+- **THEN** both `kol_sources.source` and `posts.source` exist with the CHECK constraint
 - **AND** the column is nullable with no default backfill applied to pre-existing rows
 
 #### Scenario: Analytics can filter by source
 - **WHEN** a query runs `SELECT count(*) FROM posts WHERE source = 'seed'`
 - **THEN** it returns only posts written by the seed script
 
+#### Scenario: KOL source filtering
+- **WHEN** a query runs `SELECT * FROM kol_sources WHERE source = 'seed'`
+- **THEN** it returns only KOL sources created by the seed script
+
 ### Requirement: Platform System User
 
-The system SHALL provision exactly one auth user row with email `platform@baburra.com` whose UUID acts as the owner for all seed-sourced KOLs, profile scrapes, and posts.
+The system SHALL provision exactly one auth user row with email `platform@baburra.com` whose UUID acts as the owner for all seed-sourced KOLs, kol_sources, scrape_jobs, and posts.
 
 #### Scenario: Platform user seeded once
 - **WHEN** the `add_source_and_system_user` migration runs on any environment
