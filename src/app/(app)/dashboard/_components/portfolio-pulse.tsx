@@ -1,25 +1,46 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { TrendingUp, TrendingDown, Minus, Activity } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AnimatedNumber } from '@/components/ui/animated-number';
 import { useColorPalette } from '@/lib/colors/color-palette-context';
-import { calculateReturnRateStats, type PostForReturnRate } from '@/domain/calculators';
+import {
+  calculateReturnRateStats,
+  getSqrQualitativeLabel,
+  type PostForReturnRate,
+  type WinRateStats,
+} from '@/domain/calculators';
+import { PeriodSelector } from '@/components/shared/period-selector';
+import { PerformanceMetricsPopover } from '@/components/shared/performance-metrics-popover';
+import { InsufficientDataBadge } from '@/components/shared/insufficient-data-badge';
+import { useProfile } from '@/hooks/use-profile';
+import {
+  DEFAULT_WIN_RATE_PERIOD,
+  WIN_RATE_PERIOD_TO_BUCKET,
+  type WinRatePeriod,
+} from '@/domain/models/user';
 import type { PostWithPriceChanges } from '@/domain/models';
-import type { WinRateBucket } from '@/domain/calculators';
 import type { Sentiment } from '@/domain/models/post';
 
 interface PortfolioPulseProps {
   posts: PostWithPriceChanges[];
-  /** Server-computed day30 win-rate bucket from the dashboard endpoint. */
-  pulseStats: WinRateBucket;
+  /** Server-computed full per-period win-rate stats from the dashboard endpoint. */
+  pulseStats: WinRateStats;
 }
 
 export function PortfolioPulse({ posts, pulseStats }: PortfolioPulseProps) {
   const t = useTranslations('dashboard');
+  const tMetrics = useTranslations('common.metrics');
   const { colors } = useColorPalette();
+  const { data: profile } = useProfile();
+
+  const [override, setOverride] = useState<WinRatePeriod | null>(null);
+  const selectedPeriod: WinRatePeriod =
+    override ?? profile?.defaultWinRatePeriod ?? DEFAULT_WIN_RATE_PERIOD;
+
+  const selectedBucket = pulseStats[WIN_RATE_PERIOD_TO_BUCKET[selectedPeriod]];
 
   // Average return — still computed locally from existing return-rate calculator.
   const avgReturn = useMemo(() => {
@@ -37,8 +58,14 @@ export function PortfolioPulse({ posts, pulseStats }: PortfolioPulseProps) {
     return calculateReturnRateStats(forReturn).day30.avgReturn;
   }, [posts]);
 
-  const winRate = pulseStats.winRate != null ? pulseStats.winRate * 100 : null;
-  const totalWithResult = pulseStats.winCount + pulseStats.loseCount + pulseStats.noiseCount;
+  const hitRateDisplay =
+    selectedBucket.sufficientData && selectedBucket.hitRate !== null
+      ? selectedBucket.hitRate * 100
+      : null;
+  const totalWithResult =
+    selectedBucket.winCount + selectedBucket.loseCount + selectedBucket.noiseCount;
+  const showInsufficient = !selectedBucket.sufficientData && totalWithResult > 0;
+  const sqrKey = getSqrQualitativeLabel(selectedBucket.sqr);
 
   const trend =
     avgReturn !== null ? (avgReturn > 0.5 ? 'up' : avgReturn < -0.5 ? 'down' : 'flat') : 'flat';
@@ -46,35 +73,48 @@ export function PortfolioPulse({ posts, pulseStats }: PortfolioPulseProps) {
 
   return (
     <Card className="animate-fade-up border-2">
-      <CardHeader className="pb-2">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-medium">
           <Activity className="text-primary h-4 w-4" />
           {t('pulse.title')}
         </CardTitle>
+        <PeriodSelector value={selectedPeriod} onChange={setOverride} />
       </CardHeader>
       <CardContent>
         {totalWithResult === 0 ? (
           <p className="text-muted-foreground py-2 text-sm">{t('pulse.noData')}</p>
         ) : (
           <div className="grid grid-cols-3 gap-4">
-            {/* Win Rate */}
+            {/* Hit Rate */}
             <div className="text-center">
-              <p className="text-muted-foreground mb-1 text-xs">{t('pulse.winRate')}</p>
+              <div className="text-muted-foreground mb-1 flex items-center justify-center gap-1 text-xs">
+                <span>{t('pulse.hitRate')}</span>
+                <PerformanceMetricsPopover bucket={selectedBucket} />
+              </div>
               <p
                 className={`text-2xl font-bold ${
-                  winRate !== null && winRate >= 50 ? colors.bullish.text : colors.bearish.text
+                  hitRateDisplay !== null && hitRateDisplay >= 50
+                    ? colors.bullish.text
+                    : colors.bearish.text
                 }`}
               >
-                {winRate !== null ? (
-                  <AnimatedNumber value={winRate} decimals={1} suffix="%" />
+                {hitRateDisplay !== null ? (
+                  <AnimatedNumber value={hitRateDisplay} decimals={1} suffix="%" />
                 ) : (
                   '—'
                 )}
               </p>
-              {pulseStats.threshold && (
+              {showInsufficient ? (
+                <InsufficientDataBadge className="mt-0.5" />
+              ) : selectedBucket.sqr !== null ? (
+                <p className="text-muted-foreground mt-0.5 text-[10px]">
+                  SQR {selectedBucket.sqr.toFixed(2)} · {tMetrics(`sqrLabel.${sqrKey}`)}
+                </p>
+              ) : null}
+              {selectedBucket.threshold && (
                 <p className="text-muted-foreground text-[10px]">
-                  ±{(pulseStats.threshold.value * 100).toFixed(1)}% σ
-                  {pulseStats.threshold.source === 'index-fallback' && ' (idx)'}
+                  ±{(selectedBucket.threshold.value * 100).toFixed(1)}% σ
+                  {selectedBucket.threshold.source === 'index-fallback' && ' (idx)'}
                 </p>
               )}
             </div>

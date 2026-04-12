@@ -6,7 +6,7 @@ import { createAdminClient } from '@/infrastructure/supabase/admin';
 import { listPosts } from '@/infrastructure/repositories/post.repository';
 import { enrichPostsWithPriceChanges } from '@/lib/api/enrich-price-changes';
 import { unauthorizedError, internalError } from '@/lib/api/error';
-import { emptyBucket } from '@/domain/calculators';
+import { emptyStats, type WinRateStats } from '@/domain/calculators';
 import { computeWinRateStats, type PostForWinRate } from '@/domain/services/win-rate.service';
 import { StockPriceVolatilityProvider } from '@/infrastructure/providers/stock-price-volatility.provider';
 import type { Sentiment } from '@/domain/models';
@@ -164,20 +164,19 @@ export async function GET() {
       };
     };
 
-    let pulseBucket = emptyBucket();
+    let pulseStats: WinRateStats = emptyStats();
     const kolWinRates: Array<{
       id: string;
       name: string;
       avatarUrl: string | null;
-      bucket: ReturnType<typeof emptyBucket>;
+      stats: WinRateStats;
     }> = [];
 
     try {
       const allForWinRate = recentPosts.map(buildPostForWinRate);
-      const pulseStats = await computeWinRateStats({ posts: allForWinRate, provider });
-      pulseBucket = pulseStats.day30;
+      pulseStats = await computeWinRateStats({ posts: allForWinRate, provider });
 
-      // Group by KOL and compute per-KOL day30 buckets
+      // Group by KOL and compute per-KOL full period stats (all four periods).
       const postsByKolId = new Map<
         string,
         { name: string; avatarUrl: string | null; posts: PostForWinRate[] }
@@ -197,7 +196,7 @@ export async function GET() {
           id: kolId,
           name: entry.name,
           avatarUrl: entry.avatarUrl,
-          bucket: stats.day30,
+          stats,
         });
       }
     } catch (err) {
@@ -217,7 +216,7 @@ export async function GET() {
       },
       recentPosts,
       topKols,
-      pulseStats: pulseBucket,
+      pulseStats,
       kolWinRates,
     });
   } catch (err) {

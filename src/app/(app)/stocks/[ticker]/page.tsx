@@ -31,6 +31,7 @@ import { useUnlockChecks } from '@/hooks/use-unlocks';
 import { UnlockCta } from '@/components/paywall/unlock-cta';
 import { UNLOCK_COSTS } from '@/domain/models/user';
 import { formatReturnRate, getReturnRateColorClass } from '@/domain/calculators';
+import { CommunityAccuracyCard } from './_components/community-accuracy-card';
 
 const CandlestickChart = dynamic(
   () =>
@@ -229,6 +230,9 @@ export default function StockDetailPage({ params }: { params: Promise<{ ticker: 
                   )}
                 </CardContent>
               </Card>
+
+              {/* Community Accuracy (KOL sentiment hit rate on this ticker) */}
+              <CommunityAccuracyCard ticker={decodedTicker} />
 
               {/* Return Rate Stats */}
               <Card>

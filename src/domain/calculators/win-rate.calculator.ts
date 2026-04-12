@@ -68,8 +68,9 @@ export interface ClassifiedSample {
 }
 
 /**
- * Per-period performance metrics. Extends the legacy win-rate bucket with
- * Hit Rate, Precision, Avg Excess Win/Lose, SQR and a `sufficientData` flag.
+ * Per-period performance metrics. Hit Rate is the primary UI metric;
+ * Precision, Avg Excess Win/Lose, and SQR are secondary details exposed
+ * through the performance metrics popover.
  */
 export interface WinRateBucket {
   total: number; // win + lose + noise
@@ -77,13 +78,6 @@ export interface WinRateBucket {
   loseCount: number;
   noiseCount: number;
   excludedCount: number;
-  /**
-   * Legacy alias equal to `precision`. Preserved for backwards compatibility
-   * during the rollout of `hitRate`.
-   * @deprecated Use `precision` (or `hitRate` as the primary UI metric).
-   */
-  winRate: number | null;
-  // --- new PeriodMetrics fields ---
   wins: number;
   noise: number;
   loses: number;
@@ -222,7 +216,6 @@ export function aggregateBucket(samples: ClassifiedSample[]): WinRateBucket {
     loseCount,
     noiseCount,
     excludedCount,
-    winRate: precision, // legacy alias
     wins: winCount,
     noise: noiseCount,
     loses: loseCount,
@@ -243,7 +236,6 @@ export function emptyBucket(): WinRateBucket {
     loseCount: 0,
     noiseCount: 0,
     excludedCount: 0,
-    winRate: null,
     wins: 0,
     noise: 0,
     loses: 0,
@@ -264,4 +256,21 @@ export function emptyStats(): WinRateStats {
     day90: emptyBucket(),
     day365: emptyBucket(),
   };
+}
+
+/**
+ * Qualitative label for a Signal Quality Ratio value. Thresholds mirror the
+ * Information-Ratio framing in `openspec/changes/kol-overall-performance-metrics`:
+ *   > 1.0      → excellent
+ *   0.5 – 1.0  → decent
+ *   < 0.5      → unstable
+ *   null       → none (insufficient data / undefined)
+ */
+export type SqrQualitativeKey = 'excellent' | 'decent' | 'unstable' | 'none';
+
+export function getSqrQualitativeLabel(sqr: number | null): SqrQualitativeKey {
+  if (sqr === null) return 'none';
+  if (sqr > 1) return 'excellent';
+  if (sqr >= 0.5) return 'decent';
+  return 'unstable';
 }

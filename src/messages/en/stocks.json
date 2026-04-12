@@ -47,6 +47,13 @@
       "5d": "5d:",
       "30d": "30d:"
     },
+    "communityAccuracy": {
+      "title": "KOL Community Accuracy on {ticker}",
+      "description": "How well the KOL community's bullish/bearish calls on this ticker translate into moves beyond normal volatility.",
+      "hitRateLabel": "Hit Rate",
+      "correct": "correct",
+      "noData": "No resolved KOL predictions for this ticker yet."
+    },
     "returnRate": {
       "title": "Return Rate Statistics",
       "description": "KOL return rate for this stock (short-term reflects momentum, long-term reflects value investing)",

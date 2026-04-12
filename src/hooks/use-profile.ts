@@ -5,7 +5,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { API_ROUTES } from '@/lib/constants/routes';
 import { throwIfNotOk } from '@/lib/api/fetch-error';
-import type { ColorPalette } from '@/domain/models/user';
+import type { ColorPalette, WinRatePeriod } from '@/domain/models/user';
 
 // =====================
 // Types
@@ -15,6 +15,7 @@ export interface ProfileData {
   displayName: string | null;
   timezone: string;
   colorPalette: ColorPalette;
+  defaultWinRatePeriod: WinRatePeriod;
   firstImportFree: boolean;
 }
 
@@ -22,6 +23,7 @@ interface UpdateProfileInput {
   displayName?: string;
   timezone?: string;
   colorPalette?: ColorPalette;
+  defaultWinRatePeriod?: WinRatePeriod;
 }
 
 // =====================

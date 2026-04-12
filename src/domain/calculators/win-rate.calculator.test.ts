@@ -7,6 +7,7 @@ import {
   computePrecision,
   computeAvgExcess,
   computeSqr,
+  getSqrQualitativeLabel,
   MIN_RESOLVED_POSTS_PER_PERIOD,
   type ClassifiedSample,
 } from './win-rate.calculator';
@@ -147,7 +148,6 @@ describe('aggregateBucket', () => {
     expect(b.sufficientData).toBe(true);
     expect(b.precision).toBeCloseTo(8 / 12);
     expect(b.hitRate).toBeCloseTo(8 / 22);
-    expect(b.winRate).toBeCloseTo(b.precision!); // alias
     expect(b.avgExcessWin).toBeCloseTo(2);
     expect(b.avgExcessLose).toBeCloseTo(-1.5);
     expect(b.sqr).not.toBeNull();
@@ -165,7 +165,6 @@ describe('aggregateBucket', () => {
     expect(b.sufficientData).toBe(false);
     expect(b.hitRate).toBeNull();
     expect(b.precision).toBeNull();
-    expect(b.winRate).toBeNull();
     expect(b.avgExcessWin).toBeNull();
     expect(b.avgExcessLose).toBeNull();
     expect(b.sqr).toBeNull();
@@ -200,5 +199,25 @@ describe('aggregateBucket', () => {
     const b = aggregateBucket(samples);
     expect(b.threshold?.value).toBeCloseTo(0.04, 10);
     expect(b.threshold?.source).toBe('index-fallback');
+  });
+});
+
+describe('getSqrQualitativeLabel', () => {
+  it('returns "none" for null', () => {
+    expect(getSqrQualitativeLabel(null)).toBe('none');
+  });
+  it('returns "excellent" for SQR > 1', () => {
+    expect(getSqrQualitativeLabel(1.01)).toBe('excellent');
+    expect(getSqrQualitativeLabel(2.5)).toBe('excellent');
+  });
+  it('returns "decent" for SQR in [0.5, 1.0]', () => {
+    expect(getSqrQualitativeLabel(1)).toBe('decent');
+    expect(getSqrQualitativeLabel(0.8)).toBe('decent');
+    expect(getSqrQualitativeLabel(0.5)).toBe('decent');
+  });
+  it('returns "unstable" for SQR < 0.5', () => {
+    expect(getSqrQualitativeLabel(0.49)).toBe('unstable');
+    expect(getSqrQualitativeLabel(0)).toBe('unstable');
+    expect(getSqrQualitativeLabel(-0.5)).toBe('unstable');
   });
 });

@@ -1,7 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
-import Link from 'next/link';
+import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ExternalLink, User, Users, Clock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,9 +9,18 @@ import { Badge } from '@/components/ui/badge';
 import { useColorPalette } from '@/lib/colors/color-palette-context';
 import { formatReturnRate, getReturnRateColorClass } from '@/domain/calculators';
 import { useKolWinRate } from '@/hooks/use-kols';
+import { useProfile } from '@/hooks/use-profile';
 import { WinRateRing } from './win-rate-ring';
+import { PeriodSelector } from '@/components/shared/period-selector';
+import { PerformanceMetricsPopover } from '@/components/shared/performance-metrics-popover';
+import { InsufficientDataBadge } from '@/components/shared/insufficient-data-badge';
 import { SubscriptionToggle } from '@/components/kol/subscription-toggle';
 import { BlurGate } from '@/components/paywall/blur-gate';
+import {
+  DEFAULT_WIN_RATE_PERIOD,
+  WIN_RATE_PERIOD_TO_BUCKET,
+  type WinRatePeriod,
+} from '@/domain/models/user';
 import type { KOLWithStats } from '@/domain/models/kol';
 import type { Sentiment } from '@/domain/models/post';
 
@@ -84,14 +92,25 @@ export function KolScorecard({
   const t = useTranslations('kols');
   const { palette } = useColorPalette();
 
-  // Server-computed win rate (dynamic 1σ classifier).
+  // Server-computed per-period stats (dynamic 1σ classifier).
   const { data: winRateStats } = useKolWinRate(kolId);
-  const day30Bucket = winRateStats?.day30;
-  const winRate = day30Bucket && day30Bucket.winRate != null ? day30Bucket.winRate * 100 : null;
-  const winCount = day30Bucket?.winCount ?? 0;
-  const totalCalls = day30Bucket ? day30Bucket.winCount + day30Bucket.loseCount : 0;
-  const noiseCount = day30Bucket?.noiseCount ?? 0;
-  const thresholdRef = day30Bucket?.threshold ?? null;
+  const { data: profile } = useProfile();
+
+  // User's per-card override, or null to fall through to the profile default.
+  const [override, setOverride] = useState<WinRatePeriod | null>(null);
+  const selectedPeriod: WinRatePeriod =
+    override ?? profile?.defaultWinRatePeriod ?? DEFAULT_WIN_RATE_PERIOD;
+
+  const selectedBucket = winRateStats?.[WIN_RATE_PERIOD_TO_BUCKET[selectedPeriod]] ?? null;
+  const hitRateDisplay =
+    selectedBucket && selectedBucket.sufficientData && selectedBucket.hitRate !== null
+      ? selectedBucket.hitRate * 100
+      : null;
+  const winCount = selectedBucket?.winCount ?? 0;
+  const totalCalls = selectedBucket ? selectedBucket.winCount + selectedBucket.loseCount : 0;
+  const noiseCount = selectedBucket?.noiseCount ?? 0;
+  const thresholdRef = selectedBucket?.threshold ?? null;
+  const showInsufficient = selectedBucket !== null && !selectedBucket.sufficientData;
 
   // Period stats
   const periodStats = useMemo(
@@ -180,23 +199,32 @@ export function KolScorecard({
 
           {/* Right: Scorecard metrics */}
           <div className="flex flex-1 flex-col items-center gap-4 lg:flex-row lg:items-start lg:justify-end">
-            {/* Win Rate Ring */}
-            <div className="flex flex-col items-center">
-              <WinRateRing value={winRate} label={t('detail.scorecard.winRate')} size={120} />
+            {/* Hit Rate Ring + period selector + metrics popover */}
+            <div className="flex flex-col items-center gap-2">
+              <PeriodSelector value={selectedPeriod} onChange={setOverride} />
+              <div className="flex items-center gap-1">
+                <WinRateRing
+                  value={hitRateDisplay}
+                  label={t('detail.scorecard.hitRate')}
+                  size={120}
+                />
+                <PerformanceMetricsPopover bucket={selectedBucket} />
+              </div>
               {totalCalls > 0 && (
-                <p className="text-muted-foreground mt-1 text-xs">
+                <p className="text-muted-foreground text-xs">
                   {winCount}/{totalCalls} {t('detail.scorecard.correct')}
                   {noiseCount > 0 && ` · ${noiseCount} noise`}
                 </p>
               )}
+              {showInsufficient && <InsufficientDataBadge />}
               {thresholdRef && (
-                <p className="text-muted-foreground mt-0.5 text-[10px]">
+                <p className="text-muted-foreground text-[10px]">
                   ±{(thresholdRef.value * 100).toFixed(1)}% σ
                   {thresholdRef.source === 'index-fallback' && ' (index)'}
                 </p>
               )}
               {hasInferredTickers && totalCalls > 0 && (
-                <p className="text-muted-foreground mt-1 max-w-[140px] text-center text-[10px] leading-tight">
+                <p className="text-muted-foreground max-w-[140px] text-center text-[10px] leading-tight">
                   此勝率包含系統推論的關聯標的
                 </p>
               )}

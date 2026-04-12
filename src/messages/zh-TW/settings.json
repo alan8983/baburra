@@ -55,6 +55,16 @@
     "asian": "亞洲風格（紅色 = 上漲）",
     "american": "美式風格（綠色 = 上漲）"
   },
+  "defaultPeriod": {
+    "label": "預設勝率期間",
+    "description": "全站精準度環與排行榜的預設期間。每張卡片仍可個別切換。",
+    "options": {
+      "5d": "5 日",
+      "30d": "30 日",
+      "90d": "90 日",
+      "365d": "1 年"
+    }
+  },
   "aiModel": {
     "title": "AI 模型管理",
     "currentVersion": "目前模型版本",
