@@ -141,10 +141,22 @@ export function getAiModelVersion(): string {
   return getEffectiveChain()[0];
 }
 
-function isQuotaError(err: unknown): boolean {
+function isRetryableError(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
   const msg = err.message;
-  return msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('quota');
+  // Quota / rate-limit errors
+  if (msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('quota')) {
+    return true;
+  }
+  // JSON parse failures from truncated structured output (MAX_TOKENS)
+  if (err instanceof SyntaxError || msg.includes('MAX_TOKENS') || msg.includes('truncated')) {
+    return true;
+  }
+  // Transient server errors
+  if (msg.includes('503') || msg.includes('500')) {
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -185,7 +197,7 @@ async function withModelFallback<T>(
           return await fn(model, apiKey);
         } catch (err) {
           lastErr = err;
-          if (!isQuotaError(err)) throw err;
+          if (!isRetryableError(err)) throw err;
           const errMsg = err instanceof Error ? err.message.slice(0, 150) : String(err);
           console.warn(
             `[gemini.client] Model "${model}" key#${((keyIndex - 1 + getKeyPool().length) % getKeyPool().length) + 1}/${getKeyPool().length} quota error: ${errMsg}`
@@ -351,6 +363,13 @@ async function generateStructuredJsonWithModel<T>(
     const candidate = data.candidates[0];
     if (!candidate.content?.parts || candidate.content.parts.length === 0) {
       throw new Error('Gemini API returned empty content');
+    }
+
+    // Detect truncated output before attempting parse
+    if (candidate.finishReason === 'MAX_TOKENS') {
+      throw new Error(
+        `Gemini structured JSON truncated (MAX_TOKENS): maxOutputTokens=${options?.maxOutputTokens ?? 2048} was insufficient`
+      );
     }
 
     const text = candidate.content.parts.map((p) => p.text).join('');

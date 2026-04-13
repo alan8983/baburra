@@ -92,6 +92,38 @@ sentiment 數值對應:
 `;
 
 // =====================
+// Structured Output Schema for Draft Analysis
+// =====================
+
+const DRAFT_ANALYSIS_RESPONSE_SCHEMA: Record<string, unknown> = {
+  type: 'OBJECT',
+  properties: {
+    kolName: { type: 'STRING', nullable: true },
+    tickers: {
+      type: 'ARRAY',
+      items: {
+        type: 'OBJECT',
+        properties: {
+          ticker: { type: 'STRING' },
+          name: { type: 'STRING' },
+          market: { type: 'STRING', enum: ['US', 'TW', 'HK', 'CRYPTO'] },
+          confidence: { type: 'NUMBER' },
+          mentionedAs: { type: 'STRING' },
+          source: { type: 'STRING', enum: ['explicit', 'inferred'] },
+          inferenceReason: { type: 'STRING' },
+        },
+        required: ['ticker', 'name', 'market', 'confidence', 'mentionedAs'],
+      },
+    },
+    sentiment: { type: 'INTEGER' },
+    stockSentiments: { type: 'OBJECT' },
+    confidence: { type: 'NUMBER' },
+    reasoning: { type: 'STRING' },
+    postedAt: { type: 'STRING', nullable: true },
+  },
+  required: ['tickers', 'sentiment', 'confidence', 'reasoning'],
+};
+
 // Structured Output Schema for Argument Extraction
 // =====================
 
@@ -697,7 +729,7 @@ Return the refined arguments. Keep all fields unchanged unless a correction is n
   const result = await generateStructuredJson<ArgumentExtractionResult>(
     prompt,
     ARGUMENT_RESPONSE_SCHEMA,
-    { temperature: 0.3, maxOutputTokens: 1024 }
+    { temperature: 0.3, maxOutputTokens: 2048 }
   );
 
   return validateAndClamp(result.arguments);
@@ -721,7 +753,7 @@ export async function extractArguments(
     .replace('{stockName}', stockName)
     .replace('{frameworkCategories}', frameworkText);
 
-  const genOptions = { temperature: 0.3, maxOutputTokens: 2048 };
+  const genOptions = { temperature: 0.3, maxOutputTokens: 8192 };
 
   // Round 1: initial extraction with structured output
   const result = await generateStructuredJson<ArgumentExtractionResult>(
@@ -831,10 +863,11 @@ export async function analyzeDraftContent(
     postedAt: string | null;
   }
 
-  const result = await generateJson<RawDraftAnalysis>(prompt, {
-    temperature: 0.3,
-    maxOutputTokens: 1536,
-  });
+  const result = await generateStructuredJson<RawDraftAnalysis>(
+    prompt,
+    DRAFT_ANALYSIS_RESPONSE_SCHEMA,
+    { temperature: 0.3, maxOutputTokens: 4096 }
+  );
 
   // 驗證並清理 tickers
   const validMarkets = ['US', 'TW', 'HK', 'CRYPTO'];
