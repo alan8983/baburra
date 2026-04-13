@@ -209,6 +209,48 @@ export async function executeBatchImport(
   };
 }
 
+// ── Pipeline Timing (Golden Flow) ──
+
+export interface PipelineTimings {
+  extractMs: number;
+  /** Total transcription wall time (download + transcribe overlap). 0 if cached. */
+  transcriptionMs: number;
+  /** Audio download sub-step (within transcription). */
+  downloadMs: number;
+  /** Deepgram/Gemini transcribe sub-step (within transcription). */
+  transcribeMs: number;
+  cleanupMs: number;
+  analysisMs: number;
+  argumentsMs: number;
+  postCreationMs: number;
+  totalMs: number;
+  /** Number of stocks identified — drives argument extraction fan-out. */
+  stockCount: number;
+  /** Number of arguments extracted. */
+  argumentCount: number;
+  /** Whether transcript was served from cache. */
+  cached: boolean;
+}
+
+function logTimings(url: string, t: PipelineTimings) {
+  const s = (ms: number) => (ms / 1000).toFixed(1);
+  const videoId = url.match(/[?&]v=([^&]+)/)?.[1] ?? url.slice(-20);
+
+  // Compact single-line format for grep-ability and dashboards
+  const transcriptPart = t.cached
+    ? 'transcript=cached'
+    : `download=${s(t.downloadMs)}s transcribe=${s(t.transcribeMs)}s`;
+
+  console.log(
+    `[pipeline] ${videoId} | ` +
+      `extract=${s(t.extractMs)}s ${transcriptPart} ` +
+      `cleanup=${s(t.cleanupMs)}s analysis=${s(t.analysisMs)}s ` +
+      `args=${s(t.argumentsMs)}s(${t.stockCount}→${t.argumentCount}) ` +
+      `post=${s(t.postCreationMs)}s | ` +
+      `total=${s(t.totalMs)}s`
+  );
+}
+
 // ── Per-URL Processing ──
 
 export async function processUrl(
@@ -229,6 +271,22 @@ export async function processUrl(
     }
   };
 
+  const _t0 = Date.now();
+  const timings: PipelineTimings = {
+    extractMs: 0,
+    transcriptionMs: 0,
+    downloadMs: 0,
+    transcribeMs: 0,
+    cleanupMs: 0,
+    analysisMs: 0,
+    argumentsMs: 0,
+    postCreationMs: 0,
+    totalMs: 0,
+    stockCount: 0,
+    argumentCount: 0,
+    cached: false,
+  };
+
   // 1. Duplicate check — emit discovering so a progress UI can leave the
   // `queued` state immediately even for fast URL paths.
   emit('discovering');
@@ -239,7 +297,9 @@ export async function processUrl(
   }
 
   // 2. Extract content from URL first (needed to determine credit cost)
+  const _tExtract = Date.now();
   const fetchResult = await extractorFactory.extractFromUrl(url);
+  timings.extractMs = Date.now() - _tExtract;
   if (fetchResult.title) {
     emit('discovering', { title: fetchResult.title });
   }
@@ -289,6 +349,7 @@ export async function processUrl(
       const cachedTranscript = await findTranscriptByUrl(fetchResult.sourceUrl);
       if (cachedTranscript) {
         contentForAnalysis = cachedTranscript.content;
+        timings.cached = true;
       } else {
         // Determine credit cost: flat-rate Short recipe, or per-minute long-video recipe.
         const transcriptionCost = isShort
@@ -318,12 +379,18 @@ export async function processUrl(
         // (Shorts only). User is charged the same `transcribe.audio` block
         // regardless of which vendor ran. Forward the stage callback so the
         // transcription service can emit downloading / transcribing events.
+        const _tTranscribe = Date.now();
         const transcription = await transcribeAudio({
           sourceUrl: fetchResult.sourceUrl,
           isShort,
           maxDurationSeconds: MAX_VIDEO_DURATION_SECONDS,
           onStage: emit,
         });
+        timings.transcriptionMs = Date.now() - _tTranscribe;
+        if (transcription.timings) {
+          timings.downloadMs = transcription.timings.downloadMs;
+          timings.transcribeMs = transcription.timings.transcribeMs;
+        }
         const transcriptText = transcription.text;
         contentForAnalysis = transcriptText;
 
@@ -444,11 +511,15 @@ export async function processUrl(
     }
 
     // 3.5. Clean transcript for AI analysis (merge letter fragments, fix zh-CN→zh-TW, dictionary)
+    const _tCleanup = Date.now();
     contentForAnalysis = cleanTranscript(contentForAnalysis);
+    timings.cleanupMs = Date.now() - _tCleanup;
 
     // 4. AI analysis (sentiment + ticker identification in one call)
     emit('analyzing');
+    const _tAnalysis = Date.now();
     const analysis = await analyzeDraftContent(contentForAnalysis, timezone);
+    timings.analysisMs = Date.now() - _tAnalysis;
 
     // 5. Zero-ticker rejection — skip post creation if no stocks identified
     if (analysis.stockTickers.length === 0) {
@@ -544,6 +615,7 @@ export async function processUrl(
     }
 
     // 8. Extract arguments per stock (parallel)
+    const _tArgs = Date.now();
     let draftAiArguments: DraftAiArguments[] | undefined;
     if (analysis.stockTickers.length > 0) {
       try {
@@ -561,6 +633,12 @@ export async function processUrl(
               name: analysis.stockTickers[i].name,
               arguments: result.value.arguments,
             });
+          } else if (result.status === 'rejected') {
+            const errMsg =
+              result.reason instanceof Error ? result.reason.message : String(result.reason);
+            console.warn(
+              `[pipeline] extractArguments failed for ${analysis.stockTickers[i].ticker}: ${errMsg.slice(0, 200)}`
+            );
           }
         }
         if (argumentResults.length > 0) {
@@ -571,7 +649,10 @@ export async function processUrl(
       }
     }
 
+    timings.argumentsMs = Date.now() - _tArgs;
+
     // 9. Create post (atomic via RPC) — catch duplicate key from concurrent inserts
+    const _tPost = Date.now();
     let post;
     try {
       post = await createPost(
@@ -609,6 +690,14 @@ export async function processUrl(
       }
       throw createErr;
     }
+
+    timings.postCreationMs = Date.now() - _tPost;
+    timings.totalMs = Date.now() - _t0;
+    timings.stockCount = analysis.stockTickers.length;
+    timings.argumentCount = draftAiArguments
+      ? draftAiArguments.reduce((sum, g) => sum + g.arguments.length, 0)
+      : 0;
+    logTimings(url, timings);
 
     emit('done', {
       durationSeconds: fetchResult.durationSeconds ?? undefined,

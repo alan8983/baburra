@@ -48,12 +48,21 @@ export interface TranscribeAudioInput {
   onStage?: StageCallback;
 }
 
+/** Sub-step timing returned alongside the transcript. */
+export interface TranscriptionTimings {
+  downloadMs: number;
+  transcribeMs: number;
+  totalMs: number;
+}
+
 export interface TranscribeAudioResult {
   text: string;
   /** Which vendor produced the transcript. For audit/cache provenance only. */
   source: 'deepgram' | 'gemini';
   /** Duration from the downloader, if known (used for credit reconciliation). */
   durationSeconds?: number;
+  /** Sub-step timing breakdown (download vs transcribe). */
+  timings?: TranscriptionTimings;
 }
 
 // Safely invoke a stage callback — never let a throwing callback break the
@@ -113,11 +122,13 @@ export async function transcribeAudio(input: TranscribeAudioInput): Promise<Tran
 
   // Primary: Deepgram via streaming audio download. Download and transcription
   // stages overlap — the Readable is consumed by fetch() with duplex: 'half'.
+  const _tTotal = Date.now();
   try {
     console.log(
       `[transcribeAudio] Primary path: Deepgram (${isShort ? 'Short' : 'long video'}) ${sourceUrl}`
     );
 
+    const _tDl = Date.now();
     const audio = await downloadYoutubeAudioStream(sourceUrl, { maxDurationSeconds });
     safeEmit(onStage, 'downloading', {
       bytesTotal: audio.bytesTotal,
@@ -134,7 +145,9 @@ export async function transcribeAudio(input: TranscribeAudioInput): Promise<Tran
     // When the source stream ends we've shipped every byte to Deepgram —
     // the pipeline is no longer "downloading", it's "transcribing" while we
     // wait for Deepgram to finish processing and respond.
+    let _tDlEnd = 0;
     audio.stream.once('end', () => {
+      _tDlEnd = Date.now();
       if (!transcribingEmitted) {
         transcribingEmitted = true;
         safeEmit(onStage, 'transcribing', { durationSeconds: audio.durationSeconds });
@@ -142,12 +155,20 @@ export async function transcribeAudio(input: TranscribeAudioInput): Promise<Tran
     });
 
     const text = await deepgramTranscribe(counting, audio.mimeType);
+    const _tDone = Date.now();
     // Defensive: ensure we don't leave the UI stuck in `downloading` if the
     // stream finished without an `end` event reaching us (very rare).
     if (!transcribingEmitted) {
       safeEmit(onStage, 'transcribing', { durationSeconds: audio.durationSeconds });
     }
-    return { text, source: 'deepgram', durationSeconds: audio.durationSeconds };
+    const downloadMs = (_tDlEnd || _tDone) - _tDl;
+    const transcribeMs = _tDlEnd ? _tDone - _tDlEnd : 0;
+    return {
+      text,
+      source: 'deepgram',
+      durationSeconds: audio.durationSeconds,
+      timings: { downloadMs, transcribeMs, totalMs: _tDone - _tTotal },
+    };
   } catch (deepgramErr) {
     const errMsg = deepgramErr instanceof Error ? deepgramErr.message : String(deepgramErr);
 

@@ -37,7 +37,7 @@ beforeEach(() => {
 
 describe('analyzeDraftContent', () => {
   it('有效的 AI 回應應完整通過', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: '老王',
       tickers: [
         {
@@ -67,7 +67,7 @@ describe('analyzeDraftContent', () => {
   });
 
   it('sentiment 超出範圍應被 clamp', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [],
       sentiment: 5,
@@ -81,7 +81,7 @@ describe('analyzeDraftContent', () => {
   });
 
   it('sentiment 負向超出範圍應被 clamp 到 -3', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [],
       sentiment: -5,
@@ -95,7 +95,7 @@ describe('analyzeDraftContent', () => {
   });
 
   it('sentiment 浮點數應被四捨五入', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [],
       sentiment: 1.7,
@@ -109,7 +109,7 @@ describe('analyzeDraftContent', () => {
   });
 
   it('confidence 超出範圍應被 clamp', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [],
       sentiment: 0,
@@ -123,7 +123,7 @@ describe('analyzeDraftContent', () => {
   });
 
   it('confidence 為負數應被 clamp 到 0', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [],
       sentiment: 0,
@@ -137,7 +137,7 @@ describe('analyzeDraftContent', () => {
   });
 
   it('無效的 market 應被過濾', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [
         { ticker: 'AAPL', name: 'Apple', market: 'US', confidence: 0.9, mentionedAs: 'AAPL' },
@@ -155,7 +155,7 @@ describe('analyzeDraftContent', () => {
   });
 
   it('缺少必要欄位的 ticker 應被過濾', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [
         { ticker: '', name: 'Apple', market: 'US', confidence: 0.9, mentionedAs: 'AAPL' },
@@ -174,7 +174,7 @@ describe('analyzeDraftContent', () => {
   });
 
   it('ticker 應被轉為大寫並去除空白', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [
         { ticker: ' aapl ', name: 'Apple', market: 'US', confidence: 0.9, mentionedAs: 'aapl' },
@@ -191,7 +191,7 @@ describe('analyzeDraftContent', () => {
 
   it('mentionedAs 超過 100 字元應被截斷', async () => {
     const longText = 'A'.repeat(200);
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [
         { ticker: 'AAPL', name: 'Apple', market: 'US', confidence: 0.9, mentionedAs: longText },
@@ -207,7 +207,7 @@ describe('analyzeDraftContent', () => {
   });
 
   it('無效的 postedAt 應回傳 null', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [],
       sentiment: 0,
@@ -221,7 +221,7 @@ describe('analyzeDraftContent', () => {
   });
 
   it('有效的 postedAt 應轉為 ISO 字串', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [],
       sentiment: 0,
@@ -235,7 +235,7 @@ describe('analyzeDraftContent', () => {
   });
 
   it('kolName 應去除空白，空字串轉為 null', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: '  ',
       tickers: [],
       sentiment: 0,
@@ -249,7 +249,7 @@ describe('analyzeDraftContent', () => {
   });
 
   it('kolName 前後空白應被去除', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: '  John  ',
       tickers: [],
       sentiment: 0,
@@ -263,7 +263,7 @@ describe('analyzeDraftContent', () => {
   });
 
   it('tickers 為 undefined 時應回傳空陣列', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: undefined,
       sentiment: 0,
@@ -277,7 +277,7 @@ describe('analyzeDraftContent', () => {
   });
 
   it('confidence 未提供時應預設為 0.5', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [{ ticker: 'AAPL', name: 'Apple', market: 'US', mentionedAs: 'AAPL' }],
       sentiment: 0,
@@ -291,7 +291,7 @@ describe('analyzeDraftContent', () => {
   });
 
   it('支援所有有效市場: US, TW, HK, CRYPTO', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [
         { ticker: 'AAPL', name: 'Apple', market: 'US', confidence: 0.9, mentionedAs: 'AAPL' },
@@ -311,7 +311,7 @@ describe('analyzeDraftContent', () => {
   });
 
   it('應將 timezone 傳入 prompt 中', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [],
       sentiment: 0,
@@ -322,12 +322,12 @@ describe('analyzeDraftContent', () => {
 
     await analyzeDraftContent('test', 'America/New_York');
 
-    const promptArg = mockGenerateJson.mock.calls[0][0] as string;
+    const promptArg = mockGenerateStructuredJson.mock.calls[0][0] as string;
     expect(promptArg).toContain('America/New_York');
   });
 
   it('postedAt 帶時區偏移量應正確轉換為 UTC', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [],
       sentiment: 0,
@@ -342,7 +342,7 @@ describe('analyzeDraftContent', () => {
 
   // Per-stock sentiment tests
   it('returns per-stock sentiments when AI provides them', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: '小李',
       tickers: [
         { ticker: 'NVDA', name: 'NVIDIA', market: 'US', confidence: 0.9, mentionedAs: 'NVDA' },
@@ -361,7 +361,7 @@ describe('analyzeDraftContent', () => {
   });
 
   it('returns empty stockSentiments when AI omits them', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [
         { ticker: 'AAPL', name: 'Apple', market: 'US', confidence: 0.9, mentionedAs: 'AAPL' },
@@ -377,7 +377,7 @@ describe('analyzeDraftContent', () => {
   });
 
   it('clamps per-stock sentiment values to valid range', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [
         { ticker: 'AAPL', name: 'Apple', market: 'US', confidence: 0.9, mentionedAs: 'AAPL' },
@@ -394,7 +394,7 @@ describe('analyzeDraftContent', () => {
   });
 
   it('normalizes stockSentiments ticker keys to uppercase', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [
         { ticker: 'AAPL', name: 'Apple', market: 'US', confidence: 0.9, mentionedAs: 'aapl' },
@@ -619,7 +619,7 @@ describe('identifyTickers — cashtag merge', () => {
 
 describe('analyzeDraftContent — cashtag merge', () => {
   it('should add cashtag tickers when AI misses them', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: 'SharkChart',
       tickers: [],
       sentiment: 0,
@@ -636,7 +636,7 @@ describe('analyzeDraftContent — cashtag merge', () => {
   });
 
   it('should not duplicate when AI already identified cashtag', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: 'Bodoxstocks',
       tickers: [
         {
@@ -742,7 +742,7 @@ describe('identifyTickers — benchmark filtering', () => {
 
 describe('analyzeDraftContent — benchmark filtering', () => {
   it('should exclude comparison benchmarks from stock tickers', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: 'TraderJoe',
       tickers: [],
       sentiment: 1,
@@ -819,7 +819,7 @@ describe('extractAtHandles', () => {
 
 describe('analyzeDraftContent — @handle KOL fallback', () => {
   it('should use @handle when AI returns null kolName', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [],
       sentiment: 0,
@@ -834,7 +834,7 @@ describe('analyzeDraftContent — @handle KOL fallback', () => {
   });
 
   it('should prefer AI kolName over @handle', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: 'Shark Chart',
       tickers: [],
       sentiment: 0,
@@ -849,7 +849,7 @@ describe('analyzeDraftContent — @handle KOL fallback', () => {
   });
 
   it('should use first @handle when multiple exist and AI returns null', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [],
       sentiment: 0,
@@ -864,7 +864,7 @@ describe('analyzeDraftContent — @handle KOL fallback', () => {
   });
 
   it('should return null when no AI kolName and no @handles', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [],
       sentiment: 0,
@@ -1488,7 +1488,7 @@ const DRAFT_ANALYSIS_CASES: DraftAnalysisCaseInput[] = [
 describe('analyzeDraftContent — 樣本案例', () => {
   for (const tc of DRAFT_ANALYSIS_CASES) {
     it(`${tc.name}`, async () => {
-      mockGenerateJson.mockResolvedValueOnce(tc.mockResponse);
+      mockGenerateStructuredJson.mockResolvedValueOnce(tc.mockResponse);
 
       const result = await analyzeDraftContent(tc.inputText);
 
@@ -1589,7 +1589,7 @@ describe('extractChineseDate', () => {
 
 describe('analyzeDraftContent — social media pre-processing', () => {
   it('should use pre-extracted KOL name when AI returns null', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [
         {
@@ -1613,7 +1613,7 @@ describe('analyzeDraftContent — social media pre-processing', () => {
   });
 
   it('should use pre-extracted date when AI returns null postedAt', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: '謝金河',
       tickers: [
         {
@@ -1636,7 +1636,7 @@ describe('analyzeDraftContent — social media pre-processing', () => {
   });
 
   it('should inject pre-extracted hints into AI prompt', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: '謝金河',
       tickers: [],
       sentiment: 0,
@@ -1648,13 +1648,13 @@ describe('analyzeDraftContent — social media pre-processing', () => {
     const content = '謝金河\n\n ·\n追蹤\n2025年3月21日\n ·\n文章內容...';
     await analyzeDraftContent(content);
 
-    const promptArg = mockGenerateJson.mock.calls[0][0] as string;
+    const promptArg = mockGenerateStructuredJson.mock.calls[0][0] as string;
     expect(promptArg).toContain('預提取 KOL 名稱: 謝金河');
     expect(promptArg).toContain('預提取發文日期: 2025年3月21日');
   });
 
   it('should prefer AI kolName over pre-extracted name', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: '金河兄',
       tickers: [],
       sentiment: 0,
@@ -1669,7 +1669,7 @@ describe('analyzeDraftContent — social media pre-processing', () => {
   });
 
   it('should not inject hints for regular article text', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [],
       sentiment: 0,
@@ -1681,7 +1681,7 @@ describe('analyzeDraftContent — social media pre-processing', () => {
     const content = '台積電今天股價大漲，法人看好後市表現。';
     await analyzeDraftContent(content);
 
-    const promptArg = mockGenerateJson.mock.calls[0][0] as string;
+    const promptArg = mockGenerateStructuredJson.mock.calls[0][0] as string;
     expect(promptArg).not.toContain('預提取 KOL 名稱');
     expect(promptArg).not.toContain('預提取發文日期');
   });
@@ -1693,7 +1693,7 @@ describe('analyzeDraftContent — social media pre-processing', () => {
 
 describe('analyzeDraftContent — prompt improvements', () => {
   it('should include Chinese stock name mappings in prompt', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [],
       sentiment: 0,
@@ -1703,13 +1703,13 @@ describe('analyzeDraftContent — prompt improvements', () => {
     });
 
     await analyzeDraftContent('test content');
-    const promptArg = mockGenerateJson.mock.calls[0][0] as string;
+    const promptArg = mockGenerateStructuredJson.mock.calls[0][0] as string;
     expect(promptArg).toContain('特斯拉→TSLA');
     expect(promptArg).toContain('蘋果→AAPL');
   });
 
   it('should include Chinese date format examples in prompt', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [],
       sentiment: 0,
@@ -1719,13 +1719,13 @@ describe('analyzeDraftContent — prompt improvements', () => {
     });
 
     await analyzeDraftContent('test content');
-    const promptArg = mockGenerateJson.mock.calls[0][0] as string;
+    const promptArg = mockGenerateStructuredJson.mock.calls[0][0] as string;
     expect(promptArg).toContain('2025年3月21日');
     expect(promptArg).toContain('3月21日');
   });
 
   it('should include social media KOL name patterns in prompt', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [],
       sentiment: 0,
@@ -1735,7 +1735,7 @@ describe('analyzeDraftContent — prompt improvements', () => {
     });
 
     await analyzeDraftContent('test content');
-    const promptArg = mockGenerateJson.mock.calls[0][0] as string;
+    const promptArg = mockGenerateStructuredJson.mock.calls[0][0] as string;
     expect(promptArg).toContain('追蹤');
     expect(promptArg).toContain('社群媒體貼文格式');
   });
@@ -1747,7 +1747,7 @@ describe('analyzeDraftContent — prompt improvements', () => {
 
 describe('analyzeDraftContent — macro inference', () => {
   it('explicit ticker should have source: explicit', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [
         {
@@ -1772,7 +1772,7 @@ describe('analyzeDraftContent — macro inference', () => {
   });
 
   it('inferred ticker should have source: inferred with inferenceReason', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [
         {
@@ -1799,7 +1799,7 @@ describe('analyzeDraftContent — macro inference', () => {
   });
 
   it('mixed post should return both explicit and inferred tickers', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [
         {
@@ -1834,7 +1834,7 @@ describe('analyzeDraftContent — macro inference', () => {
   });
 
   it('no-ticker post should return empty array', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [],
       sentiment: 0,
@@ -1848,7 +1848,7 @@ describe('analyzeDraftContent — macro inference', () => {
   });
 
   it('tickers without source field should default to explicit', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [
         {
@@ -1871,7 +1871,7 @@ describe('analyzeDraftContent — macro inference', () => {
   });
 
   it('prompt should contain macro inference rules', async () => {
-    mockGenerateJson.mockResolvedValueOnce({
+    mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
       tickers: [],
       sentiment: 0,
@@ -1881,7 +1881,7 @@ describe('analyzeDraftContent — macro inference', () => {
     });
 
     await analyzeDraftContent('test');
-    const promptArg = mockGenerateJson.mock.calls[0][0] as string;
+    const promptArg = mockGenerateStructuredJson.mock.calls[0][0] as string;
     expect(promptArg).toContain('宏觀推論規則');
     expect(promptArg).toContain('inferenceReason');
     expect(promptArg).toContain('0050.TW');

@@ -384,6 +384,7 @@ export type Database = {
           original_text: string | null;
           post_id: string;
           sentiment: number;
+          statement_type: string | null;
           stock_id: string;
           summary: string | null;
         };
@@ -395,6 +396,7 @@ export type Database = {
           original_text?: string | null;
           post_id: string;
           sentiment: number;
+          statement_type?: string | null;
           stock_id: string;
           summary?: string | null;
         };
@@ -406,6 +408,7 @@ export type Database = {
           original_text?: string | null;
           post_id?: string;
           sentiment?: number;
+          statement_type?: string | null;
           stock_id?: string;
           summary?: string | null;
         };
