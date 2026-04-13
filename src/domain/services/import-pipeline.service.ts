@@ -42,6 +42,7 @@ import {
 } from '@/domain/services/ai.service';
 import { getAiModelVersion } from '@/infrastructure/api/gemini.client';
 import { isLikelyInvestmentContent } from '@/domain/services/content-filter';
+import { cleanTranscript } from '@/domain/services/transcript-cleanup';
 import { extractActualDuration } from '@/infrastructure/api/deepgram.client';
 import { transcribeAudio, type StageCallback } from '@/domain/services/transcription.service';
 import { composeCost, type Recipe } from '@/domain/models/credit-blocks';
@@ -441,6 +442,9 @@ export async function processUrl(
         }
       }
     }
+
+    // 3.5. Clean transcript for AI analysis (merge letter fragments, fix zh-CN→zh-TW, dictionary)
+    contentForAnalysis = cleanTranscript(contentForAnalysis);
 
     // 4. AI analysis (sentiment + ticker identification in one call)
     emit('analyzing');

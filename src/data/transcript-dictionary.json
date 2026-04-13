@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "categories": {
+    "tickers_us": {
+      "description": "US stock ticker symbols and company names",
+      "terms": [
+        { "pattern": "T S M(?: C)?", "replacement": "TSMC", "regex": true },
+        { "pattern": "N V D A", "replacement": "NVDA" },
+        { "pattern": "A A P L", "replacement": "AAPL" },
+        { "pattern": "T S L A", "replacement": "TSLA" },
+        { "pattern": "A M Z N", "replacement": "AMZN" },
+        { "pattern": "G O O G L?", "replacement": "GOOGL", "regex": true },
+        { "pattern": "M S F T", "replacement": "MSFT" },
+        { "pattern": "M E T A", "replacement": "META" },
+        { "pattern": "A M D", "replacement": "AMD" },
+        { "pattern": "S P Y", "replacement": "SPY" },
+        { "pattern": "Q Q Q", "replacement": "QQQ" },
+        { "pattern": "S M H", "replacement": "SMH" },
+        { "pattern": "T L T", "replacement": "TLT" },
+        { "pattern": "G L D", "replacement": "GLD" },
+        { "pattern": "U S O", "replacement": "USO" }
+      ]
+    },
+    "tickers_tw": {
+      "description": "Taiwan stock names (post-OpenCC Traditional form)",
+      "terms": [
+        { "pattern": "臺積電", "replacement": "台積電" },
+        { "pattern": "臺灣", "replacement": "台灣" },
+        { "pattern": "臺股", "replacement": "台股" },
+        { "pattern": "臺幣", "replacement": "台幣" }
+      ]
+    },
+    "financial_zh": {
+      "description": "Chinese financial terminology — spaced fragments after OpenCC conversion (Traditional chars with spaces)",
+      "terms": [
+        { "pattern": "臺 ?積 ?電", "replacement": "台積電", "regex": true },
+        { "pattern": "台 積 電", "replacement": "台積電" },
+        { "pattern": "台 积 电", "replacement": "台積電" },
+        { "pattern": "輝 達", "replacement": "輝達" },
+        { "pattern": "辉 达", "replacement": "輝達" },
+        { "pattern": "聯 發 科", "replacement": "聯發科" },
+        { "pattern": "联 发 科", "replacement": "聯發科" },
+        { "pattern": "鴻 海", "replacement": "鴻海" },
+        { "pattern": "鸿 海", "replacement": "鴻海" },
+        { "pattern": "半 導 體", "replacement": "半導體" },
+        { "pattern": "半 导 体", "replacement": "半導體" },
+        { "pattern": "加 密 貨 幣", "replacement": "加密貨幣" },
+        { "pattern": "加 密 货 币", "replacement": "加密貨幣" },
+        { "pattern": "比 特 幣", "replacement": "比特幣" },
+        { "pattern": "比 特 币", "replacement": "比特幣" },
+        { "pattern": "以 太 坊", "replacement": "以太坊" },
+        { "pattern": "聯 準 會", "replacement": "聯準會" },
+        { "pattern": "联 准 会", "replacement": "聯準會" },
+        { "pattern": "殖 利 率", "replacement": "殖利率" },
+        { "pattern": "本 益 比", "replacement": "本益比" },
+        { "pattern": "財 報", "replacement": "財報" },
+        { "pattern": "财 报", "replacement": "財報" }
+      ]
+    },
+    "financial_en": {
+      "description": "English financial terms and indices",
+      "terms": [
+        { "pattern": "S & P", "replacement": "S&P" },
+        { "pattern": "E T F", "replacement": "ETF" },
+        { "pattern": "I P O", "replacement": "IPO" },
+        { "pattern": "G D P", "replacement": "GDP" },
+        { "pattern": "C P I", "replacement": "CPI" },
+        { "pattern": "P M I", "replacement": "PMI" },
+        { "pattern": "F e d", "replacement": "Fed" },
+        { "pattern": "N A S D A Q", "replacement": "NASDAQ" }
+      ]
+    },
+    "tech_terms": {
+      "description": "Technology and semiconductor terms",
+      "terms": [
+        { "pattern": "Co W[ao]s", "replacement": "CoWoS", "regex": true },
+        { "pattern": "A I", "replacement": "AI" },
+        { "pattern": "P D ?C ?ast", "replacement": "Podcast", "regex": true }
+      ]
+    },
+    "brands": {
+      "description": "Sponsor and brand names frequently garbled in transcripts",
+      "terms": [{ "pattern": "N or d ?VPN", "replacement": "NordVPN", "regex": true }]
+    },
+    "kol_names": {
+      "description": "KOL names that Deepgram commonly mis-transcribes",
+      "terms": [{ "pattern": "古 ?[玩哀癌]", "replacement": "股癌", "regex": true }]
+    }
+  }
+}
