@@ -38,18 +38,27 @@ export async function GET(_request: Request, context: RouteContext) {
     }, new Date());
     const startDate = new Date(earliestDate);
     startDate.setDate(startDate.getDate() - 7);
+    const startDateStr = startDate.toISOString().slice(0, 10);
+
+    // Fetch candles for each unique stock in parallel (5s timeout per stock)
+    const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> =>
+      Promise.race([
+        promise,
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
+      ]);
 
     const candlesByStock: Record<string, Awaited<ReturnType<typeof getStockPrices>>['candles']> =
       {};
-    for (const [stockId, ticker] of tickerByStockId) {
-      try {
-        const { candles } = await getStockPrices(ticker, {
-          startDate: startDate.toISOString().slice(0, 10),
-        });
-        candlesByStock[stockId] = candles;
-      } catch {
-        candlesByStock[stockId] = [];
-      }
+    const entries = Array.from(tickerByStockId.entries());
+    const results = await Promise.allSettled(
+      entries.map(([, ticker]) =>
+        withTimeout(getStockPrices(ticker, { startDate: startDateStr }), 5000)
+      )
+    );
+    for (let i = 0; i < entries.length; i++) {
+      const [stockId] = entries[i];
+      const result = results[i];
+      candlesByStock[stockId] = result.status === 'fulfilled' ? result.value.candles : [];
     }
 
     const postsForWinRate: PostForWinRate[] = posts.map((post) => {
