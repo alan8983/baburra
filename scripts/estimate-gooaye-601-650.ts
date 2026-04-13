@@ -77,7 +77,7 @@ function hasTranscriptTag(item: RssItem): boolean {
   const t = item['podcast:transcript'];
   if (!t) return false;
   const arr = Array.isArray(t) ? t : [t];
-  return arr.some((x: any) => !!x?.['@_url']);
+  return arr.some((x: Record<string, unknown>) => !!x?.['@_url']);
 }
 
 function buildPodcastRecipe(hasTranscript: boolean, durationSeconds: number): Recipe {
