@@ -1,13 +1,22 @@
 /**
  * YouTube Audio Download Client
  *
- * Downloads audio-only streams from YouTube using @distube/ytdl-core (pure JS).
- * Used for captionless YouTube videos whose audio has to be transcribed by Deepgram.
+ * Downloads audio-only streams from YouTube. Uses @distube/ytdl-core as the
+ * fast path (pure JS, no binary) and falls back to yt-dlp-exec (bundled binary)
+ * when ytdl-core fails — which happens frequently when YouTube changes its
+ * page structure.
  *
  * @see https://github.com/distubejs/ytdl-core
+ * @see https://github.com/microlinkhq/yt-dlp-exec
  */
 
 import ytdl from '@distube/ytdl-core';
+// yt-dlp-exec default export is a promise-based wrapper; .exec returns an ExecaChildProcess.
+// We use the default (async) variant which resolves to { stdout, stderr }.
+import ytDlpDefault from 'yt-dlp-exec';
+import { createReadStream, existsSync, unlinkSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { Readable } from 'stream';
 
 export interface AudioDownloadResult {
@@ -95,6 +104,141 @@ function parseBytesTotal(format: YtdlFormat): number | undefined {
   return Number.isFinite(n) && n > 0 ? n : undefined;
 }
 
+// ── Fast path: @distube/ytdl-core (pure JS) ──
+
+async function downloadWithYtdlCore(
+  youtubeUrl: string,
+  options?: { maxDurationSeconds?: number }
+): Promise<AudioStreamResult> {
+  const info = await ytdl.getInfo(youtubeUrl);
+  const durationSeconds = parseInt(info.videoDetails.lengthSeconds, 10) || 0;
+
+  if (options?.maxDurationSeconds && durationSeconds > options.maxDurationSeconds) {
+    throw new Error(
+      `Video too long (${Math.ceil(durationSeconds / 60)} min). ` +
+        `Maximum is ${Math.ceil(options.maxDurationSeconds / 60)} minutes.`
+    );
+  }
+
+  const chosen = selectAudioFormat(info.formats);
+  const container = chosen.container ?? 'webm';
+  const mimeType = mimeTypeFor(chosen);
+  const bytesTotal = parseBytesTotal(chosen);
+
+  console.log(
+    `[Audio] ytdl-core streaming: ${youtubeUrl} | duration=${Math.ceil(
+      durationSeconds / 60
+    )}min | format=${container} | bitrate=${chosen.audioBitrate ?? '?'}kbps` +
+      (bytesTotal ? ` | bytes=${bytesTotal}` : '')
+  );
+
+  const stream = ytdl.downloadFromInfo(info, { format: chosen });
+
+  return {
+    stream,
+    mimeType,
+    durationSeconds,
+    format: container,
+    bytesTotal,
+  };
+}
+
+// ── Reliable fallback: yt-dlp binary ──
+
+function cleanupTmpFile(filePath: string): void {
+  try {
+    if (existsSync(filePath)) unlinkSync(filePath);
+  } catch {
+    // Best-effort cleanup
+  }
+}
+
+async function downloadWithYtDlp(
+  youtubeUrl: string,
+  options?: { maxDurationSeconds?: number }
+): Promise<AudioStreamResult> {
+  // 1. Get video info (duration) via --dump-json
+  // The default export with dumpJson returns a parsed YtResponse object.
+  const info = await ytDlpDefault(youtubeUrl, {
+    dumpJson: true,
+    noPlaylist: true,
+  });
+  const durationSeconds: number = info.duration ?? 0;
+
+  if (options?.maxDurationSeconds && durationSeconds > options.maxDurationSeconds) {
+    throw new Error(
+      `Video too long (${Math.ceil(durationSeconds / 60)} min). ` +
+        `Maximum is ${Math.ceil(options.maxDurationSeconds / 60)} minutes.`
+    );
+  }
+
+  // 2. Download audio to temp file
+  const tmpFile = join(
+    tmpdir(),
+    `ytdlp-audio-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webm`
+  );
+
+  console.log(
+    `[Audio] yt-dlp downloading: ${youtubeUrl} | duration=${Math.ceil(durationSeconds / 60)}min → ${tmpFile}`
+  );
+
+  await ytDlpDefault(youtubeUrl, {
+    format: 'bestaudio[ext=webm]/bestaudio',
+    noPlaylist: true,
+    output: tmpFile,
+  });
+
+  // Determine actual file extension (yt-dlp may append its own)
+  // yt-dlp with -o writes to the exact path for webm, but may add .part during download
+  if (!existsSync(tmpFile)) {
+    // Check if yt-dlp wrote with a different extension
+    const possibleExts = ['.webm', '.m4a', '.opus', '.mp4'];
+    const base = tmpFile.replace(/\.webm$/, '');
+    let actualFile: string | null = null;
+    for (const ext of possibleExts) {
+      if (existsSync(base + ext)) {
+        actualFile = base + ext;
+        break;
+      }
+    }
+    if (!actualFile) {
+      throw new Error(`yt-dlp download produced no output file at ${tmpFile}`);
+    }
+    // Use the actual file
+    return buildStreamResult(actualFile, durationSeconds);
+  }
+
+  return buildStreamResult(tmpFile, durationSeconds);
+}
+
+function buildStreamResult(filePath: string, durationSeconds: number): AudioStreamResult {
+  const stat = statSync(filePath);
+  const ext = filePath.split('.').pop() ?? 'webm';
+  const mimeType = MIME_MAP[ext] ?? 'audio/webm';
+
+  console.log(
+    `[Audio] yt-dlp download complete: ${(stat.size / 1024 / 1024).toFixed(1)} MB ${ext}`
+  );
+
+  const stream = createReadStream(filePath);
+
+  // Auto-cleanup temp file when stream is consumed or destroyed
+  const cleanup = () => cleanupTmpFile(filePath);
+  stream.once('end', cleanup);
+  stream.once('error', cleanup);
+  stream.once('close', cleanup);
+
+  return {
+    stream,
+    mimeType,
+    durationSeconds,
+    format: ext,
+    bytesTotal: stat.size,
+  };
+}
+
+// ── Public API ──
+
 /**
  * Download audio-only from a YouTube video and return a Buffer with metadata.
  *
@@ -128,45 +272,29 @@ export async function downloadYoutubeAudio(
 /**
  * Download audio-only from a YouTube video and return a Readable stream.
  *
- * The stream is piped directly from ytdl-core — no buffering. Callers are
- * responsible for consuming it (e.g. passing it as a streaming fetch body
- * to Deepgram) and for destroying it on cancellation.
+ * Tries @distube/ytdl-core first (fast, pure JS). If that fails — which
+ * happens when YouTube changes its page structure — falls back to yt-dlp
+ * binary via yt-dlp-exec.
+ *
+ * Callers are responsible for consuming the stream and for destroying it
+ * on cancellation.
  */
 export async function downloadYoutubeAudioStream(
   youtubeUrl: string,
   options?: { maxDurationSeconds?: number }
 ): Promise<AudioStreamResult> {
-  const info = await ytdl.getInfo(youtubeUrl);
-  const durationSeconds = parseInt(info.videoDetails.lengthSeconds, 10) || 0;
-
-  if (options?.maxDurationSeconds && durationSeconds > options.maxDurationSeconds) {
-    throw new Error(
-      `Video too long (${Math.ceil(durationSeconds / 60)} min). ` +
-        `Maximum is ${Math.ceil(options.maxDurationSeconds / 60)} minutes.`
-    );
+  // Fast path: @distube/ytdl-core (pure JS, no binary spawn)
+  try {
+    return await downloadWithYtdlCore(youtubeUrl, options);
+  } catch (ytdlErr) {
+    const msg = ytdlErr instanceof Error ? ytdlErr.message : String(ytdlErr);
+    // Don't fall back for duration limit errors — those are intentional rejections
+    if (msg.includes('Video too long')) throw ytdlErr;
+    console.warn(`[Audio] ytdl-core failed, falling back to yt-dlp: ${msg}`);
   }
 
-  const chosen = selectAudioFormat(info.formats);
-  const container = chosen.container ?? 'webm';
-  const mimeType = mimeTypeFor(chosen);
-  const bytesTotal = parseBytesTotal(chosen);
-
-  console.log(
-    `[Audio] Streaming audio: ${youtubeUrl} | duration=${Math.ceil(
-      durationSeconds / 60
-    )}min | format=${container} | bitrate=${chosen.audioBitrate ?? '?'}kbps` +
-      (bytesTotal ? ` | bytes=${bytesTotal}` : '')
-  );
-
-  const stream = ytdl.downloadFromInfo(info, { format: chosen });
-
-  return {
-    stream,
-    mimeType,
-    durationSeconds,
-    format: container,
-    bytesTotal,
-  };
+  // Reliable fallback: yt-dlp binary
+  return await downloadWithYtDlp(youtubeUrl, options);
 }
 
 /**
