@@ -39,15 +39,12 @@ const DEFAULT_TIMEOUT_MS = 30_000;
  * Model fallback chain. Tried in order; quota errors (429 / RESOURCE_EXHAUSTED)
  * roll over to the next model. Non-quota errors propagate immediately.
  *
- * Default chain prefers Gemma 4 (free quota) and falls back to Gemini 2.5 Flash Lite.
+ * Default: Gemini 2.5 Flash Lite (4K RPM, 4M TPM — handles large transcripts).
+ * Gemma 4 models have only 16K TPM, too low for 50-min transcript analysis.
  * Override with AI_MODEL_CHAIN env var (comma-separated).
  * Legacy AI_SENTIMENT_MODEL pins to a single model with no fallback.
  */
-const DEFAULT_MODEL_CHAIN: string[] = [
-  'gemma-4-31b-it',
-  'gemma-4-26b-a4b-it',
-  'gemini-2.5-flash-lite',
-];
+const DEFAULT_MODEL_CHAIN: string[] = ['gemini-2.5-flash-lite'];
 
 function buildEffectiveChain(): string[] {
   if (process.env.AI_SENTIMENT_MODEL) {
@@ -62,7 +59,78 @@ function buildEffectiveChain(): string[] {
   return DEFAULT_MODEL_CHAIN;
 }
 
-const EFFECTIVE_CHAIN = buildEffectiveChain();
+/* ── Lazy initialisation ─────────────────────────────────────────────────────
+ * Scripts (e.g. scrape-gooaye-yt-601-650.ts) parse .env.local BEFORE importing
+ * this module, but ES imports are hoisted — so module-level code runs before
+ * the env-loading loop. We defer chain/pool construction to first use.
+ */
+let _effectiveChain: string[] | null = null;
+function getEffectiveChain(): string[] {
+  if (!_effectiveChain) _effectiveChain = buildEffectiveChain();
+  return _effectiveChain;
+}
+
+/* ── Multi-key pool ──────────────────────────────────────────────────────────
+ * Set GEMINI_API_KEYS (comma-separated) for N× quota headroom.
+ * Falls back to single GEMINI_API_KEY for backwards-compatibility.
+ * Keys are round-robined per request so load spreads evenly.
+ */
+function buildKeyPool(): string[] {
+  const multi = process.env.GEMINI_API_KEYS;
+  if (multi) {
+    const keys = multi
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (keys.length > 0) return keys;
+  }
+  const single = process.env.GEMINI_API_KEY;
+  if (single) return [single];
+  return [];
+}
+
+let _keyPool: string[] | null = null;
+function getKeyPool(): string[] {
+  if (!_keyPool) _keyPool = buildKeyPool();
+  return _keyPool;
+}
+let keyIndex = 0;
+
+/* ── Backoff configuration ───────────────────────────────────────────────────
+ * After exhausting the full model × key matrix, wait and retry.
+ * Delays: 5 s → 15 s → 45 s → 90 s  (total max wait ≈ 155 s).
+ * Free-tier quota resets per-minute, so we need waits long enough to span
+ * at least one full reset window.
+ */
+const BACKOFF_DELAYS_MS = [5_000, 15_000, 45_000, 90_000];
+
+/* ── Per-call cooldown (serialised) ───────────────────────────────────────────
+ * Enforces a minimum gap between consecutive Gemini API calls to avoid
+ * bursting through per-minute quota. Uses a promise-chain mutex so that
+ * concurrent callers queue up instead of racing.
+ * Default 1 500 ms; override with GEMINI_COOLDOWN_MS env var. Set to 0 to disable.
+ */
+const COOLDOWN_MS = Number(process.env.GEMINI_COOLDOWN_MS) || 1_500;
+let lastCallTime = 0;
+let cooldownQueue: Promise<void> = Promise.resolve();
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function cooldown(): Promise<void> {
+  if (COOLDOWN_MS <= 0) return Promise.resolve();
+  // Chain onto the queue — callers serialize through the mutex.
+  // Sleep only the remaining gap since the last call (not a full COOLDOWN_MS every time).
+  cooldownQueue = cooldownQueue.then(async () => {
+    const elapsed = Date.now() - lastCallTime;
+    if (elapsed < COOLDOWN_MS && lastCallTime > 0) {
+      await sleep(COOLDOWN_MS - elapsed);
+    }
+    lastCallTime = Date.now();
+  });
+  return cooldownQueue;
+}
 
 /**
  * Return the primary configured AI model name (for DB version tracking).
@@ -70,7 +138,7 @@ const EFFECTIVE_CHAIN = buildEffectiveChain();
  * if a fallback fired. The DB column is informational.
  */
 export function getAiModelVersion(): string {
-  return EFFECTIVE_CHAIN[0];
+  return getEffectiveChain()[0];
 }
 
 function isQuotaError(err: unknown): boolean {
@@ -79,32 +147,63 @@ function isQuotaError(err: unknown): boolean {
   return msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED') || msg.includes('quota');
 }
 
+/**
+ * Try each model × each API key. On full-matrix quota exhaustion,
+ * back off and retry the entire matrix up to BACKOFF_DELAYS_MS.length times.
+ * Non-quota errors propagate immediately.
+ */
 async function withModelFallback<T>(
-  fn: (model: string) => Promise<T>,
+  fn: (model: string, apiKey: string) => Promise<T>,
   explicitModel?: string
 ): Promise<T> {
-  const chain = explicitModel ? [explicitModel] : EFFECTIVE_CHAIN;
+  const chain = explicitModel ? [explicitModel] : getEffectiveChain();
   let lastErr: unknown;
-  for (const model of chain) {
-    try {
-      return await fn(model);
-    } catch (err) {
-      lastErr = err;
-      if (!isQuotaError(err)) throw err;
+
+  // Outer: rotate keys. Inner: try all models per key.
+  // This ensures model fallback (e.g. Gemma → Flash Lite) happens BEFORE
+  // burning through keys on the same quota-limited model.
+  for (let attempt = 0; attempt <= BACKOFF_DELAYS_MS.length; attempt++) {
+    if (attempt > 0) {
+      const delay = BACKOFF_DELAYS_MS[attempt - 1];
       console.warn(
-        `[gemini.client] Model "${model}" hit quota, falling back to next model in chain`
+        `[gemini.client] All keys×models exhausted — backing off ${delay}ms (retry ${attempt}/${BACKOFF_DELAYS_MS.length})`
       );
+      await sleep(delay);
+    }
+
+    for (let ki = 0; ki < getKeyPool().length; ki++) {
+      const apiKey = getApiKey();
+      let firstInKey = true;
+      for (const model of chain) {
+        try {
+          // Only cooldown before the first model attempt per key —
+          // fallback retries (e.g. Gemma→Flash Lite) fire immediately.
+          if (firstInKey) {
+            await cooldown();
+            firstInKey = false;
+          }
+          return await fn(model, apiKey);
+        } catch (err) {
+          lastErr = err;
+          if (!isQuotaError(err)) throw err;
+          const errMsg = err instanceof Error ? err.message.slice(0, 150) : String(err);
+          console.warn(
+            `[gemini.client] Model "${model}" key#${((keyIndex - 1 + getKeyPool().length) % getKeyPool().length) + 1}/${getKeyPool().length} quota error: ${errMsg}`
+          );
+        }
+      }
     }
   }
   throw lastErr;
 }
 
 function getApiKey(): string {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is not set');
+  if (getKeyPool().length === 0) {
+    throw new Error('GEMINI_API_KEY (or GEMINI_API_KEYS) is not set');
   }
-  return apiKey;
+  const key = getKeyPool()[keyIndex % getKeyPool().length];
+  keyIndex++;
+  return key;
 }
 
 /**
@@ -115,16 +214,15 @@ export async function generateContent(
   options?: GeminiGenerateOptions,
   model?: string
 ): Promise<string> {
-  return withModelFallback((m) => generateContentWithModel(prompt, options, m), model);
+  return withModelFallback((m, key) => generateContentWithModel(prompt, options, m, key), model);
 }
 
 async function generateContentWithModel(
   prompt: string,
   options: GeminiGenerateOptions | undefined,
-  model: string
+  model: string,
+  apiKey: string
 ): Promise<string> {
-  const apiKey = getApiKey();
-
   const url = `${GEMINI_BASE}/models/${model}:generateContent`;
 
   const requestBody = {
@@ -194,7 +292,7 @@ export async function generateStructuredJson<T>(
   model?: string
 ): Promise<T> {
   return withModelFallback(
-    (m) => generateStructuredJsonWithModel<T>(prompt, schema, options, m),
+    (m, key) => generateStructuredJsonWithModel<T>(prompt, schema, options, m, key),
     model
   );
 }
@@ -203,10 +301,9 @@ async function generateStructuredJsonWithModel<T>(
   prompt: string,
   schema: Record<string, unknown>,
   options: GeminiGenerateOptions | undefined,
-  model: string
+  model: string,
+  apiKey: string
 ): Promise<T> {
-  const apiKey = getApiKey();
-
   const url = `${GEMINI_BASE}/models/${model}:generateContent`;
 
   const requestBody = {
