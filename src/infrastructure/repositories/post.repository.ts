@@ -3,6 +3,11 @@
 import { createAdminClient } from '@/infrastructure/supabase/admin';
 import { escapePostgrestSearch } from '@/lib/api/search';
 import { invalidateByPost as invalidateWinRateSamplesByPost } from './win-rate-sample.repository';
+import { invalidateScorecardsForPost } from './scorecard-cache.repository';
+import {
+  enqueueKolScorecardCompute,
+  enqueueStockScorecardCompute,
+} from '@/domain/services/scorecard.service';
 import type {
   Post,
   PostWithRelations,
@@ -27,6 +32,32 @@ async function invalidateSamplesAfterSentimentWrite(postId: string): Promise<voi
   } catch (err) {
     console.warn(
       `[post.repository] win-rate sample invalidation failed for ${postId}:`,
+      err instanceof Error ? err.message : err
+    );
+  }
+}
+
+/**
+ * Mark the KOL + every referenced Stock's scorecard as stale after a post
+ * write. Fire-and-forget — scraper ingestion already pays a Tiingo round-trip
+ * later on the read-through path when a user visits, and we log rather than
+ * fail hard because the source-of-truth sample rows are the authoritative
+ * state.
+ */
+async function invalidateScorecardsAfterPostWrite(
+  kolId: string,
+  stockIds: string[]
+): Promise<void> {
+  try {
+    await invalidateScorecardsForPost({ kolId, stockIds });
+    // Pre-warm: enqueue the recompute immediately so the next user read hits
+    // a fresh cache rather than eating a 30s cold compute. The in-service
+    // dedupe lock prevents double-computes if multiple writes land quickly.
+    enqueueKolScorecardCompute(kolId);
+    for (const stockId of stockIds) enqueueStockScorecardCompute(stockId);
+  } catch (err) {
+    console.warn(
+      `[post.repository] scorecard invalidation failed for ${kolId}:`,
       err instanceof Error ? err.message : err
     );
   }
@@ -278,6 +309,8 @@ export async function createPost(input: CreatePostInput, createdBy: string | nul
 
   // RPC returns the post row as JSONB
   const row = rpcData as DbPost;
+  // Fire-and-forget scorecard invalidation for the KOL + every referenced stock.
+  void invalidateScorecardsAfterPostWrite(row.kol_id, input.stockIds ?? []);
   return mapDbToPost(row);
 }
 
@@ -322,6 +355,14 @@ export async function updatePost(
   }
 
   const p = await getPostById(id);
+  // Scorecard invalidation: sentiment changes shift classification; stock
+  // edits shift which stock scorecards a post contributes to. Fire-and-forget.
+  if (p && (input.sentiment !== undefined || input.stockSentiments)) {
+    void invalidateScorecardsAfterPostWrite(
+      p.kolId,
+      p.stocks.map((s) => s.id)
+    );
+  }
   return p ? { ...p } : null;
 }
 
@@ -361,11 +402,19 @@ export async function updatePostAiAnalysis(
   // next win-rate read re-classifies with the new values.
   await invalidateSamplesAfterSentimentWrite(id);
 
+  // Scorecard invalidation: re-analysis changes classification outcomes.
+  const stockIds = Object.keys(input.stockSentiments ?? {});
+  void invalidateScorecardsAfterPostWrite((row as DbPost).kol_id, stockIds);
+
   return mapDbToPost(row as DbPost);
 }
 
 export async function deletePost(id: string, userId: string): Promise<boolean> {
   const supabase = createAdminClient();
+  // Look up KOL + stocks BEFORE deletion so the scorecard invalidation after
+  // the RPC has something to invalidate.
+  const existing = await getPostById(id);
+
   // Verify ownership before deleting
   const { data: post } = await supabase
     .from('posts')
@@ -380,6 +429,15 @@ export async function deletePost(id: string, userId: string): Promise<boolean> {
     p_post_id: id,
   });
   if (error) throw new Error(error.message);
+
+  // Scorecard invalidation: deletion removes this post's contribution from
+  // the KOL + every referenced stock's aggregate.
+  if (existing) {
+    void invalidateScorecardsAfterPostWrite(
+      existing.kolId,
+      existing.stocks.map((s) => s.id)
+    );
+  }
   return true;
 }
 

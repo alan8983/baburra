@@ -28,6 +28,7 @@ import {
   getVolatilityThreshold,
   type ClassifiedSample,
   type PeriodDays,
+  type PriceChangeStatus,
   type ThresholdRef,
   type VolatilityProvider,
   type WinRateBucket,
@@ -78,11 +79,17 @@ export interface ComputeWinRateArgs {
 }
 
 const PERIODS: PeriodDays[] = [5, 30, 90, 365];
-const PERIOD_KEYS: Record<PeriodDays, keyof PriceChangeByPeriod> = {
+const PERIOD_KEYS: Record<PeriodDays, 'day5' | 'day30' | 'day90' | 'day365'> = {
   5: 'day5',
   30: 'day30',
   90: 'day90',
   365: 'day365',
+};
+const PERIOD_STATUS_KEYS: Record<PeriodDays, keyof PriceChangeByPeriod> = {
+  5: 'day5Status',
+  30: 'day30Status',
+  90: 'day90Status',
+  365: 'day365Status',
 };
 
 function sampleKey(postId: string, stockId: string, period: PeriodDays): string {
@@ -99,6 +106,8 @@ function rowToClassified(row: WinRateSampleRow): ClassifiedSample {
     outcome: row.outcome,
     threshold,
     excessReturn: row.excessReturn,
+    priceChange: row.priceChange,
+    priceChangeStatus: row.priceChangeStatus,
   };
 }
 
@@ -117,6 +126,8 @@ function classifiedToRow(
     excessReturn: sample.excessReturn,
     thresholdValue: sample.threshold?.value ?? null,
     thresholdSource: sample.threshold?.source ?? null,
+    priceChange: sample.priceChange ?? null,
+    priceChangeStatus: sample.priceChangeStatus ?? 'value',
     classifierVersion: CLASSIFIER_VERSION,
   };
 }
@@ -186,7 +197,9 @@ export async function computeWinRateStats(args: ComputeWinRateArgs): Promise<Win
         }
 
         const periodKey = PERIOD_KEYS[period];
-        const priceChange = pc[periodKey] as number | null;
+        const priceChange = pc[periodKey];
+        const statusKey = PERIOD_STATUS_KEYS[period];
+        const priceChangeStatus = (pc[statusKey] as PriceChangeStatus) ?? 'value';
 
         // Excluded short-circuit: skip σ lookup entirely.
         if (effectiveSentiment === 0 || priceChange === null) {
@@ -194,6 +207,8 @@ export async function computeWinRateStats(args: ComputeWinRateArgs): Promise<Win
             outcome: 'excluded',
             threshold: null,
             excessReturn: null,
+            priceChange,
+            priceChangeStatus,
           };
           recordSample(stockId, period, sample);
           if (sampleRepo) freshRows.push(classifiedToRow(post.id, stockId, period, sample));
@@ -216,6 +231,8 @@ export async function computeWinRateStats(args: ComputeWinRateArgs): Promise<Win
               outcome: 'excluded',
               threshold: null,
               excessReturn: null,
+              priceChange,
+              priceChangeStatus,
             };
             recordSample(stockId, period, sample);
             if (sampleRepo) freshRows.push(classifiedToRow(post.id, stockId, period, sample));
@@ -230,6 +247,8 @@ export async function computeWinRateStats(args: ComputeWinRateArgs): Promise<Win
             outcome: 'excluded',
             threshold: null,
             excessReturn: null,
+            priceChange,
+            priceChangeStatus,
           };
           recordSample(stockId, period, sample);
           if (sampleRepo) freshRows.push(classifiedToRow(post.id, stockId, period, sample));
@@ -243,7 +262,13 @@ export async function computeWinRateStats(args: ComputeWinRateArgs): Promise<Win
         };
         const outcome = classifyOutcome(classifyArgs);
         const excessReturn = outcome === 'excluded' ? null : computeExcessReturn(classifyArgs);
-        const sample: ClassifiedSample = { outcome, threshold, excessReturn };
+        const sample: ClassifiedSample = {
+          outcome,
+          threshold,
+          excessReturn,
+          priceChange,
+          priceChangeStatus,
+        };
         recordSample(stockId, period, sample);
         if (sampleRepo) freshRows.push(classifiedToRow(post.id, stockId, period, sample));
       }

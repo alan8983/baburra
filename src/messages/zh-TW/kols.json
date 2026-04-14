@@ -77,7 +77,9 @@
       "winRate": "勝率",
       "hitRate": "精準度",
       "correct": "正確",
-      "sectorPerformance": "各標的表現"
+      "sectorPerformance": "各標的表現",
+      "computing": "正在計算...",
+      "pending": "{count} 待計算"
     },
     "winRate": "勝率 (30日)",
     "loading": "載入中...",

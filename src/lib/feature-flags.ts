@@ -28,3 +28,18 @@ export function isWinRateSampleCacheEnabled(): boolean {
   const isProd = process.env.NODE_ENV === 'production';
   return readBoolEnv('USE_WIN_RATE_SAMPLE_CACHE', !isProd);
 }
+
+/**
+ * When enabled, `/api/kols/[id]/win-rate` and `/api/stocks/[ticker]/scorecard`
+ * read from `kol_scorecard_cache` / `stock_scorecard_cache` (Layer 3) and
+ * return `{ status: 'computing' }` on miss. When disabled, the win-rate route
+ * falls back to the pre-change inline-compute path.
+ *
+ * Default ON in development, OFF in production until the migration has been
+ * applied and the first refresh pass has populated rows for a representative
+ * subset of KOLs (see openspec/changes/persist-kol-scorecard-cache/tasks.md §10).
+ */
+export function isScorecardCacheEnabled(): boolean {
+  const isProd = process.env.NODE_ENV === 'production';
+  return readBoolEnv('USE_SCORECARD_CACHE', !isProd);
+}

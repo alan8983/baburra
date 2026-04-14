@@ -17,7 +17,9 @@
  * - A period is `sufficientData` only when (wins + loses) >= MIN_RESOLVED_POSTS_PER_PERIOD.
  */
 
-import type { Sentiment } from '@/domain/models/post';
+import type { PriceChangeStatus, Sentiment } from '@/domain/models/post';
+
+export type { PriceChangeStatus };
 
 export type WinRateOutcome = 'win' | 'lose' | 'noise' | 'excluded';
 
@@ -74,6 +76,15 @@ export interface ClassifiedSample {
   threshold: ThresholdRef | null;
   /** σ-normalized excess return; null for excluded samples. */
   excessReturn: number | null;
+  /**
+   * Raw fractional price change over `period_days` (e.g., 0.05 = +5%), prior
+   * to σ-normalization. Null when `priceChangeStatus !== 'value'`. Used for
+   * Return aggregation so Return, Hit Rate, and SQR derive from the same
+   * classified sample set.
+   */
+  priceChange?: number | null;
+  /** Resolution state of the raw price change. Defaults to `'value'` when omitted (legacy rows). */
+  priceChangeStatus?: PriceChangeStatus;
 }
 
 /**
@@ -100,6 +111,21 @@ export interface WinRateBucket {
   avgExcessLose: number | null;
   /** Signal Quality Ratio over all non-excluded samples; null if undefined. */
   sqr: number | null;
+  /**
+   * Mean raw return = `mean(priceChange * sign(sentiment))` over samples with
+   * outcome ∈ {win, lose, noise} and `priceChangeStatus === 'value'`. Null when
+   * no samples qualify. The sign is already baked in at classification time
+   * via `excessReturn` — see `computeReturn` for details.
+   */
+  avgReturn: number | null;
+  /** Count of samples contributing to `avgReturn`. */
+  returnSampleSize: number;
+  /**
+   * Count of non-excluded samples whose price window hasn't closed yet
+   * (`priceChangeStatus === 'pending'`). Reported separately so the UI can
+   * show "N 件待計算" without lying by counting them as noise.
+   */
+  pendingCount: number;
   /** True iff (winCount + loseCount) >= MIN_RESOLVED_POSTS_PER_PERIOD. */
   sufficientData: boolean;
   threshold: ThresholdRef | null; // representative (median) for the bucket
@@ -185,6 +211,64 @@ export function computeSqr(samples: ClassifiedSample[]): number | null {
   return mean / stdev;
 }
 
+/**
+ * Mean raw return over non-excluded samples with a resolved `priceChange`.
+ * `excessReturn` already carries `sign(sentiment) × priceChange / threshold`,
+ * so reversing the σ normalization gives us `sign(sentiment) × priceChange`
+ * directly without needing `sentiment` again. For samples that carry the
+ * explicit `priceChange` field, we use that × direction sign recovered from
+ * excessReturn's sign (ties broken to + when excessReturn is 0). Samples with
+ * `priceChangeStatus === 'pending'` or `'no_data'` are excluded from the
+ * mean; `'pending'` counts toward the returned `pendingCount` so the UI can
+ * surface "N 件待計算".
+ */
+export function computeReturn(samples: ClassifiedSample[]): {
+  avgReturn: number | null;
+  sampleSize: number;
+  pendingCount: number;
+} {
+  let sum = 0;
+  let n = 0;
+  let pending = 0;
+  for (const s of samples) {
+    if (s.outcome === 'excluded') continue;
+    if (s.priceChangeStatus === 'pending') {
+      pending++;
+      continue;
+    }
+    if (s.priceChangeStatus === 'no_data') continue;
+    // priceChangeStatus is 'value' or undefined (legacy row — treat as value)
+    // Prefer the raw priceChange field. Reconstruct signed return from it via
+    // `sign(excessReturn) × abs(priceChange)` — when the sample carries both,
+    // `excessReturn = direction × priceChange / threshold` so the signs align
+    // and the product already has the correct sign baked in.
+    if (s.priceChange === null || s.priceChange === undefined) {
+      // No raw priceChange persisted (legacy row predating the price_change
+      // column). Reconstruct via `excessReturn × threshold`. The stored
+      // `excess_return = direction × priceChange_percent / threshold_fraction`,
+      // so `excessReturn × threshold.value` recovers `direction × priceChange`
+      // directly in percent-space — which is the same space new rows persist
+      // priceChange in. NO ×100 scaling needed; adding one would inflate the
+      // contribution by 100×.
+      if (s.excessReturn !== null && s.threshold) {
+        sum += s.excessReturn * s.threshold.value;
+        n++;
+      }
+      continue;
+    }
+    // `excessReturn` has sign(direction × priceChange); for win/lose it is
+    // non-zero so its sign tells us direction. For noise it can be zero — in
+    // that case use +|priceChange| (noise contributes a small magnitude and
+    // the sign is not meaningful for "correctness" but still contributes to
+    // mean return; we treat it as the signed fractional move as observed).
+    const direction =
+      s.excessReturn === null || s.excessReturn === 0 ? 1 : s.excessReturn > 0 ? 1 : -1;
+    sum += direction * Math.abs(s.priceChange);
+    n++;
+  }
+  return { avgReturn: n === 0 ? null : sum / n, sampleSize: n, pendingCount: pending };
+}
+
 export function aggregateBucket(samples: ClassifiedSample[]): WinRateBucket {
   let winCount = 0;
   let loseCount = 0;
@@ -222,6 +306,7 @@ export function aggregateBucket(samples: ClassifiedSample[]): WinRateBucket {
   const avgExcessWin = sufficientData ? computeAvgExcess(samples, 'win') : null;
   const avgExcessLose = sufficientData ? computeAvgExcess(samples, 'lose') : null;
   const sqr = sufficientData ? computeSqr(samples) : null;
+  const returnStats = computeReturn(samples);
 
   const threshold: ThresholdRef | null = anySource
     ? { value: median(thresholdValues), source: anyFallback ? 'index-fallback' : 'ticker' }
@@ -241,6 +326,9 @@ export function aggregateBucket(samples: ClassifiedSample[]): WinRateBucket {
     avgExcessWin,
     avgExcessLose,
     sqr,
+    avgReturn: returnStats.avgReturn,
+    returnSampleSize: returnStats.sampleSize,
+    pendingCount: returnStats.pendingCount,
     sufficientData,
     threshold,
   };
@@ -261,6 +349,9 @@ export function emptyBucket(): WinRateBucket {
     avgExcessWin: null,
     avgExcessLose: null,
     sqr: null,
+    avgReturn: null,
+    returnSampleSize: 0,
+    pendingCount: 0,
     sufficientData: false,
     threshold: null,
   };

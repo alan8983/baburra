@@ -171,3 +171,41 @@ export function useStockWinRate(ticker: string) {
     gcTime: 10 * 60 * 1000,
   });
 }
+
+/**
+ * Stock-level scorecard (pre-aggregated Return + Hit Rate + SQR + per-KOL
+ * breakdown). Read-through cache at `/api/stocks/[ticker]/scorecard`. Returns
+ * `null` when the server is still computing; React Query polls until ready.
+ */
+export function useStockScorecard(ticker: string) {
+  return useQuery({
+    queryKey: [...stockKeys.detail(ticker), 'scorecard'] as const,
+    queryFn: async (): Promise<
+      (WinRateStats & { bucketsByKol?: Record<string, WinRateStats> }) | null
+    > => {
+      const res = await fetch(API_ROUTES.STOCK_SCORECARD(ticker));
+      await throwIfNotOk(res);
+      const json = (await res.json()) as
+        | (WinRateStats & {
+            status?: 'ready';
+            computedAt?: string;
+            bucketsByKol?: Record<string, WinRateStats>;
+          })
+        | { status: 'computing'; computedAt: null };
+      if ('status' in json && json.status === 'computing') return null;
+      const raw = json as WinRateStats & {
+        status?: 'ready';
+        computedAt?: string;
+        bucketsByKol?: Record<string, WinRateStats>;
+      };
+      const { status, computedAt, ...stats } = raw;
+      void status;
+      void computedAt;
+      return stats;
+    },
+    enabled: !!ticker,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchInterval: (query) => (query.state.data === null ? 3000 : false),
+  });
+}

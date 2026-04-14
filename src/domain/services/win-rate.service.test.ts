@@ -210,6 +210,8 @@ describe('computeWinRateStats', () => {
           excessReturn: 2,
           thresholdValue: 0.1,
           thresholdSource: 'ticker',
+          priceChange: 0.2,
+          priceChangeStatus: 'value',
           classifierVersion: CLASSIFIER_VERSION,
         });
       }
@@ -239,6 +241,8 @@ describe('computeWinRateStats', () => {
         excessReturn: 2,
         thresholdValue: 0.05,
         thresholdSource: 'ticker',
+        priceChange: 0.1,
+        priceChangeStatus: 'value',
         classifierVersion: CLASSIFIER_VERSION,
       });
     }
@@ -270,6 +274,8 @@ describe('computeWinRateStats', () => {
         excessReturn: -2,
         thresholdValue: 0.05,
         thresholdSource: 'ticker',
+        priceChange: -0.1,
+        priceChangeStatus: 'value',
         classifierVersion: CLASSIFIER_VERSION - 1,
       },
     ]);

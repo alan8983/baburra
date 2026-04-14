@@ -538,55 +538,77 @@ GET /api/stocks/{ticker}/price-change
 
 ## 八、勝率統計 API
 
-### 8.1 取得 KOL 勝率
+### 8.1 取得 KOL Scorecard（Return + Hit Rate + SQR）
 
 ```
 GET /api/kols/{id}/win-rate
 ```
 
-**Query 參數**：
+讀取 Layer 3 聚合快取 `kol_scorecard_cache`。快取命中時立即回傳已計算好的 blob；miss（無快取/stale/classifier_version 不符/超過 12h TTL）時非同步 enqueue 重新計算並回傳 `computing` 狀態，由 client 以 React Query 每 3 秒輪詢直到 ready。
 
-| 參數         | 類型   | 必填 | 說明                                     |
-| ------------ | ------ | ---- | ---------------------------------------- |
-| periods      | string | ❌   | 計算週期，逗號分隔（預設 "5,30,90,365"） |
-| stock_ticker | string | ❌   | 篩選特定 Stock                           |
+**回應**（discriminated union）：
+
+```typescript
+// 命中快取：
+{
+  status: 'ready';
+  computedAt: string; // ISO timestamp
+  day5:   WinRateBucket;
+  day30:  WinRateBucket;
+  day90:  WinRateBucket;
+  day365: WinRateBucket;
+  bucketsByStock: {
+    [stockId: string]: {
+      day5: WinRateBucket; day30: WinRateBucket;
+      day90: WinRateBucket; day365: WinRateBucket;
+    };
+  };
+}
+
+// Miss：
+{ status: 'computing'; computedAt: null; }
+
+// WinRateBucket（每個 period 的聚合結果）：
+{
+  total, winCount, loseCount, noiseCount, excludedCount,
+  hitRate, precision, sqr, avgExcessWin, avgExcessLose,
+  avgReturn,          // 平均報酬率（百分比，例：-2.47 = -2.47%）
+  returnSampleSize,   // 參與 avgReturn 計算的樣本數
+  pendingCount,       // 價格窗口尚未收盤的樣本數（不計入 avgReturn）
+  sufficientData,     // (wins+loses) >= MIN_RESOLVED_POSTS_PER_PERIOD
+  threshold: { value: number; source: 'ticker' | 'index-fallback' } | null;
+}
+```
+
+**快取失效**：scrape 匯入、post 編輯、AI 重新分析、post 刪除時自動觸發；同時 enqueue 後台 recompute 以 pre-warm。跨 KOL 隔離 — KOL B 發文不會影響 KOL A 的 scorecard。
+
+### 8.2 取得 Stock Scorecard（社群聚合）
+
+```
+GET /api/stocks/{ticker}/scorecard
+```
+
+讀取 `stock_scorecard_cache`。語意與 8.1 對稱，聚合對象是「所有 KOL 對這檔股票」的樣本。
 
 **回應**：
 
 ```typescript
-{
-  data: {
-    kol_id: string;
-    overall: WinRateStats[];
-    by_stock: {
-      [ticker: string]: WinRateStats[];
-    };
-  }
-}
+{ status: 'ready'; computedAt; day5; day30; day90; day365;
+  bucketsByKol: { [kolId: string]: { day5; day30; day90; day365 } } }
+| { status: 'computing'; computedAt: null }
 ```
 
-### 8.2 取得 Stock 勝率
+### 8.3 取得 Stock 勝率（legacy）
 
 ```
 GET /api/stocks/{ticker}/win-rate
 ```
 
-**Query 參數**：
+未經 Layer 3 快取的 inline compute 路徑，保留作為過渡。新程式碼請改用 `/api/stocks/{ticker}/scorecard`。
 
-| 參數    | 類型   | 必填 | 說明     |
-| ------- | ------ | ---- | -------- |
-| periods | string | ❌   | 計算週期 |
+### ~~8.4 取得 KOL 報酬率~~（已移除）
 
-**回應**：
-
-```typescript
-{
-  data: {
-    stock_ticker: string;
-    overall: WinRateStats[];
-  }
-}
-```
+~~`GET /api/kols/{id}/return-rate`~~ — 該端點從未被任何 client 使用；報酬率現已由 `/api/kols/{id}/win-rate` 的 `avgReturn` 欄位提供。
 
 ---
 
