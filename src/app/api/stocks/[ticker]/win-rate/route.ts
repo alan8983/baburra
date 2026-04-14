@@ -1,13 +1,22 @@
 // Stock 勝率 API
 // GET /api/stocks/[ticker]/win-rate - 取得標的的勝率統計（動態 1σ 門檻）
+//
+// Uses the persistent sample cache when USE_WIN_RATE_SAMPLE_CACHE is ON; falls
+// back to the stateless pipeline otherwise.
 
 import { NextResponse } from 'next/server';
 import { notFoundError, internalError } from '@/lib/api/error';
 import { listPosts } from '@/infrastructure/repositories/post.repository';
 import { getStockPrices } from '@/infrastructure/repositories/stock-price.repository';
-import { calculatePriceChanges, emptyStats } from '@/domain/calculators';
+import { CLASSIFIER_VERSION, calculatePriceChanges, emptyStats } from '@/domain/calculators';
 import { computeWinRateStats, type PostForWinRate } from '@/domain/services/win-rate.service';
 import { StockPriceVolatilityProvider } from '@/infrastructure/providers/stock-price-volatility.provider';
+import { PersistentVolatilityProvider } from '@/infrastructure/providers/persistent-volatility.provider';
+import {
+  loadSamplesByPostIds,
+  upsertSamples,
+} from '@/infrastructure/repositories/win-rate-sample.repository';
+import { isWinRateSampleCacheEnabled } from '@/lib/feature-flags';
 import type { PriceChangeByPeriod, Sentiment } from '@/domain/models';
 import { createAdminClient } from '@/infrastructure/supabase/admin';
 
@@ -29,21 +38,42 @@ export async function GET(_request: Request, context: RouteContext) {
       return NextResponse.json(emptyStats());
     }
 
-    const earliestDate = posts.reduce((min, post) => {
-      const postedAt = new Date(post.postedAt);
-      return postedAt < min ? postedAt : min;
-    }, new Date());
-    const startDate = new Date(earliestDate);
-    startDate.setDate(startDate.getDate() - 7);
+    const useCache = isWinRateSampleCacheEnabled();
+
+    // Load cached samples for this stock's posts up front. If all four periods
+    // are cached for every post, we skip the candle fetch entirely.
+    const cachedSamples = useCache
+      ? await loadSamplesByPostIds(
+          posts.map((p) => p.id),
+          CLASSIFIER_VERSION
+        )
+      : null;
+
+    const allCached =
+      cachedSamples !== null &&
+      posts.every((p) =>
+        (['5', '30', '90', '365'] as const).every((pd) =>
+          cachedSamples.has(`${p.id}:${stock.id}:${pd}`)
+        )
+      );
 
     let candles: Awaited<ReturnType<typeof getStockPrices>>['candles'] = [];
-    try {
-      const priceData = await getStockPrices(upper, {
-        startDate: startDate.toISOString().slice(0, 10),
-      });
-      candles = priceData.candles;
-    } catch (err) {
-      console.error(`[win-rate] failed to fetch prices for ${upper}:`, err);
+    if (!allCached) {
+      const earliestDate = posts.reduce((min, post) => {
+        const postedAt = new Date(post.postedAt);
+        return postedAt < min ? postedAt : min;
+      }, new Date());
+      const startDate = new Date(earliestDate);
+      startDate.setDate(startDate.getDate() - 7);
+
+      try {
+        const priceData = await getStockPrices(upper, {
+          startDate: startDate.toISOString().slice(0, 10),
+        });
+        candles = priceData.candles;
+      } catch (err) {
+        console.error(`[win-rate] failed to fetch prices for ${upper}:`, err);
+      }
     }
 
     const postsForWinRate: PostForWinRate[] = posts.map((post) => {
@@ -77,9 +107,15 @@ export async function GET(_request: Request, context: RouteContext) {
       };
     });
 
+    const provider = useCache
+      ? new PersistentVolatilityProvider()
+      : new StockPriceVolatilityProvider();
+    const sampleRepo = useCache ? { loadSamplesByPostIds, upsertSamples } : undefined;
+
     const stats = await computeWinRateStats({
       posts: postsForWinRate,
-      provider: new StockPriceVolatilityProvider(),
+      provider,
+      sampleRepo,
     });
 
     return NextResponse.json(stats);

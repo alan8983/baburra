@@ -1,23 +1,33 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { computeWinRateStats, type PostForWinRate } from './win-rate.service';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import {
+  computeWinRateStats,
+  type PostForWinRate,
+  type WinRateSampleRepo,
+} from './win-rate.service';
 import {
   __resetVolatilityCache,
+  CLASSIFIER_VERSION,
   MIN_RESOLVED_POSTS_PER_PERIOD,
   type VolatilityProvider,
   type PriceSeriesPoint,
   type Market,
 } from '@/domain/calculators';
 import type { PriceChangeByPeriod, Sentiment } from '@/domain/models/post';
+import type { WinRateSampleRow } from '@/infrastructure/repositories/win-rate-sample.repository';
 
 function fakeProvider(
   constSigmaSeries: PriceSeriesPoint[],
   market: Market = 'US'
-): VolatilityProvider {
+): VolatilityProvider & { calls: { getSeries: number; getMarket: number } } {
+  const calls = { getSeries: 0, getMarket: 0 };
   return {
+    calls,
     async getMarket() {
+      calls.getMarket++;
       return market;
     },
     async getSeries() {
+      calls.getSeries++;
       return constSigmaSeries;
     },
   };
@@ -60,6 +70,36 @@ function buildPosts(n: number, sentiment: Sentiment, val: number): PostForWinRat
     tickerByStockId: { s1: 'AAPL' },
     priceChanges: { s1: fullPC(val) },
   }));
+}
+
+/** In-memory sample repo — supports cache-hit and mixed-path tests. */
+function makeFakeRepo(seed: WinRateSampleRow[] = []): WinRateSampleRepo & {
+  loaded: WinRateSampleRow[];
+  upserts: WinRateSampleRow[];
+  calls: { load: number; upsert: number };
+} {
+  const loaded = [...seed];
+  const upserts: WinRateSampleRow[] = [];
+  const calls = { load: 0, upsert: 0 };
+  return {
+    loaded,
+    upserts,
+    calls,
+    async loadSamplesByPostIds(postIds, classifierVersion) {
+      calls.load++;
+      const map = new Map<string, WinRateSampleRow>();
+      for (const row of loaded) {
+        if (row.classifierVersion !== classifierVersion) continue;
+        if (!postIds.includes(row.postId)) continue;
+        map.set(`${row.postId}:${row.stockId}:${row.periodDays}`, row);
+      }
+      return map;
+    },
+    async upsertSamples(rows) {
+      calls.upsert++;
+      upserts.push(...rows);
+    },
+  };
 }
 
 describe('computeWinRateStats', () => {
@@ -151,5 +191,140 @@ describe('computeWinRateStats', () => {
     });
     expect(stats.day30.excludedCount).toBe(1);
     expect(stats.day30.winCount).toBe(0);
+  });
+
+  // ─── Persistent-sample pipeline ─────────────────────────────────────────────
+
+  it('fully cached samples: provider is never called and no upserts happen', async () => {
+    const provider = fakeProvider(buildSeries());
+    const posts = buildPosts(MIN_RESOLVED_POSTS_PER_PERIOD, 2, 0.5);
+    // Seed one 'win' row per (post, stock, period).
+    const seed: WinRateSampleRow[] = [];
+    for (const p of posts) {
+      for (const period of [5, 30, 90, 365] as const) {
+        seed.push({
+          postId: p.id,
+          stockId: 's1',
+          periodDays: period,
+          outcome: 'win',
+          excessReturn: 2,
+          thresholdValue: 0.1,
+          thresholdSource: 'ticker',
+          classifierVersion: CLASSIFIER_VERSION,
+        });
+      }
+    }
+    const repo = makeFakeRepo(seed);
+    const stats = await computeWinRateStats({ posts, provider, sampleRepo: repo });
+
+    expect(provider.calls.getSeries).toBe(0);
+    expect(provider.calls.getMarket).toBe(0);
+    expect(repo.calls.load).toBe(1);
+    expect(repo.calls.upsert).toBe(0);
+    expect(stats.day30.winCount).toBe(MIN_RESOLVED_POSTS_PER_PERIOD);
+    expect(stats.day30.sufficientData).toBe(true);
+  });
+
+  it('mixed path: provider called only for uncached tuples; fresh rows upserted', async () => {
+    const provider = fakeProvider(buildSeries());
+    const posts = buildPosts(2, 2, 0.5);
+    // Seed only the first post's samples (all four periods), leave the second uncached.
+    const seed: WinRateSampleRow[] = [];
+    for (const period of [5, 30, 90, 365] as const) {
+      seed.push({
+        postId: 'p0',
+        stockId: 's1',
+        periodDays: period,
+        outcome: 'win',
+        excessReturn: 2,
+        thresholdValue: 0.05,
+        thresholdSource: 'ticker',
+        classifierVersion: CLASSIFIER_VERSION,
+      });
+    }
+    const repo = makeFakeRepo(seed);
+
+    const stats = await computeWinRateStats({ posts, provider, sampleRepo: repo });
+
+    // Four periods × one uncached post = 4 threshold computes.
+    expect(provider.calls.getSeries).toBeGreaterThan(0);
+    expect(repo.calls.upsert).toBe(1);
+    expect(repo.upserts).toHaveLength(4);
+    for (const row of repo.upserts) {
+      expect(row.postId).toBe('p1');
+      expect(row.classifierVersion).toBe(CLASSIFIER_VERSION);
+    }
+    expect(stats.day30.winCount).toBe(2);
+  });
+
+  it('stale classifier_version rows are ignored and re-classified', async () => {
+    const provider = fakeProvider(buildSeries());
+    const posts = buildPosts(1, 2, 0.5);
+    // Seed a row at an older version — should be filtered out by the repo.
+    const repo = makeFakeRepo([
+      {
+        postId: 'p0',
+        stockId: 's1',
+        periodDays: 30,
+        outcome: 'lose',
+        excessReturn: -2,
+        thresholdValue: 0.05,
+        thresholdSource: 'ticker',
+        classifierVersion: CLASSIFIER_VERSION - 1,
+      },
+    ]);
+
+    const stats = await computeWinRateStats({ posts, provider, sampleRepo: repo });
+
+    expect(provider.calls.getSeries).toBeGreaterThan(0);
+    // Fresh classification wins over the stale seed.
+    expect(stats.day30.winCount).toBe(1);
+    expect(stats.day30.loseCount).toBe(0);
+    expect(repo.upserts.every((r) => r.classifierVersion === CLASSIFIER_VERSION)).toBe(true);
+  });
+
+  it('includeBucketsByStock returns a per-stock breakdown consistent with globals', async () => {
+    const provider = fakeProvider(buildSeries());
+    const posts: PostForWinRate[] = Array.from(
+      { length: MIN_RESOLVED_POSTS_PER_PERIOD },
+      (_, i) => ({
+        id: `p${i}`,
+        sentiment: 2,
+        postedAt: new Date('2024-12-31'),
+        tickerByStockId: { sA: 'AAPL', sB: 'MSFT' },
+        priceChanges: { sA: fullPC(0.5), sB: fullPC(-0.5) },
+      })
+    );
+
+    const stats = await computeWinRateStats({
+      posts,
+      provider,
+      includeBucketsByStock: true,
+    });
+
+    expect(stats.bucketsByStock).toBeDefined();
+    const byStock = stats.bucketsByStock!;
+    expect(Object.keys(byStock).sort()).toEqual(['sA', 'sB']);
+    // Global winCount should equal sum of per-stock winCounts.
+    const perStockWins = byStock.sA.day30.winCount + byStock.sB.day30.winCount;
+    expect(perStockWins).toBe(stats.day30.winCount);
+  });
+
+  it('upsert errors are swallowed so aggregation still returns', async () => {
+    const provider = fakeProvider(buildSeries());
+    const posts = buildPosts(1, 2, 0.5);
+    const repo: WinRateSampleRepo = {
+      async loadSamplesByPostIds() {
+        return new Map();
+      },
+      async upsertSamples() {
+        throw new Error('db dead');
+      },
+    };
+    // Silence the warn.
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const stats = await computeWinRateStats({ posts, provider, sampleRepo: repo });
+    expect(stats.day30.winCount).toBe(1);
+    warn.mockRestore();
   });
 });

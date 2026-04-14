@@ -37,6 +37,7 @@ import {
   useActiveScrapeForKol,
   useReanalyzeBatch,
   useKolFollowerCount,
+  useKolWinRate,
 } from '@/hooks';
 import { SubscriptionToggle } from '@/components/kol/subscription-toggle';
 import { useUnlockChecks } from '@/hooks/use-unlocks';
@@ -125,6 +126,12 @@ function KolStockSection({ stock, kolId }: { stock: StockGroup; kolId: string })
   const isL2Unlocked = unlockChecks.hasLayer2(kolId, stock.stockId);
 
   const { data: chartData, isLoading: chartLoading } = useStockPricesForChart(stock.ticker);
+  // Reuse the KOL-level win-rate response (already cached by react-query) to
+  // source the per-(kol, stock) bucket. `bucketsByStock[stockId].day30` is the
+  // 30d ring shown next to the return-rate grid.
+  const { data: kolWinRateStats } = useKolWinRate(kolId);
+  const stockBuckets = kolWinRateStats?.bucketsByStock?.[stock.stockId];
+  const stockWinRate30d = stockBuckets?.day30 ?? null;
 
   const markers: LineChartMarker[] = stock.posts.map((post) => ({
     time: toDateStr(post.postedAt),
@@ -141,11 +148,6 @@ function KolStockSection({ stock, kolId }: { stock: StockGroup; kolId: string })
     }),
     [stock.posts]
   );
-
-  // Per-(kol,stock) win rate display removed: the dynamic 1σ classifier requires
-  // server-side σ lookup, and we don't yet expose a per-stock bucket on the KOL
-  // win-rate route. Inline classification is no longer permitted.
-  // Follow-up: add per-stock bucket to /api/kols/[id]/win-rate.
 
   // Layer-2 gate: Free users see a compact preview + UnlockCta until they unlock this
   // (kolId, stockId) pair. Pro/Max users bypass via unlockChecks.hasLayer2.
@@ -293,6 +295,28 @@ function KolStockSection({ stock, kolId }: { stock: StockGroup; kolId: string })
                   </div>
                 ))}
               </div>
+              {/* Per-(kol, stock) 30d hit-rate summary from persisted samples */}
+              {stockWinRate30d && stockWinRate30d.total > 0 && (
+                <div className="bg-muted/40 mt-2 flex items-center justify-between rounded-lg px-3 py-2 text-xs">
+                  <span className="text-muted-foreground">
+                    {t('detail.returnRate.periods.30d')} · {stockWinRate30d.winCount}W /{' '}
+                    {stockWinRate30d.loseCount}L / {stockWinRate30d.noiseCount}N
+                  </span>
+                  <span
+                    className={
+                      !stockWinRate30d.sufficientData || stockWinRate30d.hitRate === null
+                        ? 'text-muted-foreground font-semibold'
+                        : stockWinRate30d.hitRate >= 0.5
+                          ? 'font-bold text-emerald-500 dark:text-emerald-400'
+                          : 'font-bold text-red-500 dark:text-red-400'
+                    }
+                  >
+                    {stockWinRate30d.sufficientData && stockWinRate30d.hitRate !== null
+                      ? `${Math.round(stockWinRate30d.hitRate * 100)}%`
+                      : '—'}
+                  </span>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -395,6 +419,7 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
     return postsByStock.flatMap((stock) =>
       stock.posts.map((p) => ({
         id: p.id,
+        stockId: stock.stockId,
         stockTicker: stock.ticker,
         stockName: stock.name,
         sentiment: p.sentiment,

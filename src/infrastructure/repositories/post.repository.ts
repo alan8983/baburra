@@ -2,6 +2,7 @@
 
 import { createAdminClient } from '@/infrastructure/supabase/admin';
 import { escapePostgrestSearch } from '@/lib/api/search';
+import { invalidateByPost as invalidateWinRateSamplesByPost } from './win-rate-sample.repository';
 import type {
   Post,
   PostWithRelations,
@@ -11,6 +12,25 @@ import type {
   PriceChangeByPeriod,
   SourcePlatform,
 } from '@/domain/models';
+
+/**
+ * Fire-and-forget invalidation of the cached win-rate sample rows whenever a
+ * sentiment field is written. See openspec/changes/persist-win-rate-samples
+ * (D5) — samples are immutable per `(post_id, stock_id, period_days,
+ * classifier_version)` EXCEPT when the classifier's inputs change, which for
+ * us means `posts.sentiment` or `post_stocks.sentiment`. Deleting all rows for
+ * the post is simpler than per-stock bookkeeping and the next read refills.
+ */
+async function invalidateSamplesAfterSentimentWrite(postId: string): Promise<void> {
+  try {
+    await invalidateWinRateSamplesByPost(postId);
+  } catch (err) {
+    console.warn(
+      `[post.repository] win-rate sample invalidation failed for ${postId}:`,
+      err instanceof Error ? err.message : err
+    );
+  }
+}
 
 type DbPost = {
   id: string;
@@ -296,6 +316,11 @@ export async function updatePost(
     }
   }
 
+  // Any sentiment-bearing field changed → invalidate cached samples.
+  if (input.sentiment !== undefined || input.stockSentiments) {
+    await invalidateSamplesAfterSentimentWrite(id);
+  }
+
   const p = await getPostById(id);
   return p ? { ...p } : null;
 }
@@ -331,6 +356,10 @@ export async function updatePostAiAnalysis(
         .eq('stock_id', stockId);
     }
   }
+
+  // AI re-analysis always rewrites post.sentiment; drop cached samples so the
+  // next win-rate read re-classifies with the new values.
+  await invalidateSamplesAfterSentimentWrite(id);
 
   return mapDbToPost(row as DbPost);
 }
