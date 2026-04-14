@@ -24,6 +24,15 @@ export type WinRateOutcome = 'win' | 'lose' | 'noise' | 'excluded';
 /** Minimum (wins + loses) required for a period to expose derived metrics. */
 export const MIN_RESOLVED_POSTS_PER_PERIOD = 10;
 
+/**
+ * Version tag stamped onto every persisted sample row so the win-rate API can
+ * filter rows produced by the current classifier math. Bump when the
+ * classification logic (noise-band formula, σ-multiplier, excluded short-circuit)
+ * changes; old rows become invisible and an opt-in backfill regenerates at the
+ * new version. Queries MUST pin this value — never read rows unconditionally.
+ */
+export const CLASSIFIER_VERSION = 1;
+
 export interface ClassifyArgs {
   sentiment: Sentiment;
   priceChange: number | null;
@@ -101,6 +110,14 @@ export interface WinRateStats {
   day30: WinRateBucket;
   day90: WinRateBucket;
   day365: WinRateBucket;
+  /**
+   * Optional per-stock breakdown of the same four-period buckets. Populated
+   * when the caller requests `includeBucketsByStock` on `computeWinRateStats`
+   * and consumed by the KOL-detail per-stock ring. The nested values are
+   * plain `WinRateStats` but, by convention, never carry their own
+   * `bucketsByStock` (no recursion).
+   */
+  bucketsByStock?: Record<string, WinRateStats>;
 }
 
 function median(values: number[]): number {

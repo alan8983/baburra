@@ -70,14 +70,25 @@ export async function getProfile(userId: string) {
     };
   }
 
-  const { data, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let result: { data: any; error: any } = await supabase
     .from('profiles')
     .select('display_name, timezone, color_palette, default_win_rate_period, first_import_free')
     .eq('id', userId)
     .single();
 
-  if (error) {
-    if (error.code === 'PGRST116') {
+  // If the query fails because the default_win_rate_period column hasn't been
+  // migrated yet, retry without it so the profile API stays functional.
+  if (result.error && result.error.message?.includes('default_win_rate_period')) {
+    result = await supabase
+      .from('profiles')
+      .select('display_name, timezone, color_palette, first_import_free')
+      .eq('id', userId)
+      .single();
+  }
+
+  if (result.error) {
+    if (result.error.code === 'PGRST116') {
       return {
         displayName: null,
         timezone: DEFAULT_TIMEZONE,
@@ -86,9 +97,10 @@ export async function getProfile(userId: string) {
         firstImportFree: true,
       };
     }
-    throw new Error(`Failed to get profile: ${error.message}`);
+    throw new Error(`Failed to get profile: ${result.error.message}`);
   }
 
+  const data = result.data;
   return {
     displayName: data.display_name as string | null,
     timezone: (data.timezone as string) || DEFAULT_TIMEZONE,

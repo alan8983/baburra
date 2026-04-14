@@ -33,6 +33,23 @@ export interface VolatilityProvider {
   getSeries(ticker: string, opts: { from: string; to: string }): Promise<PriceSeriesPoint[]>;
   /** Return the market the ticker belongs to. */
   getMarket(ticker: string): Promise<Market | null>;
+  /**
+   * Optional L2 cache lookup (e.g. a DB-backed threshold table). When provided,
+   * `getVolatilityThreshold` consults this before running the expensive compute
+   * path. A `null` return is treated as a miss and the compute path runs.
+   */
+  getCachedThreshold?(
+    ticker: string,
+    periodDays: PeriodDays,
+    asOfDate: string
+  ): Promise<VolatilityResult | null>;
+  /**
+   * Optional L2 cache writer. When provided, `getVolatilityThreshold` invokes
+   * this after a successful compute to persist the row for future cold starts.
+   * Errors are swallowed by the provider — callers are not expected to handle
+   * persistence failures.
+   */
+  upsertCachedThreshold?(result: VolatilityResult): Promise<void>;
 }
 
 export interface VolatilityResult {
@@ -247,19 +264,28 @@ export interface GetVolatilityThresholdArgs {
   provider: VolatilityProvider;
   /** Optional override of the shared cache (mostly for tests). */
   cache?: VolatilityCache;
+  /**
+   * Pre-resolved threshold — if supplied, skips L1/L2 lookup and compute, just
+   * seeds the L1 cache and returns it. Useful when the caller already has the
+   * value from a persisted sample row or backfill context.
+   */
+  cachedThreshold?: VolatilityResult;
 }
 
 /**
  * Compute the dynamic 1σ threshold for `(ticker, periodDays, asOfDate)`.
  *
  * Steps:
- * 1. Look up cache; on hit, return immediately (no provider calls).
- * 2. Resolve the ticker's market via `provider.getMarket`. Throw on `'HK'`.
- * 3. Pull the ticker's price series for the lookback window.
- * 4. Filter strictly before `asOfDate` (no look-ahead).
- * 5. If sample count is insufficient, fall back to the same-market index.
- * 6. Compute σ on the chosen series.
- * 7. Cache and return.
+ * 1. If `cachedThreshold` was passed, seed L1 and return immediately.
+ * 2. Look up the L1 (in-memory) cache; on hit, return.
+ * 3. Consult the provider's optional L2 cache (`getCachedThreshold`); on hit,
+ *    seed L1 and return.
+ * 4. Resolve the ticker's market via `provider.getMarket`. Throw on `'HK'`.
+ * 5. Pull the ticker's price series for the lookback window.
+ * 6. Filter strictly before `asOfDate` (no look-ahead).
+ * 7. If sample count is insufficient, fall back to the same-market index.
+ * 8. Compute σ on the chosen series.
+ * 9. Seed L1, upsert L2 via the provider (fire-and-forget), return.
  */
 export async function getVolatilityThreshold(
   args: GetVolatilityThresholdArgs
@@ -268,11 +294,26 @@ export async function getVolatilityThreshold(
   const cache = args.cache ?? sharedCache;
   const asOfStr = toIsoDate(asOfDate);
 
-  // 1. Cache check
+  // 1. Explicit pre-resolved short-circuit
+  if (args.cachedThreshold) {
+    cache.set(ticker, periodDays, asOfStr, args.cachedThreshold);
+    return args.cachedThreshold;
+  }
+
+  // 2. L1 cache check
   const cached = cache.get(ticker, periodDays, asOfStr);
   if (cached) return cached;
 
-  // 2. Market lookup (HK throws)
+  // 3. L2 cache check (optional provider capability)
+  if (provider.getCachedThreshold) {
+    const l2 = await provider.getCachedThreshold(ticker, periodDays, asOfStr);
+    if (l2) {
+      cache.set(ticker, periodDays, asOfStr, l2);
+      return l2;
+    }
+  }
+
+  // 4. Market lookup (HK throws)
   const market = await provider.getMarket(ticker);
   if (market === 'HK') {
     throw new UnsupportedMarketError('HK', ticker);
@@ -282,7 +323,7 @@ export async function getVolatilityThreshold(
     throw new UnsupportedMarketError('UNKNOWN', ticker);
   }
 
-  // 3. Fetch the ticker's series for the lookback window (with a small buffer
+  // 5. Fetch the ticker's series for the lookback window (with a small buffer
   //    so weekends/holidays don't shrink the count below the threshold).
   const lookbackDays = LOOKBACK_CALENDAR_DAYS[periodDays];
   const buffer = 14;
@@ -291,7 +332,7 @@ export async function getVolatilityThreshold(
     from: toIsoDate(fromDate),
     to: asOfStr,
   });
-  // 4. Strict no-look-ahead filter
+  // 6. Strict no-look-ahead filter
   const tickerSeries = filterStrictlyBefore(tickerSeriesRaw, asOfStr);
 
   let chosenSeries = tickerSeries;
@@ -299,7 +340,7 @@ export async function getVolatilityThreshold(
   let chosenTicker = ticker;
 
   if (countOverlappingSamples(tickerSeries, periodDays) < MIN_SAMPLE_SIZE[periodDays]) {
-    // 5. Insufficient history → index fallback
+    // 7. Insufficient history → index fallback
     const indexTicker = getIndexTickerForMarket(market);
     const indexSeriesRaw = await provider.getSeries(indexTicker, {
       from: toIsoDate(fromDate),
@@ -311,7 +352,7 @@ export async function getVolatilityThreshold(
     chosenTicker = indexTicker;
   }
 
-  // 6. Compute σ
+  // 8. Compute σ
   const value = calculateRealizedVolatility(chosenSeries, periodDays);
   const sampleSize = countOverlappingSamples(chosenSeries, periodDays);
 
@@ -324,8 +365,18 @@ export async function getVolatilityThreshold(
     periodDays,
   };
 
-  // 7. Cache and return
+  // 9. Seed L1, upsert L2 (fire-and-forget; errors are swallowed by the provider)
   cache.set(ticker, periodDays, asOfStr, result);
+  if (provider.upsertCachedThreshold) {
+    try {
+      await provider.upsertCachedThreshold(result);
+    } catch (err) {
+      console.warn(
+        `[volatility] L2 upsert failed for ${ticker}/${periodDays}/${asOfStr}:`,
+        err instanceof Error ? err.message : err
+      );
+    }
+  }
   return result;
 }
 

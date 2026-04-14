@@ -9,6 +9,12 @@ import { unauthorizedError, internalError } from '@/lib/api/error';
 import { emptyStats, type WinRateStats } from '@/domain/calculators';
 import { computeWinRateStats, type PostForWinRate } from '@/domain/services/win-rate.service';
 import { StockPriceVolatilityProvider } from '@/infrastructure/providers/stock-price-volatility.provider';
+import { PersistentVolatilityProvider } from '@/infrastructure/providers/persistent-volatility.provider';
+import {
+  loadSamplesByPostIds,
+  upsertSamples,
+} from '@/infrastructure/repositories/win-rate-sample.repository';
+import { isWinRateSampleCacheEnabled } from '@/lib/feature-flags';
 import type { Sentiment } from '@/domain/models';
 
 // 計算本月開始時間（UTC）
@@ -151,7 +157,11 @@ export async function GET() {
 
     // Compute server-side win-rate aggregates over the recent post sample so the
     // dashboard widgets can drop their inline classification logic.
-    const provider = new StockPriceVolatilityProvider();
+    const useCache = isWinRateSampleCacheEnabled();
+    const provider = useCache
+      ? new PersistentVolatilityProvider()
+      : new StockPriceVolatilityProvider();
+    const sampleRepo = useCache ? { loadSamplesByPostIds, upsertSamples } : undefined;
     const buildPostForWinRate = (post: (typeof recentPosts)[number]): PostForWinRate => {
       const tickerByStockId: Record<string, string> = {};
       const stockSentiments: Record<string, Sentiment> = {};
@@ -179,7 +189,7 @@ export async function GET() {
 
     try {
       const allForWinRate = recentPosts.map(buildPostForWinRate);
-      pulseStats = await computeWinRateStats({ posts: allForWinRate, provider });
+      pulseStats = await computeWinRateStats({ posts: allForWinRate, provider, sampleRepo });
 
       // Group by KOL and compute per-KOL full period stats (all four periods).
       const postsByKolId = new Map<
@@ -196,7 +206,7 @@ export async function GET() {
         postsByKolId.set(post.kol.id, entry);
       }
       for (const [kolId, entry] of postsByKolId) {
-        const stats = await computeWinRateStats({ posts: entry.posts, provider });
+        const stats = await computeWinRateStats({ posts: entry.posts, provider, sampleRepo });
         kolWinRates.push({
           id: kolId,
           name: entry.name,

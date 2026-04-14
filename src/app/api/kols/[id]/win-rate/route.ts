@@ -1,13 +1,24 @@
 // KOL 勝率 API
 // GET /api/kols/[id]/win-rate - 取得 KOL 的勝率統計（動態 1σ 門檻）
+//
+// When USE_WIN_RATE_SAMPLE_CACHE is enabled, the route reads cached rows from
+// `post_win_rate_samples` first and only classifies missing (post, stock,
+// period) tuples. Missing tuples are filled lazily via the persistent
+// volatility provider (L2 DB cache) and upserted back for future requests.
 
 import { NextResponse } from 'next/server';
 import { internalError } from '@/lib/api/error';
 import { listPosts } from '@/infrastructure/repositories/post.repository';
 import { getStockPrices } from '@/infrastructure/repositories/stock-price.repository';
-import { calculatePriceChanges, emptyStats } from '@/domain/calculators';
+import { CLASSIFIER_VERSION, calculatePriceChanges, emptyStats } from '@/domain/calculators';
 import { computeWinRateStats, type PostForWinRate } from '@/domain/services/win-rate.service';
 import { StockPriceVolatilityProvider } from '@/infrastructure/providers/stock-price-volatility.provider';
+import { PersistentVolatilityProvider } from '@/infrastructure/providers/persistent-volatility.provider';
+import {
+  loadSamplesByPostIds,
+  upsertSamples,
+} from '@/infrastructure/repositories/win-rate-sample.repository';
+import { isWinRateSampleCacheEnabled } from '@/lib/feature-flags';
 import type { PriceChangeByPeriod, Sentiment } from '@/domain/models';
 
 interface RouteContext {
@@ -23,6 +34,8 @@ export async function GET(_request: Request, context: RouteContext) {
       return NextResponse.json(emptyStats());
     }
 
+    const useCache = isWinRateSampleCacheEnabled();
+
     // Collect tickers per stockId
     const tickerByStockId = new Map<string, string>();
     for (const post of posts) {
@@ -31,24 +44,68 @@ export async function GET(_request: Request, context: RouteContext) {
       }
     }
 
-    // Earliest postedAt → backfill candles
-    const earliestDate = posts.reduce((min, post) => {
-      const postedAt = new Date(post.postedAt);
-      return postedAt < min ? postedAt : min;
-    }, new Date());
-    const startDate = new Date(earliestDate);
-    startDate.setDate(startDate.getDate() - 7);
+    // Read the cached sample rows up front; this is one query regardless of
+    // KOL size and lets us skip candle prefetch for fully-cached KOLs.
+    const cachedSamples = useCache
+      ? await loadSamplesByPostIds(
+          posts.map((p) => p.id),
+          CLASSIFIER_VERSION
+        )
+      : null;
+
+    // Identify which (post, stock, period) tuples still need classification.
+    // If every tuple is cached, skip the candle fetch entirely — huge latency
+    // win on warm reads.
+    const missingStockIds = new Set<string>();
+    if (cachedSamples) {
+      for (const post of posts) {
+        for (const stock of post.stocks) {
+          let missing = false;
+          for (const period of [5, 30, 90, 365] as const) {
+            if (!cachedSamples.has(`${post.id}:${stock.id}:${period}`)) {
+              missing = true;
+              break;
+            }
+          }
+          if (missing) missingStockIds.add(stock.id);
+        }
+      }
+    } else {
+      for (const stockId of tickerByStockId.keys()) missingStockIds.add(stockId);
+    }
 
     const candlesByStock: Record<string, Awaited<ReturnType<typeof getStockPrices>>['candles']> =
       {};
-    for (const [stockId, ticker] of tickerByStockId) {
-      try {
-        const { candles } = await getStockPrices(ticker, {
-          startDate: startDate.toISOString().slice(0, 10),
-        });
-        candlesByStock[stockId] = candles;
-      } catch {
-        candlesByStock[stockId] = [];
+
+    if (missingStockIds.size > 0) {
+      // Earliest postedAt among posts that still need classification → fetch
+      // enough history to cover the 365d window.
+      const earliestDate = posts.reduce((min, post) => {
+        const postedAt = new Date(post.postedAt);
+        return postedAt < min ? postedAt : min;
+      }, new Date());
+      const startDate = new Date(earliestDate);
+      startDate.setDate(startDate.getDate() - 7);
+      const startDateStr = startDate.toISOString().slice(0, 10);
+
+      const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> =>
+        Promise.race([
+          promise,
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
+        ]);
+
+      const entries = Array.from(missingStockIds).map(
+        (stockId) => [stockId, tickerByStockId.get(stockId)!] as const
+      );
+      const results = await Promise.allSettled(
+        entries.map(([, ticker]) =>
+          withTimeout(getStockPrices(ticker, { startDate: startDateStr }), 5000)
+        )
+      );
+      for (let i = 0; i < entries.length; i++) {
+        const [stockId] = entries[i];
+        const result = results[i];
+        candlesByStock[stockId] = result.status === 'fulfilled' ? result.value.candles : [];
       }
     }
 
@@ -86,9 +143,21 @@ export async function GET(_request: Request, context: RouteContext) {
       };
     });
 
+    const provider = useCache
+      ? new PersistentVolatilityProvider()
+      : new StockPriceVolatilityProvider();
+    const sampleRepo = useCache
+      ? {
+          loadSamplesByPostIds,
+          upsertSamples,
+        }
+      : undefined;
+
     const stats = await computeWinRateStats({
       posts: postsForWinRate,
-      provider: new StockPriceVolatilityProvider(),
+      provider,
+      sampleRepo,
+      includeBucketsByStock: true,
     });
 
     return NextResponse.json(stats);
