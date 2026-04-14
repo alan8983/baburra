@@ -14,7 +14,7 @@
  */
 
 import { createAdminClient } from '@/infrastructure/supabase/admin';
-import type { PeriodDays, WinRateOutcome } from '@/domain/calculators';
+import type { PeriodDays, PriceChangeStatus, WinRateOutcome } from '@/domain/calculators';
 
 export interface WinRateSampleRow {
   postId: string;
@@ -26,6 +26,10 @@ export interface WinRateSampleRow {
   /** The 1σ threshold applied at classification time; null for excluded. */
   thresholdValue: number | null;
   thresholdSource: 'ticker' | 'index-fallback' | null;
+  /** Raw fractional price change; null when `priceChangeStatus !== 'value'`. */
+  priceChange: number | null;
+  /** Resolution state of the raw price change. */
+  priceChangeStatus: PriceChangeStatus;
   classifierVersion: number;
 }
 
@@ -37,6 +41,8 @@ interface DbRow {
   excess_return: number | string | null;
   threshold_value: number | string | null;
   threshold_source: string | null;
+  price_change: number | string | null;
+  price_change_status: string | null;
   classifier_version: number;
 }
 
@@ -59,6 +65,8 @@ function mapDbRow(row: DbRow): WinRateSampleRow {
     excessReturn: numOrNull(row.excess_return),
     thresholdValue: numOrNull(row.threshold_value),
     thresholdSource: (row.threshold_source as 'ticker' | 'index-fallback' | null) ?? null,
+    priceChange: numOrNull(row.price_change),
+    priceChangeStatus: (row.price_change_status as PriceChangeStatus | null) ?? 'value',
     classifierVersion: row.classifier_version,
   };
 }
@@ -79,7 +87,7 @@ export async function loadSamplesByPostIds(
   const { data, error } = await supabase
     .from('post_win_rate_samples')
     .select(
-      'post_id, stock_id, period_days, outcome, excess_return, threshold_value, threshold_source, classifier_version'
+      'post_id, stock_id, period_days, outcome, excess_return, threshold_value, threshold_source, price_change, price_change_status, classifier_version'
     )
     .in('post_id', postIds)
     .eq('classifier_version', classifierVersion);
@@ -126,6 +134,8 @@ export async function upsertSamples(rows: WinRateSampleRow[]): Promise<void> {
     excess_return: r.excessReturn,
     threshold_value: r.thresholdValue,
     threshold_source: r.thresholdSource,
+    price_change: r.priceChange,
+    price_change_status: r.priceChangeStatus,
     computed_at: now,
   }));
 

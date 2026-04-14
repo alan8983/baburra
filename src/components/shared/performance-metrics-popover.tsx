@@ -70,9 +70,11 @@ export function PerformanceMetricsPopover({ bucket, className }: PerformanceMetr
               <dt className="text-muted-foreground">{t('sqr')}</dt>
               <dd className="flex items-baseline gap-1 font-mono">
                 <span>{formatSqr(bucket?.sqr ?? null)}</span>
-                <span className={cn('text-[10px]', sqrBadgeClass)}>
-                  · {t(`sqrLabel.${sqrKey}`)}
-                </span>
+                {bucket?.sqr != null && (
+                  <span className={cn('text-[10px]', sqrBadgeClass)}>
+                    · {t(`sqrLabel.${sqrKey}`)}
+                  </span>
+                )}
               </dd>
             </div>
             <div className="flex items-baseline justify-between gap-4">

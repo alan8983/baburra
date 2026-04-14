@@ -8,7 +8,7 @@ import { WinRateRing } from '@/app/(app)/kols/[id]/_components/win-rate-ring';
 import { PeriodSelector } from '@/components/shared/period-selector';
 import { PerformanceMetricsPopover } from '@/components/shared/performance-metrics-popover';
 import { InsufficientDataBadge } from '@/components/shared/insufficient-data-badge';
-import { useStockWinRate } from '@/hooks/use-stocks';
+import { useStockScorecard } from '@/hooks/use-stocks';
 import { useProfile } from '@/hooks/use-profile';
 import {
   DEFAULT_WIN_RATE_PERIOD,
@@ -27,7 +27,7 @@ interface CommunityAccuracyCardProps {
  */
 export function CommunityAccuracyCard({ ticker }: CommunityAccuracyCardProps) {
   const t = useTranslations('stocks');
-  const { data: stats, isLoading } = useStockWinRate(ticker);
+  const { data: stats, isLoading } = useStockScorecard(ticker);
   const { data: profile } = useProfile();
 
   const [override, setOverride] = useState<WinRatePeriod | null>(null);

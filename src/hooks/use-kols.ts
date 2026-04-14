@@ -13,7 +13,7 @@ import type {
 import { API_ROUTES } from '@/lib/constants';
 import { throwIfNotOk } from '@/lib/api/fetch-error';
 
-import type { ReturnRateStats, WinRateStats } from '@/domain/calculators';
+import type { WinRateStats } from '@/domain/calculators';
 
 // Query Keys
 export const kolKeys = {
@@ -23,7 +23,6 @@ export const kolKeys = {
   details: () => [...kolKeys.all, 'detail'] as const,
   detail: (id: string) => [...kolKeys.details(), id] as const,
   posts: (id: string) => [...kolKeys.detail(id), 'posts'] as const,
-  returnRate: (id: string) => [...kolKeys.detail(id), 'return-rate'] as const,
   winRate: (id: string) => [...kolKeys.detail(id), 'win-rate'] as const,
   search: (query: string) => [...kolKeys.all, 'search', query] as const,
 };
@@ -128,32 +127,37 @@ export function useCreateKol() {
   });
 }
 
-// 取得 KOL 報酬率統計
-export function useKolReturnRate(id: string) {
-  return useQuery({
-    queryKey: kolKeys.returnRate(id),
-    queryFn: async (): Promise<ReturnRateStats> => {
-      const res = await fetch(API_ROUTES.KOL_RETURN_RATE(id));
-      await throwIfNotOk(res);
-      return res.json();
-    },
-    enabled: !!id,
-    staleTime: 5 * 60 * 1000, // 5 分鐘內不重新請求
-    gcTime: 10 * 60 * 1000,
-  });
-}
-
-// 取得 KOL 勝率統計（動態 1σ 門檻）
+/**
+ * KOL scorecard + win-rate. Handles the read-through cache response shape:
+ *   { status: 'ready', computedAt, day5, day30, day90, day365, bucketsByStock }
+ *   { status: 'computing', computedAt: null }
+ *
+ * When legacy inline-compute is active (feature flag off, during rollout) the
+ * response still decodes cleanly because it carries the bucket fields without
+ * a `status` discriminator — we treat that as implicit `ready`.
+ *
+ * When status is 'computing', React Query polls every 3 s for up to 30 s.
+ */
 export function useKolWinRate(id: string) {
   return useQuery({
     queryKey: kolKeys.winRate(id),
-    queryFn: async (): Promise<WinRateStats> => {
+    queryFn: async (): Promise<WinRateStats | null> => {
       const res = await fetch(API_ROUTES.KOL_WIN_RATE(id));
       await throwIfNotOk(res);
-      return res.json();
+      const json = (await res.json()) as
+        | (WinRateStats & { status?: 'ready'; computedAt?: string })
+        | { status: 'computing'; computedAt: null };
+      if ('status' in json && json.status === 'computing') return null;
+      // Strip the cache envelope fields before returning.
+      const raw = json as WinRateStats & { status?: 'ready'; computedAt?: string };
+      const { status, computedAt, ...stats } = raw;
+      void status;
+      void computedAt;
+      return stats as WinRateStats;
     },
     enabled: !!id,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
+    refetchInterval: (query) => (query.state.data === null ? 3000 : false),
   });
 }

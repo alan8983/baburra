@@ -221,6 +221,63 @@ export type Database = {
           },
         ];
       };
+      kol_scorecard_cache: {
+        Row: {
+          buckets_by_stock: Json;
+          classifier_version: number;
+          computed_at: string;
+          day30: Json;
+          day365: Json;
+          day5: Json;
+          day90: Json;
+          kol_id: string;
+          last_post_at: string | null;
+          post_count: number;
+          stale: boolean;
+        };
+        Insert: {
+          buckets_by_stock: Json;
+          classifier_version: number;
+          computed_at?: string;
+          day30: Json;
+          day365: Json;
+          day5: Json;
+          day90: Json;
+          kol_id: string;
+          last_post_at?: string | null;
+          post_count: number;
+          stale?: boolean;
+        };
+        Update: {
+          buckets_by_stock?: Json;
+          classifier_version?: number;
+          computed_at?: string;
+          day30?: Json;
+          day365?: Json;
+          day5?: Json;
+          day90?: Json;
+          kol_id?: string;
+          last_post_at?: string | null;
+          post_count?: number;
+          stale?: boolean;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'kol_scorecard_cache_kol_id_fkey';
+            columns: ['kol_id'];
+            isOneToOne: true;
+            referencedRelation: 'kol_stats';
+            referencedColumns: ['kol_id'];
+          },
+          {
+            foreignKeyName: 'kol_scorecard_cache_kol_id_fkey';
+            columns: ['kol_id'];
+            isOneToOne: true;
+            referencedRelation: 'kols';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       kol_sources: {
         Row: {
           created_at: string;
@@ -500,6 +557,8 @@ export type Database = {
           outcome: string;
           period_days: number;
           post_id: string;
+          price_change: number | null;
+          price_change_status: string;
           stock_id: string;
           threshold_source: string | null;
           threshold_value: number | null;
@@ -511,6 +570,8 @@ export type Database = {
           outcome: string;
           period_days: number;
           post_id: string;
+          price_change?: number | null;
+          price_change_status?: string;
           stock_id: string;
           threshold_source?: string | null;
           threshold_value?: number | null;
@@ -522,6 +583,8 @@ export type Database = {
           outcome?: string;
           period_days?: number;
           post_id?: string;
+          price_change?: number | null;
+          price_change_status?: string;
           stock_id?: string;
           threshold_source?: string | null;
           threshold_value?: number | null;
@@ -814,6 +877,63 @@ export type Database = {
             foreignKeyName: 'stock_prices_stock_id_fkey';
             columns: ['stock_id'];
             isOneToOne: false;
+            referencedRelation: 'stocks';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      stock_scorecard_cache: {
+        Row: {
+          buckets_by_kol: Json;
+          classifier_version: number;
+          computed_at: string;
+          day30: Json;
+          day365: Json;
+          day5: Json;
+          day90: Json;
+          last_post_at: string | null;
+          post_count: number;
+          stale: boolean;
+          stock_id: string;
+        };
+        Insert: {
+          buckets_by_kol: Json;
+          classifier_version: number;
+          computed_at?: string;
+          day30: Json;
+          day365: Json;
+          day5: Json;
+          day90: Json;
+          last_post_at?: string | null;
+          post_count: number;
+          stale?: boolean;
+          stock_id: string;
+        };
+        Update: {
+          buckets_by_kol?: Json;
+          classifier_version?: number;
+          computed_at?: string;
+          day30?: Json;
+          day365?: Json;
+          day5?: Json;
+          day90?: Json;
+          last_post_at?: string | null;
+          post_count?: number;
+          stale?: boolean;
+          stock_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'stock_scorecard_cache_stock_id_fkey';
+            columns: ['stock_id'];
+            isOneToOne: true;
+            referencedRelation: 'stock_stats';
+            referencedColumns: ['stock_id'];
+          },
+          {
+            foreignKeyName: 'stock_scorecard_cache_stock_id_fkey';
+            columns: ['stock_id'];
+            isOneToOne: true;
             referencedRelation: 'stocks';
             referencedColumns: ['id'];
           },

@@ -7,7 +7,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useColorPalette } from '@/lib/colors/color-palette-context';
-import { formatReturnRate, getReturnRateColorClass } from '@/domain/calculators';
+import {
+  formatReturnRate,
+  getReturnRateColorClass,
+  type WinRateBucket,
+} from '@/domain/calculators';
 import { useKolWinRate } from '@/hooks/use-kols';
 import { useProfile } from '@/hooks/use-profile';
 import { WinRateRing } from './win-rate-ring';
@@ -56,29 +60,25 @@ interface KolScorecardProps {
 interface PeriodStats {
   avgReturn: number | null;
   allPending: boolean;
+  pendingCount: number;
 }
 
-function calcPeriodAvg(
-  posts: StockPost[],
-  period: 'day5' | 'day30' | 'day90' | 'day365'
-): PeriodStats {
-  const statusKey = `${period}Status` as const;
-  const nonNeutral = posts.filter((p) => p.sentiment !== 0);
-  if (!nonNeutral.length) return { avgReturn: null, allPending: false };
-
-  const pendingCount = nonNeutral.filter((p) => p.priceChanges[statusKey] === 'pending').length;
-  const allPending = pendingCount === nonNeutral.length;
-
-  const relevant = nonNeutral.filter((p) => p.priceChanges[period] != null);
-  if (!relevant.length) return { avgReturn: null, allPending };
-
-  const returns = relevant.map((p) => {
-    const change = p.priceChanges[period]!;
-    return p.sentiment > 0 ? change : -change;
-  });
+/**
+ * Derive per-period display stats from the server-aggregated bucket. The
+ * previous implementation re-averaged on the client over a 20-post window
+ * and silently dropped posts whose candles timed out — scorecards drifted
+ * across devices. The bucket is computed once, server-side, from the full
+ * sample set. `allPending` is true only when every sample for the period
+ * is pending (no resolved returns yet).
+ */
+function bucketToPeriodStats(bucket: WinRateBucket | null | undefined): PeriodStats {
+  if (!bucket) return { avgReturn: null, allPending: false, pendingCount: 0 };
+  const resolved = bucket.returnSampleSize;
+  const pending = bucket.pendingCount;
   return {
-    avgReturn: returns.reduce((a, b) => a + b, 0) / returns.length,
-    allPending,
+    avgReturn: bucket.avgReturn,
+    allPending: resolved === 0 && pending > 0,
+    pendingCount: pending,
   };
 }
 
@@ -94,7 +94,11 @@ export function KolScorecard({
   const { palette } = useColorPalette();
 
   // Server-computed per-period stats (dynamic 1σ classifier).
-  const { data: winRateStats } = useKolWinRate(kolId);
+  // When `data === null` + `isFetching`, the server returned `computing` and
+  // React Query is polling — show a subtle "computing..." label instead of
+  // rendering em-dashes that look like missing data.
+  const { data: winRateStats, isFetching: winRateFetching } = useKolWinRate(kolId);
+  const isComputing = winRateStats === null && winRateFetching;
   const { data: profile } = useProfile();
 
   // User's per-card override, or null to fall through to the profile default.
@@ -113,15 +117,15 @@ export function KolScorecard({
   const thresholdRef = selectedBucket?.threshold ?? null;
   const showInsufficient = selectedBucket !== null && !selectedBucket.sufficientData;
 
-  // Period stats
+  // Period stats — now read straight from the server-aggregated blob.
   const periodStats = useMemo(
     () => ({
-      day5: calcPeriodAvg(stockPosts, 'day5'),
-      day30: calcPeriodAvg(stockPosts, 'day30'),
-      day90: calcPeriodAvg(stockPosts, 'day90'),
-      day365: calcPeriodAvg(stockPosts, 'day365'),
+      day5: bucketToPeriodStats(winRateStats?.day5),
+      day30: bucketToPeriodStats(winRateStats?.day30),
+      day90: bucketToPeriodStats(winRateStats?.day90),
+      day365: bucketToPeriodStats(winRateStats?.day365),
     }),
-    [stockPosts]
+    [winRateStats]
   );
 
   // Per-stock breakdown — derived from the `bucketsByStock` returned by the
@@ -233,13 +237,18 @@ export function KolScorecard({
                 />
                 <PerformanceMetricsPopover bucket={selectedBucket} />
               </div>
-              {totalCalls > 0 && (
+              {isComputing && (
+                <p className="text-muted-foreground animate-pulse text-xs">
+                  {t('detail.scorecard.computing')}
+                </p>
+              )}
+              {!isComputing && totalCalls > 0 && (
                 <p className="text-muted-foreground text-xs">
                   {winCount}/{totalCalls} {t('detail.scorecard.correct')}
                   {noiseCount > 0 && ` · ${noiseCount} noise`}
                 </p>
               )}
-              {showInsufficient && <InsufficientDataBadge />}
+              {!isComputing && showInsufficient && <InsufficientDataBadge />}
               {thresholdRef && (
                 <p className="text-muted-foreground text-[10px]">
                   ±{(thresholdRef.value * 100).toFixed(1)}% σ
@@ -270,6 +279,11 @@ export function KolScorecard({
                           className={`mt-1 text-sm font-bold ${getReturnRateColorClass(item.data.avgReturn, palette)}`}
                         >
                           {formatReturnRate(item.data.avgReturn)}
+                        </p>
+                      )}
+                      {item.data.pendingCount > 0 && !item.data.allPending && (
+                        <p className="text-muted-foreground mt-0.5 text-[10px] leading-tight">
+                          {t('detail.scorecard.pending', { count: item.data.pendingCount })}
                         </p>
                       )}
                     </div>

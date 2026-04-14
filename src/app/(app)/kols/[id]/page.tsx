@@ -90,27 +90,41 @@ function toDateStr(postedAt: Date | string): string {
   return s.includes('T') ? s.slice(0, 10) : s.slice(0, 10);
 }
 
-function calcPeriodStats(posts: StockPost[], period: 'day5' | 'day30' | 'day90' | 'day365') {
-  const statusKey = `${period}Status` as const;
-  const nonNeutral = posts.filter((p) => p.sentiment !== 0);
-  if (!nonNeutral.length)
-    return { avgReturn: null, positiveCount: 0, negativeCount: 0, allPending: false };
-
-  const pendingCount = nonNeutral.filter((p) => p.priceChanges[statusKey] === 'pending').length;
-  const allPending = pendingCount === nonNeutral.length;
-
-  const relevant = nonNeutral.filter((p) => p.priceChanges[period] != null);
-  if (!relevant.length) return { avgReturn: null, positiveCount: 0, negativeCount: 0, allPending };
-
-  const returns = relevant.map((p) => {
-    const change = p.priceChanges[period]!;
-    return p.sentiment > 0 ? change : -change;
-  });
+/**
+ * Per-stock return/pending stats sourced from the server-aggregated bucket
+ * (`bucketsByStock[stockId][dayN]`). Previous implementation re-averaged
+ * on the client with silent Tiingo-timeout dropouts — replaced by the
+ * persistent scorecard cache so numbers are deterministic across devices.
+ */
+function bucketToStockPeriodStats(
+  bucket:
+    | { avgReturn: number | null; pendingCount: number; returnSampleSize: number }
+    | null
+    | undefined
+): {
+  avgReturn: number | null;
+  positiveCount: number;
+  negativeCount: number;
+  allPending: boolean;
+  pendingCount: number;
+} {
+  if (!bucket) {
+    return {
+      avgReturn: null,
+      positiveCount: 0,
+      negativeCount: 0,
+      allPending: false,
+      pendingCount: 0,
+    };
+  }
+  const resolved = bucket.returnSampleSize;
+  const pending = bucket.pendingCount;
   return {
-    avgReturn: returns.reduce((a, b) => a + b, 0) / returns.length,
-    positiveCount: returns.filter((r) => r > 0).length,
-    negativeCount: returns.filter((r) => r < 0).length,
-    allPending,
+    avgReturn: bucket.avgReturn,
+    positiveCount: 0, // counts no longer surfaced by the aggregate; kept for shape
+    negativeCount: 0,
+    allPending: resolved === 0 && pending > 0,
+    pendingCount: pending,
   };
 }
 
@@ -141,12 +155,12 @@ function KolStockSection({ stock, kolId }: { stock: StockGroup; kolId: string })
 
   const periodStats = useMemo(
     () => ({
-      day5: calcPeriodStats(stock.posts, 'day5'),
-      day30: calcPeriodStats(stock.posts, 'day30'),
-      day90: calcPeriodStats(stock.posts, 'day90'),
-      day365: calcPeriodStats(stock.posts, 'day365'),
+      day5: bucketToStockPeriodStats(stockBuckets?.day5),
+      day30: bucketToStockPeriodStats(stockBuckets?.day30),
+      day90: bucketToStockPeriodStats(stockBuckets?.day90),
+      day365: bucketToStockPeriodStats(stockBuckets?.day365),
     }),
-    [stock.posts]
+    [stockBuckets]
   );
 
   // Layer-2 gate: Free users see a compact preview + UnlockCta until they unlock this

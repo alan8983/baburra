@@ -37,7 +37,6 @@ export const API_ROUTES = {
   KOLS: '/api/kols',
   KOL_DETAIL: (id: string) => `/api/kols/${id}`,
   KOL_POSTS: (id: string) => `/api/kols/${id}/posts`,
-  KOL_RETURN_RATE: (id: string) => `/api/kols/${id}/return-rate`,
   KOL_WIN_RATE: (id: string) => `/api/kols/${id}/win-rate`,
 
   // Stocks
@@ -47,6 +46,7 @@ export const API_ROUTES = {
   STOCK_PRICES: (ticker: string) => `/api/stocks/${ticker}/prices`,
   STOCK_RETURN_RATE: (ticker: string) => `/api/stocks/${ticker}/return-rate`,
   STOCK_WIN_RATE: (ticker: string) => `/api/stocks/${ticker}/win-rate`,
+  STOCK_SCORECARD: (ticker: string) => `/api/stocks/${ticker}/scorecard`,
   STOCK_ARGUMENTS: (ticker: string) => `/api/stocks/${ticker}/arguments`,
 
   // Posts
