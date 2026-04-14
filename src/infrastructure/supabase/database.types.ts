@@ -492,6 +492,64 @@ export type Database = {
           },
         ];
       };
+      post_win_rate_samples: {
+        Row: {
+          classifier_version: number;
+          computed_at: string;
+          excess_return: number | null;
+          outcome: string;
+          period_days: number;
+          post_id: string;
+          stock_id: string;
+          threshold_source: string | null;
+          threshold_value: number | null;
+        };
+        Insert: {
+          classifier_version?: number;
+          computed_at?: string;
+          excess_return?: number | null;
+          outcome: string;
+          period_days: number;
+          post_id: string;
+          stock_id: string;
+          threshold_source?: string | null;
+          threshold_value?: number | null;
+        };
+        Update: {
+          classifier_version?: number;
+          computed_at?: string;
+          excess_return?: number | null;
+          outcome?: string;
+          period_days?: number;
+          post_id?: string;
+          stock_id?: string;
+          threshold_source?: string | null;
+          threshold_value?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'post_win_rate_samples_post_id_fkey';
+            columns: ['post_id'];
+            isOneToOne: false;
+            referencedRelation: 'posts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'post_win_rate_samples_stock_id_fkey';
+            columns: ['stock_id'];
+            isOneToOne: false;
+            referencedRelation: 'stock_stats';
+            referencedColumns: ['stock_id'];
+          },
+          {
+            foreignKeyName: 'post_win_rate_samples_stock_id_fkey';
+            columns: ['stock_id'];
+            isOneToOne: false;
+            referencedRelation: 'stocks';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       posts: {
         Row: {
           ai_model_version: string | null;
@@ -818,6 +876,36 @@ export type Database = {
           language?: string | null;
           source?: string;
           source_url?: string;
+        };
+        Relationships: [];
+      };
+      volatility_thresholds: {
+        Row: {
+          as_of_date: string;
+          computed_at: string;
+          period_days: number;
+          sample_size: number;
+          source: string;
+          ticker: string;
+          value: number;
+        };
+        Insert: {
+          as_of_date: string;
+          computed_at?: string;
+          period_days: number;
+          sample_size: number;
+          source: string;
+          ticker: string;
+          value: number;
+        };
+        Update: {
+          as_of_date?: string;
+          computed_at?: string;
+          period_days?: number;
+          sample_size?: number;
+          source?: string;
+          ticker?: string;
+          value?: number;
         };
         Relationships: [];
       };
