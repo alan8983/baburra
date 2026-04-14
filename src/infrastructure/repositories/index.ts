@@ -13,3 +13,5 @@ export * from './subscription.repository';
 export * from './scrape-job.repository';
 export * from './scrape-job-item.repository';
 export * from './insight.repository';
+export * from './volatility-threshold.repository';
+export * from './win-rate-sample.repository';

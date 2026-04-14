@@ -28,6 +28,7 @@ type PriceChangeStatusType = 'pending' | 'no_data' | 'value';
 
 type StockPost = {
   id: string;
+  stockId?: string;
   stockTicker: string;
   stockName: string;
   sentiment: Sentiment;
@@ -123,9 +124,31 @@ export function KolScorecard({
     [stockPosts]
   );
 
-  // Sector breakdown removed: per-stock win-rate aggregation belongs in a follow-up
-  // change that adds a per-ticker bucket to the win-rate API. Inline classification
-  // is no longer permitted (see openspec/changes/dynamic-volatility-threshold).
+  // Per-stock breakdown — derived from the `bucketsByStock` returned by the
+  // persistent win-rate pipeline. Shown only for the currently-selected period
+  // and only once there is data for at least one stock.
+  const selectedBucketKey = WIN_RATE_PERIOD_TO_BUCKET[selectedPeriod];
+  const stockIdLookup = useMemo(() => {
+    const map: Record<string, { ticker: string; name: string }> = {};
+    for (const p of stockPosts) {
+      if (p.stockId && !map[p.stockId]) {
+        map[p.stockId] = { ticker: p.stockTicker, name: p.stockName };
+      }
+    }
+    return map;
+  }, [stockPosts]);
+  const bucketsByStock = winRateStats?.bucketsByStock ?? null;
+  const perStockRows = bucketsByStock
+    ? Object.entries(bucketsByStock)
+        .map(([stockId, stats]) => ({
+          stockId,
+          bucket: stats[selectedBucketKey],
+          ticker: stockIdLookup[stockId]?.ticker ?? stockId.slice(0, 8),
+        }))
+        .filter((row) => row.bucket.total > 0)
+        .sort((a, b) => (b.bucket.hitRate ?? -1) - (a.bucket.hitRate ?? -1))
+        .slice(0, 8)
+    : [];
 
   const periods = [
     { key: 'day5' as const, label: t('detail.returnRate.periods.5d'), data: periodStats.day5 },
@@ -230,7 +253,7 @@ export function KolScorecard({
               )}
             </div>
 
-            {/* Return Rates + Sector (gated for free users) */}
+            {/* Return Rates + per-stock breakdown (gated for free users) */}
             <BlurGate feature="win_rate_breakdown">
               <div className="flex flex-col gap-3">
                 {/* 4-period returns */}
@@ -252,6 +275,38 @@ export function KolScorecard({
                     </div>
                   ))}
                 </div>
+
+                {/* Per-stock hit-rate breakdown for the selected period */}
+                {perStockRows.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {perStockRows.map(({ stockId, ticker, bucket }) => {
+                      const pct =
+                        bucket.sufficientData && bucket.hitRate !== null
+                          ? Math.round(bucket.hitRate * 100)
+                          : null;
+                      return (
+                        <span
+                          key={stockId}
+                          className="bg-muted/60 inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px]"
+                          title={`${ticker}: ${bucket.winCount}W/${bucket.loseCount}L/${bucket.noiseCount}N`}
+                        >
+                          <span className="font-mono">{ticker}</span>
+                          <span
+                            className={
+                              pct === null
+                                ? 'text-muted-foreground'
+                                : pct >= 50
+                                  ? 'text-emerald-500 dark:text-emerald-400'
+                                  : 'text-red-500 dark:text-red-400'
+                            }
+                          >
+                            {pct === null ? '—' : `${pct}%`}
+                          </span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </BlurGate>
           </div>

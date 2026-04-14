@@ -13,6 +13,8 @@
 | `posts` | Shared | Published articles with sentiment, content, source URL |
 | `post_stocks` | Shared | Many-to-many: post ↔ stock |
 | `stock_prices` | Shared (cache) | Daily OHLCV price data — Tiingo (US/CRYPTO), TWSE Open Data (TW) |
+| `volatility_thresholds` | Shared (cache) | L2 cache of `(ticker, period_days, as_of_date)` → 1σ threshold used by win-rate classifier |
+| `post_win_rate_samples` | Shared (cache) | Persisted win-rate classification per `(post, stock, period_days, classifier_version)` — SQL-aggregated by the win-rate API |
 | `post_arguments` | Shared | AI-extracted investment arguments per post per stock |
 | `argument_categories` | Shared (seed) | 7 analysis framework categories |
 | `drafts` | Private | User drafts (pre-publication) |
@@ -40,12 +42,15 @@ kols ──< kol_sources
 posts ──< post_arguments >── stocks
 posts ──< post_arguments >── argument_categories
 stocks ──< stock_prices
+posts ──< post_win_rate_samples >── stocks
+stocks ──< volatility_thresholds  (by ticker, not FK)
 ```
 
 ## Recent Schema Changes
 
 | Migration | Description | Date |
 | --- | --- | --- |
+| 20260414000002 | Add `volatility_thresholds` + `post_win_rate_samples` cache tables | 2026-04-14 |
 | 20250602 | Remove onboarding columns, add `first_import_free` | 2026-03-18 |
 | 027 | `post_arguments.statement_type` (fact/opinion/mixed) | 2026-03-13 |
 | 019-026 | Phase 12b tables (kol_sources, kol_subscriptions, scrape_jobs) | 2026-03-08 |
