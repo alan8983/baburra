@@ -32,8 +32,14 @@ export const MIN_RESOLVED_POSTS_PER_PERIOD = 10;
  * classification logic (noise-band formula, σ-multiplier, excluded short-circuit)
  * changes; old rows become invisible and an opt-in backfill regenerates at the
  * new version. Queries MUST pin this value — never read rows unconditionally.
+ *
+ * Version history:
+ * - 1 → 2: Fix %-space vs fraction-space units mismatch between `priceChange`
+ *   and `threshold`. Pre-v2 rows carry 100×-inflated `excess_return` values and
+ *   mis-classified `outcome` assignments in the noise-band neighborhood. See
+ *   openspec/changes/fix-win-rate-units-mismatch/.
  */
-export const CLASSIFIER_VERSION = 1;
+export const CLASSIFIER_VERSION = 2;
 
 export interface ClassifyArgs {
   sentiment: Sentiment;
