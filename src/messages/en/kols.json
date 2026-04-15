@@ -36,7 +36,10 @@
       "loading": "Loading posts...",
       "noPosts": "No posts",
       "total": "Total {count} posts",
-      "viewAll": "View all {count} posts"
+      "viewAll": "View all {count} posts",
+      "showMore": "View all {count} posts",
+      "backToKol": "Back to {name}",
+      "empty": "{kolName} hasn't posted about {ticker} yet."
     },
     "priceChange": "{percent}% (5d)",
     "returnRate": {

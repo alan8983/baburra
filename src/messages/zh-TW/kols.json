@@ -36,7 +36,10 @@
       "loading": "載入文章...",
       "noPosts": "尚無文章",
       "total": "共 {count} 篇文章",
-      "viewAll": "查看全部 {count} 篇"
+      "viewAll": "查看全部 {count} 篇",
+      "showMore": "查看全部 {count} 篇文章",
+      "backToKol": "返回 {name}",
+      "empty": "{kolName} 尚未發表關於 {ticker} 的文章"
     },
     "priceChange": "{percent}% (5日)",
     "returnRate": {
