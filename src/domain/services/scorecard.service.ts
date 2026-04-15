@@ -36,6 +36,19 @@ import {
 } from '@/infrastructure/repositories/scorecard-cache.repository';
 import type { PriceChangeByPeriod, Sentiment } from '@/domain/models';
 
+// On Vercel: waitUntil holds the sandbox open until the promise settles,
+// up to the function's remaining time budget (60 s on Pro, 10 s on Hobby).
+// Without it, Node is frozen the moment the HTTP response is written —
+// background computes never land and cold-KOL polls loop forever.
+// In dev / non-Vercel runtimes the require throws; we fall back to `void`.
+let _waitUntil: ((p: Promise<unknown>) => void) | null = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  _waitUntil = require('@vercel/functions').waitUntil;
+} catch {
+  /* running outside Vercel — no-op fallback is fine */
+}
+
 const COMPUTE_TIMEOUT_MS = 5000;
 
 // In-process dedupe locks — per-key promise reuse.
@@ -196,10 +209,18 @@ export async function computeKolScorecard(kolId: string): Promise<void> {
   return task;
 }
 
-/** Fire-and-forget variant used from the read-through API path. */
+/**
+ * Fire-and-forget variant used from the read-through API path.
+ * Uses waitUntil() on Vercel so the sandbox stays alive past the response
+ * write; falls back to void for dev / non-Vercel runtimes where freezing
+ * is not an issue.
+ */
 export function enqueueKolScorecardCompute(kolId: string): void {
-  // Intentionally not awaited — the API returns immediately.
-  void computeKolScorecard(kolId);
+  if (_waitUntil) {
+    _waitUntil(computeKolScorecard(kolId));
+  } else {
+    void computeKolScorecard(kolId);
+  }
 }
 
 // ─── Stock scorecard ─────────────────────────────────────────────────────────
@@ -307,6 +328,15 @@ export async function computeStockScorecard(stockId: string): Promise<void> {
   return task;
 }
 
+/**
+ * Fire-and-forget variant for the stock scorecard read-through path.
+ * Same waitUntil() pattern as enqueueKolScorecardCompute — Vercel sandbox
+ * is frozen on response write; without this, stock recomputes never land.
+ */
 export function enqueueStockScorecardCompute(stockId: string): void {
-  void computeStockScorecard(stockId);
+  if (_waitUntil) {
+    _waitUntil(computeStockScorecard(stockId));
+  } else {
+    void computeStockScorecard(stockId);
+  }
 }
