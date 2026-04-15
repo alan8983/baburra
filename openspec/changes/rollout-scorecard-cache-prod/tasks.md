@@ -37,6 +37,11 @@
 
 ### 5. Run the backfill against production (flags still OFF)
 
+**Pre-rollout baseline captured 2026-04-15 via readonly MCP tools (not an action, just measurement):**
+- Supabase: `warm_kols = 1/9`, `warm_stocks = 0/194` — cache is effectively empty as predicted.
+- Vercel runtime logs: `0` entries matching `win-rate` in the past 24 h (no traffic hit the endpoint during the window — consistent with low dev activity; does not contradict the "4 Gooaye 504s today" observed earlier in the day).
+- Actionable state: backfill + flag flip still pending; this baseline confirms the rollout has not yet occurred.
+
 - [ ] 5.1 Set local env:
   ```bash
   export SUPABASE_SERVICE_ROLE_KEY=<prod service role key>
