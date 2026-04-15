@@ -21,6 +21,8 @@ export const ROUTES = {
   DRAFT_DETAIL: (id: string) => `/drafts/${id}`,
   KOLS: '/kols',
   KOL_DETAIL: (id: string) => `/kols/${id}`,
+  KOL_STOCK_DETAIL: (kolId: string, ticker: string) =>
+    `/kols/${kolId}/stocks/${encodeURIComponent(ticker)}`,
   STOCKS: '/stocks',
   STOCK_DETAIL: (ticker: string) => `/stocks/${ticker}`,
   POSTS: '/posts',
