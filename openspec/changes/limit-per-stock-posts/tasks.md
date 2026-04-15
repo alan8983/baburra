@@ -72,9 +72,25 @@
 - [x] 8.2 `npm run lint` — pass (18 pre-existing warnings, 0 errors).
 - [x] 8.3 `npm test` — 920 tests pass (9 new + 911 pre-existing), no regressions.
 - [x] 8.4 `npm run build` — `/kols/[id]/stocks/[ticker]` confirmed in build output.
-- [ ] 8.5 Browser MCP validation per `validation.md`.
+- [x] 8.5 Browser MCP validation per `validation.md` — executed 2026-04-15 on localhost:3000 (dev user temporarily elevated to `max` to pass the Layer-2 paywall; reverted after run):
+  - T2.1 ✓ Gooaye NVDA: exactly 3 post cards, button `查看全部 18 篇文章`, click → `/kols/.../stocks/NVDA` → 18 cards, back link `返回 Gooaye 股癌` round-trips. Dates 2026/04/04 → 2026/04/01 → 2026/03/21 (strict DESC).
+  - T2.2 ✓ Gooaye QQQ: 1 post card, no "View all" button, container `padding-bottom: 0px` (no whitespace regression).
+  - T2.3 ✓ Cold direct URL `/kols/.../stocks/NVDA?bust=<ts>`: 18 cards, back link present, no unexpected errors.
+  - T2.4 ✓ Gooaye + PLTR: empty-state copy `Gooaye 股癌 尚未發表關於 PLTR 的文章` renders, back link present, no chart/scorecard/post list.
+  - T2.5 ✓ Unknown UUID `00000000-...`: `無法載入 KOL 或找不到該 KOL` + `返回 KOL 列表` — matches existing not-found pattern.
+  - T2.6 ⏸ SKIPPED — no KOL has posts about BRK.B or ^TWII in prod DB. Unit tests in §7.2 already cover the URL encode/decode logic. See Follow-ups below.
+  - T3.1 ✓ Page height at 1280px = 64,026px with 22 capped-sections (157 post cards rendered vs. ~487 if uncapped) — cap is working.
+  - T3.2 ✓ zh-TW label `查看全部 18 篇文章` has required spaces; en label `View all 18 posts` renders after `NEXT_LOCALE=en` cookie + reload.
+  - T3.3 ✓ 640px: button fits single-column, no overflow. 360px: button fits 278px width, wraps to 2 lines (mild but not truncated — acceptable at xs).
+  - Console errors: 0.
+  - Network: 0 failures on endpoints touched by this change. Many pre-existing 500s on `/api/stocks/<ticker>/prices` for badly-normalized tickers (CLOUDFLARE, MARVELL, NVM, VIS, PURE.US, CMO, CRTK) — orthogonal data-quality issue, not introduced by PR #77.
 
 ### 9. Docs
 
 - [x] 9.1 No `docs/WEB_DEV_PLAN.md` phase change — this is inside an already-shipped phase.
 - [x] 9.2 No `openspec/specs/` update — no spec capability is changed enough to warrant a living-spec update (pure UI routing addition).
+
+## Follow-ups (not blocking archive)
+
+- Seed at least one KOL post referencing `BRK.B` or `^TWII` so T2.6 special-ticker encoding can be exercised end-to-end. Unit tests cover the logic; this is a belt-and-suspenders gap.
+- Ticker-normalization cleanup for `CLOUDFLARE→NET`, `MARVELL→MRVL`, `NVM→?`, `PURE.US→PSTG`, `CMO→?`, `CRTK→CRTO`, `VIS→?` in the `stocks` table. Causes cascading 500s on `/api/stocks/<ticker>/prices`. Unrelated to this change; flag for a separate cleanup change.
