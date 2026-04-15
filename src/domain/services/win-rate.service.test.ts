@@ -8,7 +8,9 @@ import {
   __resetVolatilityCache,
   CLASSIFIER_VERSION,
   MIN_RESOLVED_POSTS_PER_PERIOD,
+  type PeriodDays,
   type VolatilityProvider,
+  type VolatilityResult,
   type PriceSeriesPoint,
   type Market,
 } from '@/domain/calculators';
@@ -29,6 +31,38 @@ function fakeProvider(
     async getSeries() {
       calls.getSeries++;
       return constSigmaSeries;
+    },
+  };
+}
+
+/**
+ * Provider that returns a fixed σ per period via the optional L2 cache hook.
+ * Lets tests pin an exact threshold and assert precise σ-normalized output
+ * without having to construct a price series whose realized vol matches.
+ */
+function fixedThresholdProvider(
+  thresholdByPeriod: Record<number, number>,
+  market: Market = 'US'
+): VolatilityProvider {
+  return {
+    async getMarket() {
+      return market;
+    },
+    async getSeries() {
+      return [];
+    },
+    async getCachedThreshold(ticker, periodDays, asOfDate) {
+      const value = thresholdByPeriod[periodDays];
+      if (value === undefined) return null;
+      const result: VolatilityResult = {
+        value,
+        source: 'ticker',
+        sampleSize: 252,
+        asOfDate,
+        ticker,
+        periodDays: periodDays as PeriodDays,
+      };
+      return result;
     },
   };
 }
@@ -115,7 +149,9 @@ describe('computeWinRateStats', () => {
 
   it('single winning post stays below the sample floor', async () => {
     const stats = await computeWinRateStats({
-      posts: buildPosts(1, 2, 0.5),
+      // priceChange = 15 (%-space, i.e., a 15% move) → 0.15 in fraction-space,
+      // clearly above any threshold derivable from `buildSeries()`.
+      posts: buildPosts(1, 2, 15),
       provider: fakeProvider(buildSeries()),
     });
     expect(stats.day30.winCount).toBe(1);
@@ -126,7 +162,7 @@ describe('computeWinRateStats', () => {
 
   it('meets the floor with >= MIN resolved wins', async () => {
     const stats = await computeWinRateStats({
-      posts: buildPosts(MIN_RESOLVED_POSTS_PER_PERIOD, 2, 0.5),
+      posts: buildPosts(MIN_RESOLVED_POSTS_PER_PERIOD, 2, 15),
       provider: fakeProvider(buildSeries()),
     });
     expect(stats.day30.sufficientData).toBe(true);
@@ -146,9 +182,11 @@ describe('computeWinRateStats', () => {
       tickerByStockId: { s1: 'AAPL' },
       priceChanges: {
         s1: {
-          day5: 0.5,
-          day30: 0.5,
-          day90: 0.5,
+          // 15% %-space moves → 0.15 fraction-space, comfortably above any
+          // buildSeries-derived threshold.
+          day5: 15,
+          day30: 15,
+          day90: 15,
           day365: null,
           day5Status: 'value',
           day30Status: 'value',
@@ -186,7 +224,7 @@ describe('computeWinRateStats', () => {
 
   it('classifies neutral/null as excluded across all periods', async () => {
     const stats = await computeWinRateStats({
-      posts: buildPosts(1, 0, 0.5),
+      posts: buildPosts(1, 0, 15),
       provider: fakeProvider(buildSeries()),
     });
     expect(stats.day30.excludedCount).toBe(1);
@@ -197,7 +235,7 @@ describe('computeWinRateStats', () => {
 
   it('fully cached samples: provider is never called and no upserts happen', async () => {
     const provider = fakeProvider(buildSeries());
-    const posts = buildPosts(MIN_RESOLVED_POSTS_PER_PERIOD, 2, 0.5);
+    const posts = buildPosts(MIN_RESOLVED_POSTS_PER_PERIOD, 2, 15);
     // Seed one 'win' row per (post, stock, period).
     const seed: WinRateSampleRow[] = [];
     for (const p of posts) {
@@ -229,7 +267,7 @@ describe('computeWinRateStats', () => {
 
   it('mixed path: provider called only for uncached tuples; fresh rows upserted', async () => {
     const provider = fakeProvider(buildSeries());
-    const posts = buildPosts(2, 2, 0.5);
+    const posts = buildPosts(2, 2, 15);
     // Seed only the first post's samples (all four periods), leave the second uncached.
     const seed: WinRateSampleRow[] = [];
     for (const period of [5, 30, 90, 365] as const) {
@@ -263,7 +301,7 @@ describe('computeWinRateStats', () => {
 
   it('stale classifier_version rows are ignored and re-classified', async () => {
     const provider = fakeProvider(buildSeries());
-    const posts = buildPosts(1, 2, 0.5);
+    const posts = buildPosts(1, 2, 15);
     // Seed a row at an older version — should be filtered out by the repo.
     const repo = makeFakeRepo([
       {
@@ -298,7 +336,7 @@ describe('computeWinRateStats', () => {
         sentiment: 2,
         postedAt: new Date('2024-12-31'),
         tickerByStockId: { sA: 'AAPL', sB: 'MSFT' },
-        priceChanges: { sA: fullPC(0.5), sB: fullPC(-0.5) },
+        priceChanges: { sA: fullPC(15), sB: fullPC(-15) },
       })
     );
 
@@ -318,7 +356,7 @@ describe('computeWinRateStats', () => {
 
   it('upsert errors are swallowed so aggregation still returns', async () => {
     const provider = fakeProvider(buildSeries());
-    const posts = buildPosts(1, 2, 0.5);
+    const posts = buildPosts(1, 2, 15);
     const repo: WinRateSampleRepo = {
       async loadSamplesByPostIds() {
         return new Map();
@@ -332,5 +370,97 @@ describe('computeWinRateStats', () => {
     const stats = await computeWinRateStats({ posts, provider, sampleRepo: repo });
     expect(stats.day30.winCount).toBe(1);
     warn.mockRestore();
+  });
+
+  // ─── Units-mismatch regression guards ───────────────────────────────────────
+  // Guards the %-space (priceChange) vs fraction-space (threshold) normalization
+  // in computeWinRateStats. Prior to the fix, the service fed %-space priceChange
+  // directly into the classifier, producing ±60σ excessReturn values and
+  // effectively disabling the noise band. See
+  // openspec/changes/fix-win-rate-units-mismatch/specs/win-rate-classification/spec.md.
+
+  it('normalizes %-space priceChange against fraction-space threshold', async () => {
+    // priceChange = 8.0 (%-space, i.e., 8% realized move)
+    // threshold   = 0.046 (fraction-space, i.e., 4.6% σ — from the screenshot)
+    // Fraction-space priceChange = 0.08 → excessReturn = 0.08 / 0.046 ≈ 1.74σ.
+    // Pre-fix this was 8.0 / 0.046 ≈ 173.9σ — two orders of magnitude too large.
+    const provider = fixedThresholdProvider({ 5: 0.02, 30: 0.046, 90: 0.08, 365: 0.15 });
+    const posts = buildPosts(MIN_RESOLVED_POSTS_PER_PERIOD, 2, 8.0);
+
+    const stats = await computeWinRateStats({ posts, provider });
+
+    expect(stats.day30.winCount).toBe(MIN_RESOLVED_POSTS_PER_PERIOD);
+    expect(stats.day30.avgExcessWin).not.toBeNull();
+    const sigma = stats.day30.avgExcessWin!;
+    expect(sigma).toBeGreaterThan(0);
+    expect(sigma).toBeLessThan(10); // pre-fix value was ~174 — this bound catches regressions
+    expect(sigma).toBeCloseTo(0.08 / 0.046, 2);
+  });
+
+  it('SQR is scale-invariant: unaffected by the fix (ratio cancels)', async () => {
+    // Mix 8% wins with 10% wins against a 4.6% threshold so stdev > 0.
+    // SQR = mean / stdev: any uniform multiplicative scaling cancels, so SQR is
+    // identical before and after the units fix.
+    const provider = fixedThresholdProvider({ 5: 0.02, 30: 0.046, 90: 0.08, 365: 0.15 });
+    const posts: PostForWinRate[] = Array.from(
+      { length: MIN_RESOLVED_POSTS_PER_PERIOD },
+      (_, i) => ({
+        id: `p${i}`,
+        sentiment: 2,
+        postedAt: new Date('2024-12-31'),
+        tickerByStockId: { s1: 'AAPL' },
+        priceChanges: { s1: fullPC(i % 2 === 0 ? 8.0 : 10.0) },
+      })
+    );
+
+    const stats = await computeWinRateStats({ posts, provider });
+
+    expect(stats.day30.sqr).not.toBeNull();
+    // SQR for {8, 10}/100/0.046 = {1.739, 2.174}: mean ≈ 1.957, stdev ≈ 0.307
+    // → SQR ≈ 6.37. Same ratio you'd get if the values were {174, 217} (pre-fix).
+    const sqr = stats.day30.sqr!;
+    expect(sqr).toBeGreaterThan(0);
+    expect(sqr).toBeLessThan(100); // sanity bound — real signal ratios are small single digits
+  });
+
+  it('noise band catches sub-threshold moves (2.0% vs 4.6% σ)', async () => {
+    // priceChange = 2.0% → 0.02 fraction-space; threshold 0.046 → 0.02 ∈ [-0.046, +0.046]
+    // → outcome must be noise. Pre-fix this was mis-classified as a win.
+    const provider = fixedThresholdProvider({ 5: 0.02, 30: 0.046, 90: 0.08, 365: 0.15 });
+    const posts = buildPosts(MIN_RESOLVED_POSTS_PER_PERIOD, 2, 2.0);
+
+    const stats = await computeWinRateStats({ posts, provider });
+
+    expect(stats.day30.noiseCount).toBe(MIN_RESOLVED_POSTS_PER_PERIOD);
+    expect(stats.day30.winCount).toBe(0);
+    expect(stats.day30.loseCount).toBe(0);
+  });
+
+  it('noise band boundary is inclusive (priceChange exactly at threshold)', async () => {
+    // priceChange = 4.6% → 0.046 fraction-space; threshold 0.046 → closed
+    // interval check should put this sample in the noise bucket, not win.
+    const provider = fixedThresholdProvider({ 5: 0.02, 30: 0.046, 90: 0.08, 365: 0.15 });
+    const posts = buildPosts(MIN_RESOLVED_POSTS_PER_PERIOD, 2, 4.6);
+
+    const stats = await computeWinRateStats({ posts, provider });
+
+    expect(stats.day30.noiseCount).toBe(MIN_RESOLVED_POSTS_PER_PERIOD);
+    expect(stats.day30.winCount).toBe(0);
+  });
+
+  it('stored priceChange on persisted rows stays in %-space', async () => {
+    // The classifier normalizes to fraction-space internally, but the row
+    // written back to `post_win_rate_samples` must keep the raw %-space value
+    // so `computeReturn` → `avgReturn` percentage display stays correct.
+    const provider = fixedThresholdProvider({ 5: 0.02, 30: 0.046, 90: 0.08, 365: 0.15 });
+    const posts = buildPosts(1, 2, 8.0);
+    const repo = makeFakeRepo();
+
+    await computeWinRateStats({ posts, provider, sampleRepo: repo });
+
+    const day30Row = repo.upserts.find((r) => r.periodDays === 30);
+    expect(day30Row).toBeDefined();
+    expect(day30Row!.priceChange).toBe(8.0); // %-space, not 0.08 fraction-space
+    expect(day30Row!.classifierVersion).toBe(CLASSIFIER_VERSION);
   });
 });

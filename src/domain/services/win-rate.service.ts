@@ -255,9 +255,16 @@ export async function computeWinRateStats(args: ComputeWinRateArgs): Promise<Win
           continue;
         }
 
+        // Units contract: `priceChange` arrives in %-space from
+        // `calculatePriceChangePercent` (a 2.8% move is the number `2.8`), while
+        // `threshold.value` is in fraction-space from `calculateRealizedVolatility`
+        // (a 4.6% σ is `0.046`). The pure classifier assumes both inputs are in
+        // fraction-space, so we normalize here. Spec:
+        // openspec/changes/fix-win-rate-units-mismatch/specs/win-rate-classification/spec.md
+        const priceChangeFraction = priceChange === null ? null : priceChange / 100;
         const classifyArgs = {
           sentiment: effectiveSentiment,
-          priceChange,
+          priceChange: priceChangeFraction,
           threshold: threshold.value,
         };
         const outcome = classifyOutcome(classifyArgs);
@@ -266,6 +273,8 @@ export async function computeWinRateStats(args: ComputeWinRateArgs): Promise<Win
           outcome,
           threshold,
           excessReturn,
+          // Keep `priceChange` stored in %-space — `computeReturn` / `avgReturn`
+          // consume the raw %-space value directly for percentage display.
           priceChange,
           priceChangeStatus,
         };

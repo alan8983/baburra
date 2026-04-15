@@ -412,6 +412,28 @@ interface WinRateStats {
 }
 ```
 
+#### Units contract for WinRateSample
+
+Persisted `post_win_rate_samples` rows use mixed number spaces by design:
+
+| Field            | Space                        | Example                |
+| ---------------- | ---------------------------- | ---------------------- |
+| `price_change`   | **percent-space**            | `2.8` means a +2.8% move |
+| `threshold_value`| **fraction-space**           | `0.046` means 4.6% σ     |
+| `excess_return`  | σ-multiples (dimensionless)  | `1.74` means +1.74σ      |
+
+The pure classifier (`classifyOutcome`, `computeExcessReturn`) assumes **both**
+`priceChange` and `threshold` are in fraction-space, so the service layer
+(`computeWinRateStats`) normalizes `priceChange / 100` before calling the
+classifier. The raw `price_change` is persisted in percent-space because
+`computeReturn` / `avgReturn` consume it directly for percentage display.
+
+Source of truth:
+[`openspec/changes/fix-win-rate-units-mismatch/specs/win-rate-classification/spec.md`](../openspec/changes/fix-win-rate-units-mismatch/specs/win-rate-classification/spec.md).
+Queries that read these rows MUST pin `classifier_version = CLASSIFIER_VERSION`
+— legacy `v1` rows carry 100×-inflated `excess_return` from the pre-fix
+units mismatch.
+
 ---
 
 ## 五、資料流程圖

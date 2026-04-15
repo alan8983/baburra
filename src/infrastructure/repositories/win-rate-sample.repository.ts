@@ -26,7 +26,13 @@ export interface WinRateSampleRow {
   /** The 1σ threshold applied at classification time; null for excluded. */
   thresholdValue: number | null;
   thresholdSource: 'ticker' | 'index-fallback' | null;
-  /** Raw fractional price change; null when `priceChangeStatus !== 'value'`. */
+  /**
+   * Raw price change in percent-space (e.g., `2.8` for a 2.8% move); null when
+   * `priceChangeStatus !== 'value'`. Consumed by `computeReturn` for the
+   * `avgReturn` percentage display. Note: the classifier operates in
+   * fraction-space — the service layer normalizes `priceChange / 100` before
+   * passing it to `classifyOutcome`.
+   */
   priceChange: number | null;
   /** Resolution state of the raw price change. */
   priceChangeStatus: PriceChangeStatus;
