@@ -511,8 +511,12 @@ export async function processUrl(
     }
 
     // 3.5. Clean transcript for AI analysis (merge letter fragments, fix zh-CN→zh-TW, dictionary)
+    //       Pass kolId so per-KOL vocabulary from the DB is included.
     const _tCleanup = Date.now();
-    contentForAnalysis = cleanTranscript(contentForAnalysis);
+    contentForAnalysis = await cleanTranscript(
+      contentForAnalysis,
+      knownKolId ? { kolId: knownKolId } : undefined
+    );
     timings.cleanupMs = Date.now() - _tCleanup;
 
     // 4. AI analysis (sentiment + ticker identification in one call)

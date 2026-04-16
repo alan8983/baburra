@@ -45,7 +45,7 @@ async function main() {
   console.log('\n=== RAW (first 500 chars) ===');
   console.log(data.content.slice(0, 500));
 
-  const cleaned = cleanTranscript(data.content);
+  const cleaned = await cleanTranscript(data.content);
   console.log('\n=== CLEANED (first 500 chars) ===');
   console.log(cleaned.slice(0, 500));
   console.log('\nCleaned length:', cleaned.length);

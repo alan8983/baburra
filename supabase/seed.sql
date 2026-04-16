@@ -4,11 +4,11 @@
 -- =====================
 -- 測試用 KOL 資料
 -- =====================
-INSERT INTO kols (id, name, slug, bio, social_links) VALUES
-  ('00000000-0000-0000-0000-000000000001', '股癌', 'gu-ai', '專注美股分析，分享投資心得與市場觀察。', '{"twitter": "https://twitter.com/example1", "youtube": "https://youtube.com/example1"}'),
-  ('00000000-0000-0000-0000-000000000002', '財報狗', 'cai-bao-gou', '用數據說話，專業財報分析。', '{"website": "https://example.com"}'),
-  ('00000000-0000-0000-0000-000000000003', '艾蜜莉', 'ai-mi-li', '小資女的投資日記，長期價值投資。', '{"facebook": "https://facebook.com/example"}'),
-  ('00000000-0000-0000-0000-000000000004', '老王愛說笑', 'lao-wang', '幽默風趣的股市觀察家。', '{}')
+INSERT INTO kols (id, name, slug, bio, social_links, validation_status, validated_at) VALUES
+  ('00000000-0000-0000-0000-000000000001', '股癌', 'gu-ai', '專注美股分析，分享投資心得與市場觀察。', '{"twitter": "https://twitter.com/example1", "youtube": "https://youtube.com/example1"}', 'active', now()),
+  ('00000000-0000-0000-0000-000000000002', '財報狗', 'cai-bao-gou', '用數據說話，專業財報分析。', '{"website": "https://example.com"}', 'pending', null),
+  ('00000000-0000-0000-0000-000000000003', '艾蜜莉', 'ai-mi-li', '小資女的投資日記，長期價值投資。', '{"facebook": "https://facebook.com/example"}', 'pending', null),
+  ('00000000-0000-0000-0000-000000000004', '老王愛說笑', 'lao-wang', '幽默風趣的股市觀察家。', '{}', 'pending', null)
 ON CONFLICT (id) DO NOTHING;
 
 -- =====================

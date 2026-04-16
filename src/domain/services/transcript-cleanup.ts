@@ -4,9 +4,9 @@
  * Fixes Deepgram Nova-3 transcription artifacts before AI analysis:
  * 1. Merges isolated single-letter English tokens ("T S M" → "TSM")
  * 2. Applies a maintainable dictionary of term corrections
+ *    - Global terms from `src/data/transcript-dictionary.json`
+ *    - Per-KOL terms from the `kol_vocabulary` DB table (when kolId provided)
  * 3. Converts Simplified Chinese → Traditional Chinese (zh-CN → zh-TW)
- *
- * Pure function: same input always produces same output, idempotent.
  */
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -14,6 +14,7 @@ const OpenCC = require('opencc-js') as {
   Converter: (options: { from: string; to: string }) => (text: string) => string;
 };
 import dictionaryData from '@/data/transcript-dictionary.json';
+import { listVocabularyByKol } from '@/infrastructure/repositories/kol-vocabulary.repository';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -31,6 +32,10 @@ interface DictionaryCategory {
 interface TranscriptDictionary {
   version: number;
   categories: Record<string, DictionaryCategory>;
+}
+
+export interface CleanTranscriptOptions {
+  kolId?: string;
 }
 
 // ── Compiled dictionary (lazy) ─────────────────────────────────────────────
@@ -64,6 +69,27 @@ function getCompiledTerms(): CompiledTerm[] {
 
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// ── Per-KOL vocabulary (cached per process) ───────────────────────────────
+
+const _kolVocabCache = new Map<string, { terms: CompiledTerm[]; fetchedAt: number }>();
+const KOL_VOCAB_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+async function getKolCompiledTerms(kolId: string): Promise<CompiledTerm[]> {
+  const cached = _kolVocabCache.get(kolId);
+  if (cached && Date.now() - cached.fetchedAt < KOL_VOCAB_TTL_MS) {
+    return cached.terms;
+  }
+
+  const rows = await listVocabularyByKol(kolId);
+  const terms: CompiledTerm[] = rows.map((row) => {
+    const pattern = row.isRegex ? row.pattern : escapeRegex(row.pattern);
+    return { re: new RegExp(pattern, 'g'), replacement: row.replacement };
+  });
+
+  _kolVocabCache.set(kolId, { terms, fetchedAt: Date.now() });
+  return terms;
 }
 
 // ── OpenCC converter (lazy) ────────────────────────────────────────────────
@@ -101,13 +127,20 @@ export function mergeIsolatedLetters(text: string): string {
 
 /**
  * Apply all dictionary term replacements to the text.
- * Dictionary is lazy-loaded and regex patterns are pre-compiled on first call.
+ * Global dictionary is lazy-loaded and regex patterns are pre-compiled on first call.
+ * Per-KOL terms (if provided) are applied after global terms so KOL-specific
+ * replacements win on conflict.
  */
-export function applyDictionary(text: string): string {
+export function applyDictionary(text: string, kolTerms?: CompiledTerm[]): string {
   const terms = getCompiledTerms();
   let result = text;
   for (const term of terms) {
     result = result.replace(term.re, term.replacement);
+  }
+  if (kolTerms) {
+    for (const term of kolTerms) {
+      result = result.replace(term.re, term.replacement);
+    }
   }
   return result;
 }
@@ -132,12 +165,20 @@ export function convertSimplifiedToTraditional(text: string): string {
  * 1. Merge isolated single-letter English tokens
  * 2. Convert Simplified → Traditional Chinese (so dictionary can fix 臺→台 etc.)
  * 3. Apply dictionary term corrections (runs last to clean up OpenCC artifacts)
+ *    — global dictionary + optional per-KOL vocabulary from DB
  *
- * Pure and idempotent: cleanTranscript(cleanTranscript(x)) === cleanTranscript(x)
+ * When `opts.kolId` is provided, per-KOL vocabulary terms are fetched from the
+ * `kol_vocabulary` table and applied after the global dictionary.
  */
-export function cleanTranscript(text: string): string {
+export async function cleanTranscript(
+  text: string,
+  opts?: CleanTranscriptOptions
+): Promise<string> {
   let result = mergeIsolatedLetters(text);
   result = convertSimplifiedToTraditional(result);
-  result = applyDictionary(result);
+
+  const kolTerms = opts?.kolId ? await getKolCompiledTerms(opts.kolId) : undefined;
+  result = applyDictionary(result, kolTerms);
+
   return result;
 }
