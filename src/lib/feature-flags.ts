@@ -21,12 +21,11 @@ function readBoolEnv(name: string, defaultValue: boolean): boolean {
  * `PersistentVolatilityProvider`. When disabled they fall back to the pure
  * stateless pipeline with `StockPriceVolatilityProvider`.
  *
- * Default ON in development, OFF in production until the sample table has
- * been backfilled (see openspec/changes/persist-win-rate-samples/tasks.md §10).
+ * Default ON — cache tables have been backfilled for all KOLs and stocks.
+ * Set USE_WIN_RATE_SAMPLE_CACHE=false to revert to the legacy stateless path.
  */
 export function isWinRateSampleCacheEnabled(): boolean {
-  const isProd = process.env.NODE_ENV === 'production';
-  return readBoolEnv('USE_WIN_RATE_SAMPLE_CACHE', !isProd);
+  return readBoolEnv('USE_WIN_RATE_SAMPLE_CACHE', true);
 }
 
 /**
@@ -35,11 +34,9 @@ export function isWinRateSampleCacheEnabled(): boolean {
  * return `{ status: 'computing' }` on miss. When disabled, the win-rate route
  * falls back to the pre-change inline-compute path.
  *
- * Default ON in development, OFF in production until the migration has been
- * applied and the first refresh pass has populated rows for a representative
- * subset of KOLs (see openspec/changes/persist-kol-scorecard-cache/tasks.md §10).
+ * Default ON — cache tables have been backfilled for all KOLs and stocks.
+ * Set USE_SCORECARD_CACHE=false to revert to the legacy inline-compute path.
  */
 export function isScorecardCacheEnabled(): boolean {
-  const isProd = process.env.NODE_ENV === 'production';
-  return readBoolEnv('USE_SCORECARD_CACHE', !isProd);
+  return readBoolEnv('USE_SCORECARD_CACHE', true);
 }

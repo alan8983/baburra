@@ -124,9 +124,9 @@ describe('convertSimplifiedToTraditional', () => {
 // ── Integration: cleanTranscript ───────────────────────────────────────────
 
 describe('cleanTranscript', () => {
-  it('handles combined Gooaye-style transcript issues', () => {
+  it('handles combined Gooaye-style transcript issues', async () => {
     const input = '欢迎 收听 古 玩 今天 讨论 T S M C 和 台 积 电 的 半 导 体 趋势';
-    const result = cleanTranscript(input);
+    const result = await cleanTranscript(input);
 
     expect(result).toContain('股癌');
     expect(result).toContain('TSMC');
@@ -134,29 +134,29 @@ describe('cleanTranscript', () => {
     expect(result).toContain('半導體');
   });
 
-  it('cleans mixed English ticker and Chinese content', () => {
+  it('cleans mixed English ticker and Chinese content', async () => {
     const input = 'N V D A 辉 达 今天涨了 S & P 500 也创新高';
-    const result = cleanTranscript(input);
+    const result = await cleanTranscript(input);
 
     expect(result).toContain('NVDA');
     expect(result).toContain('輝達');
     expect(result).toContain('S&P');
   });
 
-  it('is idempotent', () => {
+  it('is idempotent', async () => {
     const input = '欢迎 收听 古 玩 T S M C 台 积 电 N V D A';
-    const once = cleanTranscript(input);
-    const twice = cleanTranscript(once);
+    const once = await cleanTranscript(input);
+    const twice = await cleanTranscript(once);
     expect(twice).toBe(once);
   });
 
-  it('handles empty string', () => {
-    expect(cleanTranscript('')).toBe('');
+  it('handles empty string', async () => {
+    expect(await cleanTranscript('')).toBe('');
   });
 
-  it('handles pure English text without breaking it', () => {
+  it('handles pure English text without breaking it', async () => {
     const input = 'TSMC reported strong earnings this quarter';
-    const result = cleanTranscript(input);
+    const result = await cleanTranscript(input);
     expect(result).toBe(input);
   });
 });
