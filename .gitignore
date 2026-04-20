@@ -38,6 +38,9 @@ yarn-error.log*
 
 # claude code
 .claude/worktrees/
+.claude/session-status.txt
+.claude/repo-map.txt
+.claude/.setup-cache/
 
 # seed scrape logs
 scripts/logs/
