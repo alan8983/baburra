@@ -1,4 +1,5 @@
 // Bookmark Repository - 書籤 CRUD
+// listBookmarksByUserId uses a single nested select (1 query vs the previous 5).
 
 import { createAdminClient } from '@/infrastructure/supabase/admin';
 import type { Bookmark, BookmarkWithPost } from '@/domain/models';
@@ -10,12 +11,58 @@ type DbBookmark = {
   created_at: string;
 };
 
+type DbBookmarkWithPost = DbBookmark & {
+  post: {
+    id: string;
+    title: string | null;
+    content: string;
+    sentiment: number;
+    posted_at: string;
+    kol: {
+      id: string;
+      name: string;
+      avatar_url: string | null;
+    } | null;
+    post_stocks: {
+      stocks: {
+        id: string;
+        ticker: string;
+        name: string;
+      } | null;
+    }[];
+  } | null;
+};
+
 function mapDbToBookmark(row: DbBookmark): Bookmark {
   return {
     id: row.id,
     userId: row.user_id,
     postId: row.post_id,
     createdAt: new Date(row.created_at),
+  };
+}
+
+function mapDbToBookmarkWithPost(row: DbBookmarkWithPost): BookmarkWithPost | null {
+  if (!row.post) return null;
+  return {
+    ...mapDbToBookmark(row),
+    post: {
+      id: row.post.id,
+      title: row.post.title ?? null,
+      content: row.post.content,
+      sentiment: row.post.sentiment,
+      postedAt: new Date(row.post.posted_at),
+      kol: row.post.kol
+        ? {
+            id: row.post.kol.id,
+            name: row.post.kol.name,
+            avatarUrl: row.post.kol.avatar_url ?? null,
+          }
+        : { id: '', name: 'Unknown', avatarUrl: null },
+      stocks: row.post.post_stocks
+        .map((ps) => ps.stocks)
+        .filter((s): s is NonNullable<typeof s> => s !== null),
+    },
   };
 }
 
@@ -28,13 +75,21 @@ export async function listBookmarksByUserId(
 
   const from = (page - 1) * limit;
   const to = from + limit - 1;
+
   const {
     data: rows,
     count,
     error,
   } = await supabase
     .from('bookmarks')
-    .select('*', { count: 'exact', head: false })
+    .select(
+      `*, post:posts!inner (
+        id, title, content, sentiment, posted_at,
+        kol:kols (id, name, avatar_url),
+        post_stocks (stocks (id, ticker, name))
+      )`,
+      { count: 'exact', head: false }
+    )
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
     .range(from, to);
@@ -42,93 +97,9 @@ export async function listBookmarksByUserId(
   if (error) throw new Error(error.message);
   if (!rows?.length) return { data: [], total: count ?? 0 };
 
-  const bookmarks = (rows as DbBookmark[]).map(mapDbToBookmark);
-  const postIds = bookmarks.map((b) => b.postId);
-
-  // Fetch posts with their relations
-  const { data: postRows, error: postError } = await supabase
-    .from('posts')
-    .select('id, kol_id, title, content, sentiment, posted_at')
-    .in('id', postIds);
-
-  if (postError) throw new Error(postError.message);
-
-  // Fetch KOL info for posts
-  const kolIds = [...new Set((postRows ?? []).map((p) => p.kol_id as string).filter(Boolean))];
-  const [kolResult, postStockResult] = await Promise.all([
-    kolIds.length
-      ? supabase.from('kols').select('id, name, avatar_url').in('id', kolIds)
-      : { data: [] },
-    postIds.length
-      ? supabase.from('post_stocks').select('post_id, stock_id').in('post_id', postIds)
-      : { data: [] },
-  ]);
-
-  const kolMap: Record<string, { id: string; name: string; avatarUrl: string | null }> = {};
-  for (const k of kolResult.data ?? []) {
-    kolMap[k.id as string] = {
-      id: k.id as string,
-      name: k.name as string,
-      avatarUrl: (k.avatar_url as string) ?? null,
-    };
-  }
-
-  // Fetch stock info
-  const stockIds = [...new Set((postStockResult.data ?? []).map((ps) => ps.stock_id as string))];
-  const stockResult = stockIds.length
-    ? await supabase.from('stocks').select('id, ticker, name').in('id', stockIds)
-    : { data: [] };
-
-  const stockMap: Record<string, { id: string; ticker: string; name: string }> = {};
-  for (const s of stockResult.data ?? []) {
-    stockMap[s.id as string] = {
-      id: s.id as string,
-      ticker: s.ticker as string,
-      name: s.name as string,
-    };
-  }
-
-  // Build post_id -> stock[] map
-  const postStockMap: Record<string, { id: string; ticker: string; name: string }[]> = {};
-  for (const ps of postStockResult.data ?? []) {
-    const pid = ps.post_id as string;
-    const sid = ps.stock_id as string;
-    if (!postStockMap[pid]) postStockMap[pid] = [];
-    if (stockMap[sid]) postStockMap[pid].push(stockMap[sid]);
-  }
-
-  // Build post map
-  const postMap: Record<
-    string,
-    {
-      id: string;
-      title: string | null;
-      content: string;
-      sentiment: number;
-      postedAt: Date;
-      kol: { id: string; name: string; avatarUrl: string | null };
-      stocks: { id: string; ticker: string; name: string }[];
-    }
-  > = {};
-  for (const p of postRows ?? []) {
-    const kolId = p.kol_id as string;
-    postMap[p.id as string] = {
-      id: p.id as string,
-      title: (p.title as string) ?? null,
-      content: p.content as string,
-      sentiment: p.sentiment as number,
-      postedAt: new Date(p.posted_at as string),
-      kol: kolMap[kolId] ?? { id: kolId, name: 'Unknown', avatarUrl: null },
-      stocks: postStockMap[p.id as string] ?? [],
-    };
-  }
-
-  const data: BookmarkWithPost[] = bookmarks
-    .filter((b) => postMap[b.postId])
-    .map((b) => ({
-      ...b,
-      post: postMap[b.postId],
-    }));
+  const data: BookmarkWithPost[] = (rows as DbBookmarkWithPost[])
+    .map(mapDbToBookmarkWithPost)
+    .filter((b): b is BookmarkWithPost => b !== null);
 
   return { data, total: count ?? 0 };
 }
