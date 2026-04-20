@@ -51,7 +51,8 @@
       "Bash(gh pr:*)",
       "mcp__4979d5c0-fccb-4998-ad93-552dfff5ee67__apply_migration",
       "mcp__4979d5c0-fccb-4998-ad93-552dfff5ee67__generate_typescript_types",
-      "mcp__4979d5c0-fccb-4998-ad93-552dfff5ee67__list_migrations"
+      "mcp__4979d5c0-fccb-4998-ad93-552dfff5ee67__list_migrations",
+      "Bash(openspec status *)"
     ],
     "additionalDirectories": [
       "c:\\Cursor_Master\\investment-idea-monitor\\src\\app\\api\\kols\\[id]\\win-rate"
