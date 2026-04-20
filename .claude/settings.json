@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "[ -d node_modules ] || npm install"
+            "command": "bash scripts/session-setup.sh"
           }
         ]
       }
