@@ -10,8 +10,15 @@ import { unauthorizedError, notFoundError, internalError } from '@/lib/api/error
 import { updatePostSchema, parseBody } from '@/lib/api/validation';
 import { getAiModelVersion } from '@/infrastructure/api/gemini.client';
 
+// 可見性：authenticated-public
+// 任何登入使用者可讀任何 post（post 是 KOL 公開發表的投資觀點）
+// 未來若加 private post 需在此處加 visibility 檢查
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const userId = await getCurrentUserId();
+    if (!userId) {
+      return unauthorizedError();
+    }
     const { id } = await params;
     const post = await getPostById(id);
     if (!post) return notFoundError('Post');
