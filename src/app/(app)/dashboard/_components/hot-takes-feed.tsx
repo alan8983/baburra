@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ROUTES } from '@/lib/constants';
+import { DASHBOARD_RECENT_POSTS_LIMIT } from '@/lib/constants/dashboard';
 import { sentimentKey } from '@/lib/utils/sentiment';
 import { useColorPalette } from '@/lib/colors/color-palette-context';
 import { getStaggerClass } from '@/lib/animations';
@@ -22,9 +23,8 @@ export function HotTakesFeed({ posts }: HotTakesFeedProps) {
   const tCommon = useTranslations('common');
   const { colors } = useColorPalette();
 
-  // Show the 5 most recent posts (sorted by date, already sorted from API)
   const recentPosts = useMemo(() => {
-    return posts.slice(0, 5);
+    return posts.slice(0, DASHBOARD_RECENT_POSTS_LIMIT);
   }, [posts]);
 
   return (

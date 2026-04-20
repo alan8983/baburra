@@ -15,6 +15,7 @@ import {
   upsertSamples,
 } from '@/infrastructure/repositories/win-rate-sample.repository';
 import { isWinRateSampleCacheEnabled } from '@/lib/feature-flags';
+import { DASHBOARD_RECENT_POSTS_LIMIT } from '@/lib/constants/dashboard';
 import type { Sentiment } from '@/domain/models';
 
 // 計算本月開始時間（UTC）
@@ -88,8 +89,8 @@ export async function GET() {
         .eq('user_id', userId)
         .order('updated_at', { ascending: false })
         .limit(1),
-      // 最近 5 篇文章
-      listPosts({ limit: 5 }),
+      // 最近 N 篇文章
+      listPosts({ limit: DASHBOARD_RECENT_POSTS_LIMIT }),
       // 取得所有文章的 kol_id（輕量查詢，只取一欄，exclude mirrors）
       supabase.from('posts').select('kol_id').is('primary_post_id', null),
     ]);
