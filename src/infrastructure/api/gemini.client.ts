@@ -3,6 +3,8 @@
  * @see https://ai.google.dev/gemini-api/docs
  */
 
+import type { GeminiCallMeta } from '@/domain/models/pipeline-timing';
+
 export interface GeminiMessage {
   role: 'user' | 'model';
   parts: { text: string }[];
@@ -166,10 +168,12 @@ function isRetryableError(err: unknown): boolean {
  */
 async function withModelFallback<T>(
   fn: (model: string, apiKey: string) => Promise<T>,
-  explicitModel?: string
+  explicitModel?: string,
+  meta?: GeminiCallMeta
 ): Promise<T> {
   const chain = explicitModel ? [explicitModel] : getEffectiveChain();
   let lastErr: unknown;
+  let retries = 0;
 
   // Outer: rotate keys. Inner: try all models per key.
   // This ensures model fallback (e.g. Gemma → Flash Lite) happens BEFORE
@@ -185,6 +189,8 @@ async function withModelFallback<T>(
 
     for (let ki = 0; ki < getKeyPool().length; ki++) {
       const apiKey = getApiKey();
+      // Snapshot the index actually used for THIS request (getApiKey() bumps keyIndex).
+      const usedKeyIndex = (keyIndex - 1 + getKeyPool().length) % getKeyPool().length;
       let firstInKey = true;
       for (const model of chain) {
         try {
@@ -194,18 +200,33 @@ async function withModelFallback<T>(
             await cooldown();
             firstInKey = false;
           }
-          return await fn(model, apiKey);
+          const result = await fn(model, apiKey);
+          if (meta) {
+            meta.retries = retries;
+            meta.keyIndex = usedKeyIndex;
+            meta.finalModel = model;
+          }
+          return result;
         } catch (err) {
           lastErr = err;
-          if (!isRetryableError(err)) throw err;
+          if (!isRetryableError(err)) {
+            if (meta) {
+              meta.retries = retries;
+              meta.keyIndex = usedKeyIndex;
+              meta.finalModel = model;
+            }
+            throw err;
+          }
+          retries++;
           const errMsg = err instanceof Error ? err.message.slice(0, 150) : String(err);
           console.warn(
-            `[gemini.client] Model "${model}" key#${((keyIndex - 1 + getKeyPool().length) % getKeyPool().length) + 1}/${getKeyPool().length} quota error: ${errMsg}`
+            `[gemini.client] Model "${model}" key#${usedKeyIndex + 1}/${getKeyPool().length} quota error: ${errMsg}`
           );
         }
       }
     }
   }
+  if (meta) meta.retries = retries;
   throw lastErr;
 }
 
@@ -224,9 +245,14 @@ function getApiKey(): string {
 export async function generateContent(
   prompt: string,
   options?: GeminiGenerateOptions,
-  model?: string
+  model?: string,
+  meta?: GeminiCallMeta
 ): Promise<string> {
-  return withModelFallback((m, key) => generateContentWithModel(prompt, options, m, key), model);
+  return withModelFallback(
+    (m, key) => generateContentWithModel(prompt, options, m, key),
+    model,
+    meta
+  );
 }
 
 async function generateContentWithModel(
@@ -301,11 +327,13 @@ export async function generateStructuredJson<T>(
   prompt: string,
   schema: Record<string, unknown>,
   options?: GeminiGenerateOptions,
-  model?: string
+  model?: string,
+  meta?: GeminiCallMeta
 ): Promise<T> {
   return withModelFallback(
     (m, key) => generateStructuredJsonWithModel<T>(prompt, schema, options, m, key),
-    model
+    model,
+    meta
   );
 }
 
@@ -391,9 +419,10 @@ async function generateStructuredJsonWithModel<T>(
 export async function generateJson<T>(
   prompt: string,
   options?: GeminiGenerateOptions,
-  model?: string
+  model?: string,
+  meta?: GeminiCallMeta
 ): Promise<T> {
-  const text = await generateContent(prompt, options, model);
+  const text = await generateContent(prompt, options, model, meta);
 
   // 清理可能的 markdown code block 標記
   let cleanedText = text.trim();

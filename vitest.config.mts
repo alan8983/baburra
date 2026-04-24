@@ -12,7 +12,7 @@ export default defineConfig({
     environment: 'happy-dom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.{test,spec}.{ts,tsx}'],
+    include: ['src/**/*.{test,spec}.{ts,tsx}', 'scripts/**/*.{test,spec}.ts'],
     // Integration tests hit a real Supabase instance and are opt-in via the
     // `test:integration` npm script. Keep them out of the default `test` run
     // so a dev without Supabase env vars can run unit tests without a sea of

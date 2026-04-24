@@ -42,8 +42,10 @@ import { encodeEpisodeUrl } from '../src/infrastructure/extractors/podcast.extra
 import {
   initiateProfileScrape,
   processJobBatch,
+  type UrlCompletionHook,
 } from '../src/domain/services/profile-scrape.service';
 import type { ScrapeOverrides } from '../src/domain/models/kol-source';
+import { writeSummary } from './lib/summarize-run';
 
 // ── Config ───────────────────────────────────────────────────────────────────
 
@@ -114,11 +116,81 @@ function extractEpNumber(item: RssItem): number | null {
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
+// ── JSONL run log + summary on exit ──────────────────────────────────────────
+// Each successful/failed URL writes one JSONL line to scripts/logs/seed-run-<ts>.jsonl.
+// On process exit (normal, crash, or SIGINT) summarize-run writes the
+// aggregate summary.json alongside. Partial runs are flagged.
+
+const RUN_TS = new Date().toISOString().replace(/[:.]/g, '-');
+const LOG_DIR = path.join(__dirname, 'logs');
+if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
+const LOG_PATH = path.join(LOG_DIR, `seed-run-${RUN_TS}.jsonl`);
+const logStream = fs.createWriteStream(LOG_PATH, { flags: 'a' });
+
+let runCompletedNormally = false;
+let anyLogWritten = false;
+
+const onUrlComplete: UrlCompletionHook = (url, result, error) => {
+  anyLogWritten = true;
+  const entry = result
+    ? {
+        url: result.url,
+        status: result.status,
+        error: result.error,
+        title: result.title,
+        kolName: result.kolName,
+        stockTickers: result.stockTickers,
+        timings: result.timings,
+        ts: new Date().toISOString(),
+      }
+    : {
+        url,
+        status: 'error' as const,
+        error: error?.message ?? 'unknown error',
+        ts: new Date().toISOString(),
+      };
+  logStream.write(JSON.stringify(entry) + '\n');
+};
+
+function writeFinalSummary() {
+  try {
+    logStream.end();
+  } catch {
+    /* ignore */
+  }
+  if (!anyLogWritten) return;
+  try {
+    const output = writeSummary(LOG_PATH, { partial: !runCompletedNormally });
+    console.log(`\n[summary] Wrote: ${output}`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[summary] Failed to write summary: ${msg}`);
+  }
+}
+
+let sigintReceived = false;
+process.on('SIGINT', () => {
+  if (sigintReceived) {
+    console.warn('\n[signal] Second SIGINT — exiting immediately.');
+    process.exit(130);
+  }
+  sigintReceived = true;
+  console.warn('\n[signal] SIGINT received — finalizing log + summary...');
+  writeFinalSummary();
+  process.exit(130);
+});
+process.on('SIGTERM', () => {
+  console.warn('\n[signal] SIGTERM received — finalizing log + summary...');
+  writeFinalSummary();
+  process.exit(143);
+});
+
 async function main() {
   console.log(`\n=== 股癌 Podcast EP${EP_MIN}-${EP_MAX} Scrape ===`);
   console.log(`RSS: ${GUYI_RSS_FEED}`);
   console.log(`Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}${limit < Infinity ? ` (limit=${limit})` : ''}`);
-  console.log(`Batch size: ${batchSize}\n`);
+  console.log(`Batch size: ${batchSize}`);
+  console.log(`Log: ${LOG_PATH}\n`);
 
   // 1. Fetch and parse the RSS feed
   console.log('Fetching RSS feed...');
@@ -200,7 +272,7 @@ async function main() {
 
   while (progress.status !== 'completed' && progress.status !== 'failed') {
     // Use long timeout (10 min) since Deepgram transcription can take minutes per episode
-    progress = await processJobBatch(result.jobId, batchSize, 600_000, OVERRIDES);
+    progress = await processJobBatch(result.jobId, batchSize, 600_000, OVERRIDES, onUrlComplete);
 
     const now = Date.now();
     if (now - lastLog >= 30_000 || progress.status === 'completed' || progress.status === 'failed') {
@@ -232,7 +304,13 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error('Fatal:', err);
-  process.exit(1);
-});
+main()
+  .then(() => {
+    runCompletedNormally = true;
+    writeFinalSummary();
+  })
+  .catch((err) => {
+    console.error('Fatal:', err);
+    writeFinalSummary();
+    process.exit(1);
+  });

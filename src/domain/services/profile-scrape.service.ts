@@ -330,11 +330,24 @@ export async function initiateProfileScrape(
   };
 }
 
+/**
+ * Optional per-URL completion hook. Called after processUrl resolves (with
+ * either an ImportUrlResult or an Error). Scripts use this to write per-URL
+ * JSONL logs including `timings` without needing to query scrape_job_items.
+ * Thrown errors from the hook are swallowed — never break batch processing.
+ */
+export type UrlCompletionHook = (
+  url: string,
+  result: import('@/domain/services/import-pipeline.service').ImportUrlResult | null,
+  error: Error | null
+) => void;
+
 export async function processJobBatch(
   jobId: string,
   batchSize: number = 10,
   timeoutMs: number = 50_000,
-  overrides?: ScrapeOverrides
+  overrides?: ScrapeOverrides,
+  onUrlComplete?: UrlCompletionHook
 ): Promise<BatchProgress> {
   const startTime = Date.now();
   const job = await getScrapeJobById(jobId);
@@ -495,6 +508,13 @@ export async function processJobBatch(
           } else {
             errorCount++;
           }
+          if (onUrlComplete) {
+            try {
+              onUrlComplete(url, value, null);
+            } catch (hookErr) {
+              console.warn('[processJobBatch] onUrlComplete threw:', hookErr);
+            }
+          }
         } catch (err) {
           errorCount++;
           // processUrl already emits 'failed' on throws, but the catch
@@ -505,6 +525,13 @@ export async function processJobBatch(
             scheduleItemWrite(itemId, () =>
               updateScrapeJobItemStage(itemId, 'failed', { errorMessage })
             );
+          }
+          if (onUrlComplete) {
+            try {
+              onUrlComplete(url, null, err instanceof Error ? err : new Error(String(err)));
+            } catch (hookErr) {
+              console.warn('[processJobBatch] onUrlComplete threw:', hookErr);
+            }
           }
         }
 

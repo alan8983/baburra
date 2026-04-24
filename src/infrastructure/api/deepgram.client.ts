@@ -16,6 +16,7 @@
  */
 
 import { Readable } from 'stream';
+import type { DeepgramCallMeta } from '@/domain/models/pipeline-timing';
 
 const DEEPGRAM_BASE = 'https://api.deepgram.com/v1/listen';
 const REQUEST_TIMEOUT_MS = 180_000; // 3 min
@@ -154,9 +155,11 @@ async function drainStreamToBuffer(stream: Readable): Promise<Buffer> {
  */
 export async function deepgramTranscribe(
   body: Buffer | Readable,
-  mimeType: string
+  mimeType: string,
+  meta?: DeepgramCallMeta
 ): Promise<string> {
   const apiKey = getApiKey();
+  let retries = 0;
 
   const params = new URLSearchParams({
     model: 'nova-3',
@@ -262,6 +265,7 @@ export async function deepgramTranscribe(
         console.log(
           `[Deepgram] Transcription complete: ${data.results.utterances.length} utterances`
         );
+        if (meta) meta.retries = retries;
         return transcript;
       }
 
@@ -269,6 +273,7 @@ export async function deepgramTranscribe(
       const plainTranscript = data.results?.channels?.[0]?.alternatives?.[0]?.transcript;
       if (plainTranscript?.trim()) {
         console.log('[Deepgram] Transcription complete (plain text fallback)');
+        if (meta) meta.retries = retries;
         return plainTranscript;
       }
 
@@ -315,11 +320,13 @@ export async function deepgramTranscribe(
         `[Deepgram] Attempt ${attempt + 1} failed: ${lastError.message}. Retrying in ${delay / 1000}s...`
       );
       await new Promise((resolve) => setTimeout(resolve, delay));
+      retries++;
       continue;
     } finally {
       clearTimeout(timeoutId);
     }
   }
 
+  if (meta) meta.retries = retries;
   throw lastError ?? new Error('Deepgram transcription failed after all retries');
 }

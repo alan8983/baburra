@@ -88,6 +88,7 @@ const TEXT_ANALYSIS_RECIPE: Recipe = [
 const TEXT_ANALYSIS_COST = composeCost(TEXT_ANALYSIS_RECIPE);
 import type { Sentiment, SourcePlatform } from '@/domain/models/post';
 import type { DraftAiArguments } from '@/domain/models/draft';
+import type { StageTiming } from '@/domain/models/pipeline-timing';
 
 const MAX_VIDEO_DURATION_SECONDS = 120 * 60; // 120 minutes
 
@@ -111,6 +112,12 @@ export interface ImportUrlResult {
   kolId?: string;
   kolName?: string;
   kolCreated?: boolean;
+  /**
+   * Per-stage timing breakdown for this URL. Populated by processUrl when
+   * the URL traverses at least one instrumented stage. Consumed by seed
+   * scripts to emit JSONL lines for post-run aggregation.
+   */
+  timings?: StageTiming[];
 }
 
 export interface ImportKolSummary {
@@ -251,6 +258,66 @@ function logTimings(url: string, t: PipelineTimings) {
   );
 }
 
+interface StageMetaCounters {
+  deepgramRetries: number;
+  analysisRetries: number;
+  argumentsRetries: number;
+  deepgramOk: boolean;
+  analysisOk: boolean;
+  argumentsOk: boolean;
+  extractOk: boolean;
+  supabaseOk: boolean;
+}
+
+/**
+ * Build a `StageTiming[]` snapshot from the internal `PipelineTimings` and
+ * per-stage meta counters, skipping stages that did not run (ms === 0 and
+ * not flagged as ok). Tiingo is not currently measured at this layer and is
+ * omitted; it will be added when price hydration moves into processUrl.
+ */
+function buildStageTimings(t: PipelineTimings, m: StageMetaCounters): StageTiming[] {
+  const out: StageTiming[] = [];
+  if (t.extractMs > 0 || m.extractOk) {
+    out.push({ stage: 'rss_lookup', ms: t.extractMs, ok: m.extractOk, retries: 0 });
+  }
+  if (t.downloadMs > 0) {
+    out.push({ stage: 'audio_download', ms: t.downloadMs, ok: true, retries: 0 });
+  }
+  if (t.transcribeMs > 0 || m.deepgramOk) {
+    out.push({
+      stage: 'deepgram',
+      ms: t.transcribeMs,
+      ok: m.deepgramOk,
+      retries: m.deepgramRetries,
+    });
+  }
+  if (t.analysisMs > 0 || m.analysisOk) {
+    out.push({
+      stage: 'gemini_sentiment',
+      ms: t.analysisMs,
+      ok: m.analysisOk,
+      retries: m.analysisRetries,
+    });
+  }
+  if (t.argumentsMs > 0 || m.argumentsOk) {
+    out.push({
+      stage: 'gemini_args',
+      ms: t.argumentsMs,
+      ok: m.argumentsOk,
+      retries: m.argumentsRetries,
+    });
+  }
+  if (t.postCreationMs > 0 || m.supabaseOk) {
+    out.push({
+      stage: 'supabase_write',
+      ms: t.postCreationMs,
+      ok: m.supabaseOk,
+      retries: 0,
+    });
+  }
+  return out;
+}
+
 // ── Per-URL Processing ──
 
 export async function processUrl(
@@ -287,6 +354,18 @@ export async function processUrl(
     cached: false,
   };
 
+  // Per-stage retry counters — populated via meta out-params on client calls.
+  const stageMeta = {
+    deepgramRetries: 0,
+    analysisRetries: 0,
+    argumentsRetries: 0,
+    analysisOk: false,
+    argumentsOk: false,
+    deepgramOk: false,
+    extractOk: false,
+    supabaseOk: false,
+  };
+
   // 1. Duplicate check — emit discovering so a progress UI can leave the
   // `queued` state immediately even for fast URL paths.
   emit('discovering');
@@ -300,6 +379,7 @@ export async function processUrl(
   const _tExtract = Date.now();
   const fetchResult = await extractorFactory.extractFromUrl(url);
   timings.extractMs = Date.now() - _tExtract;
+  stageMeta.extractOk = true;
   if (fetchResult.title) {
     emit('discovering', { title: fetchResult.title });
   }
@@ -380,17 +460,21 @@ export async function processUrl(
         // regardless of which vendor ran. Forward the stage callback so the
         // transcription service can emit downloading / transcribing events.
         const _tTranscribe = Date.now();
+        const deepgramMeta = { retries: 0 };
         const transcription = await transcribeAudio({
           sourceUrl: fetchResult.sourceUrl,
           isShort,
           maxDurationSeconds: MAX_VIDEO_DURATION_SECONDS,
           onStage: emit,
+          deepgramMeta,
         });
         timings.transcriptionMs = Date.now() - _tTranscribe;
         if (transcription.timings) {
           timings.downloadMs = transcription.timings.downloadMs;
           timings.transcribeMs = transcription.timings.transcribeMs;
         }
+        stageMeta.deepgramRetries = deepgramMeta.retries;
+        stageMeta.deepgramOk = true;
         const transcriptText = transcription.text;
         contentForAnalysis = transcriptText;
 
@@ -522,8 +606,11 @@ export async function processUrl(
     // 4. AI analysis (sentiment + ticker identification in one call)
     emit('analyzing');
     const _tAnalysis = Date.now();
-    const analysis = await analyzeDraftContent(contentForAnalysis, timezone);
+    const analysisMeta = { retries: 0, keyIndex: 0, finalModel: '' };
+    const analysis = await analyzeDraftContent(contentForAnalysis, timezone, analysisMeta);
     timings.analysisMs = Date.now() - _tAnalysis;
+    stageMeta.analysisRetries = analysisMeta.retries;
+    stageMeta.analysisOk = true;
 
     // 5. Zero-ticker rejection — skip post creation if no stocks identified
     if (analysis.stockTickers.length === 0) {
@@ -536,7 +623,12 @@ export async function processUrl(
       // Treat filtered-out content as done (from the item's perspective) but
       // carry the filter reason so the UI can distinguish it from a true error.
       emit('done', { errorMessage: 'no_tickers_identified' });
-      return { url, status: 'error', error: 'no_tickers_identified' };
+      return {
+        url,
+        status: 'error',
+        error: 'no_tickers_identified',
+        timings: buildStageTimings(timings, stageMeta),
+      };
     }
 
     // 6. Resolve KOL: use knownKolId if provided, otherwise auto-detect
@@ -623,9 +715,16 @@ export async function processUrl(
     let draftAiArguments: DraftAiArguments[] | undefined;
     if (analysis.stockTickers.length > 0) {
       try {
+        // One meta object per ticker call — retries summed, keyIndex/finalModel
+        // from the last completed call (most recent signal).
+        const argMetas = analysis.stockTickers.map(() => ({
+          retries: 0,
+          keyIndex: 0,
+          finalModel: '',
+        }));
         const results = await Promise.allSettled(
-          analysis.stockTickers.map((ticker) =>
-            extractArguments(contentForAnalysis, ticker.ticker, ticker.name)
+          analysis.stockTickers.map((ticker, i) =>
+            extractArguments(contentForAnalysis, ticker.ticker, ticker.name, argMetas[i])
           )
         );
         const argumentResults: DraftAiArguments[] = [];
@@ -645,6 +744,8 @@ export async function processUrl(
             );
           }
         }
+        stageMeta.argumentsRetries = argMetas.reduce((acc, m) => acc + m.retries, 0);
+        stageMeta.argumentsOk = results.some((r) => r.status === 'fulfilled');
         if (argumentResults.length > 0) {
           draftAiArguments = argumentResults;
         }
@@ -696,6 +797,7 @@ export async function processUrl(
     }
 
     timings.postCreationMs = Date.now() - _tPost;
+    stageMeta.supabaseOk = true;
     timings.totalMs = Date.now() - _t0;
     timings.stockCount = analysis.stockTickers.length;
     timings.argumentCount = draftAiArguments
@@ -718,6 +820,7 @@ export async function processUrl(
       kolId,
       kolName: detectedKolName,
       kolCreated,
+      timings: buildStageTimings(timings, stageMeta),
     };
   } catch (pipelineErr) {
     // Refund credits if consumed but pipeline failed

@@ -4,6 +4,7 @@
 
 import { generateJson, generateStructuredJson } from '@/infrastructure/api/gemini.client';
 import type { Sentiment } from '@/domain/models/post';
+import type { GeminiCallMeta } from '@/domain/models/pipeline-timing';
 
 // =====================
 // Types
@@ -741,7 +742,8 @@ Return the refined arguments. Keep all fields unchanged unless a correction is n
 export async function extractArguments(
   content: string,
   ticker: string,
-  stockName: string
+  stockName: string,
+  meta?: GeminiCallMeta
 ): Promise<ArgumentExtractionResult> {
   // 格式化框架類別供 prompt 使用
   const frameworkText = FRAMEWORK_CATEGORIES.map(
@@ -759,18 +761,31 @@ export async function extractArguments(
   const result = await generateStructuredJson<ArgumentExtractionResult>(
     prompt,
     ARGUMENT_RESPONSE_SCHEMA,
-    genOptions
+    genOptions,
+    undefined,
+    meta
   );
   let validated = validateAndClamp(result.arguments);
 
   // Round 2: if too many, send feedback and ask Gemini to revise
   if (validated.length > 5) {
     const revisionPrompt = buildRevisionPrompt(content, ticker, stockName, validated);
+    // Accumulate retries from the revision call into the caller's meta.
+    const revisionMeta: GeminiCallMeta | undefined = meta
+      ? { retries: 0, keyIndex: 0, finalModel: '' }
+      : undefined;
     const revised = await generateStructuredJson<ArgumentExtractionResult>(
       revisionPrompt,
       ARGUMENT_RESPONSE_SCHEMA,
-      genOptions
+      genOptions,
+      undefined,
+      revisionMeta
     );
+    if (meta && revisionMeta) {
+      meta.retries += revisionMeta.retries;
+      meta.keyIndex = revisionMeta.keyIndex;
+      meta.finalModel = revisionMeta.finalModel;
+    }
     validated = validateAndClamp(revised.arguments);
   }
 
@@ -821,7 +836,8 @@ export async function identifyTickers(content: string): Promise<TickerIdentifica
  */
 export async function analyzeDraftContent(
   content: string,
-  timezone: string = 'Asia/Taipei'
+  timezone: string = 'Asia/Taipei',
+  meta?: GeminiCallMeta
 ): Promise<DraftAnalysisResult> {
   const today = new Date().toLocaleDateString('sv-SE', { timeZone: timezone }); // YYYY-MM-DD
 
@@ -866,7 +882,9 @@ export async function analyzeDraftContent(
   const result = await generateStructuredJson<RawDraftAnalysis>(
     prompt,
     DRAFT_ANALYSIS_RESPONSE_SCHEMA,
-    { temperature: 0.3, maxOutputTokens: 4096 }
+    { temperature: 0.3, maxOutputTokens: 4096 },
+    undefined,
+    meta
   );
 
   // 驗證並清理 tickers

@@ -428,7 +428,12 @@ describe('executeBatchImport', () => {
 
     await executeBatchImport({ urls: ['https://x.com/a/status/1'] }, USER_ID);
 
-    expect(mocks.extractArguments).toHaveBeenCalledWith(expect.any(String), 'AAPL', 'Apple Inc.');
+    expect(mocks.extractArguments).toHaveBeenCalledWith(
+      expect.any(String),
+      'AAPL',
+      'Apple Inc.',
+      expect.objectContaining({ retries: expect.any(Number) })
+    );
     // createPost should receive the arguments
     expect(mocks.createPost).toHaveBeenCalledWith(
       expect.objectContaining({
