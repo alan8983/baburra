@@ -1,5 +1,41 @@
 # Baseline — validate-podcast-pipeline-with-gooaye
 
+## Session handoff (2026-04-25, Session B)
+
+**Stopping point:** §5 complete and committed. §6–§8 to be driven from a fresh session.
+
+**Where to resume:**
+
+1. Read this file top-to-bottom — the §5 summary table names every gate's status and every open bug.
+2. Next task is **§6 autoresearch tuning** (`openspec/changes/validate-podcast-pipeline-with-gooaye/tasks.md` §6.1–6.8). Budget ~$32 and 4–6 h wall time for a 15-iteration loop over 10-ep samples.
+3. Before resuming, consider whether to short-circuit: the current defaults already produce 100% idempotency + 71% fresh success_rate on a 10-ep sample; the highest-value unresolved bug is **D4** ([#91](https://github.com/alan8983/baburra/issues/91) — duplicate tickers from Gemini). A targeted D4 fix + direct §8 run may reach the 95% launch-readiness gate faster than a full §6 tuning pass.
+4. Whichever path is chosen, the 4 tuning candidates **6.T1–6.T4** in `tasks.md §3.4` (RSS feed cache, Gemini cooldown per-key, audio-download retry helper, Gemini key-cooldown marker) remain valid follow-ups.
+
+**Environment state:**
+
+- `.env.local` present in worktree root (7 keys; Gemini pool size 3; Deepgram Pay-as-you-go ~$183 credit at session start)
+- `node_modules` installed (513 entries)
+- Supabase linked via `supabase/.temp/project-ref = jinxqfsejfrhmvlhrfjj`
+- DB: 12 Gooaye podcast posts seeded (`kol_id = b7a958c4-f9f4-48e1-8dbf-a8966bf1484e`), all with canonical `podcast-rss://…` `source_url`. `kol_sources.source = 'seed'` is set. `posts.source` is NULL pending the D2 ([#89](https://github.com/alan8983/baburra/issues/89)) migration.
+
+**Commit trail this session:**
+
+| SHA | What |
+| --- | --- |
+| `d20c8b0` | §0 preconditions + §2 migration verification + patch stale RSS UUID |
+| `3f6d016` | §3 predict — 15 findings from 8 adversarial personas |
+| `2c065c1` | §4 scenarios — 25 failure scenarios across 5 dimensions |
+| `b1d03b3` | §5.2–5.3 baseline entry — 3 bugs surfaced (D1/D2/D3) |
+| `2d1c1ef` | D1 fix — podcast `sourceUrl` aligned on podcast-rss:// key |
+| `8c7ecfa` | §5.4–5.6 baseline entry — idempotency gates passed, D4 filed |
+
+**Open bugs (GitHub issues, not blocking §6):**
+- D2 [#89](https://github.com/alan8983/baburra/issues/89) `posts.source` never written → rollback script inert.
+- D3 [#90](https://github.com/alan8983/baburra/issues/90) `completeScrapeJob` aborts script on Supabase fetch blip.
+- D4 [#91](https://github.com/alan8983/baburra/issues/91) duplicate tickers from Gemini → `post_stocks` constraint violation.
+
+---
+
 ## Run metadata
 
 *Captured at §0.3 of tasks.md. Source: `.env.local` copied from `/c/Cursor_Master/baburra/.env.local` (§0.1).*
