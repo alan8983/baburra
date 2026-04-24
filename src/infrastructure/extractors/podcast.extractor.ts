@@ -142,15 +142,20 @@ export class PodcastEpisodeExtractor extends SocialMediaExtractor {
       );
     }
 
-    // Build the source URL for caching (use enclosure URL as canonical)
-    const enclosureUrl = episode.enclosure?.['@_url'] ?? url;
-
-    // Three-tier transcript extraction
-    const content = await this.fetchTranscript(episode, enclosureUrl);
+    // Use the stable podcast-rss:// URL as the canonical key for dedup,
+    // transcript cache, and post.source_url. SoundOn enclosure URLs carry an
+    // upload timestamp query param that is per-episode-stable but still
+    // diverges from the podcast-rss:// key `findPostBySourceUrl` is called
+    // with in `processUrl`, so using it here would make the pre-insert
+    // dedup check always miss on re-runs (full Deepgram re-cost before the
+    // unique constraint catches it at INSERT). Keeping the key consistent
+    // across findPostBySourceUrl, findTranscriptByUrl, saveTranscript, and
+    // createPost gives the podcast path the same idempotency as YouTube.
+    const content = await this.fetchTranscript(episode, url);
 
     return {
       content,
-      sourceUrl: enclosureUrl,
+      sourceUrl: url,
       sourcePlatform: 'podcast',
       title: episode.title ?? null,
       images: [],
