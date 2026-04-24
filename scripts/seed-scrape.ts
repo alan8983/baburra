@@ -1,13 +1,17 @@
 #!/usr/bin/env tsx
 /**
- * Seed Scrape Script — one-shot batch ingestion for pre-launch KOL seeding.
+ * ORPHANED — DO NOT USE.
  *
- * Drives the existing async job pipeline (initiateProfileScrape → processJobBatch)
- * with ScrapeOverrides { ownerUserId, source: 'seed', quotaExempt: true }.
+ * This script was built against scripts/seed-kol-config.json (a 19-KOL
+ * placeholder with feeds.example.com URLs) which has been removed as part of
+ * the validate-podcast-pipeline-with-gooaye change. The canonical seed
+ * entrypoint is now scripts/scrape-guyi-podcast-ep501-600.ts, which targets a
+ * real production RSS feed and one KOL (股癌/Gooaye).
  *
- * Usage:
- *   npm run seed:scrape              # full run
- *   npm run seed:scrape -- --dry-run  # discovery only, no DB writes
+ * Kept here for reference — the override-threading, idempotency check, and
+ * per-KOL summary patterns are reusable. If a multi-KOL seeder is wanted
+ * later, generate a fresh config from real sources rather than reviving the
+ * old placeholder file.
  */
 
 import * as fs from 'node:fs';
