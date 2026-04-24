@@ -128,6 +128,55 @@ Empirical vs predict match-up:
 
 **§5.4/§5.5 proceed-decision:** blocked on D1 for cheap idempotency. User decision needed.
 
+### Post-D1-fix: DB cleanup
+
+- Deleted the 3 S1/S2 test posts (they stored enclosure URL + `source=NULL`, making them incompatible with the new key format).
+- `UPDATE posts SET source_url = 'podcast-rss://…#{guid}' WHERE id IN (…)` on the 5 pre-existing Gooaye podcast posts (EP504, 505, 506, 513, 524 from Apr-16 testing) so the new D1 pre-check would short-circuit them.
+
+### S3 — §5.4 `--limit 10 --batch-size 3` (live, post-D1-fix, 2026-04-25 03:36 local)
+
+- Summary: [seed-run-2026-04-24T19-36-02-758Z.summary.json](../../../scripts/logs/seed-run-2026-04-24T19-36-02-758Z.summary.json) — attempted 10, passed 5, duplicates 3, errors 2, **success_rate 50%** (excluding dups from numerator).
+- DB: 10 podcast posts for Gooaye (EP501, 502, 503, 504, 505, 506, 509, 510, 513, 524). Missing: EP507, EP508.
+- Stages (p50 / p95 across 5 fresh URLs): rss_lookup 46.5 / 51.6s · gemini_sentiment 5.0 / 25.0s · gemini_args 147.9 / 202.7s · supabase_write 1.6 / 2.6s
+- **D1 fix verified** — EP504/505/506 were cleanly caught at the pre-extract `findPostBySourceUrl` check (zero Deepgram/Gemini cost).
+- **Errors:**
+  - EP507 — `fetch failed` (transient; not reproduced on §5.5 rerun)
+  - EP508 — `duplicate key value violates unique constraint "post_stocks_post_id_stock_id_key"` → new bug **D4** filed as [baburra#91](https://github.com/alan8983/baburra/issues/91). Gemini returned a duplicate ticker in `analysis.stockTickers`; pipeline forwarded it twice to `create_post_atomic`.
+- **Non-fatal quality-gate signal** — log line `extractArguments failed for BTC: Gemini API request timed out after 30000ms` observed mid-run. Silently swallowed per predict F-14; post still written with arguments from the other tickers. Matches prediction.
+- **Predict match-up after S3:**
+  - ✅ F-03 concretely observed (EP507 `fetch failed`)
+  - ✅ F-14 concretely observed (BTC argument-extraction 30s timeout, silently dropped)
+  - ⚠️ F-02 moderate impact — `gemini_args` p95 = 202.7s at B=3, cooldown mutex real
+  - ➕ **NEW D4** (duplicate ticker → post_stocks constraint) not in predict scope
+
+### S3-serial-rerun — §5.5 `--limit 10 --batch-size 1` (2026-04-25 03:49 local)
+
+- Summary: [seed-run-2026-04-24T19-49-50-728Z.summary.json](../../../scripts/logs/seed-run-2026-04-24T19-49-50-728Z.summary.json) — attempted 10, passed 2 (EP507 + EP508, retry success), duplicates **8**, errors 0.
+- Wall time: **152s** for 10 episodes — 8 short-circuits were near-instant; the 2 fresh-retry episodes took ~60s each.
+- **EP507 + EP508 both succeeded on rerun** — confirms F-03's transient nature for EP507 and D4's non-determinism for EP508 (Gemini output for EP508 this run had 14 unique tickers, no duplicates). EP508 log line `extractArguments failed for BTC: timed out` observed again — same F-14 behavior.
+- **§5.5 idempotency gate — PASSED for the 8 previously-seeded episodes (0 new posts, 8 clean duplicates).**
+
+### S3-parallel-rerun — §5.6 `--limit 10 --batch-size 3` (2026-04-25 03:55 local)
+
+- Summary: [seed-run-2026-04-24T19-55-47-707Z.summary.json](../../../scripts/logs/seed-run-2026-04-24T19-55-47-707Z.summary.json) — attempted 10, passed 0, duplicates **10**, errors 0.
+- Wall time: **5 seconds** for 10 episodes — pure pre-check short-circuit. No Deepgram, no Gemini.
+- **§5.6 idempotency gate — PASSED (pure 0-new-posts, 10 duplicates).**
+- DB count unchanged: 12 Gooaye podcast posts (pre-existing 5 + fresh 5 from S3 + 2 from S3-serial-rerun).
+
+### §5 summary
+
+| Gate | Status | Notes |
+| --- | --- | --- |
+| §5.1 S1-dry | ✅ pass | See §2.4 |
+| §5.2 S1 | ✅ pass | 1/1, 100% |
+| §5.3 S2 | ⚠️ partial | 2/3; surfaced D1/D2/D3 (all filed/fixed) |
+| §5.4 S3 | ⚠️ partial | 5/10 fresh success; EP507 transient, EP508 D4; D1 fix verified |
+| §5.5 S3-serial-rerun | ✅ **pass** | 8/8 idempotent dup; 2 genuinely-new attempts succeeded on retry |
+| §5.6 S3-parallel-rerun | ✅ **PASS** | 10/10 dup in 5s — pure idempotency proof |
+| §5.7 Proceed? | ✅ yes | All idempotency gates met; proceed to §6 |
+
+**Bugs still open:** D2 ([#89](https://github.com/alan8983/baburra/issues/89)), D3 ([#90](https://github.com/alan8983/baburra/issues/90)), D4 ([#91](https://github.com/alan8983/baburra/issues/91)) — all in separate GitHub issues, none blocking §6.
+
 ## Stage 5 — tuned defaults
 
 *Pending §6.1–§6.8.*
