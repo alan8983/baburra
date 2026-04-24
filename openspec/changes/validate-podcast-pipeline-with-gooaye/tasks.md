@@ -30,10 +30,14 @@
 
 ## 3. Autoresearch Predict (Stage 1)
 
-- [ ] 3.1 Invoke `/autoresearch:predict --adversarial --depth deep --scope src/domain/services/import-pipeline.service.ts,src/domain/services/profile-scrape.service.ts,src/infrastructure/extractors/podcast.extractor.ts,src/infrastructure/api/gemini.client.ts,src/infrastructure/api/deepgram.client.ts,scripts/scrape-guyi-podcast-ep501-600.ts` with `Goal: Find concurrency, 429, and timeout failure modes in the RSS → Deepgram → Gemini path under Gooaye-scale batch import (100 episodes, batch-size 3-10)`, `Iterations: 1`, `--budget 20`
-- [ ] 3.2 Copy the resulting `predict/<ts>-<slug>/` directory into `openspec/changes/validate-podcast-pipeline-with-gooaye/predict/`
-- [ ] 3.3 Read `predict/handoff.json` and `predict/findings.md`; transcribe the top 5 highest-confidence findings into `baseline.md` under `Stage 1 — predict findings`
-- [ ] 3.4 For each finding classified `critical` or `high`, open a checkbox under §5 (tuning candidates) naming the hypothesis
+- [x] 3.1 Invoked `/autoresearch:predict --adversarial --depth deep --scope <6 pipeline files> --budget 20 --iterations 1` with goal "Find concurrency, 429, and timeout failure modes in the RSS → Deepgram → Gemini path under Gooaye-scale batch import"
+- [x] 3.2 Artifacts written directly into `openspec/changes/validate-podcast-pipeline-with-gooaye/predict/260425-1850-gooaye-pipeline/` (overview.md, findings.md, hypothesis-queue.md, handoff.json)
+- [x] 3.3 Top 5 findings transcribed into `baseline.md § Stage 1 — predict findings` (F-01, F-02, F-03, F-04, F-14)
+- [x] 3.4 HIGH-severity tuning-candidate checkboxes opened under §6:
+  - [ ] 6.T1 (F-01) Cache parsed RSS feed in `podcast.extractor.ts` with TTL to eliminate 99% of redundant SoundOn GETs
+  - [ ] 6.T2 (F-02) Tune/bypass Gemini `GEMINI_COOLDOWN_MS` (try 0 or per-key) to unlock key-pool parallelism
+  - [ ] 6.T3 (F-03) Add `fetchWithRetry` helper for audio download + RSS in the podcast extractor (3× / 2s,8s / 30s timeout)
+  - [ ] 6.T4 (F-04) Add `keyCooldownUntil` map in `gemini.client.ts` to skip quota-exhausted keys for ~65s
 
 ## 4. Autoresearch Scenario (Stage 2)
 

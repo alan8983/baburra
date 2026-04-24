@@ -39,7 +39,21 @@
 
 ## Stage 1 — predict findings
 
-*Pending §3.1–§3.4.*
+**Executed 2026-04-25 (§3.1–§3.4).**
+
+Report: [predict/260425-1850-gooaye-pipeline/](./predict/260425-1850-gooaye-pipeline/).
+
+Adversarial persona set × deep depth × budget 20 produced **15 findings** (8 confirmed, 5 probable, 2 minority). Anti-herd passed; composite predict_score = 178.
+
+**Top 5 highest-confidence findings** (transcribed for stress-run reference):
+
+1. **F-01 (HIGH, 8/8)** — RSS feed re-fetched in full for every episode (`podcast.extractor.ts:111`). 100 eps × concurrency 3 ≈ 100 identical GETs to SoundOn in seconds. Most likely cause of spurious 429s / socket resets under §5.4 load.
+2. **F-02 (HIGH, 7/8)** — Gemini `cooldownQueue` is a global module-level mutex (`gemini.client.ts:115-135`); serializes ALL Gemini calls through a 1500ms gate regardless of key-pool size. Caps practical throughput.
+3. **F-03 (HIGH, 7/8)** — No retry on audio download + no AbortController on RSS fetches (`podcast.extractor.ts:194,111`). Single transient 429 drops the episode permanently.
+4. **F-04 (HIGH, 6/8)** — Key-pool 429 backoff retries already-exhausted keys (`gemini.client.ts:169-231`); the 5s initial backoff is strictly shorter than Flash-Lite's per-minute quota window. Wastes retry budget.
+5. **F-14 (MEDIUM, 5/8)** — `extractArguments` per-ticker failures silently swallowed (`import-pipeline.service.ts:725-754`); posts land with zero arguments for some tickers while `argumentsOk` reports true. Masks quality-gate failures.
+
+Tuning candidates for §6 (high/critical findings below opened as checkboxes):
 
 ## Stage 2 — failure scenarios
 
