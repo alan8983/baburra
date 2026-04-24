@@ -889,6 +889,7 @@ export async function analyzeDraftContent(
 
   // 驗證並清理 tickers
   const validMarkets = ['US', 'TW', 'HK', 'CRYPTO'];
+  const seenTickers = new Set<string>();
   const aiStockTickers: IdentifiedTicker[] = (result.tickers || [])
     .filter((t) => t.ticker && t.name && validMarkets.includes(t.market))
     .map((t) => ({
@@ -901,7 +902,14 @@ export async function analyzeDraftContent(
       ...(t.source === 'inferred' && t.inferenceReason
         ? { inferenceReason: t.inferenceReason }
         : {}),
-    }));
+    }))
+    // Dedupe by normalized ticker to avoid downstream UNIQUE(post_id, stock_id)
+    // violations in post_stocks when Gemini emits the same ticker twice (D4).
+    .filter((t) => {
+      if (seenTickers.has(t.ticker)) return false;
+      seenTickers.add(t.ticker);
+      return true;
+    });
 
   // Merge with regex-extracted cashtags to catch any the AI missed
   const stockTickers = mergeWithCashtags(aiStockTickers, content);

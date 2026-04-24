@@ -173,6 +173,34 @@ describe('analyzeDraftContent', () => {
     expect(result.stockTickers[0].ticker).toBe('NVDA');
   });
 
+  it('重複 ticker 應被去重 (D4 regression — post_stocks UNIQUE constraint)', async () => {
+    mockGenerateStructuredJson.mockResolvedValueOnce({
+      kolName: null,
+      tickers: [
+        { ticker: 'BTC', name: 'Bitcoin', market: 'CRYPTO', confidence: 0.9, mentionedAs: 'BTC' },
+        {
+          ticker: 'btc',
+          name: 'Bitcoin',
+          market: 'CRYPTO',
+          confidence: 0.8,
+          mentionedAs: 'bitcoin',
+        },
+        { ticker: 'AAPL', name: 'Apple', market: 'US', confidence: 0.9, mentionedAs: 'AAPL' },
+        { ticker: ' BTC ', name: 'Bitcoin', market: 'CRYPTO', confidence: 0.7, mentionedAs: 'btc' },
+      ],
+      sentiment: 0,
+      confidence: 0.5,
+      reasoning: '',
+      postedAt: null,
+    });
+
+    const result = await analyzeDraftContent('test');
+    expect(result.stockTickers).toHaveLength(2);
+    expect(result.stockTickers.map((t) => t.ticker).sort()).toEqual(['AAPL', 'BTC']);
+    const btc = result.stockTickers.find((t) => t.ticker === 'BTC');
+    expect(btc?.confidence).toBe(0.9);
+  });
+
   it('ticker 應被轉為大寫並去除空白', async () => {
     mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
