@@ -100,11 +100,15 @@ let keyIndex = 0;
 
 /* ── Backoff configuration ───────────────────────────────────────────────────
  * After exhausting the full model × key matrix, wait and retry.
- * Delays: 5 s → 15 s → 45 s → 90 s  (total max wait ≈ 155 s).
+ * Delays scale from a base (default 5 000 ms → [5, 15, 45, 90] s, max wait ≈ 155 s).
  * Free-tier quota resets per-minute, so we need waits long enough to span
- * at least one full reset window.
+ * at least one full reset window. Override with GEMINI_RETRY_BASE_MS env var
+ * (used by §6 tuning loops).
  */
-const BACKOFF_DELAYS_MS = [5_000, 15_000, 45_000, 90_000];
+function getBackoffDelaysMs(): number[] {
+  const base = Number(process.env.GEMINI_RETRY_BASE_MS) || 5_000;
+  return [base, base * 3, base * 9, base * 18];
+}
 
 /* ── Per-call cooldown (serialised) ───────────────────────────────────────────
  * Enforces a minimum gap between consecutive Gemini API calls to avoid
@@ -174,15 +178,16 @@ async function withModelFallback<T>(
   const chain = explicitModel ? [explicitModel] : getEffectiveChain();
   let lastErr: unknown;
   let retries = 0;
+  const backoffDelaysMs = getBackoffDelaysMs();
 
   // Outer: rotate keys. Inner: try all models per key.
   // This ensures model fallback (e.g. Gemma → Flash Lite) happens BEFORE
   // burning through keys on the same quota-limited model.
-  for (let attempt = 0; attempt <= BACKOFF_DELAYS_MS.length; attempt++) {
+  for (let attempt = 0; attempt <= backoffDelaysMs.length; attempt++) {
     if (attempt > 0) {
-      const delay = BACKOFF_DELAYS_MS[attempt - 1];
+      const delay = backoffDelaysMs[attempt - 1];
       console.warn(
-        `[gemini.client] All keys×models exhausted — backing off ${delay}ms (retry ${attempt}/${BACKOFF_DELAYS_MS.length})`
+        `[gemini.client] All keys×models exhausted — backing off ${delay}ms (retry ${attempt}/${backoffDelaysMs.length})`
       );
       await sleep(delay);
     }

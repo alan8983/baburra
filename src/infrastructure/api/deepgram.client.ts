@@ -20,7 +20,13 @@ import type { DeepgramCallMeta } from '@/domain/models/pipeline-timing';
 
 const DEEPGRAM_BASE = 'https://api.deepgram.com/v1/listen';
 const REQUEST_TIMEOUT_MS = 180_000; // 3 min
-const RETRY_DELAYS = [5_000, 15_000]; // Backoff delays for retries
+
+// Retry delays scale off a base. Default base 5 000 ms → [5 s, 15 s].
+// Override with DEEPGRAM_RETRY_BASE_MS env var (e.g. tuning loops in §6).
+function getRetryDelays(): number[] {
+  const base = Number(process.env.DEEPGRAM_RETRY_BASE_MS) || 5_000;
+  return [base, base * 3];
+}
 
 function getApiKey(): string {
   const apiKey = process.env.DEEPGRAM_API_KEY;
@@ -191,8 +197,9 @@ export async function deepgramTranscribe(
   console.log(`[Deepgram] Transcribing audio: ${logSize}, ${mimeType}`);
 
   let lastError: Error | undefined;
+  const retryDelays = getRetryDelays();
 
-  for (let attempt = 0; attempt <= RETRY_DELAYS.length; attempt++) {
+  for (let attempt = 0; attempt <= retryDelays.length; attempt++) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
@@ -306,7 +313,7 @@ export async function deepgramTranscribe(
       }
 
       // Check if we should retry
-      const canRetry = attempt < RETRY_DELAYS.length && isRetryableError(error);
+      const canRetry = attempt < retryDelays.length && isRetryableError(error);
       if (!canRetry) {
         console.error('[Deepgram] Transcription failed (no more retries):', {
           message: lastError.message,
@@ -315,7 +322,7 @@ export async function deepgramTranscribe(
         throw lastError;
       }
 
-      const delay = RETRY_DELAYS[attempt];
+      const delay = retryDelays[attempt];
       console.warn(
         `[Deepgram] Attempt ${attempt + 1} failed: ${lastError.message}. Retrying in ${delay / 1000}s...`
       );
