@@ -41,10 +41,12 @@
 
 ## 4. Autoresearch Scenario (Stage 2)
 
-- [ ] 4.1 Invoke `/autoresearch:scenario --focus failures --domain software --depth standard` with seed scenario `Seed: 100 Gooaye episodes (avg ~45 min) scraped via RSS → Deepgram → Gemini, batch-size 3, Gemini key pool of <N from 0.3> keys`, `Iterations: 25`
-- [ ] 4.2 Copy the resulting `scenario/<ts>-<slug>/` directory into `openspec/changes/validate-podcast-pipeline-with-gooaye/scenario/`
-- [ ] 4.3 Filter the generated `scenarios.md` for the dimensions `concurrent`, `scale`, `recovery`, `temporal` — list the top 10 as deliberate-probe candidates in `baseline.md` under `Stage 2 — failure scenarios`
-- [ ] 4.4 From that list, pick 2 scenarios that CAN be injected without real-money cost (e.g., mock Deepgram 429 mid-episode, doctored RSS with duplicate GUID) and add checkboxes under §6
+- [x] 4.1 Invoked `/autoresearch:scenario --focus failures --domain software --depth standard --seed "100 Gooaye episodes... batch-size 3, Gemini key pool of 3 keys" --iterations 25`
+- [x] 4.2 Artifacts at `openspec/changes/validate-podcast-pipeline-with-gooaye/scenario/260425-1855-gooaye-scale/` (scenarios.md, handoff.json)
+- [x] 4.3 Filtered to 4 named dimensions; top-10 table in `baseline.md § Stage 2 — failure scenarios`
+- [x] 4.4 Two injection probes picked — added as checkboxes under §7:
+  - [ ] 7.P1 (S-01/S-23) Locally intercept `fetch()` for `feeds.soundon.fm` → return 429 on every 3rd call; run `--limit 3` and record whether current code drops ≥2 eps (expected behavior without F-03 fix). Cost: $0.
+  - [ ] 7.P2 (S-13) SIGINT mid-batch probe: `--limit 5`, ^C after first ep completes, re-run `--limit 5`. Verify DB post-count = 5 exactly, no duplicate rows. Cost: ~$1–2.
 
 ## 5. Staged Stress Runs (Stage 4 — Ladder)
 

@@ -57,7 +57,29 @@ Tuning candidates for §6 (high/critical findings below opened as checkboxes):
 
 ## Stage 2 — failure scenarios
 
-*Pending §4.1–§4.4.*
+**Executed 2026-04-25 (§4.1–§4.4).**
+
+Report: [scenario/260425-1855-gooaye-scale/](./scenario/260425-1855-gooaye-scale/). 25 scenarios generated across 5 dimensions (concurrent, scale, recovery, temporal, composite). 1 critical, 7 high, 9 medium, 8 low.
+
+**Top 10 deliberate-probe candidates** (filtered to the four focus dimensions per §4.3):
+
+| Rank | ID | Dim | Severity | Scenario |
+| --- | --- | --- | --- | --- |
+| 1 | S-23 | composite | CRITICAL | F-01 + F-03 compound — RSS 429 with no retry drops episode |
+| 2 | S-01 | concurrent | HIGH | SoundOn RSS rate-limits at burst of 3 identical GETs |
+| 3 | S-02 | concurrent | HIGH | Gemini `cooldownQueue` mutex serializes parallel Gemini calls |
+| 4 | S-16 | recovery | HIGH | Gemini key-pool all-429 triggers 155s backoff cycle |
+| 5 | S-19 | temporal | HIGH | Per-minute quota reset vs 5s initial backoff mismatch |
+| 6 | S-24 | composite | HIGH | F-02 + F-04 compound — cooldown serializes a 429 cascade |
+| 7 | S-07 | scale | MED | Multi-day ≥5-run traffic may trip SoundOn unwritten daily cap |
+| 8 | S-08 | scale | MED | Audio buffer heap pressure at batch-size 10 (~500 MB peak) |
+| 9 | S-13 | recovery | MED | SIGINT miscounts imported vs duplicate; DB-row integrity preserved |
+| 10 | S-21 | temporal | MED | Signed enclosure URL expiry between discovery and download |
+
+**Two injection-ready probes selected for §7** (per §4.4 — must be free or ≤$2):
+
+- **P-01** (S-01 / S-23): locally intercept `fetch()` for SoundOn feed URL → return 429 every 3rd call. Observes whether retries absorb the burst. **Cost: $0.**
+- **P-02** (S-13): SIGINT mid-batch + restart; verify `duplicate` counter on restart equals the SIGINT-interrupted count and DB post-count is correct. **Cost: ~$1–2** (one real Deepgram call, no double-post).
 
 ## Stage 2 — failure probes
 
