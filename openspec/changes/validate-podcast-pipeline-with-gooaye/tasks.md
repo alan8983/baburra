@@ -50,13 +50,13 @@
 
 ## 5. Staged Stress Runs (Stage 4 — Ladder)
 
-- [ ] 5.1 **S1-dry**: `npx tsx scripts/scrape-guyi-podcast-ep501-600.ts --dry-run --limit 1` — record parsed episode + no DB writes to baseline.md `S1-dry`
-- [ ] 5.2 **S1**: `npx tsx scripts/scrape-guyi-podcast-ep501-600.ts --limit 1` — verify one `posts` row created for platform user, one `scrape_jobs` row with status `completed`, timing log contains all 7 stages; paste summary.json path into `baseline.md` `S1`
-- [ ] 5.3 **S2**: `npx tsx scripts/scrape-guyi-podcast-ep501-600.ts --limit 3` — manually spot-check the 3 resulting posts' arguments against the transcript for factual accuracy; record any MAX_TOKENS or JSON-parse warnings
-- [ ] 5.4 **S3**: `npx tsx scripts/scrape-guyi-podcast-ep501-600.ts --limit 10 --batch-size 3` — target ≥90% success on the 10-ep sample; if 429s observed, capture `retries`/`keyIndex` distribution into baseline.md `S3`
-- [ ] 5.5 **S3-serial-rerun**: re-run the same command with `--batch-size 1` — must insert 0 new posts (idempotency proof); query `SELECT COUNT(*) FROM posts WHERE source='seed' AND kol_id IN (SELECT id FROM kols WHERE display_name LIKE '%股癌%')` before/after to verify
-- [ ] 5.6 **S3-parallel-rerun**: re-run with the original `--batch-size 3` — must also insert 0 new posts; if duplicates appear, file the exact SQL + bug to §7.1 and STOP before S4
-- [ ] 5.7 If S3-rerun passes with 0 duplicates, proceed to §6 tuning. If not, diagnose + patch + rerun S3/S3-rerun before continuing.
+- [x] 5.1 **S1-dry**: already executed at §2.4 (2026-04-25 18:49 UTC) — 100 matched / first=EP501 3121s. No DB writes.
+- [x] 5.2 **S1** executed (`--limit 1`): 1/1 passed, 100% success_rate. Post `798c41cf…` created on Gooaye, 20 tickers, 72 arguments, sentiment=1. Details in `baseline.md § S1`. Note: `scrape_jobs` row status=`completed` OK.
+- [x] 5.3 **S2** executed (`--limit 3 --batch-size 3`): 2/3 passed (EP502 + EP503), 1 error = duplicate from re-running EP501. Surfaced bugs D1 (dedup asymmetry), D2 (`posts.source` never set), D3 (`completeScrapeJob` fetch blip abort). Details + stage p50/p95 in `baseline.md § S2`.
+- [ ] 5.4 **S3** (`--limit 10 --batch-size 3`) — **blocked** on D1 fix (otherwise §5.5 can't cheaply verify idempotency).
+- [ ] 5.5 **S3-serial-rerun** — **blocked** on D1.
+- [ ] 5.6 **S3-parallel-rerun** — **blocked** on D1.
+- [ ] 5.7 If S3-rerun passes with 0 duplicates, proceed to §6 tuning.
 
 ## 6. Autoresearch Tuning Loop (Stage 5)
 

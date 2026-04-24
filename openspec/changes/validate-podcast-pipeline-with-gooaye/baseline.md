@@ -87,7 +87,46 @@ Report: [scenario/260425-1855-gooaye-scale/](./scenario/260425-1855-gooaye-scale
 
 ## S1-dry / S1 / S2 / S3 / S3-serial-rerun / S3-parallel-rerun
 
-*Pending §5.1–§5.7.*
+### S1-dry (§5.1 — satisfied by §2.4)
+655 feed entries, 100 EP501-600 matched, first=`EP501 | 🫎` (3121s). No DB writes.
+
+### S1 — `--limit 1` (live, 2026-04-25 03:08 local)
+
+- Summary: [seed-run-2026-04-24T19-05-20-114Z.summary.json](../../../scripts/logs/seed-run-2026-04-24T19-05-20-114Z.summary.json)
+- Result: **1/1 passed, success_rate 100%**
+- Stages (p50): rss_lookup 40.6s · gemini_sentiment 48.9s (retries=5, matches F-04) · gemini_args 58.7s · supabase_write 1.3s
+- DB: 1 post (`798c41cf...`), EP501, kol=Gooaye (`b7a958c4...`), 20 tickers, 72 arguments, sentiment=1 (bullish).
+- **Note:** `rss_lookup` stage-timing label is misleading — it covers the full podcast extractor (RSS fetch + audio download + Deepgram transcription). Deepgram is not separately timed on the podcast path. Instrumentation gap to address in a follow-up.
+
+### S2 — `--limit 3 --batch-size 3` (live, 2026-04-25 03:14 local)
+
+- Summary: [seed-run-2026-04-24T19-14-40-792Z.summary.json](../../../scripts/logs/seed-run-2026-04-24T19-14-40-792Z.summary.json) (partial: true — script exited abnormally, see D3 below)
+- Result: **2/3 passed (EP502, EP503), 1 error (EP501 duplicate), success_rate 66.7%**
+- Stages (p50 / p95): rss_lookup 161.6s / 167.5s · gemini_sentiment 12.9s / 19.7s (retries=0) · gemini_args 49.8s / 56.0s · supabase_write 0.9s / 1.0s
+- DB net: +2 posts (EP502, EP503), total seed-run posts on Gooaye = 3.
+
+### Bugs discovered during S1+S2 (summary)
+
+| Id | Severity | Where | Impact | Fix size |
+| --- | --- | --- | --- | --- |
+| **D1** Podcast dedup asymmetry | HIGH | `import-pipeline.service.ts:372` + `podcast.extractor.ts:153` | `findPostBySourceUrl(podcast-rss://…)` never matches the stored enclosure URL, so re-runs pay full Deepgram cost before the unique constraint catches them at INSERT. Blocks §5.5 cheap idempotency. | 1-2 lines |
+| **D2** `posts.source` never populated | HIGH | `create_post_atomic` RPC lacks `p_source` param; pipeline passes nothing | `scripts/seed-rollback.sql` queries `WHERE source='seed'` — matches 0 rows; rollback effectively broken | Migration + RPC + code (medium) |
+| **D3** `completeScrapeJob` aborts script on Supabase fetch blip | MEDIUM | `scrape-job.repository.ts:195` via `profile-scrape.service.ts:561` | Network blip throws out of `processJobBatch`, kills the script (`process.exit(1)`). Posts committed, but `scrape_jobs.status` stuck in `processing`. | Add retry wrapper (small) |
+
+Empirical vs predict match-up:
+
+- ✅ **F-04 confirmed (retries=5 on S1 gemini_sentiment)** — but matrix self-heals on next run (retries=0 on S2). Not blocking.
+- ⚠️ **F-02 partially observed** — S2 gemini_args p95 ≈ 56s for 13 tickers × 3 concurrent episodes. Cooldown mutex impact real but tolerable at batch-size 3.
+- ❌ **F-01 NOT observed yet** — SoundOn did not 429 on 3× concurrent RSS fetches. Possibly F-01 doesn't bite until batch-size ≥ 5 or under sustained load. Re-evaluate at §5.4.
+- ➕ **NEW D1 + D2 + D3 found** — not in predict scope (predict focused on concurrency/429/timeout; these are correctness/observability).
+
+### Recommendation (before §5.4 / §5.5)
+
+1. **Fix D1 (required for §5.5 idempotency proof).** 1-line change: in `processUrl`, store `source_url = url` (the podcast-rss:// URL passed in) instead of `fetchResult.sourceUrl` for podcast platform — OR normalize in the extractor. After fix, re-verify §5.5.
+2. **Defer D2 to a separate change.** Scope: migration to `create_post_atomic` signature + repository + rollback script. Affects multiple callers.
+3. **Defer D3 to the same follow-up change as D2** — or wrap `completeScrapeJob` in 1-retry-with-2s-backoff inline. Low-priority since posts are correct; job-status housekeeping only.
+
+**§5.4/§5.5 proceed-decision:** blocked on D1 for cheap idempotency. User decision needed.
 
 ## Stage 5 — tuned defaults
 
