@@ -1,8 +1,8 @@
 ## 0. Preconditions & Cleanup
 
-- [ ] 0.1 Copy `.env.local` into this worktree root (per CLAUDE.md worktree setup) and confirm it contains `DEEPGRAM_API_KEY`, at least 3 comma-separated `GEMINI_API_KEYS`, `TIINGO_API_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`
-- [ ] 0.2 Run `npm install` in the worktree (node_modules are not shared across worktrees)
-- [ ] 0.3 Record the current key-pool size (count of keys in `GEMINI_API_KEYS`) and Deepgram rate-limit tier into `openspec/changes/validate-podcast-pipeline-with-gooaye/baseline.md` under a `Run metadata` section (Design Q2)
+- [x] 0.1 Copied `/c/Cursor_Master/baburra/.env.local` → worktree root; all 7 required keys present (`DEEPGRAM_API_KEY`, `GEMINI_API_KEYS` x3, `TIINGO_API_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`)
+- [x] 0.2 `node_modules` already populated (513 entries; `next@16.1.6`, `vitest@^4.0.18` resolved) — no reinstall required
+- [x] 0.3 Wrote `baseline.md` `Run metadata` section — Gemini pool size=3; Deepgram tier recorded as **Unknown** (to confirm via Deepgram console before §5.4, tracks Design Q2)
 - [x] 0.4 Mark `openspec/changes/seed-scraping-pipeline/proposal.md` as superseded by appending a `## Superseded` section linking to this change (per Design D5). Do not delete; archive separately if desired.
 - [x] 0.5 `git rm scripts/seed-kol-config.json` and add a header comment to `scripts/seed-scrape.ts` marking it orphaned with a pointer to `scripts/scrape-guyi-podcast-ep501-600.ts` (per Design D6)
 - [x] 0.6 Committed 0.4–0.5 as `chore(seed): supersede placeholder 19-KOL seed pipeline` (3d9cdb9). *0.1–0.3 deferred — require `.env.local` setup; will run in a fresh session.*
@@ -22,11 +22,11 @@
 
 ## 2. Migration Verification (Stage 3, done early)
 
-- [ ] 2.1 Read `supabase/migrations/20260406000000_scrape_jobs_allow_validation_scrape.sql` end-to-end; confirm it widens the `scrape_jobs_job_type_check` CHECK constraint to include `'validation_scrape'`
-- [ ] 2.2 Grep `profile-scrape.service.ts` for every `job_type` value used when `platform === 'podcast'` — enumerate them in `baseline.md` under `Stage 3 — migration verification`
-- [ ] 2.3 Run `supabase migration list -p "$SUPABASE_DB_PASSWORD"` in the worktree; confirm `20260406000000` is present on remote (no `local only`)
-- [ ] 2.4 Execute `npx tsx scripts/scrape-guyi-podcast-ep501-600.ts --dry-run --limit 1` — confirm no DB writes attempted; capture parsed episode title/duration into baseline.md
-- [ ] 2.5 Mark Open Question Q1 in design.md as `Resolved: <yes|no>` with the evidence from 2.4 (or file a follow-up OpenSpec change if a new migration is needed — out of scope here)
+- [x] 2.1 Migration widens CHECK to `('initial_scrape','incremental_check','validation_scrape')` — confirmed by direct file read
+- [x] 2.2 Enumerated `job_type` literals in `profile-scrape.service.ts`: `validation_scrape` (L306, L393), `initial_scrape` (L306), `incremental_check` (L629). All covered.
+- [x] 2.3 Remote state verified via Supabase MCP: migration `20260406000000` absent from history, but later `20260411000000_scrape_job_items.sql` (remote version `20260416092358_scrape_job_items`) re-ADDs the same constraint including `validation_scrape` + `batch_import`. Remote CHECK confirmed via `pg_get_constraintdef`.
+- [x] 2.4 Dry-run `--limit 1` — **latent bug fixed mid-task**: stale RSS UUID (`30cee1f0`) returned 404; patched to canonical `954689a5` from `kol_sources.platform_id`. Second dry-run: 655 total eps, 100 matched, EP501 title `EP501 | 🫎`, duration 3121s. No DB writes.
+- [x] 2.5 Q1 Resolved: yes — no new migration needed; CHECK allows `validation_scrape` on remote and dry-run parses cleanly.
 
 ## 3. Autoresearch Predict (Stage 1)
 

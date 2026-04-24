@@ -96,8 +96,8 @@ Stakeholders: **one developer** (the user) preparing for public launch. Risk tol
 
 ## Open Questions
 
-- **Q1**: Does the `validation_scrape` migration cover the RSS path? → Resolved by Stage 3 in tasks.md.
-- **Q2**: How many Gemini API keys are currently pooled in `.env.local`? → To be captured at start of Stage 0 in tasks.md; informs whether key pool is a bottleneck or red herring.
+- **Q1**: Does the `validation_scrape` migration cover the RSS path? → **Resolved: yes (2026-04-25)**. Remote CHECK = `('initial_scrape','incremental_check','validation_scrape','batch_import')`; `profile-scrape.service.ts` only ever emits those three podcast-relevant values. Widening landed via `20260411000000_scrape_job_items.sql`, not the `20260406000000` file whose version string never appears on remote — migration-history drift is cosmetic. Evidence in `baseline.md § Stage 3`.
+- **Q2**: How many Gemini API keys are currently pooled in `.env.local`? → **Resolved: 3 keys (2026-04-25)**. Deepgram confirmed on Pay-as-you-go (~$183 remaining). Evidence in `baseline.md § Run metadata`.
 - **Q3**: What is the true episode-length distribution of Gooaye EP501-600? → Autoresearch scenario step feeds this into the hypothesis queue; measured concretely during S1-dry (parse all 100 titles/durations without running).
 - **Q4**: Do we want `--batch-size` to be adaptive (back off on 429s) or static (find the right fixed value)? → Defer to Stage 5; autoresearch loop result will tell us whether a static value plateaus or whether adaptive backoff wins consistently.
 - **Q5**: Should the baseline report be promoted to a long-lived `docs/pipeline-baseline.md` for future regressions? → Out of scope for this change; revisit at archive time.

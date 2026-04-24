@@ -51,7 +51,10 @@ import { writeSummary } from './lib/summarize-run';
 
 // 股癌 SoundOn RSS feed URL
 // Verify: https://podcasts.apple.com/tw/podcast/股癌-gooaye/id1500839292
-const GUYI_RSS_FEED = 'https://feeds.soundon.fm/podcasts/30cee1f0-4616-46c8-80a8-7bc5a3c7db8b.xml';
+// Canonical Gooaye feed — matches kol_sources.platform_id on remote.
+// Previous hardcoded UUID (30cee1f0-...) 404'd as of 2026-04-25; sourced current
+// UUID via `SELECT platform_id FROM kol_sources WHERE name='Gooaye 股癌' AND platform='podcast'`.
+const GUYI_RSS_FEED = 'https://feeds.soundon.fm/podcasts/954689a5-3096-43a4-a80b-7810b219cef3.xml';
 
 // Apple Podcasts profile URL (used as profileUrl for initiateProfileScrape)
 const PROFILE_URL = 'https://podcasts.apple.com/tw/podcast/股癌-gooaye/id1500839292';
