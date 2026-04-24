@@ -5,7 +5,7 @@
 - [ ] 0.3 Record the current key-pool size (count of keys in `GEMINI_API_KEYS`) and Deepgram rate-limit tier into `openspec/changes/validate-podcast-pipeline-with-gooaye/baseline.md` under a `Run metadata` section (Design Q2)
 - [x] 0.4 Mark `openspec/changes/seed-scraping-pipeline/proposal.md` as superseded by appending a `## Superseded` section linking to this change (per Design D5). Do not delete; archive separately if desired.
 - [x] 0.5 `git rm scripts/seed-kol-config.json` and add a header comment to `scripts/seed-scrape.ts` marking it orphaned with a pointer to `scripts/scrape-guyi-podcast-ep501-600.ts` (per Design D6)
-- [ ] 0.6 Commit 0.1–0.5 as `chore(seed): supersede placeholder 19-KOL seed pipeline`
+- [x] 0.6 Committed 0.4–0.5 as `chore(seed): supersede placeholder 19-KOL seed pipeline` (3d9cdb9). *0.1–0.3 deferred — require `.env.local` setup; will run in a fresh session.*
 
 ## 1. Observability Instrumentation (Stage 0)
 
@@ -18,7 +18,7 @@
 - [x] 1.7 Modify `scripts/scrape-guyi-podcast-ep501-600.ts` to invoke `summarize-run.ts` at exit (success, error, or SIGINT) so partial runs still produce a summary with `partial: true`
 - [x] 1.8 Add a Vitest unit test for `summarize-run.ts` covering: well-formed log → correct metric; malformed log line → warning field in output; zero-attempt input → `success_rate: 0, partial: true` *(9 tests across parseJsonl + aggregateSummary. Required widening `vitest.config.mts` include to cover `scripts/**/*.test.ts`.)*
 - [x] 1.9 Run `npm run type-check` and `npx vitest run` — type-check clean; 58 test files / 943 tests pass (1 pre-existing test updated to match new `extractArguments` signature).
-- [ ] 1.10 Commit 1.1–1.9 as `feat(pipeline): per-stage timing instrumentation + run summary`
+- [x] 1.10 Committed 1.1–1.9 as `feat(pipeline): per-stage timing instrumentation + run summary` (b7a4845).
 
 ## 2. Migration Verification (Stage 3, done early)
 
