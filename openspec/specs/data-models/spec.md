@@ -50,6 +50,7 @@ stocks ──< volatility_thresholds  (by ticker, not FK)
 
 | Migration | Description | Date |
 | --- | --- | --- |
+| 20260425000002 | Widen `stock_prices.volume` from `BIGINT` to `NUMERIC(20, 8)` (accept fractional crypto volumes) | 2026-04-25 |
 | 20260414000002 | Add `volatility_thresholds` + `post_win_rate_samples` cache tables | 2026-04-14 |
 | 20250602 | Remove onboarding columns, add `first_import_free` | 2026-03-18 |
 | 027 | `post_arguments.statement_type` (fact/opinion/mixed) | 2026-03-13 |
