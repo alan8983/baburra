@@ -5,17 +5,22 @@
  *
  *   A. Remap to canonical: ticker has a known correct equivalent. Rewrite
  *      post_stocks.stock_id to the canonical row, then delete the orphan.
- *   B. Pure delete: no canonical equivalent exists OR the "ticker" was never
- *      tradable (馮君, CHROME, MODEL 3, SPACEX, ^TWII, DI0T). Cascade-delete
+ *   B. Pure delete: ticker is not in stocks_master at the stock's market
+ *      (including non-existent tickers like 馮君/CHROME/MODEL 3 and rows
+ *      with the wrong market like ERG/HK or DYNA/TW). Cascade-delete
  *      post_stocks linkages, then delete the stock row.
- *   C. Re-canonicalize name only: ticker is valid but stocks.name is wrong
- *      (e.g. 2353.TW: "宏捷" → "宏碁"). UPDATE name to the master value.
+ *   C. Re-canonicalize name only: ticker IS in master at the right market
+ *      but stocks.name disagrees (e.g. 2353.TW: "宏捷" → "宏碁"). UPDATE
+ *      name to the master value.
+ *
+ * No-op (intentionally): ticker is in master at the right market AND
+ * stocks.name already matches. Skipped silently.
  *
  * Defaults to --dry-run; --apply mutates. Logs every action to
  *   scripts/cleanup-fabricated-stocks.log
  *
  * Idempotent: a second --apply run after the first produces no further DB
- * changes (every targeted row is gone or already canonical).
+ * changes.
  *
  * Pre-requisites:
  *   - Migration 20260425100000_create_stocks_master.sql applied.
@@ -43,29 +48,32 @@ if (fs.existsSync(envPath)) {
 
 import { createAdminClient } from '../src/infrastructure/supabase/admin';
 
-interface SuspectStock {
+interface StockRow {
   id: string;
   ticker: string;
   name: string;
   market: string;
 }
 
+interface MasterRow {
+  ticker: string;
+  name: string;
+  market: string;
+}
+
 interface PlanRow {
-  stock: SuspectStock;
-  bucket: 'A_remap' | 'B_delete' | 'C_rename' | 'unhandled';
-  /** For bucket A: canonical ticker to remap to. */
-  remapTo?: string;
-  /** For bucket C: new name from master. */
-  newName?: string;
-  /** Number of post_stocks rows referencing this stock. */
+  stock: StockRow;
+  bucket: 'A_remap' | 'B_delete' | 'C_rename' | 'noop';
+  remapTo?: string; // for A
+  newName?: string; // for C
+  reason: string;
   postStocksCount: number;
 }
 
 // Hardcoded bucket A remap table — wrong/oversize ticker → canonical equivalent.
-// Reviewed 2026-04-25 against current production data. Add new entries here
-// before running --apply if the dry-run surfaces additional cases.
+// Reviewed against production dry-run on 2026-04-25.
 const REMAP: Record<string, string> = {
-  // Long-form US "tickers" that are really company names → canonical ticker
+  // US: long-form name-as-ticker → real ticker
   PALANTIR: 'PLTR',
   PANTR: 'PLTR',
   PNTIR: 'PLTR',
@@ -75,7 +83,8 @@ const REMAP: Record<string, string> = {
   FLCL: 'NET',
   BROADCOM: 'AVGO',
   BRCM: 'AVGO',
-  CONFLUENT: 'CFLT', // requires manual_us_master.json override
+  CONFLUENT: 'CFLT',
+  CNFL: 'CFLT',
   SALESFORCE: 'CRM',
   SFDC: 'CRM',
   SERVICENOW: 'NOW',
@@ -87,25 +96,23 @@ const REMAP: Record<string, string> = {
   MARVELL: 'MRVL',
   PAYPAL: 'PYPL',
   AMAZON: 'AMZN',
-  AIRBUS: 'EADSY', // requires manual_us_master.json override
+  AIRBUS: 'EADSY',
   ORACLE: 'ORCL',
-  // Bare numeric TW codes → .TW canonical form
+  FORTUNE: 'FTNT',
+  'PURE.US': 'PSTG',
+  // TW: bare numeric → .TW canonical form (also covers ETF letter-tranche 00631L)
   '2357': '2357.TW',
   '2408': '2408.TW',
-  '3596': '2408.TW' /* placeholder; verify */, // intentionally absent — see ad-hoc adjustments below
+  '3596': '3596.TW',
+  '4966': '4966.TW',
+  '566': '566.TW',
+  '6531': '6531.TW',
+  '8299': '8299.TW',
+  '00631L': '00631L.TW',
 };
-// Pure numeric .TW twin remaps generated from the SQL audit at proposal-time.
-// "2408" → "2408.TW" follows from `EXISTS (twin)` cross-check.
-const TW_DOT_TWINS = ['2357', '2408', '3596', '4966', '566', '6531', '8299'];
-for (const code of TW_DOT_TWINS) {
-  REMAP[code] = `${code}.TW`;
-}
-// 3596 entry above was a typo in the initial draft; clean up:
-delete (REMAP as Record<string, string | undefined>)['3596'];
-REMAP['3596'] = '3596.TW';
 
-// "Pure orphan" tickers: no canonical equivalent exists or the underlying
-// company is private/non-traded/conceptual. These get deleted.
+// Hardcoded delete blacklist — these rows are pure hallucinations or
+// conceptually invalid (private companies, product names, indices).
 const PURE_DELETE = new Set<string>([
   'CLAUDE',
   'CHROME',
@@ -116,18 +123,46 @@ const PURE_DELETE = new Set<string>([
   'MODEL X',
   'MODEL Y',
   'UNIQLO',
-  'VMWARE', // acquired by Broadcom 2023; AVGO already canonical
-  '^TWII', // index, not a stock
-  'DI0T', // transcription artifact
+  'VMWARE',
+  '^TWII',
+  'DI0T',
+  'DIOT',
   '366',
   '366 E',
   '569',
-  // The 馮君 group — 9 fabrications. Pure deletes: every (馮君, <ticker>) pair.
-  // Identified by name match below rather than enumerated tickers, so we
-  // don't accidentally delete a real ticker that happened to overlap.
+  '2542',
+  'US',
+  'CRYSTAL',
+  'ASTERRA LABS',
+  'CMO',
+  'CNMRBL',
+  'PLANTLY',
+  'PANTRY',
+  'STARLBS',
+  'GPT-4',
+  'ERG',
+  'ASUS',
+  'AP MEMORY',
+  'APMEMORY',
+  'PSMC',
+  'DYNA',
+  '2888.TW', // 新光金 merged into 2887.TW; delisted
 ]);
 
-const SUSPECT_NAMES_TO_DELETE = new Set<string>(['馮君']);
+const SUSPECT_NAMES_TO_DELETE = new Set<string>([
+  '馮君', // 9-ticker hallucination
+  '寶', // 11-ticker hallucination on 9970-9995.TW range
+]);
+
+// Explicit per-row renames. These are stocks whose name is wrong in a way
+// that only a human reviewer can identify (the diagnostic surfaced them, but
+// they don't fit any pattern rule). The master IS the source of truth for
+// the new name — we just need to flag these tickers as suspect so the
+// classifier looks them up.
+const EXPLICIT_RENAME_TICKERS = new Set<string>([
+  '2353.TW', // currently '宏捷' → master '宏碁' (Acer); the headline diagnostic finding
+  '8086.TW', // currently '宏捷' → master '宏捷科' (the real 宏捷科技, AWSC)
+]);
 
 async function main() {
   const apply = process.argv.includes('--apply');
@@ -142,13 +177,32 @@ async function main() {
 
   log(`mode: ${apply ? 'APPLY (DB writes ENABLED)' : 'DRY-RUN (no writes)'}`);
 
-  // Step 1: identify suspects via the same SQL as the proposal.
-  const { data: suspectStocksRaw, error: suspectErr } = await supabase
+  // Step 1: load all stocks.
+  const { data: stocksRaw, error: stocksErr } = await supabase
     .from('stocks')
     .select('id, ticker, name, market');
-  if (suspectErr) throw suspectErr;
-  const allStocks = (suspectStocksRaw ?? []) as SuspectStock[];
+  if (stocksErr) throw stocksErr;
+  const allStocks = (stocksRaw ?? []) as StockRow[];
   log(`stocks total: ${allStocks.length}`);
+
+  // Step 2: bulk-load master rows for every distinct ticker we have.
+  const distinctTickers = Array.from(new Set(allStocks.map((s) => s.ticker)));
+  const { data: masterRaw, error: masterErr } = await supabase
+    .from('stocks_master')
+    .select('ticker, name, market')
+    .in('ticker', distinctTickers);
+  if (masterErr) throw masterErr;
+  const masters = (masterRaw ?? []) as MasterRow[];
+  const masterByKey = new Map<string, MasterRow>(
+    masters.map((m) => [`${m.ticker}::${m.market}`, m])
+  );
+  const masterByTicker = new Map<string, MasterRow[]>();
+  for (const m of masters) {
+    const arr = masterByTicker.get(m.ticker) ?? [];
+    arr.push(m);
+    masterByTicker.set(m.ticker, arr);
+  }
+  log(`master rows hit by current tickers: ${masters.length}`);
 
   // Build name-frequency map for the duplicate-name-group rule.
   const nameFreq = new Map<string, number>();
@@ -157,84 +211,132 @@ async function main() {
     nameFreq.set(s.name.trim(), (nameFreq.get(s.name.trim()) ?? 0) + 1);
   }
 
-  const suspects = allStocks.filter((s) => {
-    // (a) US "ticker" longer than 5 chars
-    if (s.market === 'US' && s.ticker.length > 5) return true;
-    // (b) TW non-numeric or missing-suffix
-    if (s.market === 'TW' && !s.ticker.endsWith('.TW') && !/^\d{4,6}[A-Z]?$/.test(s.ticker)) return true;
-    if (s.market === 'TW' && !s.ticker.endsWith('.TW') && /^\d{4,6}[A-Z]?$/.test(s.ticker)) return true; // missing-suffix
-    // (c) name in a duplicate-name group of 3+ tickers (worst hallucinations)
-    if (s.name && (nameFreq.get(s.name.trim()) ?? 0) >= 3) return true;
-    // (d) explicit name-based blacklist
-    if (s.name && SUSPECT_NAMES_TO_DELETE.has(s.name.trim())) return true;
-    // (e) explicit ticker-based blacklist
+  // Suspect filter — only rows that look broken go through classification.
+  // Everything else stays untouched (including real-but-name-slightly-different
+  // entries like TSLA="特斯拉" or NVDA="Nvidia" — too aggressive to overwrite).
+  function isSuspect(s: StockRow): boolean {
     if (PURE_DELETE.has(s.ticker)) return true;
-    // (f) named-with-its-own-ticker (e.g. "366" with name "366" — placeholder)
-    if (s.ticker === s.name) return true;
+    if (s.name && SUSPECT_NAMES_TO_DELETE.has(s.name.trim())) return true;
+    if (REMAP[s.ticker.toUpperCase()]) return true;
+    if (EXPLICIT_RENAME_TICKERS.has(s.ticker)) return true;
+    // Malformed shapes
+    if (s.market === 'US' && s.ticker.length > 5) return true;
+    if (s.market === 'TW' && !s.ticker.endsWith('.TW') && /^\d{4,6}[A-Z]?$/.test(s.ticker)) {
+      return true; // missing-suffix on numeric TW code
+    }
+    if (s.market === 'TW' && !s.ticker.endsWith('.TW') && !/^\d/.test(s.ticker)) {
+      return true; // non-numeric TW market ticker (ASUS, UMC, …)
+    }
+    if (s.market === 'HK') return true; // unsupported market
+    if (s.ticker === s.name) return true; // ticker-as-name (CRCL, AAOI, IBM, …)
+    // Duplicate-name group of 3+ — catches the First Financial × 11 case
+    if (s.name && (nameFreq.get(s.name.trim()) ?? 0) >= 3) return true;
     return false;
-  });
+  }
 
+  const suspects = allStocks.filter(isSuspect);
   log(`suspect rows: ${suspects.length}`);
 
-  // Step 2: classify each suspect into a bucket.
+  // Step 3: classify each suspect.
   const plan: PlanRow[] = [];
   for (const stock of suspects) {
-    // Count post_stocks linkages (small N, sequential is fine).
+    // Hard delete blacklists.
+    if (
+      PURE_DELETE.has(stock.ticker) ||
+      (stock.name && SUSPECT_NAMES_TO_DELETE.has(stock.name.trim()))
+    ) {
+      plan.push({
+        stock,
+        bucket: 'B_delete',
+        reason: 'blacklisted',
+        postStocksCount: 0,
+      });
+      continue;
+    }
+
+    // Hard remap.
+    const remapTo = REMAP[stock.ticker.toUpperCase()];
+    if (remapTo) {
+      plan.push({
+        stock,
+        bucket: 'A_remap',
+        remapTo,
+        reason: 'remap-table',
+        postStocksCount: 0,
+      });
+      continue;
+    }
+
+    // Master lookup at the EXACT market.
+    const masterMatch = masterByKey.get(`${stock.ticker}::${stock.market}`);
+    if (masterMatch) {
+      if (masterMatch.name === stock.name) {
+        plan.push({
+          stock,
+          bucket: 'noop',
+          reason: 'canonical (suspect by another rule, name already correct)',
+          postStocksCount: 0,
+        });
+        continue;
+      }
+      plan.push({
+        stock,
+        bucket: 'C_rename',
+        newName: masterMatch.name,
+        reason: 'master-name-disagrees',
+        postStocksCount: 0,
+      });
+      continue;
+    }
+
+    // Same ticker exists in master at a DIFFERENT market → market is wrong → delete.
+    const otherMarket = masterByTicker.get(stock.ticker);
+    if (otherMarket && otherMarket.length > 0) {
+      plan.push({
+        stock,
+        bucket: 'B_delete',
+        reason: `wrong-market (master has ${stock.ticker} in ${otherMarket.map((m) => m.market).join(',')})`,
+        postStocksCount: 0,
+      });
+      continue;
+    }
+
+    // Not in master at all → delete.
+    plan.push({
+      stock,
+      bucket: 'B_delete',
+      reason: 'not-in-master',
+      postStocksCount: 0,
+    });
+  }
+
+  // Step 4: count post_stocks linkages for non-noop rows (sequential is fine).
+  for (const p of plan) {
+    if (p.bucket === 'noop') continue;
     const { count } = await supabase
       .from('post_stocks')
       .select('*', { count: 'exact', head: true })
-      .eq('stock_id', stock.id);
-    const postStocksCount = count ?? 0;
-
-    // Bucket B (delete): hard blacklist by name or ticker.
-    if (
-      (stock.name && SUSPECT_NAMES_TO_DELETE.has(stock.name.trim())) ||
-      PURE_DELETE.has(stock.ticker)
-    ) {
-      plan.push({ stock, bucket: 'B_delete', postStocksCount });
-      continue;
-    }
-
-    // Bucket A (remap): explicit map.
-    const remapTo = REMAP[stock.ticker.toUpperCase()];
-    if (remapTo) {
-      plan.push({ stock, bucket: 'A_remap', remapTo, postStocksCount });
-      continue;
-    }
-
-    // Bucket C (rename only): ticker is in master with a different (correct) name.
-    const { data: master } = await supabase
-      .from('stocks_master')
-      .select('ticker, name')
-      .eq('ticker', stock.ticker)
-      .maybeSingle();
-    if (master && master.name && master.name !== stock.name) {
-      plan.push({ stock, bucket: 'C_rename', newName: master.name, postStocksCount });
-      continue;
-    }
-
-    // Anything else — log for human review. The duplicate-name-group catch
-    // above will surface "First Financial Holding" stocks; if the master has
-    // them with the right names, they fall into bucket C; otherwise unhandled.
-    plan.push({ stock, bucket: 'unhandled', postStocksCount });
+      .eq('stock_id', p.stock.id);
+    p.postStocksCount = count ?? 0;
   }
 
-  // Step 3: report.
+  // Step 5: report.
   const groupBy = (b: PlanRow['bucket']) => plan.filter((p) => p.bucket === b);
   log(`bucket A (remap):     ${groupBy('A_remap').length}`);
   log(`bucket B (delete):    ${groupBy('B_delete').length}`);
   log(`bucket C (rename):    ${groupBy('C_rename').length}`);
-  log(`bucket - (unhandled): ${groupBy('unhandled').length}`);
+  log(`bucket   (noop):      ${groupBy('noop').length} (canonical rows skipped)`);
 
   for (const p of plan) {
+    if (p.bucket === 'noop') continue;
     const tag = `[${p.bucket}]`;
-    const line = `${tag.padEnd(15)} ${p.stock.ticker.padEnd(15)} name="${p.stock.name}" market=${p.stock.market} post_stocks=${p.postStocksCount}`;
+    const line = `${tag.padEnd(15)} ${p.stock.ticker.padEnd(15)} name="${p.stock.name}" market=${p.stock.market} post_stocks=${p.postStocksCount} (${p.reason})`;
     if (p.bucket === 'A_remap') log(`${line} → remap to ${p.remapTo}`);
     else if (p.bucket === 'C_rename') log(`${line} → rename "${p.stock.name}" → "${p.newName}"`);
     else log(line);
   }
 
-  // Step 4: apply if asked.
+  // Step 6: apply if asked.
   if (!apply) {
     log('DRY-RUN complete. Re-run with --apply to perform DB writes.');
     fs.writeFileSync(logPath, logLines.join('\n') + '\n', 'utf-8');
@@ -252,16 +354,16 @@ async function main() {
       .eq('ticker', p.remapTo!)
       .maybeSingle();
     if (!target) {
-      // Target doesn't exist yet — it will once the next import for that
-      // ticker happens. For cleanup, we'll just delete the orphan; the next
-      // user-driven import will create a fresh, correctly-named row.
+      // Target doesn't exist yet — it'll be created on next user-driven import
+      // for that ticker. Drop the orphan now.
       log(`  [A_remap] target ${p.remapTo} not yet in stocks; deleting source ${p.stock.ticker}`);
       await supabase.from('post_stocks').delete().eq('stock_id', p.stock.id);
       await supabase.from('stocks').delete().eq('id', p.stock.id);
       continue;
     }
-    // Move every post_stocks row from old → new. ON CONFLICT (post_id, stock_id)
-    // means a row may already exist for that pair — drop the dupe in that case.
+    // Move every post_stocks row from old → new. Conflict on (post_id, stock_id)
+    // unique constraint can happen if BOTH the source and the canonical were
+    // already linked to the same post; in that case drop the duplicate source.
     const { data: existingLinks } = await supabase
       .from('post_stocks')
       .select('post_id')
@@ -273,8 +375,6 @@ async function main() {
         .eq('post_id', row.post_id)
         .eq('stock_id', p.stock.id);
       if (updErr) {
-        // Most likely cause: a (post_id, target.id) row already exists →
-        // unique-constraint violation. Drop the source row instead.
         await supabase
           .from('post_stocks')
           .delete()
@@ -290,7 +390,7 @@ async function main() {
   for (const p of plan.filter((x) => x.bucket === 'B_delete')) {
     await supabase.from('post_stocks').delete().eq('stock_id', p.stock.id);
     await supabase.from('stocks').delete().eq('id', p.stock.id);
-    log(`  [B_delete] ${p.stock.ticker} (${p.stock.name}) deleted`);
+    log(`  [B_delete] ${p.stock.ticker} (${p.stock.name}) deleted [${p.reason}]`);
   }
 
   // Bucket C: just update the name.

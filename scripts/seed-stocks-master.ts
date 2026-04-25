@@ -71,10 +71,12 @@ async function main() {
     all.push(...rows);
   }
 
-  // Dedup by ticker (manual override later wins by virtue of being read after us_master).
-  const byTicker = new Map<string, MasterRow>();
-  for (const r of all) byTicker.set(r.ticker, r);
-  const merged = Array.from(byTicker.values());
+  // Dedup by (ticker, market) — same ticker CAN legitimately exist in two
+  // markets (STX is Seagate/US and Stacks/CRYPTO). Manual override entries
+  // win by virtue of being read after us_master.
+  const byKey = new Map<string, MasterRow>();
+  for (const r of all) byKey.set(`${r.ticker}::${r.market}`, r);
+  const merged = Array.from(byKey.values());
 
   console.log(`[seed] merged-unique total: ${merged.length}`);
   const byMarket = merged.reduce<Record<string, number>>((acc, r) => {
@@ -94,7 +96,7 @@ async function main() {
   for (let i = 0; i < merged.length; i += BATCH) {
     const chunk = merged.slice(i, i + BATCH);
     const { error } = await supabase.from('stocks_master').upsert(chunk, {
-      onConflict: 'ticker',
+      onConflict: 'ticker,market',
       ignoreDuplicates: false,
     });
     if (error) {

@@ -1,4 +1,5 @@
 [
   { "ticker": "CFLT", "name": "Confluent, Inc.", "market": "US", "source": "manual" },
-  { "ticker": "EADSY", "name": "Airbus SE (ADR)", "market": "US", "source": "manual" }
+  { "ticker": "EADSY", "name": "Airbus SE (ADR)", "market": "US", "source": "manual" },
+  { "ticker": "PSTG", "name": "Pure Storage, Inc.", "market": "US", "source": "manual" }
 ]
