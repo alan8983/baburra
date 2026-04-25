@@ -41,6 +41,11 @@ const mocks = vi.hoisted(() => ({
   },
   // Import pipeline
   processUrl: vi.fn(),
+  // #90 / D3 — terminal-state hardening helpers
+  // Default to "nothing to reconcile" so the existing happy-path tests
+  // continue through `processJobBatch` without short-circuiting.
+  reconcileStuckJob: vi.fn().mockResolvedValue({ reconciled: false }),
+  retryTerminalWrite: vi.fn(),
 }));
 
 vi.mock('@/infrastructure/repositories', () => ({
@@ -63,6 +68,10 @@ vi.mock('@/infrastructure/repositories', () => ({
   createScrapeJobItems: vi.fn().mockResolvedValue([]),
   failScrapeJobItem: vi.fn().mockResolvedValue(undefined),
   updateScrapeJobItemDownloadProgress: vi.fn().mockResolvedValue(undefined),
+  reconcileStuckJob: mocks.reconcileStuckJob,
+  // Pass through the underlying call so the test's existing assertions
+  // against `updateScrapeStatus` still observe the call site directly.
+  retryTerminalWrite: <T>(fn: () => Promise<T>) => fn(),
 }));
 
 vi.mock('@/infrastructure/repositories/profile.repository', () => ({
@@ -654,6 +663,130 @@ describe('backward compatibility', () => {
 
     expect(mocks.handleValidationCompletion).not.toHaveBeenCalled();
     expect(mocks.updateValidationStatus).not.toHaveBeenCalled();
+  });
+});
+
+// ── #90 / D3: stuck-job reconciler at processJobBatch entry ──
+
+describe('processJobBatch self-heal via reconcileStuckJob (#90 / D3)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Re-arm the default after clearAllMocks wipes the implementation.
+    mocks.reconcileStuckJob.mockResolvedValue({ reconciled: false });
+    mocks.getUserTimezone.mockResolvedValue('UTC');
+    mocks.checkFirstImportFree.mockResolvedValue(false);
+    mocks.processUrl.mockResolvedValue({ status: 'success' });
+    mocks.startScrapeJob.mockResolvedValue(undefined);
+    mocks.updateScrapeJobProgress.mockResolvedValue(undefined);
+    mocks.completeScrapeJob.mockResolvedValue(undefined);
+    mocks.updateScrapeStatus.mockResolvedValue(undefined);
+  });
+
+  it('returns reconciled stats early without calling processUrl when reconciler self-heals a stuck job', async () => {
+    // Simulate: prior run committed all 3 items (counts already in the row)
+    // but crashed before `completeScrapeJob` flipped status. The reconciler
+    // detects this and flips the parent terminal.
+    mocks.reconcileStuckJob.mockResolvedValueOnce({
+      reconciled: true,
+      status: 'completed',
+      stats: {
+        processedUrls: 3,
+        totalUrls: 3,
+        importedCount: 2,
+        duplicateCount: 0,
+        errorCount: 1,
+        filteredCount: 0,
+      },
+    });
+    // After reconcile flips status, the subsequent getScrapeJobById sees
+    // `completed` and the existing early-return path returns the stats.
+    mocks.getScrapeJobById.mockResolvedValueOnce({
+      id: 'job-stuck',
+      kolSourceId: 'source-1',
+      status: 'completed',
+      jobType: 'initial_scrape',
+      discoveredUrls: ['u1', 'u2', 'u3'],
+      totalUrls: 3,
+      processedUrls: 3,
+      importedCount: 2,
+      duplicateCount: 0,
+      errorCount: 1,
+      filteredCount: 0,
+      triggeredBy: USER_ID,
+      retryCount: 0,
+    });
+    mocks.getSourceById.mockResolvedValue(mockSource({ kolId: 'kol-existing' }));
+
+    const result = await processJobBatch('job-stuck', 10, 50_000);
+
+    expect(mocks.reconcileStuckJob).toHaveBeenCalledWith('job-stuck');
+    expect(mocks.processUrl).not.toHaveBeenCalled();
+    expect(result.status).toBe('completed');
+    expect(result).toEqual({
+      processedUrls: 3,
+      totalUrls: 3,
+      importedCount: 2,
+      duplicateCount: 0,
+      errorCount: 1,
+      filteredCount: 0,
+      status: 'completed',
+    });
+  });
+
+  it('continues normal processing when reconciler reports nothing to reconcile', async () => {
+    mocks.reconcileStuckJob.mockResolvedValueOnce({ reconciled: false });
+    mocks.getScrapeJobById.mockResolvedValueOnce({
+      id: 'job-fresh',
+      kolSourceId: 'source-1',
+      status: 'queued',
+      jobType: 'initial_scrape',
+      discoveredUrls: ['u1'],
+      totalUrls: 1,
+      processedUrls: 0,
+      importedCount: 0,
+      duplicateCount: 0,
+      errorCount: 0,
+      filteredCount: 0,
+      triggeredBy: USER_ID,
+      retryCount: 0,
+    });
+    mocks.getSourceById.mockResolvedValue(mockSource({ kolId: 'kol-existing' }));
+
+    await processJobBatch('job-fresh', 10, 50_000);
+
+    expect(mocks.reconcileStuckJob).toHaveBeenCalledWith('job-fresh');
+    expect(mocks.processUrl).toHaveBeenCalledTimes(1);
+    expect(mocks.completeScrapeJob).toHaveBeenCalled();
+  });
+
+  it('logs and continues when the reconciler itself throws (non-blocking)', async () => {
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mocks.reconcileStuckJob.mockRejectedValueOnce(new Error('reconciler boom'));
+    mocks.getScrapeJobById.mockResolvedValueOnce({
+      id: 'job-fresh',
+      kolSourceId: 'source-1',
+      status: 'queued',
+      jobType: 'initial_scrape',
+      discoveredUrls: ['u1'],
+      totalUrls: 1,
+      processedUrls: 0,
+      importedCount: 0,
+      duplicateCount: 0,
+      errorCount: 0,
+      filteredCount: 0,
+      triggeredBy: USER_ID,
+      retryCount: 0,
+    });
+    mocks.getSourceById.mockResolvedValue(mockSource({ kolId: 'kol-existing' }));
+
+    await processJobBatch('job-fresh', 10, 50_000);
+
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('reconcileStuckJob threw'),
+      expect.any(Error)
+    );
+    expect(mocks.processUrl).toHaveBeenCalledTimes(1); // pipeline still ran
+    consoleSpy.mockRestore();
   });
 });
 

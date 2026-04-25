@@ -59,6 +59,18 @@ Each argument is classified as:
 - **`opinion`**: Subjective assessment or prediction
 - **`mixed`**: Contains both factual data and subjective interpretation
 
+## Entity extraction contracts
+
+### Invariant: AI-extracted entity lists MUST be deduplicated before persistence
+
+AI-extracted entity lists (e.g., `analysis.stockTickers`, returned by `analyzeDraftContent`) MAY contain duplicates as raw model output — Gemini occasionally emits the same ticker twice on long transcript-heavy content. The pipeline MUST deduplicate them by case-insensitive identifier (after normalization, e.g. `.trim().toUpperCase()` for tickers) BEFORE the values reach any persistence boundary that has a uniqueness constraint.
+
+**Current implementation:** First-wins `Set<string>` filter in `analyzeDraftContent` immediately after ticker normalization (`src/domain/services/ai.service.ts:895-915`). The surviving entry retains its first occurrence's metadata wholesale (`name`, `confidence`, `mentionedAs`, `source`, `inferenceReason`) — duplicates are dropped, not merged.
+
+**Worked example:** Gemini returns `[{ticker:'BTC', confidence:0.9}, {ticker:'btc', confidence:0.8}, {ticker:' BTC ', confidence:0.7}]`. After normalization all three become `'BTC'`; dedup keeps the first (confidence 0.9) and drops the other two. Without dedup, the downstream `post_stocks` write violates `UNIQUE(post_id, stock_id)` — this is exactly how issue [#91](https://github.com/alan8983/baburra/issues/91) (D4) surfaced.
+
+**Rationale for AI-layer dedup as the primary defense:** `analyzeDraftContent` is the single boundary every AI-driven path must cross. Centralizing dedup here keeps the `IdentifiedTicker[]` contract clean for downstream consumers (they can trust uniqueness), is the smallest possible blast radius for the fix, and gives one place to add observability if needed later. The repository sink (`createPost`) carries a defense-in-depth dedup as well — see `repository-contracts` R9.
+
 ## Quota Management
 
 - Weekly AI usage tracked in `profiles.ai_usage_count`

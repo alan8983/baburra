@@ -109,6 +109,8 @@ import {
   failScrapeJob,
   getScrapeJobItems,
   updateScrapeJobItemStage,
+  reconcileStuckJob,
+  retryTerminalWrite,
 } from '@/infrastructure/repositories';
 import {
   getUserTimezone,
@@ -350,13 +352,53 @@ export async function processJobBatch(
   onUrlComplete?: UrlCompletionHook
 ): Promise<BatchProgress> {
   const startTime = Date.now();
+  // Self-heal step (#90 / D3): if a previous run committed all per-URL items
+  // but failed to flip the parent terminal (network blip, crash between
+  // last item and `completeScrapeJob`), `reconcileStuckJob` flips the
+  // parent to `completed` using its existing aggregate counters. The
+  // subsequent `getScrapeJobById` then sees the post-reconcile state and
+  // the early-return below short-circuits cleanly.
+  let didReconcile = false;
+  try {
+    const reconciliation = await reconcileStuckJob(jobId);
+    didReconcile = reconciliation.reconciled;
+    if (didReconcile) {
+      console.warn(
+        `[processJobBatch] reconciled stuck job ${jobId} → ${reconciliation.status}`,
+        reconciliation.stats
+      );
+    }
+  } catch (reconcileErr) {
+    // Reconciler failures are non-blocking; the worst case is we re-do the
+    // (now redundant) work in the body below and the regular completion
+    // path handles it. Surface the error so operators can spot patterns.
+    console.warn(`[processJobBatch] reconcileStuckJob threw for ${jobId}:`, reconcileErr);
+  }
+
   const job = await getScrapeJobById(jobId);
   if (!job) {
     throw new Error(`Scrape job not found: ${jobId}`);
   }
 
-  // Already done
+  // Already done (covers both natural completions and reconciled-stuck above).
   if (job.status === 'completed' || job.status === 'failed') {
+    // If the reconciler just flipped a `validation_scrape` to terminal, mirror
+    // the post-`completeScrapeJob` validation hook the original run would
+    // have fired. Best-effort: a thrown error here doesn't roll back the
+    // already-committed reconciliation.
+    if (didReconcile && job.jobType === 'validation_scrape' && job.kolSourceId) {
+      const reconciledSource = await getSourceById(job.kolSourceId);
+      if (reconciledSource?.kolId) {
+        try {
+          await handleValidationCompletion(reconciledSource.kolId);
+        } catch (validationErr) {
+          console.error(
+            `[processJobBatch] reconcile-time validation completion failed for KOL ${reconciledSource.kolId}:`,
+            validationErr
+          );
+        }
+      }
+    }
     return {
       processedUrls: job.processedUrls,
       totalUrls: job.totalUrls,
@@ -567,8 +609,14 @@ export async function processJobBatch(
       filteredCount,
     });
     // Batch-import jobs have no backing source to mark as completed.
+    // Wrapped in retryTerminalWrite so a transient blip on this final
+    // kol_sources update doesn't leave the source's `scrape_status` lagging
+    // behind the job's `completed` status. (#90 / D3 — task 2.4.)
     if (source) {
-      await updateScrapeStatus(source.id, 'completed', importedCount);
+      await retryTerminalWrite(
+        () => updateScrapeStatus(source.id, 'completed', importedCount),
+        `updateScrapeStatus(${source.id}, completed)`
+      );
     }
 
     // Trigger validation scoring for validation scrape jobs

@@ -201,6 +201,32 @@ describe('analyzeDraftContent', () => {
     expect(btc?.confidence).toBe(0.9);
   });
 
+  it('analyzeDraftContent dedupes duplicate tickers and keeps first occurrence metadata', async () => {
+    // Regression test for D4 / GitHub #91. AI-layer dedup at ai.service.ts:895.
+    // Distinct from the BTC variants test above by also asserting that the
+    // surviving entry retains the FIRST occurrence's `name`, not just the
+    // first confidence — the dedup must keep the first hit wholesale, not
+    // merge fields from later duplicates.
+    mockGenerateStructuredJson.mockResolvedValueOnce({
+      kolName: null,
+      tickers: [
+        { ticker: 'TSLA', name: 'Tesla', market: 'US', confidence: 0.9, mentionedAs: 'Tesla' },
+        { ticker: 'tsla', name: 'Tesla Inc', market: 'US', confidence: 0.8, mentionedAs: 'TSLA' },
+      ],
+      sentiment: 1,
+      confidence: 0.85,
+      reasoning: '',
+      postedAt: null,
+    });
+
+    const result = await analyzeDraftContent('test');
+
+    expect(result.stockTickers).toHaveLength(1);
+    expect(result.stockTickers[0].ticker).toBe('TSLA');
+    expect(result.stockTickers[0].name).toBe('Tesla'); // first occurrence wins
+    expect(result.stockTickers[0].confidence).toBe(0.9);
+  });
+
   it('ticker 應被轉為大寫並去除空白', async () => {
     mockGenerateStructuredJson.mockResolvedValueOnce({
       kolName: null,
