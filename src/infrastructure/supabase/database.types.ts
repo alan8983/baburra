@@ -376,6 +376,57 @@ export type Database = {
           },
         ];
       };
+      kol_vocabulary: {
+        Row: {
+          category: string;
+          created_at: string;
+          id: string;
+          is_regex: boolean;
+          kol_id: string;
+          note: string | null;
+          pattern: string;
+          replacement: string;
+          updated_at: string;
+        };
+        Insert: {
+          category?: string;
+          created_at?: string;
+          id?: string;
+          is_regex?: boolean;
+          kol_id: string;
+          note?: string | null;
+          pattern: string;
+          replacement: string;
+          updated_at?: string;
+        };
+        Update: {
+          category?: string;
+          created_at?: string;
+          id?: string;
+          is_regex?: boolean;
+          kol_id?: string;
+          note?: string | null;
+          pattern?: string;
+          replacement?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'kol_vocabulary_kol_id_fkey';
+            columns: ['kol_id'];
+            isOneToOne: false;
+            referencedRelation: 'kol_stats';
+            referencedColumns: ['kol_id'];
+          },
+          {
+            foreignKeyName: 'kol_vocabulary_kol_id_fkey';
+            columns: ['kol_id'];
+            isOneToOne: false;
+            referencedRelation: 'kols';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       kols: {
         Row: {
           avatar_url: string | null;
@@ -753,6 +804,62 @@ export type Database = {
         };
         Relationships: [];
       };
+      scrape_job_items: {
+        Row: {
+          bytes_downloaded: number | null;
+          bytes_total: number | null;
+          duration_seconds: number | null;
+          error_message: string | null;
+          finished_at: string | null;
+          id: string;
+          job_id: string;
+          ordinal: number;
+          stage: string;
+          started_at: string | null;
+          title: string | null;
+          updated_at: string;
+          url: string;
+        };
+        Insert: {
+          bytes_downloaded?: number | null;
+          bytes_total?: number | null;
+          duration_seconds?: number | null;
+          error_message?: string | null;
+          finished_at?: string | null;
+          id?: string;
+          job_id: string;
+          ordinal: number;
+          stage?: string;
+          started_at?: string | null;
+          title?: string | null;
+          updated_at?: string;
+          url: string;
+        };
+        Update: {
+          bytes_downloaded?: number | null;
+          bytes_total?: number | null;
+          duration_seconds?: number | null;
+          error_message?: string | null;
+          finished_at?: string | null;
+          id?: string;
+          job_id?: string;
+          ordinal?: number;
+          stage?: string;
+          started_at?: string | null;
+          title?: string | null;
+          updated_at?: string;
+          url?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'scrape_job_items_job_id_fkey';
+            columns: ['job_id'];
+            isOneToOne: false;
+            referencedRelation: 'scrape_jobs';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       scrape_jobs: {
         Row: {
           completed_at: string | null;
@@ -765,7 +872,7 @@ export type Database = {
           id: string;
           imported_count: number;
           job_type: string;
-          kol_source_id: string;
+          kol_source_id: string | null;
           processed_urls: number;
           retry_count: number;
           started_at: string | null;
@@ -785,7 +892,7 @@ export type Database = {
           id?: string;
           imported_count?: number;
           job_type: string;
-          kol_source_id: string;
+          kol_source_id?: string | null;
           processed_urls?: number;
           retry_count?: number;
           started_at?: string | null;
@@ -805,7 +912,7 @@ export type Database = {
           id?: string;
           imported_count?: number;
           job_type?: string;
-          kol_source_id?: string;
+          kol_source_id?: string | null;
           processed_urls?: number;
           retry_count?: number;
           started_at?: string | null;
@@ -862,7 +969,7 @@ export type Database = {
           id?: string;
           low?: number | null;
           open?: number | null;
-          stock_id?: string;
+          stock_id: string;
           volume?: number | null;
         };
         Relationships: [
@@ -1076,25 +1183,6 @@ export type Database = {
               p_ai_model_version?: string;
               p_arguments?: Json;
               p_content: string;
-              p_created_by: string;
-              p_images: string[];
-              p_kol_id: string;
-              p_posted_at: string;
-              p_sentiment: number;
-              p_sentiment_ai_generated: boolean;
-              p_source_platform: string;
-              p_source_url: string;
-              p_stocks?: Json;
-              p_title: string;
-            };
-            Returns: Json;
-          }
-        | {
-            Args: {
-              p_ai_model_version?: string;
-              p_arguments?: Json;
-              p_content: string;
-              p_content_fingerprint?: string;
               p_created_by: string;
               p_images: string[];
               p_kol_id: string;

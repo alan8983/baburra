@@ -3,7 +3,7 @@
  * Verifies Supabase caching behavior for stock price data.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock Supabase admin client
 const mockFrom = vi.fn();
@@ -324,6 +324,100 @@ describe('stock-price.repository', () => {
         market: 'CRYPTO',
       });
       expect(fetchTwsePrices).not.toHaveBeenCalled();
+    });
+
+    it('should preserve fractional crypto volume verbatim through the cache write (regression: bigint→numeric)', async () => {
+      // Regression for: "Failed to write prices to cache: invalid input syntax for type bigint:
+      // \"99961.56929834\"". Tiingo's crypto endpoint returns fractional volume (fractional
+      // base-currency units traded). The repository must pass that value through to the upsert
+      // payload without rounding, truncation, or any integer coercion. The DB column was widened
+      // from BIGINT to NUMERIC(20, 8) in migration 20260425000002 to accept it.
+      const FRACTIONAL_VOLUME_A = 99961.56929834;
+      const FRACTIONAL_VOLUME_B = 12771.36822284;
+
+      const upsertSpy = vi.fn().mockResolvedValue({ error: null });
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === 'stocks') {
+          return {
+            select: () => ({
+              eq: () => ({
+                single: () =>
+                  Promise.resolve({
+                    data: { id: STOCK_ID, market: 'CRYPTO' },
+                    error: null,
+                  }),
+              }),
+            }),
+          };
+        }
+        if (table === 'stock_prices') {
+          return {
+            select: () => ({
+              eq: () => ({
+                gte: () => ({
+                  lte: () => ({
+                    order: () => Promise.resolve({ data: [], error: null }),
+                  }),
+                }),
+              }),
+            }),
+            upsert: upsertSpy,
+          };
+        }
+        return {};
+      });
+
+      vi.mocked(fetchTiingoPrices).mockResolvedValueOnce([
+        {
+          date: '2025-01-02T00:00:00Z',
+          open: 99000,
+          high: 100100,
+          low: 98800,
+          close: 99961.57,
+          volume: FRACTIONAL_VOLUME_A,
+        },
+        {
+          date: '2025-01-03T00:00:00Z',
+          open: 99961.57,
+          high: 100200,
+          low: 99700,
+          close: 100050.12,
+          volume: FRACTIONAL_VOLUME_B,
+        },
+      ]);
+
+      const result = await getStockPrices('BTC', {
+        startDate: '2025-01-02',
+        endDate: '2025-01-03',
+      });
+
+      // Chart-data path must surface the fractional value unchanged (no rounding in JS layer).
+      expect(result.volumes).toHaveLength(2);
+      expect(result.volumes[0].value).toBe(FRACTIONAL_VOLUME_A);
+      expect(result.volumes[1].value).toBe(FRACTIONAL_VOLUME_B);
+
+      // Cache write path must send the fractional value verbatim — no Math.round / parseInt / truncation.
+      // (writePricesToCache is fire-and-forget but the upsert call is built synchronously inside
+      // the async function before its first await, so the spy has been invoked by the time
+      // getStockPrices resolves.)
+      expect(upsertSpy).toHaveBeenCalledTimes(1);
+      const [upsertPayload, upsertOptions] = upsertSpy.mock.calls[0];
+      expect(upsertOptions).toEqual({ onConflict: 'stock_id,date' });
+      expect(upsertPayload).toHaveLength(2);
+      expect(upsertPayload[0]).toMatchObject({
+        stock_id: STOCK_ID,
+        date: '2025-01-02',
+        volume: FRACTIONAL_VOLUME_A,
+      });
+      expect(upsertPayload[1]).toMatchObject({
+        stock_id: STOCK_ID,
+        date: '2025-01-03',
+        volume: FRACTIONAL_VOLUME_B,
+      });
+      // Belt-and-braces: explicitly assert no integer coercion happened.
+      expect(Number.isInteger(upsertPayload[0].volume)).toBe(false);
+      expect(Number.isInteger(upsertPayload[1].volume)).toBe(false);
     });
 
     it('should return fresh cache for today when fetched_at is recent', async () => {
