@@ -28,12 +28,24 @@ beforeEach(() => {
   mocks.fromFn.mockReset();
 });
 
-// Helper: mock the createAdminClient().from('stocks_master').select(...).eq(...).eq(...).maybeSingle()
-// chain to return either a row or null.
-function mockSingleHit(row: { ticker: string; name: string; market: string } | null) {
-  const maybeSingle = vi.fn().mockResolvedValue({ data: row, error: null });
-  const eq2 = vi.fn().mockReturnValue({ maybeSingle });
-  const eq1 = vi.fn().mockReturnValue({ eq: eq2 });
+// resolveStock makes up to TWO supabase calls per ticker:
+//   Pass 1: from('stocks_master').select(…).eq('ticker', x).eq('market', y).maybeSingle()
+//   Pass 2: from('stocks_master').select(…).eq('market', y).contains('aliases', [x]).limit(1).maybeSingle()
+// This helper stubs both. After select().eq(), the same chain object exposes
+// either `.eq` (direct) or `.contains` (alias), so both passes thread through
+// the same mock.
+function mockSingleHit(
+  directRow: { ticker: string; name: string; market: string } | null,
+  aliasRow: { ticker: string; name: string; market: string } | null = null
+) {
+  const directMaybeSingle = vi.fn().mockResolvedValue({ data: directRow, error: null });
+  const aliasMaybeSingle = vi.fn().mockResolvedValue({ data: aliasRow, error: null });
+  const aliasLimit = vi.fn().mockReturnValue({ maybeSingle: aliasMaybeSingle });
+  const aliasContains = vi.fn().mockReturnValue({ limit: aliasLimit });
+  const directEq2 = vi.fn().mockReturnValue({ maybeSingle: directMaybeSingle });
+  // After select().eq(market_or_ticker, ...), the chain forks: direct goes to
+  // another .eq(), alias goes to .contains().
+  const eq1 = vi.fn().mockReturnValue({ eq: directEq2, contains: aliasContains });
   const select = vi.fn().mockReturnValue({ eq: eq1 });
   mocks.fromFn.mockReturnValue({ select });
 }
@@ -121,11 +133,33 @@ describe('resolveStock', () => {
   });
 
   it('caches negative results so a hallucination is rejected once', async () => {
-    mockSingleHit(null);
+    mockSingleHit(null, null); // Pass 1 miss + Pass 2 miss
 
     expect(await resolveStock('CLAUDE', 'US')).toBe(null);
     expect(await resolveStock('CLAUDE', 'US')).toBe(null);
-    expect(mocks.fromFn).toHaveBeenCalledTimes(1);
+    // First resolveStock: Pass 1 (miss) + Pass 2 (alias miss) = 2 fromFn calls.
+    // Second resolveStock: cache hit = 0 calls. Total = 2.
+    expect(mocks.fromFn).toHaveBeenCalledTimes(2);
+  });
+
+  it('falls back to alias lookup when direct (ticker, market) misses', async () => {
+    // The user's UMC case: KOL says "UMC" with market=TW, but UMC isn't in
+    // master at TW (it's the US ADR ticker). The TW row 2303.TW carries
+    // 'UMC' in its aliases array. resolveStock should return 2303.TW (聯電).
+    mockSingleHit(null, { ticker: '2303.TW', name: '聯電', market: 'TW' });
+
+    const result = await resolveStock('UMC', 'TW');
+    expect(result).toEqual({ ticker: '2303.TW', name: '聯電', market: 'TW' });
+  });
+
+  it('alias lookup is market-scoped (UMC US ADR is its own row, not the TW alias)', async () => {
+    // Direct hit on UMC market=US returns the US ADR row immediately; no
+    // alias fallback needed. Pass 1 hit means Pass 2 is never executed.
+    mockSingleHit({ ticker: 'UMC', name: 'United Microelectronics Corporation', market: 'US' });
+
+    const result = await resolveStock('UMC', 'US');
+    expect(result?.ticker).toBe('UMC');
+    expect(result?.market).toBe('US');
   });
 
   it('treats same ticker in different markets as independent lookups', async () => {
@@ -163,27 +197,41 @@ describe('resolveStock', () => {
 });
 
 describe('resolveStocksBatch', () => {
-  it('groups by market, makes one query per market, returns map keyed by raw input', async () => {
+  // Each market gets up to TWO supabase calls: pass 1 (direct ticker IN list)
+  // and pass 2 (alias overlap, only if pass 1 missed any). The chain after
+  // select().eq() exposes both `.in` (direct) and `.overlaps` (alias).
+  function batchChain(args: {
+    direct?: Array<{ ticker: string; name: string; market: string }>;
+    alias?: Array<{ ticker: string; name: string; market: string; aliases: string[] }>;
+  }) {
+    const inFn = vi.fn().mockResolvedValue({ data: args.direct ?? [], error: null });
+    const overlapsFn = vi.fn().mockResolvedValue({ data: args.alias ?? [], error: null });
+    const eq = vi.fn().mockReturnValue({ in: inFn, overlaps: overlapsFn });
+    const select = vi.fn().mockReturnValue({ eq });
+    return { select };
+  }
+
+  it('groups by market, returns map keyed by raw input', async () => {
     let calls = 0;
     mocks.fromFn.mockImplementation(() => {
       calls++;
-      const data =
-        calls === 1
-          ? [
-              { ticker: 'AAPL', name: 'Apple Inc.', market: 'US' },
-              { ticker: 'NVDA', name: 'NVIDIA Corporation', market: 'US' },
-            ]
-          : [{ ticker: '2330.TW', name: '台積電', market: 'TW' }];
-      const inFn = vi.fn().mockResolvedValue({ data, error: null });
-      const eq = vi.fn().mockReturnValue({ in: inFn });
-      const select = vi.fn().mockReturnValue({ eq });
-      return { select };
+      // Order of fromFn calls: US-direct, TW-direct (no alias passes — direct
+      // covers everything).
+      if (calls === 1) {
+        return batchChain({
+          direct: [
+            { ticker: 'AAPL', name: 'Apple Inc.', market: 'US' },
+            { ticker: 'NVDA', name: 'NVIDIA Corporation', market: 'US' },
+          ],
+        });
+      }
+      return batchChain({ direct: [{ ticker: '2330.TW', name: '台積電', market: 'TW' }] });
     });
 
     const result = await resolveStocksBatch([
       { ticker: 'AAPL', market: 'US' },
       { ticker: 'NVDA', market: 'US' },
-      { ticker: '2330', market: 'TW' }, // should be normalized to 2330.TW
+      { ticker: '2330', market: 'TW' }, // normalized to 2330.TW
     ]);
 
     expect(result.get('AAPL')).toEqual({ ticker: 'AAPL', name: 'Apple Inc.', market: 'US' });
@@ -193,18 +241,19 @@ describe('resolveStocksBatch', () => {
       market: 'US',
     });
     expect(result.get('2330')).toEqual({ ticker: '2330.TW', name: '台積電', market: 'TW' });
-    expect(calls).toBe(2); // one for US batch, one for TW batch
+    expect(calls).toBe(2);
   });
 
-  it('returns null entries for tickers not in master', async () => {
+  it('returns null entries for tickers not in master and not aliased', async () => {
+    let calls = 0;
     mocks.fromFn.mockImplementation(() => {
-      const inFn = vi.fn().mockResolvedValue({
-        data: [{ ticker: 'AAPL', name: 'Apple Inc.', market: 'US' }],
-        error: null,
-      });
-      const eq = vi.fn().mockReturnValue({ in: inFn });
-      const select = vi.fn().mockReturnValue({ eq });
-      return { select };
+      calls++;
+      if (calls === 1) {
+        // Pass 1: direct returns AAPL only; CHROME missing.
+        return batchChain({ direct: [{ ticker: 'AAPL', name: 'Apple Inc.', market: 'US' }] });
+      }
+      // Pass 2: alias lookup for CHROME — empty result.
+      return batchChain({ alias: [] });
     });
 
     const result = await resolveStocksBatch([
@@ -214,6 +263,37 @@ describe('resolveStocksBatch', () => {
 
     expect(result.get('AAPL')?.name).toBe('Apple Inc.');
     expect(result.get('CHROME')).toBe(null);
+    expect(calls).toBe(2);
+  });
+
+  it('falls back to alias lookup for tickers not in direct master', async () => {
+    // Mixed batch: AAPL is direct hit; UMC (TW) misses direct but matches
+    // 2303.TW's aliases array.
+    let calls = 0;
+    mocks.fromFn.mockImplementation(() => {
+      calls++;
+      if (calls === 1) {
+        // US direct: AAPL hit
+        return batchChain({ direct: [{ ticker: 'AAPL', name: 'Apple Inc.', market: 'US' }] });
+      }
+      if (calls === 2) {
+        // TW direct: UMC miss
+        return batchChain({ direct: [] });
+      }
+      // calls === 3: TW alias — 2303.TW has 'UMC' in its aliases
+      return batchChain({
+        alias: [{ ticker: '2303.TW', name: '聯電', market: 'TW', aliases: ['UMC'] }],
+      });
+    });
+
+    const result = await resolveStocksBatch([
+      { ticker: 'AAPL', market: 'US' },
+      { ticker: 'UMC', market: 'TW' },
+    ]);
+
+    expect(result.get('AAPL')?.ticker).toBe('AAPL');
+    expect(result.get('UMC')).toEqual({ ticker: '2303.TW', name: '聯電', market: 'TW' });
+    expect(calls).toBe(3); // US-direct + TW-direct + TW-alias
   });
 
   it('returns empty map for empty input without hitting DB', async () => {

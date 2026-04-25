@@ -13,6 +13,10 @@ CREATE TABLE IF NOT EXISTS stocks_master (
   name text NOT NULL,
   market text NOT NULL CHECK (market IN ('US', 'TW', 'CRYPTO')),
   source text NOT NULL CHECK (source IN ('twse', 'tpex', 'tiingo', 'manual')),
+  -- Alternate identifiers (English abbreviations like UMC/TSMC, or
+  -- cross-market ADR equivalents). Uppercased. Resolver falls back to alias
+  -- lookup when (ticker, market) misses.
+  aliases text[] NOT NULL DEFAULT ARRAY[]::text[],
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (ticker, market)
@@ -20,6 +24,8 @@ CREATE TABLE IF NOT EXISTS stocks_master (
 
 CREATE INDEX IF NOT EXISTS idx_stocks_master_market ON stocks_master(market);
 CREATE INDEX IF NOT EXISTS idx_stocks_master_name ON stocks_master(name);
+-- GIN for aliases array containment / overlap queries.
+CREATE INDEX IF NOT EXISTS idx_stocks_master_aliases ON stocks_master USING GIN (aliases);
 
 -- Updated_at trigger so re-seeds bump the timestamp without losing created_at.
 CREATE OR REPLACE FUNCTION set_stocks_master_updated_at()

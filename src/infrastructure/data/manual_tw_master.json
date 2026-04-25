@@ -1,0 +1,119 @@
+[
+  {
+    "ticker": "2330.TW",
+    "name": "台積電",
+    "market": "TW",
+    "source": "manual",
+    "aliases": ["TSMC", "TSM"],
+    "_note": "TSMC US ADR is TSM. KOLs commonly write 'TSMC' when referencing the TW primary listing."
+  },
+  {
+    "ticker": "2303.TW",
+    "name": "聯電",
+    "market": "TW",
+    "source": "manual",
+    "aliases": ["UMC"],
+    "_note": "UMC US ADR is UMC (NYSE). Per user (2026-04-26): UMC's primary listing is TW, so 'UMC' resolves here."
+  },
+  {
+    "ticker": "2317.TW",
+    "name": "鴻海",
+    "market": "TW",
+    "source": "manual",
+    "aliases": ["FOXCONN", "HNHPF"],
+    "_note": "FOXCONN is the English brand; HNHPF is the US OTC ADR."
+  },
+  {
+    "ticker": "2454.TW",
+    "name": "聯發科",
+    "market": "TW",
+    "source": "manual",
+    "aliases": ["MEDIATEK", "MTK"]
+  },
+  {
+    "ticker": "2357.TW",
+    "name": "華碩",
+    "market": "TW",
+    "source": "manual",
+    "aliases": ["ASUS", "ASUUY"]
+  },
+  {
+    "ticker": "2353.TW",
+    "name": "宏碁",
+    "market": "TW",
+    "source": "manual",
+    "aliases": ["ACER"]
+  },
+  {
+    "ticker": "3008.TW",
+    "name": "大立光",
+    "market": "TW",
+    "source": "manual",
+    "aliases": ["LARGAN"]
+  },
+  {
+    "ticker": "2308.TW",
+    "name": "台達電",
+    "market": "TW",
+    "source": "manual",
+    "aliases": ["DELTA"],
+    "_note": "Delta Electronics (TW). Distinct from Delta Air Lines (DAL US)."
+  },
+  {
+    "ticker": "6669.TW",
+    "name": "緯穎",
+    "market": "TW",
+    "source": "manual",
+    "aliases": ["WIWYNN"]
+  },
+  {
+    "ticker": "6531.TW",
+    "name": "愛普*",
+    "market": "TW",
+    "source": "manual",
+    "aliases": ["APMEMORY", "AP MEMORY"]
+  },
+  {
+    "ticker": "6770.TW",
+    "name": "力積電",
+    "market": "TW",
+    "source": "manual",
+    "aliases": ["PSMC"]
+  },
+  {
+    "ticker": "3034.TW",
+    "name": "聯詠",
+    "market": "TW",
+    "source": "manual",
+    "aliases": ["NOVATEK"]
+  },
+  {
+    "ticker": "2382.TW",
+    "name": "廣達",
+    "market": "TW",
+    "source": "manual",
+    "aliases": ["QUANTA"]
+  },
+  {
+    "ticker": "2376.TW",
+    "name": "技嘉",
+    "market": "TW",
+    "source": "manual",
+    "aliases": ["GIGABYTE"]
+  },
+  {
+    "ticker": "2379.TW",
+    "name": "瑞昱",
+    "market": "TW",
+    "source": "manual",
+    "aliases": ["REALTEK"]
+  },
+  {
+    "ticker": "8086.TW",
+    "name": "宏捷科",
+    "market": "TW",
+    "source": "manual",
+    "aliases": ["AWSC"],
+    "_note": "Advanced Wireless Semiconductor (宏捷科技). Distinct from 宏碁=2353.TW."
+  }
+]

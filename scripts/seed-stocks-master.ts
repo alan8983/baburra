@@ -44,15 +44,29 @@ interface MasterRow {
   name: string;
   market: 'US' | 'TW' | 'CRYPTO';
   source: 'twse' | 'tpex' | 'tiingo' | 'manual';
+  aliases?: string[];
 }
 
 const DATA_DIR = path.join(__dirname, '..', 'src', 'infrastructure', 'data');
+// Order matters: manual files come AFTER the bulk source they augment, so
+// manual entries win on key conflict (manual is the canonical override layer).
 const SOURCES = [
   { file: 'tw_master.json', label: 'TW' },
+  { file: 'manual_tw_master.json', label: 'TW (manual)' },
   { file: 'us_master.json', label: 'US' },
   { file: 'manual_us_master.json', label: 'US (manual)' },
   { file: 'crypto_master.json', label: 'CRYPTO' },
 ];
+
+/** Strip JSON file fields that aren't part of the DB row schema. */
+function stripJsonOnlyFields(r: MasterRow & { _note?: string }): MasterRow {
+  const { _note, ...rest } = r;
+  // Normalize aliases to uppercase + dedup. Empty array if absent.
+  const aliases = (rest.aliases ?? [])
+    .map((a) => a.trim().toUpperCase())
+    .filter((a, i, arr) => a && arr.indexOf(a) === i);
+  return { ...rest, aliases };
+}
 
 const BATCH = 1000;
 
@@ -66,14 +80,14 @@ async function main() {
       console.warn(`[seed] ${file} not found — run scripts/build-${label.toLowerCase().split(' ')[0]}-master.ts first?`);
       continue;
     }
-    const rows = JSON.parse(fs.readFileSync(p, 'utf-8')) as MasterRow[];
-    console.log(`[seed] ${label.padEnd(12)} ${rows.length.toString().padStart(6)} entries from ${file}`);
+    const rows = (JSON.parse(fs.readFileSync(p, 'utf-8')) as Array<MasterRow & { _note?: string }>).map(stripJsonOnlyFields);
+    console.log(`[seed] ${label.padEnd(14)} ${rows.length.toString().padStart(6)} entries from ${file}`);
     all.push(...rows);
   }
 
   // Dedup by (ticker, market) — same ticker CAN legitimately exist in two
   // markets (STX is Seagate/US and Stacks/CRYPTO). Manual override entries
-  // win by virtue of being read after us_master.
+  // win by virtue of being read AFTER the bulk source for the same market.
   const byKey = new Map<string, MasterRow>();
   for (const r of all) byKey.set(`${r.ticker}::${r.market}`, r);
   const merged = Array.from(byKey.values());

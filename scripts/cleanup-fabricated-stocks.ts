@@ -110,6 +110,21 @@ const REMAP: Record<string, string> = {
   '6531': '6531.TW',
   '8299': '8299.TW',
   '00631L': '00631L.TW',
+  // English abbreviations of TW companies (now also resolvable via aliases at
+  // import-time). For existing rows in stocks (market=TW) where the "ticker"
+  // is the English abbreviation, remap to the canonical TW listing.
+  // Per user feedback (2026-04-26): UMC's primary listing is TW (2303.TW).
+  UMC: '2303.TW',
+  TSMC: '2330.TW',
+  ASUS: '2357.TW',
+  ACER: '2353.TW',
+  MEDIATEK: '2454.TW',
+  FOXCONN: '2317.TW',
+  LARGAN: '3008.TW',
+  WIWYNN: '6669.TW',
+  APMEMORY: '6531.TW',
+  'AP MEMORY': '6531.TW',
+  PSMC: '6770.TW',
 };
 
 // Hardcoded delete blacklist — these rows are pure hallucinations or
@@ -148,10 +163,8 @@ const PURE_DELETE = new Set<string>([
   'STARLBS',
   'GPT-4',
   'ERG',
-  'ASUS',
-  'AP MEMORY',
-  'APMEMORY',
-  'PSMC',
+  // ASUS / AP MEMORY / APMEMORY / PSMC moved to REMAP — they're abbreviations
+  // of real TW companies and now alias-resolvable via stocks_master.
   'DYNA',
   '2888.TW', // 新光金 merged into 2887.TW; delisted
 ]);
