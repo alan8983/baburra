@@ -1,118 +1,123 @@
-[2026-04-25T15:36:09.832Z] mode: DRY-RUN (no writes)
-[2026-04-25T15:36:10.666Z] stocks total: 414
-[2026-04-25T15:36:10.954Z] master rows hit by current tickers: 266
-[2026-04-25T15:36:10.956Z] suspect rows: 112
-[2026-04-25T15:36:38.998Z] bucket A (remap):     34
-[2026-04-25T15:36:38.998Z] bucket B (delete):    55
-[2026-04-25T15:36:38.998Z] bucket C (rename):    19
-[2026-04-25T15:36:38.998Z] bucket   (noop):      4 (canonical rows skipped)
-[2026-04-25T15:36:38.998Z] [A_remap]       CELSIUS         name="Celsius Network" market=US post_stocks=1 (remap-table) → remap to CELH
-[2026-04-25T15:36:38.998Z] [A_remap]       FORTUNE         name="Fortinet, Inc." market=US post_stocks=1 (remap-table) → remap to FTNT
-[2026-04-25T15:36:38.999Z] [C_rename]      CRCL            name="CRCL" market=US post_stocks=1 (master-name-disagrees) → rename "CRCL" → "Circle Internet Group, Inc. Class A Common Stock"
-[2026-04-25T15:36:38.999Z] [A_remap]       CORNING         name="Corning Incorporated" market=US post_stocks=1 (remap-table) → remap to GLW
-[2026-04-25T15:36:38.999Z] [B_delete]      AP MEMORY       name="AP Memory Inc." market=TW post_stocks=0 (blacklisted)
-[2026-04-25T15:36:38.999Z] [C_rename]      ASML            name="ASML" market=US post_stocks=2 (master-name-disagrees) → rename "ASML" → "ASML Holding N.V. - New York Registry Shares"
-[2026-04-25T15:36:38.999Z] [A_remap]       BROADCOM        name="Broadcom Inc." market=US post_stocks=1 (remap-table) → remap to AVGO
-[2026-04-25T15:36:38.999Z] [B_delete]      PANTRY          name="Pantry Inc." market=US post_stocks=0 (blacklisted)
-[2026-04-25T15:36:38.999Z] [A_remap]       CONFLUENT       name="Confluent, Inc." market=US post_stocks=4 (remap-table) → remap to CFLT
-[2026-04-25T15:36:38.999Z] [A_remap]       6531            name="APMemory Inc." market=TW post_stocks=0 (remap-table) → remap to 6531.TW
-[2026-04-25T15:36:38.999Z] [A_remap]       PNTIR           name="Palantir Technologies Inc." market=US post_stocks=0 (remap-table) → remap to PLTR
-[2026-04-25T15:36:38.999Z] [C_rename]      AAOI            name="AAOI" market=US post_stocks=1 (master-name-disagrees) → rename "AAOI" → "Applied Optoelectronics, Inc."
-[2026-04-25T15:36:38.999Z] [C_rename]      IBM             name="IBM" market=US post_stocks=2 (master-name-disagrees) → rename "IBM" → "International Business Machines Corporation Common Stock"
-[2026-04-25T15:36:38.999Z] [A_remap]       MARVELL         name="Marvell Technology, Inc." market=US post_stocks=6 (remap-table) → remap to MRVL
-[2026-04-25T15:36:38.999Z] [A_remap]       2408            name="南亞科" market=TW post_stocks=0 (remap-table) → remap to 2408.TW
-[2026-04-25T15:36:38.999Z] [A_remap]       CLOUDFLARE      name="Cloudflare, Inc." market=US post_stocks=3 (remap-table) → remap to NET
-[2026-04-25T15:36:38.999Z] [A_remap]       SFDC            name="Salesforce, Inc." market=US post_stocks=0 (remap-table) → remap to CRM
-[2026-04-25T15:36:38.999Z] [A_remap]       CLOUDFRE        name="Cloudflare, Inc." market=US post_stocks=0 (remap-table) → remap to NET
-[2026-04-25T15:36:38.999Z] [A_remap]       PALANTIR        name="Palantir Technologies Inc." market=US post_stocks=2 (remap-table) → remap to PLTR
-[2026-04-25T15:36:38.999Z] [B_delete]      APMEMORY        name="APMemory Inc." market=TW post_stocks=1 (blacklisted)
-[2026-04-25T15:36:38.999Z] [B_delete]      569             name="聖暉工程科技股份有限公司" market=TW post_stocks=0 (blacklisted)
-[2026-04-25T15:36:38.999Z] [A_remap]       566             name="精測股份有限公司" market=TW post_stocks=1 (remap-table) → remap to 566.TW
-[2026-04-25T15:36:38.999Z] [B_delete]      VIS             name="威盛" market=TW post_stocks=1 (wrong-market (master has VIS in US))
-[2026-04-25T15:36:38.999Z] [A_remap]       PANTR           name="Palantir Technologies Inc." market=US post_stocks=0 (remap-table) → remap to PLTR
-[2026-04-25T15:36:38.999Z] [A_remap]       4966            name="普瑞" market=TW post_stocks=1 (remap-table) → remap to 4966.TW
-[2026-04-25T15:36:38.999Z] [B_delete]      STARLBS         name="Starbox Holdings Ltd." market=US post_stocks=1 (blacklisted)
-[2026-04-25T15:36:38.999Z] [B_delete]      366             name="366" market=TW post_stocks=1 (blacklisted)
-[2026-04-25T15:36:38.999Z] [A_remap]       8299            name="8299" market=TW post_stocks=1 (remap-table) → remap to 8299.TW
-[2026-04-25T15:36:38.999Z] [A_remap]       PAYPAL          name="PayPal Holdings, Inc." market=US post_stocks=1 (remap-table) → remap to PYPL
-[2026-04-25T15:36:38.999Z] [B_delete]      SPACEX          name="SpaceX" market=US post_stocks=1 (blacklisted)
-[2026-04-25T15:36:38.999Z] [A_remap]       2357            name="華碩" market=TW post_stocks=1 (remap-table) → remap to 2357.TW
-[2026-04-25T15:36:38.999Z] [C_rename]      8086.TW         name="宏捷" market=TW post_stocks=2 (master-name-disagrees) → rename "宏捷" → "宏捷科"
-[2026-04-25T15:36:38.999Z] [A_remap]       PURE.US         name="Pure Storage, Inc." market=US post_stocks=1 (remap-table) → remap to PSTG
-[2026-04-25T15:36:38.999Z] [B_delete]      CMO             name="CMO" market=US post_stocks=1 (blacklisted)
-[2026-04-25T15:36:38.999Z] [C_rename]      2353.TW         name="宏捷" market=TW post_stocks=8 (master-name-disagrees) → rename "宏捷" → "宏碁"
-[2026-04-25T15:36:38.999Z] [B_delete]      3044.TW         name="馮君" market=TW post_stocks=1 (blacklisted)
-[2026-04-25T15:36:38.999Z] [B_delete]      3622.TW         name="馮君" market=TW post_stocks=1 (blacklisted)
-[2026-04-25T15:36:38.999Z] [B_delete]      4966.TW         name="馮君" market=TW post_stocks=1 (blacklisted)
-[2026-04-25T15:36:38.999Z] [B_delete]      5349.TW         name="馮君" market=TW post_stocks=1 (blacklisted)
-[2026-04-25T15:36:38.999Z] [B_delete]      6121.TW         name="馮君" market=TW post_stocks=3 (blacklisted)
-[2026-04-25T15:36:38.999Z] [B_delete]      6244.TW         name="馮君" market=TW post_stocks=1 (blacklisted)
-[2026-04-25T15:36:38.999Z] [B_delete]      6435.TW         name="馮君" market=TW post_stocks=3 (blacklisted)
-[2026-04-25T15:36:38.999Z] [B_delete]      6441.TW         name="馮君" market=TW post_stocks=1 (blacklisted)
-[2026-04-25T15:36:38.999Z] [B_delete]      6533.TW         name="馮君" market=TW post_stocks=4 (blacklisted)
-[2026-04-25T15:36:38.999Z] [C_rename]      2883.TW         name="First Financial Holding Co., Ltd." market=TW post_stocks=0 (master-name-disagrees) → rename "First Financial Holding Co., Ltd." → "凱基金"
-[2026-04-25T15:36:38.999Z] [C_rename]      2886.TW         name="First Financial Holding Co., Ltd." market=TW post_stocks=0 (master-name-disagrees) → rename "First Financial Holding Co., Ltd." → "兆豐金"
-[2026-04-25T15:36:38.999Z] [B_delete]      2888.TW         name="First Financial Holding Co., Ltd." market=TW post_stocks=0 (blacklisted)
-[2026-04-25T15:36:38.999Z] [C_rename]      2892.TW         name="First Financial Holding Co., Ltd." market=TW post_stocks=0 (master-name-disagrees) → rename "First Financial Holding Co., Ltd." → "第一金"
-[2026-04-25T15:36:38.999Z] [C_rename]      2882.TW         name="First Financial Holding Co., Ltd." market=TW post_stocks=0 (master-name-disagrees) → rename "First Financial Holding Co., Ltd." → "國泰金"
-[2026-04-25T15:36:38.999Z] [C_rename]      2881.TW         name="First Financial Holding Co., Ltd." market=TW post_stocks=0 (master-name-disagrees) → rename "First Financial Holding Co., Ltd." → "富邦金"
-[2026-04-25T15:36:38.999Z] [C_rename]      2885.TW         name="First Financial Holding Co., Ltd." market=TW post_stocks=0 (master-name-disagrees) → rename "First Financial Holding Co., Ltd." → "元大金"
-[2026-04-25T15:36:38.999Z] [C_rename]      2890.TW         name="First Financial Holding Co., Ltd." market=TW post_stocks=0 (master-name-disagrees) → rename "First Financial Holding Co., Ltd." → "永豐金"
-[2026-04-25T15:36:38.999Z] [C_rename]      2887.TW         name="First Financial Holding Co., Ltd." market=TW post_stocks=0 (master-name-disagrees) → rename "First Financial Holding Co., Ltd." → "台新新光金"
-[2026-04-25T15:36:38.999Z] [C_rename]      2889.TW         name="First Financial Holding Co., Ltd." market=TW post_stocks=0 (master-name-disagrees) → rename "First Financial Holding Co., Ltd." → "國票金"
-[2026-04-25T15:36:38.999Z] [C_rename]      2897.TW         name="First Financial Holding Co., Ltd." market=TW post_stocks=0 (master-name-disagrees) → rename "First Financial Holding Co., Ltd." → "王道銀行"
-[2026-04-25T15:36:38.999Z] [B_delete]      DIOT            name="DIOT" market=US post_stocks=0 (blacklisted)
-[2026-04-25T15:36:38.999Z] [B_delete]      UMC             name="聯華電子" market=TW post_stocks=0 (wrong-market (master has UMC in US))
-[2026-04-25T15:36:38.999Z] [B_delete]      PSMC            name="力積電" market=TW post_stocks=0 (blacklisted)
-[2026-04-25T15:36:38.999Z] [A_remap]       FLCL            name="Cloudflare" market=US post_stocks=0 (remap-table) → remap to NET
-[2026-04-25T15:36:38.999Z] [B_delete]      ^TWII           name="TWSE Weighted Index" market=TW post_stocks=0 (blacklisted)
-[2026-04-25T15:36:38.999Z] [B_delete]      DI0T            name="DI0T" market=TW post_stocks=0 (blacklisted)
-[2026-04-25T15:36:38.999Z] [A_remap]       BRCM            name="Broadcom Inc." market=US post_stocks=2 (remap-table) → remap to AVGO
-[2026-04-25T15:36:38.999Z] [A_remap]       CNFL            name="Confluent, Inc." market=US post_stocks=1 (remap-table) → remap to CFLT
-[2026-04-25T15:36:38.999Z] [B_delete]      CHROME          name="Chrome" market=US post_stocks=0 (blacklisted)
-[2026-04-25T15:36:38.999Z] [B_delete]      ANDROID         name="Android" market=US post_stocks=0 (blacklisted)
-[2026-04-25T15:36:38.999Z] [B_delete]      CLAUDE          name="Claude" market=US post_stocks=0 (blacklisted)
-[2026-04-25T15:36:38.999Z] [B_delete]      YOUTUBE         name="YouTube" market=US post_stocks=0 (blacklisted)
-[2026-04-25T15:36:38.999Z] [B_delete]      VMWARE          name="VMware, Inc." market=US post_stocks=1 (blacklisted)
-[2026-04-25T15:36:38.999Z] [A_remap]       00631L          name="元大台灣50正2" market=TW post_stocks=1 (remap-table) → remap to 00631L.TW
-[2026-04-25T15:36:38.999Z] [B_delete]      ERG             name="ERG" market=HK post_stocks=1 (blacklisted)
-[2026-04-25T15:36:38.999Z] [B_delete]      ASUS            name="華碩" market=TW post_stocks=1 (blacklisted)
-[2026-04-25T15:36:38.999Z] [B_delete]      US              name="US" market=US post_stocks=1 (blacklisted)
-[2026-04-25T15:36:38.999Z] [C_rename]      BYD             name="BYD" market=US post_stocks=2 (master-name-disagrees) → rename "BYD" → "Boyd Gaming Corporation Common Stock"
-[2026-04-25T15:36:38.999Z] [C_rename]      NIO             name="NIO" market=US post_stocks=1 (master-name-disagrees) → rename "NIO" → "NIO Inc. American depositary shares, each representing one Class A ordinary share"
-[2026-04-25T15:36:39.000Z] [A_remap]       AIRBUS          name="Airbus" market=US post_stocks=1 (remap-table) → remap to EADSY
-[2026-04-25T15:36:39.000Z] [B_delete]      GPT-4           name="GPT-4" market=CRYPTO post_stocks=1 (blacklisted)
-[2026-04-25T15:36:39.000Z] [B_delete]      MODEL Y         name="Model Y" market=US post_stocks=1 (blacklisted)
-[2026-04-25T15:36:39.000Z] [B_delete]      MODEL 3         name="Model 3" market=US post_stocks=1 (blacklisted)
-[2026-04-25T15:36:39.000Z] [B_delete]      MODEL X         name="Model X" market=US post_stocks=1 (blacklisted)
-[2026-04-25T15:36:39.000Z] [A_remap]       SERVICENOW      name="ServiceNow" market=US post_stocks=1 (remap-table) → remap to NOW
-[2026-04-25T15:36:39.000Z] [A_remap]       ORACLE          name="Oracle" market=US post_stocks=1 (remap-table) → remap to ORCL
-[2026-04-25T15:36:39.000Z] [A_remap]       SALESFORCE      name="Salesforce" market=US post_stocks=1 (remap-table) → remap to CRM
-[2026-04-25T15:36:39.000Z] [A_remap]       FLARE           name="Cloudflare" market=US post_stocks=1 (remap-table) → remap to NET
-[2026-04-25T15:36:39.000Z] [B_delete]      ASTERRA LABS    name="ASTERRA LABS" market=US post_stocks=1 (blacklisted)
-[2026-04-25T15:36:39.000Z] [B_delete]      DYNA            name="順達" market=TW post_stocks=1 (blacklisted)
-[2026-04-25T15:36:39.000Z] [A_remap]       SEAGATE         name="Seagate Technology Holdings plc" market=US post_stocks=1 (remap-table) → remap to STX
-[2026-04-25T15:36:39.000Z] [B_delete]      366 E           name="366E" market=TW post_stocks=1 (blacklisted)
-[2026-04-25T15:36:39.000Z] [B_delete]      CRYSTAL         name="Crystal" market=US post_stocks=1 (blacklisted)
-[2026-04-25T15:36:39.000Z] [A_remap]       STELLANTIS      name="Stellantis" market=US post_stocks=1 (remap-table) → remap to STLA
-[2026-04-25T15:36:39.000Z] [A_remap]       AMAZON          name="Amazon" market=US post_stocks=1 (remap-table) → remap to AMZN
-[2026-04-25T15:36:39.000Z] [B_delete]      2542            name="元大台灣50" market=TW post_stocks=1 (blacklisted)
-[2026-04-25T15:36:39.000Z] [A_remap]       3596            name="智易" market=TW post_stocks=1 (remap-table) → remap to 3596.TW
-[2026-04-25T15:36:39.000Z] [B_delete]      CNMRBL          name="CNM Resources Limited" market=US post_stocks=1 (blacklisted)
-[2026-04-25T15:36:39.000Z] [C_rename]      NVTS            name="NVTS" market=US post_stocks=1 (master-name-disagrees) → rename "NVTS" → "Navitas Semiconductor Corporation"
-[2026-04-25T15:36:39.000Z] [B_delete]      PLANTLY         name="Plantly" market=US post_stocks=1 (blacklisted)
-[2026-04-25T15:36:39.000Z] [A_remap]       IMPINJ          name="Impinj" market=US post_stocks=1 (remap-table) → remap to PI
-[2026-04-25T15:36:39.000Z] [B_delete]      UNIQLO          name="Uniqlo" market=US post_stocks=1 (blacklisted)
-[2026-04-25T15:36:39.000Z] [B_delete]      9970.TW         name="寶" market=TW post_stocks=1 (blacklisted)
-[2026-04-25T15:36:39.000Z] [B_delete]      9972.TW         name="寶" market=TW post_stocks=1 (blacklisted)
-[2026-04-25T15:36:39.000Z] [B_delete]      9977.TW         name="寶" market=TW post_stocks=1 (blacklisted)
-[2026-04-25T15:36:39.000Z] [B_delete]      9995.TW         name="寶" market=TW post_stocks=1 (blacklisted)
-[2026-04-25T15:36:39.000Z] [B_delete]      9971.TW         name="寶" market=TW post_stocks=1 (blacklisted)
-[2026-04-25T15:36:39.000Z] [B_delete]      9975.TW         name="寶" market=TW post_stocks=1 (blacklisted)
-[2026-04-25T15:36:39.000Z] [B_delete]      9978.TW         name="寶" market=TW post_stocks=1 (blacklisted)
-[2026-04-25T15:36:39.000Z] [B_delete]      9973.TW         name="寶" market=TW post_stocks=1 (blacklisted)
-[2026-04-25T15:36:39.000Z] [B_delete]      9974.TW         name="寶" market=TW post_stocks=1 (blacklisted)
-[2026-04-25T15:36:39.000Z] [B_delete]      9976.TW         name="寶" market=TW post_stocks=1 (blacklisted)
-[2026-04-25T15:36:39.000Z] [B_delete]      9979.TW         name="寶" market=TW post_stocks=1 (blacklisted)
-[2026-04-25T15:36:39.000Z] DRY-RUN complete. Re-run with --apply to perform DB writes.
-[2026-04-25T15:36:39.002Z] log written to scripts\cleanup-fabricated-stocks.log
+[2026-04-25T18:42:44.810Z] mode: DRY-RUN (no writes)
+[2026-04-25T18:42:46.160Z] stocks total: 414
+[2026-04-25T18:42:46.637Z] master rows hit by current tickers: 266
+[2026-04-25T18:42:46.639Z] suspect rows: 116
+[2026-04-25T18:43:11.559Z] bucket A (remap):     33
+[2026-04-25T18:43:11.559Z] bucket B (delete):    52
+[2026-04-25T18:43:11.559Z] bucket C (rename):    27
+[2026-04-25T18:43:11.559Z] bucket   (noop):      4 (canonical rows skipped)
+[2026-04-25T18:43:11.559Z] [A_remap]       CELSIUS         name="Celsius Network" market=US post_stocks=1 (remap-table) → remap to CELH
+[2026-04-25T18:43:11.559Z] [A_remap]       FORTUNE         name="Fortinet, Inc." market=US post_stocks=1 (remap-table) → remap to FTNT
+[2026-04-25T18:43:11.559Z] [C_rename]      CRCL            name="CRCL" market=US post_stocks=1 (master-name-disagrees) → rename "CRCL" → "Circle Internet Group, Inc. Class A Common Stock"
+[2026-04-25T18:43:11.559Z] [A_remap]       CORNING         name="Corning Incorporated" market=US post_stocks=1 (remap-table) → remap to GLW
+[2026-04-25T18:43:11.559Z] [B_delete]      AP MEMORY       name="AP Memory Inc." market=TW post_stocks=0 (ticker-blacklisted)
+[2026-04-25T18:43:11.559Z] [C_rename]      ASML            name="ASML" market=US post_stocks=2 (master-name-disagrees) → rename "ASML" → "ASML Holding N.V. - New York Registry Shares"
+[2026-04-25T18:43:11.559Z] [A_remap]       BROADCOM        name="Broadcom Inc." market=US post_stocks=1 (remap-table) → remap to AVGO
+[2026-04-25T18:43:11.559Z] [B_delete]      PANTRY          name="Pantry Inc." market=US post_stocks=0 (ticker-blacklisted)
+[2026-04-25T18:43:11.559Z] [A_remap]       CONFLUENT       name="Confluent, Inc." market=US post_stocks=4 (remap-table) → remap to CFLT
+[2026-04-25T18:43:11.559Z] [A_remap]       6531            name="APMemory Inc." market=TW post_stocks=0 (remap-table) → remap to 6531.TW
+[2026-04-25T18:43:11.559Z] [A_remap]       PNTIR           name="Palantir Technologies Inc." market=US post_stocks=0 (remap-table) → remap to PLTR
+[2026-04-25T18:43:11.559Z] [C_rename]      AAOI            name="AAOI" market=US post_stocks=1 (master-name-disagrees) → rename "AAOI" → "Applied Optoelectronics, Inc."
+[2026-04-25T18:43:11.559Z] [C_rename]      IBM             name="IBM" market=US post_stocks=2 (master-name-disagrees) → rename "IBM" → "International Business Machines Corporation Common Stock"
+[2026-04-25T18:43:11.559Z] [B_delete]      566.TW          name="日月光投控" market=TW post_stocks=0 (ticker-blacklisted)
+[2026-04-25T18:43:11.559Z] [A_remap]       MARVELL         name="Marvell Technology, Inc." market=US post_stocks=6 (remap-table) → remap to MRVL
+[2026-04-25T18:43:11.559Z] [A_remap]       2408            name="南亞科" market=TW post_stocks=0 (remap-table) → remap to 2408.TW
+[2026-04-25T18:43:11.559Z] [A_remap]       CLOUDFLARE      name="Cloudflare, Inc." market=US post_stocks=3 (remap-table) → remap to NET
+[2026-04-25T18:43:11.559Z] [A_remap]       SFDC            name="Salesforce, Inc." market=US post_stocks=0 (remap-table) → remap to CRM
+[2026-04-25T18:43:11.559Z] [A_remap]       CLOUDFRE        name="Cloudflare, Inc." market=US post_stocks=0 (remap-table) → remap to NET
+[2026-04-25T18:43:11.559Z] [A_remap]       PALANTIR        name="Palantir Technologies Inc." market=US post_stocks=2 (remap-table) → remap to PLTR
+[2026-04-25T18:43:11.559Z] [B_delete]      APMEMORY        name="APMemory Inc." market=TW post_stocks=1 (ticker-blacklisted)
+[2026-04-25T18:43:11.559Z] [B_delete]      569             name="聖暉工程科技股份有限公司" market=TW post_stocks=0 (ticker-blacklisted)
+[2026-04-25T18:43:11.559Z] [B_delete]      566             name="精測股份有限公司" market=TW post_stocks=1 (ticker-blacklisted)
+[2026-04-25T18:43:11.559Z] [B_delete]      VIS             name="威盛" market=TW post_stocks=1 (wrong-market (master has VIS in US))
+[2026-04-25T18:43:11.559Z] [A_remap]       PANTR           name="Palantir Technologies Inc." market=US post_stocks=0 (remap-table) → remap to PLTR
+[2026-04-25T18:43:11.559Z] [A_remap]       4966            name="普瑞" market=TW post_stocks=1 (remap-table) → remap to 4966.TW
+[2026-04-25T18:43:11.559Z] [B_delete]      STARLBS         name="Starbox Holdings Ltd." market=US post_stocks=1 (ticker-blacklisted)
+[2026-04-25T18:43:11.559Z] [B_delete]      366             name="366" market=TW post_stocks=1 (ticker-blacklisted)
+[2026-04-25T18:43:11.559Z] [A_remap]       8299            name="8299" market=TW post_stocks=1 (remap-table) → remap to 8299.TW
+[2026-04-25T18:43:11.559Z] [A_remap]       PAYPAL          name="PayPal Holdings, Inc." market=US post_stocks=1 (remap-table) → remap to PYPL
+[2026-04-25T18:43:11.559Z] [B_delete]      SPACEX          name="SpaceX" market=US post_stocks=1 (ticker-blacklisted)
+[2026-04-25T18:43:11.559Z] [A_remap]       2357            name="華碩" market=TW post_stocks=1 (remap-table) → remap to 2357.TW
+[2026-04-25T18:43:11.559Z] [C_rename]      8086.TW         name="宏捷" market=TW post_stocks=2 (master-name-disagrees) → rename "宏捷" → "宏捷科"
+[2026-04-25T18:43:11.559Z] [A_remap]       PURE.US         name="Pure Storage, Inc." market=US post_stocks=1 (remap-table) → remap to PSTG
+[2026-04-25T18:43:11.559Z] [B_delete]      CMO             name="CMO" market=US post_stocks=1 (ticker-blacklisted)
+[2026-04-25T18:43:11.559Z] [B_delete]      CRDL.TW         name="創王" market=TW post_stocks=1 (not-in-master)
+[2026-04-25T18:43:11.559Z] [C_rename]      2353.TW         name="宏捷" market=TW post_stocks=8 (master-name-disagrees) → rename "宏捷" → "宏碁"
+[2026-04-25T18:43:11.559Z] [C_rename]      3044.TW         name="馮君" market=TW post_stocks=1 (rescued-from-name-blacklist) → rename "馮君" → "健鼎"
+[2026-04-25T18:43:11.559Z] [C_rename]      3622.TW         name="馮君" market=TW post_stocks=1 (rescued-from-name-blacklist) → rename "馮君" → "洋華"
+[2026-04-25T18:43:11.559Z] [C_rename]      4966.TW         name="馮君" market=TW post_stocks=1 (rescued-from-name-blacklist) → rename "馮君" → "譜瑞-KY"
+[2026-04-25T18:43:11.559Z] [B_delete]      5349.TW         name="馮君" market=TW post_stocks=1 (name-blacklisted (no master rescue))
+[2026-04-25T18:43:11.559Z] [C_rename]      6121.TW         name="馮君" market=TW post_stocks=3 (rescued-from-name-blacklist) → rename "馮君" → "新普"
+[2026-04-25T18:43:11.559Z] [C_rename]      6244.TW         name="馮君" market=TW post_stocks=1 (rescued-from-name-blacklist) → rename "馮君" → "茂迪"
+[2026-04-25T18:43:11.559Z] [C_rename]      6435.TW         name="馮君" market=TW post_stocks=3 (rescued-from-name-blacklist) → rename "馮君" → "大中"
+[2026-04-25T18:43:11.559Z] [C_rename]      6441.TW         name="馮君" market=TW post_stocks=1 (rescued-from-name-blacklist) → rename "馮君" → "廣錠"
+[2026-04-25T18:43:11.559Z] [C_rename]      6533.TW         name="馮君" market=TW post_stocks=4 (rescued-from-name-blacklist) → rename "馮君" → "晶心科"
+[2026-04-25T18:43:11.559Z] [C_rename]      2883.TW         name="First Financial Holding Co., Ltd." market=TW post_stocks=0 (master-name-disagrees) → rename "First Financial Holding Co., Ltd." → "凱基金"
+[2026-04-25T18:43:11.560Z] [C_rename]      2886.TW         name="First Financial Holding Co., Ltd." market=TW post_stocks=0 (master-name-disagrees) → rename "First Financial Holding Co., Ltd." → "兆豐金"
+[2026-04-25T18:43:11.560Z] [B_delete]      2888.TW         name="First Financial Holding Co., Ltd." market=TW post_stocks=0 (ticker-blacklisted)
+[2026-04-25T18:43:11.560Z] [C_rename]      2892.TW         name="First Financial Holding Co., Ltd." market=TW post_stocks=0 (master-name-disagrees) → rename "First Financial Holding Co., Ltd." → "第一金"
+[2026-04-25T18:43:11.560Z] [C_rename]      2882.TW         name="First Financial Holding Co., Ltd." market=TW post_stocks=0 (master-name-disagrees) → rename "First Financial Holding Co., Ltd." → "國泰金"
+[2026-04-25T18:43:11.560Z] [C_rename]      2881.TW         name="First Financial Holding Co., Ltd." market=TW post_stocks=0 (master-name-disagrees) → rename "First Financial Holding Co., Ltd." → "富邦金"
+[2026-04-25T18:43:11.560Z] [C_rename]      2885.TW         name="First Financial Holding Co., Ltd." market=TW post_stocks=0 (master-name-disagrees) → rename "First Financial Holding Co., Ltd." → "元大金"
+[2026-04-25T18:43:11.560Z] [C_rename]      2890.TW         name="First Financial Holding Co., Ltd." market=TW post_stocks=0 (master-name-disagrees) → rename "First Financial Holding Co., Ltd." → "永豐金"
+[2026-04-25T18:43:11.560Z] [C_rename]      2887.TW         name="First Financial Holding Co., Ltd." market=TW post_stocks=0 (master-name-disagrees) → rename "First Financial Holding Co., Ltd." → "台新新光金"
+[2026-04-25T18:43:11.560Z] [C_rename]      2889.TW         name="First Financial Holding Co., Ltd." market=TW post_stocks=0 (master-name-disagrees) → rename "First Financial Holding Co., Ltd." → "國票金"
+[2026-04-25T18:43:11.560Z] [C_rename]      2897.TW         name="First Financial Holding Co., Ltd." market=TW post_stocks=0 (master-name-disagrees) → rename "First Financial Holding Co., Ltd." → "王道銀行"
+[2026-04-25T18:43:11.560Z] [B_delete]      DIOT            name="DIOT" market=US post_stocks=0 (ticker-blacklisted)
+[2026-04-25T18:43:11.560Z] [B_delete]      UMC             name="聯華電子" market=TW post_stocks=0 (wrong-market (master has UMC in US))
+[2026-04-25T18:43:11.560Z] [B_delete]      PSMC            name="力積電" market=TW post_stocks=0 (ticker-blacklisted)
+[2026-04-25T18:43:11.560Z] [A_remap]       FLCL            name="Cloudflare" market=US post_stocks=0 (remap-table) → remap to NET
+[2026-04-25T18:43:11.560Z] [B_delete]      ^TWII           name="TWSE Weighted Index" market=TW post_stocks=0 (ticker-blacklisted)
+[2026-04-25T18:43:11.560Z] [B_delete]      DI0T            name="DI0T" market=TW post_stocks=0 (ticker-blacklisted)
+[2026-04-25T18:43:11.560Z] [A_remap]       BRCM            name="Broadcom Inc." market=US post_stocks=2 (remap-table) → remap to AVGO
+[2026-04-25T18:43:11.560Z] [A_remap]       CNFL            name="Confluent, Inc." market=US post_stocks=1 (remap-table) → remap to CFLT
+[2026-04-25T18:43:11.560Z] [B_delete]      CHROME          name="Chrome" market=US post_stocks=0 (ticker-blacklisted)
+[2026-04-25T18:43:11.560Z] [B_delete]      ANDROID         name="Android" market=US post_stocks=0 (ticker-blacklisted)
+[2026-04-25T18:43:11.560Z] [B_delete]      CLAUDE          name="Claude" market=US post_stocks=0 (ticker-blacklisted)
+[2026-04-25T18:43:11.560Z] [B_delete]      YOUTUBE         name="YouTube" market=US post_stocks=0 (ticker-blacklisted)
+[2026-04-25T18:43:11.560Z] [B_delete]      VMWARE          name="VMware, Inc." market=US post_stocks=1 (ticker-blacklisted)
+[2026-04-25T18:43:11.560Z] [A_remap]       00631L          name="元大台灣50正2" market=TW post_stocks=1 (remap-table) → remap to 00631L.TW
+[2026-04-25T18:43:11.560Z] [B_delete]      ERG             name="ERG" market=HK post_stocks=1 (ticker-blacklisted)
+[2026-04-25T18:43:11.560Z] [B_delete]      ASUS            name="華碩" market=TW post_stocks=1 (ticker-blacklisted)
+[2026-04-25T18:43:11.560Z] [B_delete]      US              name="US" market=US post_stocks=1 (ticker-blacklisted)
+[2026-04-25T18:43:11.560Z] [C_rename]      BYD             name="BYD" market=US post_stocks=2 (master-name-disagrees) → rename "BYD" → "Boyd Gaming Corporation Common Stock"
+[2026-04-25T18:43:11.560Z] [C_rename]      NIO             name="NIO" market=US post_stocks=1 (master-name-disagrees) → rename "NIO" → "NIO Inc. American depositary shares, each representing one Class A ordinary share"
+[2026-04-25T18:43:11.560Z] [A_remap]       AIRBUS          name="Airbus" market=US post_stocks=1 (remap-table) → remap to EADSY
+[2026-04-25T18:43:11.560Z] [B_delete]      GPT-4           name="GPT-4" market=CRYPTO post_stocks=1 (ticker-blacklisted)
+[2026-04-25T18:43:11.560Z] [B_delete]      LLAMA 3         name="Llama 3" market=CRYPTO post_stocks=1 (not-in-master)
+[2026-04-25T18:43:11.560Z] [B_delete]      CLAUDE 3.5      name="Claude 3.5" market=CRYPTO post_stocks=1 (not-in-master)
+[2026-04-25T18:43:11.560Z] [B_delete]      MODEL Y         name="Model Y" market=US post_stocks=1 (ticker-blacklisted)
+[2026-04-25T18:43:11.560Z] [B_delete]      MODEL 3         name="Model 3" market=US post_stocks=1 (ticker-blacklisted)
+[2026-04-25T18:43:11.560Z] [B_delete]      MODEL X         name="Model X" market=US post_stocks=1 (ticker-blacklisted)
+[2026-04-25T18:43:11.560Z] [A_remap]       SERVICENOW      name="ServiceNow" market=US post_stocks=1 (remap-table) → remap to NOW
+[2026-04-25T18:43:11.560Z] [A_remap]       ORACLE          name="Oracle" market=US post_stocks=1 (remap-table) → remap to ORCL
+[2026-04-25T18:43:11.560Z] [A_remap]       SALESFORCE      name="Salesforce" market=US post_stocks=1 (remap-table) → remap to CRM
+[2026-04-25T18:43:11.560Z] [A_remap]       FLARE           name="Cloudflare" market=US post_stocks=1 (remap-table) → remap to NET
+[2026-04-25T18:43:11.560Z] [B_delete]      ASTERRA LABS    name="ASTERRA LABS" market=US post_stocks=1 (ticker-blacklisted)
+[2026-04-25T18:43:11.560Z] [B_delete]      DYNA            name="順達" market=TW post_stocks=1 (ticker-blacklisted)
+[2026-04-25T18:43:11.560Z] [A_remap]       SEAGATE         name="Seagate Technology Holdings plc" market=US post_stocks=1 (remap-table) → remap to STX
+[2026-04-25T18:43:11.560Z] [B_delete]      366 E           name="366E" market=TW post_stocks=1 (ticker-blacklisted)
+[2026-04-25T18:43:11.560Z] [B_delete]      CRYSTAL         name="Crystal" market=US post_stocks=1 (ticker-blacklisted)
+[2026-04-25T18:43:11.560Z] [A_remap]       STELLANTIS      name="Stellantis" market=US post_stocks=1 (remap-table) → remap to STLA
+[2026-04-25T18:43:11.560Z] [A_remap]       AMAZON          name="Amazon" market=US post_stocks=1 (remap-table) → remap to AMZN
+[2026-04-25T18:43:11.560Z] [B_delete]      2542            name="元大台灣50" market=TW post_stocks=1 (ticker-blacklisted)
+[2026-04-25T18:43:11.560Z] [A_remap]       3596            name="智易" market=TW post_stocks=1 (remap-table) → remap to 3596.TW
+[2026-04-25T18:43:11.560Z] [B_delete]      CNMRBL          name="CNM Resources Limited" market=US post_stocks=1 (ticker-blacklisted)
+[2026-04-25T18:43:11.560Z] [C_rename]      NVTS            name="NVTS" market=US post_stocks=1 (master-name-disagrees) → rename "NVTS" → "Navitas Semiconductor Corporation"
+[2026-04-25T18:43:11.560Z] [B_delete]      PLANTLY         name="Plantly" market=US post_stocks=1 (ticker-blacklisted)
+[2026-04-25T18:43:11.560Z] [A_remap]       IMPINJ          name="Impinj" market=US post_stocks=1 (remap-table) → remap to PI
+[2026-04-25T18:43:11.560Z] [B_delete]      UNIQLO          name="Uniqlo" market=US post_stocks=1 (ticker-blacklisted)
+[2026-04-25T18:43:11.560Z] [B_delete]      9970.TW         name="寶" market=TW post_stocks=1 (name-blacklisted (no master rescue))
+[2026-04-25T18:43:11.560Z] [B_delete]      9972.TW         name="寶" market=TW post_stocks=1 (name-blacklisted (no master rescue))
+[2026-04-25T18:43:11.560Z] [B_delete]      9977.TW         name="寶" market=TW post_stocks=1 (name-blacklisted (no master rescue))
+[2026-04-25T18:43:11.560Z] [B_delete]      9995.TW         name="寶" market=TW post_stocks=1 (name-blacklisted (no master rescue))
+[2026-04-25T18:43:11.560Z] [B_delete]      9971.TW         name="寶" market=TW post_stocks=1 (name-blacklisted (no master rescue))
+[2026-04-25T18:43:11.560Z] [B_delete]      9975.TW         name="寶" market=TW post_stocks=1 (name-blacklisted (no master rescue))
+[2026-04-25T18:43:11.560Z] [B_delete]      9978.TW         name="寶" market=TW post_stocks=1 (name-blacklisted (no master rescue))
+[2026-04-25T18:43:11.560Z] [B_delete]      9973.TW         name="寶" market=TW post_stocks=1 (name-blacklisted (no master rescue))
+[2026-04-25T18:43:11.560Z] [B_delete]      9974.TW         name="寶" market=TW post_stocks=1 (name-blacklisted (no master rescue))
+[2026-04-25T18:43:11.560Z] [B_delete]      9976.TW         name="寶" market=TW post_stocks=1 (name-blacklisted (no master rescue))
+[2026-04-25T18:43:11.560Z] [B_delete]      9979.TW         name="寶" market=TW post_stocks=1 (name-blacklisted (no master rescue))
+[2026-04-25T18:43:11.562Z] SQL emitted to scripts\cleanup-fabricated-stocks.sql
+[2026-04-25T18:43:11.563Z] DRY-RUN complete. Re-run with --apply to perform DB writes.
+[2026-04-25T18:43:11.564Z] log written to scripts\cleanup-fabricated-stocks.log

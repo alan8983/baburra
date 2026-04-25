@@ -100,12 +100,13 @@ const REMAP: Record<string, string> = {
   ORACLE: 'ORCL',
   FORTUNE: 'FTNT',
   'PURE.US': 'PSTG',
-  // TW: bare numeric → .TW canonical form (also covers ETF letter-tranche 00631L)
+  // TW: bare numeric → .TW canonical form (also covers ETF letter-tranche 00631L).
+  // Only valid TW shapes (4-6 digit) are remappable. 3-digit codes like 566/569/366
+  // are NOT real Taiwan tickers and go to PURE_DELETE instead.
   '2357': '2357.TW',
   '2408': '2408.TW',
   '3596': '3596.TW',
   '4966': '4966.TW',
-  '566': '566.TW',
   '6531': '6531.TW',
   '8299': '8299.TW',
   '00631L': '00631L.TW',
@@ -113,6 +114,9 @@ const REMAP: Record<string, string> = {
 
 // Hardcoded delete blacklist — these rows are pure hallucinations or
 // conceptually invalid (private companies, product names, indices).
+// TW ticker rule: 4-digit ordinary stocks, or 4-6 digit ETF codes starting
+// with 00 (with optional A-Z suffix), with optional .TW suffix. Anything
+// shorter or differently-shaped is invalid by construction.
 const PURE_DELETE = new Set<string>([
   'CLAUDE',
   'CHROME',
@@ -127,10 +131,13 @@ const PURE_DELETE = new Set<string>([
   '^TWII',
   'DI0T',
   'DIOT',
+  // 3-digit "TW" codes — invalid format. Real TW tickers are 4-6 digit.
   '366',
   '366 E',
+  '566',
+  '566.TW',
   '569',
-  '2542',
+  '2542', // looks like 4-digit TW but the row's name "元大台灣50" belongs to 0050.TW; this row is corrupted
   'US',
   'CRYSTAL',
   'ASTERRA LABS',
@@ -211,6 +218,17 @@ async function main() {
     nameFreq.set(s.name.trim(), (nameFreq.get(s.name.trim()) ?? 0) + 1);
   }
 
+  // Generic shape rules — what a valid ticker looks like in each market.
+  // Per user rule (2026-04-26): TW codes are 4-digit (ordinary) or 4-6 digit
+  // (ETFs, optional A-Z tranche suffix), with optional .TW suffix. 3-digit
+  // codes like 366/566/569 are invalid by construction.
+  function isMalformedTicker(s: StockRow): boolean {
+    if (s.market === 'US') return !/^[A-Z]{1,5}$/.test(s.ticker);
+    if (s.market === 'TW') return !/^\d{4,6}[A-Z]?(\.TW)?$/.test(s.ticker);
+    if (s.market === 'CRYPTO') return !/^[A-Z0-9]{2,10}$/.test(s.ticker);
+    return true; // HK and unknown markets are unsupported
+  }
+
   // Suspect filter — only rows that look broken go through classification.
   // Everything else stays untouched (including real-but-name-slightly-different
   // entries like TSLA="特斯拉" or NVDA="Nvidia" — too aggressive to overwrite).
@@ -219,15 +237,7 @@ async function main() {
     if (s.name && SUSPECT_NAMES_TO_DELETE.has(s.name.trim())) return true;
     if (REMAP[s.ticker.toUpperCase()]) return true;
     if (EXPLICIT_RENAME_TICKERS.has(s.ticker)) return true;
-    // Malformed shapes
-    if (s.market === 'US' && s.ticker.length > 5) return true;
-    if (s.market === 'TW' && !s.ticker.endsWith('.TW') && /^\d{4,6}[A-Z]?$/.test(s.ticker)) {
-      return true; // missing-suffix on numeric TW code
-    }
-    if (s.market === 'TW' && !s.ticker.endsWith('.TW') && !/^\d/.test(s.ticker)) {
-      return true; // non-numeric TW market ticker (ASUS, UMC, …)
-    }
-    if (s.market === 'HK') return true; // unsupported market
+    if (isMalformedTicker(s)) return true;
     if (s.ticker === s.name) return true; // ticker-as-name (CRCL, AAOI, IBM, …)
     // Duplicate-name group of 3+ — catches the First Financial × 11 case
     if (s.name && (nameFreq.get(s.name.trim()) ?? 0) >= 3) return true;
@@ -237,24 +247,33 @@ async function main() {
   const suspects = allStocks.filter(isSuspect);
   log(`suspect rows: ${suspects.length}`);
 
-  // Step 3: classify each suspect.
+  // Step 3: classify each suspect. Order of checks matters:
+  //   1. PURE_DELETE: hardcoded ticker blacklist (always wins)
+  //   2. REMAP: explicit ticker → canonical equivalent
+  //   3. Master lookup at (ticker, market):
+  //      a. hit + name agrees → noop
+  //      b. hit + name disagrees → C_rename (use master.name). This branch
+  //         RESCUES rows whose name was a fabrication (e.g. 馮君, 寶) but
+  //         whose ticker is real — preserves the post→stock linkage and
+  //         heals the name. Per user feedback (2026-04-26): "use the
+  //         ticker as index to map the company name".
+  //   4. SUSPECT_NAMES_TO_DELETE: name is on the fabrication blacklist AND
+  //      ticker isn't in master → no canonical to rescue to → B_delete.
+  //   5. ticker exists in master at a DIFFERENT market → wrong-market →
+  //      B_delete.
+  //   6. ticker not in master at all → B_delete.
   const plan: PlanRow[] = [];
   for (const stock of suspects) {
-    // Hard delete blacklists.
-    if (
-      PURE_DELETE.has(stock.ticker) ||
-      (stock.name && SUSPECT_NAMES_TO_DELETE.has(stock.name.trim()))
-    ) {
+    if (PURE_DELETE.has(stock.ticker)) {
       plan.push({
         stock,
         bucket: 'B_delete',
-        reason: 'blacklisted',
+        reason: 'ticker-blacklisted',
         postStocksCount: 0,
       });
       continue;
     }
 
-    // Hard remap.
     const remapTo = REMAP[stock.ticker.toUpperCase()];
     if (remapTo) {
       plan.push({
@@ -267,7 +286,6 @@ async function main() {
       continue;
     }
 
-    // Master lookup at the EXACT market.
     const masterMatch = masterByKey.get(`${stock.ticker}::${stock.market}`);
     if (masterMatch) {
       if (masterMatch.name === stock.name) {
@@ -279,11 +297,28 @@ async function main() {
         });
         continue;
       }
+      // Rescue path: even if the existing name is on the fabrication blacklist
+      // (e.g. 4966.TW name="馮君"), prefer renaming to the master's canonical
+      // name (4966.TW → "譜瑞-KY") over deleting. This keeps post→stock
+      // linkages live and heals the corrupted name in one shot.
       plan.push({
         stock,
         bucket: 'C_rename',
         newName: masterMatch.name,
-        reason: 'master-name-disagrees',
+        reason: stock.name && SUSPECT_NAMES_TO_DELETE.has(stock.name.trim())
+          ? 'rescued-from-name-blacklist'
+          : 'master-name-disagrees',
+        postStocksCount: 0,
+      });
+      continue;
+    }
+
+    // Name on the fabrication blacklist AND no canonical to rescue to.
+    if (stock.name && SUSPECT_NAMES_TO_DELETE.has(stock.name.trim())) {
+      plan.push({
+        stock,
+        bucket: 'B_delete',
+        reason: 'name-blacklisted (no master rescue)',
         postStocksCount: 0,
       });
       continue;
@@ -336,7 +371,79 @@ async function main() {
     else log(line);
   }
 
-  // Step 6: apply if asked.
+  // Step 6a: always emit the equivalent SQL alongside the text log so the
+  // user can review/run the exact statements the script would execute.
+  const sqlPath = path.join(__dirname, 'cleanup-fabricated-stocks.sql');
+  const sqlLines: string[] = [];
+  sqlLines.push('-- Generated by scripts/cleanup-fabricated-stocks.ts');
+  sqlLines.push(`-- Mode: ${apply ? 'APPLY' : 'DRY-RUN'} | Generated: ${new Date().toISOString()}`);
+  sqlLines.push('-- Each bucket is wrapped in a transaction. Review and run individually.');
+  sqlLines.push('-- Buckets: A = remap (rewrite linkages, drop orphan); B = delete (cascade);');
+  sqlLines.push('--          C = rename (UPDATE name only)');
+  sqlLines.push('');
+  const esc = (s: string) => s.replace(/'/g, "''");
+
+  // Bucket A SQL
+  const aRows = plan.filter((p) => p.bucket === 'A_remap');
+  if (aRows.length > 0) {
+    sqlLines.push(`-- ============================================================`);
+    sqlLines.push(`-- BUCKET A — REMAP (${aRows.length} rows)`);
+    sqlLines.push(`-- For each, rewrite post_stocks linkages from source → target,`);
+    sqlLines.push(`-- drop any duplicate-pair rows, then delete the source stock.`);
+    sqlLines.push(`-- ============================================================`);
+    sqlLines.push('BEGIN;');
+    for (const p of aRows) {
+      sqlLines.push(`-- ${p.stock.ticker} (${p.stock.market}, name="${p.stock.name}", ${p.postStocksCount} linkages) → ${p.remapTo}`);
+      sqlLines.push(
+        `UPDATE post_stocks SET stock_id = (SELECT id FROM stocks WHERE ticker = '${esc(p.remapTo!)}' LIMIT 1) ` +
+          `WHERE stock_id = '${p.stock.id}' AND NOT EXISTS (` +
+          `SELECT 1 FROM post_stocks ps2 WHERE ps2.post_id = post_stocks.post_id ` +
+          `AND ps2.stock_id = (SELECT id FROM stocks WHERE ticker = '${esc(p.remapTo!)}' LIMIT 1));`
+      );
+      sqlLines.push(`DELETE FROM post_stocks WHERE stock_id = '${p.stock.id}';`);
+      sqlLines.push(`DELETE FROM stocks WHERE id = '${p.stock.id}';`);
+    }
+    sqlLines.push('COMMIT;');
+    sqlLines.push('');
+  }
+
+  // Bucket B SQL
+  const bRows = plan.filter((p) => p.bucket === 'B_delete');
+  if (bRows.length > 0) {
+    sqlLines.push(`-- ============================================================`);
+    sqlLines.push(`-- BUCKET B — DELETE (${bRows.length} rows)`);
+    sqlLines.push(`-- Cascade-delete post_stocks then the stock row.`);
+    sqlLines.push(`-- ============================================================`);
+    sqlLines.push('BEGIN;');
+    for (const p of bRows) {
+      sqlLines.push(`-- ${p.stock.ticker} (${p.stock.market}, name="${p.stock.name}", ${p.postStocksCount} linkages) [${p.reason}]`);
+      sqlLines.push(`DELETE FROM post_stocks WHERE stock_id = '${p.stock.id}';`);
+      sqlLines.push(`DELETE FROM stocks WHERE id = '${p.stock.id}';`);
+    }
+    sqlLines.push('COMMIT;');
+    sqlLines.push('');
+  }
+
+  // Bucket C SQL
+  const cRows = plan.filter((p) => p.bucket === 'C_rename');
+  if (cRows.length > 0) {
+    sqlLines.push(`-- ============================================================`);
+    sqlLines.push(`-- BUCKET C — RENAME (${cRows.length} rows)`);
+    sqlLines.push(`-- Heal name to the canonical master value. Linkages preserved.`);
+    sqlLines.push(`-- ============================================================`);
+    sqlLines.push('BEGIN;');
+    for (const p of cRows) {
+      sqlLines.push(`-- ${p.stock.ticker} (${p.stock.market}, ${p.postStocksCount} linkages): "${p.stock.name}" → "${p.newName}" [${p.reason}]`);
+      sqlLines.push(`UPDATE stocks SET name = '${esc(p.newName!)}' WHERE id = '${p.stock.id}';`);
+    }
+    sqlLines.push('COMMIT;');
+    sqlLines.push('');
+  }
+
+  fs.writeFileSync(sqlPath, sqlLines.join('\n') + '\n', 'utf-8');
+  log(`SQL emitted to ${path.relative(process.cwd(), sqlPath)}`);
+
+  // Step 6b: apply if asked.
   if (!apply) {
     log('DRY-RUN complete. Re-run with --apply to perform DB writes.');
     fs.writeFileSync(logPath, logLines.join('\n') + '\n', 'utf-8');
