@@ -9,39 +9,29 @@ Sequence matters: §1 → §2 (seed) → §3 (validation layer) → §4 (cleanup
 
 ## §1. `stocks_master` table
 
-- [ ] §1.1 Migration: `supabase/migrations/<ts>_create_stocks_master.sql` — create `stocks_master(ticker text PK, name text NOT NULL, market text NOT NULL CHECK (market IN ('US','TW','CRYPTO')), created_at timestamptz default now())`. **Do NOT** add the FK from `stocks` yet — that comes in §5 after cleanup.
-- [ ] §1.2 `npm run type-check` after `supabase gen types`.
+- [x] §1.1 Migration `supabase/migrations/20260425100000_create_stocks_master.sql` created. FK on `stocks.ticker` deferred to §5.
+- [ ] §1.2 `npm run type-check` after `supabase gen types`. *(Pending: needs `db push` against prod first.)*
 
 ## §2. Seed registries
 
-- [ ] §2.1 `scripts/build-tw-master.ts`: fetch TWSE 上市 (strMode=2) + TPEX 上櫃 (strMode=4) listings from `isin.twse.com.tw`, parse the HTML tables, output `src/infrastructure/data/tw_master.json` (`[{ ticker: '2330.TW', name: '台積電' }, ...]`). Idempotent; can re-run.
-- [ ] §2.2 `scripts/build-us-master.ts`: download Tiingo's `supported_tickers.zip`, filter to US-listed equities + ADRs + ETFs, output `src/infrastructure/data/us_master.json`.
-- [ ] §2.3 Hand-curate `src/infrastructure/data/crypto_master.json` (~50 entries: BTC, ETH, SOL, XRP, ADA, DOGE, MATIC, AVAX, LINK, …).
-- [ ] §2.4 `scripts/seed-stocks-master.ts`: read all three JSON files and bulk-insert into `stocks_master` via `createAdminClient()`. ON CONFLICT DO UPDATE for re-runs.
-- [ ] §2.5 Run §2.1, §2.2, §2.4 against prod. Verify row counts: TW ≥ 1,800; US ≥ 8,000; CRYPTO ≥ 30.
+- [x] §2.1 `scripts/build-tw-master.ts` — fetches TWSE+TPEX listings from `isin.twse.com.tw` (Big5-decoded HTML; openapi.tpex.org.tw is Cloudflare-blocked). Wrote 2,298 entries to `src/infrastructure/data/tw_master.json`. Sanity passes incl. **2353.TW → 宏碁** (the canonical-name fix).
+- [x] §2.2 `scripts/build-us-master.ts` — pivoted from Tiingo zip to NASDAQ Trader's pipe-delimited symbol directory files (no zip dep, public, authoritative). Wrote 11,273 entries to `src/infrastructure/data/us_master.json`. Hand-added two missing real tickers (CFLT, EADSY) via `manual_us_master.json`.
+- [x] §2.3 `src/infrastructure/data/crypto_master.json` — 49 curated entries (BTC, ETH, SOL, XRP, …, JUP).
+- [x] §2.4 `scripts/seed-stocks-master.ts` — reads all four JSONs, dedups, bulk-upserts in batches of 1,000 via `createAdminClient()`. ON CONFLICT DO UPDATE keeps `created_at` and bumps `updated_at`.
+- [ ] §2.5 Run §2.1, §2.2, §2.4 against prod. Verify row counts: TW ≥ 1,800; US ≥ 8,000; CRYPTO ≥ 30. *(Pending — write to prod, requires user approval.)*
 
 ## §3. Validation layer (`resolveStock`)
 
-- [ ] §3.1 `src/domain/services/ticker-resolver.service.ts`: implement `resolveStock(rawTicker: string, market: 'US'|'TW'|'CRYPTO') → Promise<{ticker,name,market}|null>` per design D2. Includes the normalization rules and the `stocks_master` lookup.
-- [ ] §3.2 `src/domain/services/__tests__/ticker-resolver.service.test.ts`:
-  - normalize: `'2357'` + `TW` → `'2357.TW'`; `'aapl'` + `US` → `'AAPL'`.
-  - hit + name override: master has `2353.TW`/`宏碁`; `resolveStock('2353.TW','TW')` returns name `'宏碁'` regardless of input name.
-  - miss: `resolveStock('CHROME','US')` → `null`.
-  - non-numeric TW: `resolveStock('ASUS','TW')` → `null`.
-  - empty/whitespace: returns `null`.
-- [ ] §3.3 Modify `src/domain/services/import-pipeline.service.ts:678-702`: replace the existing loop body with `const resolved = await resolveStock(ticker.ticker, ticker.market); if (!resolved) continue;` then call `getStockByTicker(resolved.ticker) || createStock(resolved)`. Use `resolved.name` not `ticker.name`.
-- [ ] §3.4 Update `src/infrastructure/repositories/stock.repository.ts::createStock` to refuse insertion if the ticker is not in `stocks_master` (defense-in-depth even before §5's FK lands; safe because §2 has populated the master).
-- [ ] §3.5 Extend `src/domain/services/__tests__/import-pipeline.service.test.ts`: mock `resolveStock` to return `null` for one ticker; assert that ticker is dropped, post still creates with the surviving tickers, no exception.
-- [ ] §3.6 `npm run type-check && npm test && npm run lint`.
+- [x] §3.1 `src/domain/services/ticker-resolver.service.ts` — implements `resolveStock` and `resolveStocksBatch` (one DB round-trip per market). Per-process positive AND negative cache. Throws on transient DB errors; returns `null` on miss.
+- [x] §3.2 `src/domain/services/__tests__/ticker-resolver.service.test.ts` — 13 tests: normalize, hit+name-override (2353.TW → 宏碁), miss, non-numeric TW, empty input, positive cache, negative cache, market-disambiguation (STX as US-equity vs CRYPTO), DB error propagation, batch grouping.
+- [x] §3.3 Modified `src/domain/services/import-pipeline.service.ts` — replaced direct ticker loop with `resolveStocksBatch` + `resolvedStockTickers` parallel array. HK tickers dropped at the seam (resolver doesn't support HK). `extractArguments` and per-stock-sentiment mapping now use canonical ticker/name. Added `no_resolvable_tickers` short-circuit + credit refund when ALL tickers fail validation.
+- [x] §3.4 `createStock` in `src/infrastructure/repositories/stock.repository.ts` now refuses tickers absent from `stocks_master` with an explicit error (defense-in-depth before §5 FK lands).
+- [x] §3.5 Extended `src/domain/services/__tests__/import-pipeline.service.test.ts` — 3 new tests: drop-and-survive, master-name-override, all-dropped-refund. Plus a default `resolveStocksBatch` impl in `beforeEach` so existing tests don't regress.
+- [x] §3.6 `npm run type-check && npm test && npm run lint` — all clean. (965/965 tests passing; only lint warning in new code was an unused helper, removed.)
 
 ## §4. Cleanup of existing 90 fabricated rows
 
-- [ ] §4.1 `scripts/cleanup-fabricated-stocks.ts`:
-  - identify the same 90 rows the diagnostic surfaces (use the SQL from `proposal.md`).
-  - bucket into A (remap), B (delete), C (rename only) per design D3.
-  - write a hardcoded remap map for the recoverable B-list (`MARVELL→MRVL`, `CONFLUENT→CFLT`, `CLOUDFLARE→NET`, `PALANTIR→PLTR`, `BROADCOM→AVGO`, `SALESFORCE→CRM`, `SERVICENOW→NOW`, `ORACLE→ORCL`, `AMAZON→AMZN`, `PAYPAL→PYPL`, `STELLANTIS→STLA`, `SEAGATE→STX`, `CORNING→GLW`, `CELSIUS→CELH`, `IMPINJ→PI`, `MARVELL→MRVL`, `2357→2357.TW`, `2408→2408.TW`, …).
-  - default to `--dry-run`; require `--apply` to write.
-  - log every action to `scripts/cleanup-fabricated-stocks.log`.
+- [x] §4.1 `scripts/cleanup-fabricated-stocks.ts` — identifies suspects via the proposal's SQL; buckets into A (remap), B (delete), C (rename) per design D3. Hardcoded remap table for known canonical equivalents (MARVELL→MRVL, CONFLUENT→CFLT, CLOUDFLARE→NET, …, 2357→2357.TW, 4966→4966.TW, …). Default `--dry-run`; `--apply` required to mutate. Writes audit log to `scripts/cleanup-fabricated-stocks.log`.
 - [ ] §4.2 Run `--dry-run`, attach the log to this change as `openspec/changes/fix-ticker-mapping-quality/cleanup-dry-run.log`.
 - [ ] §4.3 Review the dry-run log with the user; adjust the remap table for any cases not handled.
 - [ ] §4.4 Snapshot the prod DB (Supabase backup or export of `stocks` + `post_stocks`).
@@ -56,9 +46,9 @@ Sequence matters: §1 → §2 (seed) → §3 (validation layer) → §4 (cleanup
 
 ## §6. Specs + docs
 
-- [ ] §6.1 `openspec/specs/ai-pipeline/spec.md`: add invariant — "AI-extracted tickers MUST go through `resolveStock` before persistence; the resolver's name overrides any AI-supplied name."
-- [ ] §6.2 `openspec/specs/data-models.md`: document `stocks_master` table + `stocks.ticker → stocks_master.ticker` FK.
-- [ ] §6.3 `openspec/specs/repository-contracts/spec.md`: invariant — "`createStock` MUST refuse insertion if the ticker is not present in `stocks_master`."
+- [x] §6.1 `openspec/specs/ai-pipeline/spec.md` — Invariants section added: ticker resolution must be registry-grounded; HK is unsupported.
+- [x] §6.2 `openspec/specs/data-models/spec.md` — `stocks_master` row added to Core Tables; FK `stocks.ticker → stocks_master.ticker` added to relationship diagram; migration listed.
+- [x] §6.3 `openspec/specs/repository-contracts/spec.md` — new R7-stocks requirement: `createStock` refuses tickers absent from `stocks_master`, with success + reject scenarios.
 
 ## §7. Verification
 

@@ -103,7 +103,7 @@ async function main() {
         .eq('stock_id', stock.id)
         .limit(MAX_POSTS_PER_SUSPECT);
 
-      const linkRows = (links ?? []) as Array<{
+      const linkRows = (links ?? []) as unknown as Array<{
         post_id: string;
         source: string | null;
         inference_reason: string | null;

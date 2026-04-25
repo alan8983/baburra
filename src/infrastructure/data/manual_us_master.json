@@ -1,0 +1,4 @@
+[
+  { "ticker": "CFLT", "name": "Confluent, Inc.", "market": "US", "source": "manual" },
+  { "ticker": "EADSY", "name": "Airbus SE (ADR)", "market": "US", "source": "manual" }
+]

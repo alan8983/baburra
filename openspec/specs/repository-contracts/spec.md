@@ -97,7 +97,33 @@ These are invoked by the scraper worker, AI pipeline, or cron jobs — there is 
 - **WHEN** a PR adds a mutating function with no `userId` parameter
 - **THEN** the reviewer confirms it is only called from worker/pipeline code and the exemption list above is updated in the same PR, OR the reviewer asks for the function to be brought under R2-R4
 
-### Requirement: Known deferred exceptions (R7)
+### Requirement: createStock refuses tickers absent from `stocks_master` (R7-stocks)
+
+`createStock` (`src/infrastructure/repositories/stock.repository.ts`) SHALL
+reject any input whose normalized `ticker` is not present in the
+`stocks_master` table. The check is a `SELECT ticker FROM stocks_master WHERE
+ticker = $1` issued before the `stocks` upsert; on miss, the function throws
+with a message naming the rejected ticker.
+
+**Rationale:** The import pipeline already validates AI-extracted tickers at
+the `resolveStock` seam, but other callers (manual scripts, future webhook
+ingestion, hand-edits) may bypass that seam. Enforcing the master-membership
+check inside `createStock` keeps the `stocks` table clean even before the
+DB-level FK on `stocks.ticker → stocks_master.ticker` is applied
+(post-cleanup). After the FK lands, this check becomes belt-and-suspenders —
+the DB would reject anyway, but the application-layer error is more readable.
+
+Spec source: `openspec/changes/fix-ticker-mapping-quality/`.
+
+#### Scenario: Master-validated ticker is created
+- **WHEN** `createStock({ ticker: '2330.TW', name: '台積電', market: 'TW' })` is called and `stocks_master` contains row `(2330.TW, 台積電, TW)`
+- **THEN** the function upserts a `stocks` row and returns the entity
+
+#### Scenario: Hallucinated ticker is rejected
+- **WHEN** `createStock({ ticker: 'CHROME', name: 'Chrome', market: 'US' })` is called and `stocks_master` does not contain `'CHROME'`
+- **THEN** the function throws an error whose message names `'CHROME'` and references `stocks_master`, and no `stocks` row is created
+
+### Requirement: Known deferred exceptions (R8)
 
 Functions that should be user-scoped but are not yet are tracked here rather than silently ignored. Each entry SHALL name a follow-up change proposal when one exists.
 
