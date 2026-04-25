@@ -303,6 +303,7 @@ export async function createPost(input: CreatePostInput, createdBy: string | nul
     p_arguments: argumentsParam,
     p_ai_model_version: input.aiModelVersion ?? null,
     p_content_fingerprint: input.contentFingerprint ?? null,
+    p_source: input.source ?? null,
   });
 
   if (rpcError) throw new Error(rpcError.message);

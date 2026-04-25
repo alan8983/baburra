@@ -110,6 +110,7 @@ export interface CreatePostInput {
   postedAt: Date;
   draftAiArguments?: DraftAiArguments[];
   contentFingerprint?: string;
+  source?: 'seed' | 'user' | null;
 }
 
 export interface UpdatePostInput {

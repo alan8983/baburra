@@ -39,3 +39,7 @@ New users land on an empty database. Layer 1 (aggregate stats) and Layer 3 (Stoc
   - `openspec/specs/ai-pipeline/spec.md` — note scrape-service override parameters
 - **Dependencies**: no new runtime deps. Deepgram + Gemini + Tiingo keys must be present in `.env.local` when running the script. Estimated one-time cost: to be re-validated against lego credit block prices (original $51 estimate predates the credit-cost rework). AI model fallback chain (Gemma 4 → Gemini) is transparent to callers.
 - **Not in scope**: cron automation, UI changes, BUG-001 fix (Podcast `detectPlatform`), BUG-004 (`APIFY_API_TOKEN` check), TikTok/Facebook seeding.
+
+## Superseded
+
+Tasks 4.1–4.3 of this change (the dry-run/full-run validation stage) are superseded by [`validate-podcast-pipeline-with-gooaye`](../validate-podcast-pipeline-with-gooaye/proposal.md), which narrows scope to Gooaye + a few YouTube channels and adds the observability/autoresearch work needed to certify the pipeline launch-ready. The placeholder `scripts/seed-kol-config.json` (19 KOLs with `feeds.example.com` URLs) is being removed as part of that change. The instrumentation and seed-script infrastructure built under tasks 1–3 of this change remains in use.

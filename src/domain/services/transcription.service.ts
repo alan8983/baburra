@@ -29,6 +29,7 @@ import { downloadYoutubeAudioStream } from '@/infrastructure/api/youtube-audio.c
 import { deepgramTranscribe } from '@/infrastructure/api/deepgram.client';
 import { geminiTranscribeShort } from '@/infrastructure/api/gemini.client';
 import type { ScrapeJobItemStage, ScrapeStageMeta } from '@/domain/models';
+import type { DeepgramCallMeta } from '@/domain/models/pipeline-timing';
 
 export type StageCallback = (stage: ScrapeJobItemStage, meta?: ScrapeStageMeta) => void;
 
@@ -46,6 +47,11 @@ export interface TranscribeAudioInput {
    *   - `transcribing` once the audio stream has been fully consumed
    */
   onStage?: StageCallback;
+  /**
+   * Optional out-param populated with Deepgram retry count for the primary
+   * transcription attempt. Caller passes `{ retries: 0 }` and reads back after.
+   */
+  deepgramMeta?: DeepgramCallMeta;
 }
 
 /** Sub-step timing returned alongside the transcript. */
@@ -118,7 +124,7 @@ function wrapWithByteCounter(
 }
 
 export async function transcribeAudio(input: TranscribeAudioInput): Promise<TranscribeAudioResult> {
-  const { sourceUrl, isShort, maxDurationSeconds, onStage } = input;
+  const { sourceUrl, isShort, maxDurationSeconds, onStage, deepgramMeta } = input;
 
   // Primary: Deepgram via streaming audio download. Download and transcription
   // stages overlap — the Readable is consumed by fetch() with duplex: 'half'.
@@ -154,7 +160,7 @@ export async function transcribeAudio(input: TranscribeAudioInput): Promise<Tran
       }
     });
 
-    const text = await deepgramTranscribe(counting, audio.mimeType);
+    const text = await deepgramTranscribe(counting, audio.mimeType, deepgramMeta);
     const _tDone = Date.now();
     // Defensive: ensure we don't leave the UI stuck in `downloading` if the
     // stream finished without an `end` event reaching us (very rare).

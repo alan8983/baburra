@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "tool": "scenario",
+  "generated_at": "2026-04-25T18:55:00Z",
+  "commit_hash": "3f6d016",
+  "seed": "100 Gooaye episodes (avg ~45 min) scraped via RSS → Deepgram → Gemini, batch-size 3, Gemini key pool of 3 keys",
+  "focus": "failures",
+  "domain": "software",
+  "iterations_completed": 25,
+  "summary": {
+    "dimensions": ["concurrent", "scale", "recovery", "temporal", "composite"],
+    "scenarios_total": 25,
+    "critical": 1,
+    "high": 7,
+    "medium": 9,
+    "low": 8
+  },
+  "top10_for_baseline": [
+    { "id": "S-23", "dimension": "composite", "severity": "critical", "title": "F-01 + F-03 compound — RSS 429 with no retry = episode drop" },
+    { "id": "S-01", "dimension": "concurrent", "severity": "high", "title": "SoundOn RSS rate-limit at burst of 3 identical GETs" },
+    { "id": "S-02", "dimension": "concurrent", "severity": "high", "title": "Gemini cooldownQueue serializes all parallel calls" },
+    { "id": "S-16", "dimension": "recovery", "severity": "high", "title": "Gemini key-pool all-429 = 155s backoff cycle, repeatable" },
+    { "id": "S-19", "dimension": "temporal", "severity": "high", "title": "Per-minute quota reset vs 5s backoff mismatch" },
+    { "id": "S-24", "dimension": "composite", "severity": "high", "title": "F-02 + F-04 compound — cooldown serializes 429 cascade" },
+    { "id": "S-07", "dimension": "scale", "severity": "medium", "title": "100 eps × 300 RSS fetches exceed SoundOn unwritten daily limit" },
+    { "id": "S-08", "dimension": "scale", "severity": "medium", "title": "Audio buffer heap pressure at batch-size 10" },
+    { "id": "S-13", "dimension": "recovery", "severity": "medium", "title": "SIGINT recovery preserves DB row integrity but miscounts" },
+    { "id": "S-21", "dimension": "temporal", "severity": "medium", "title": "Signed enclosure URL expires between discovery and download — injection candidate" }
+  ],
+  "injection_candidates": [
+    {
+      "id": "P-01",
+      "source_scenario": "S-01 (and S-23 compound)",
+      "injection": "Doctored feed locally — wrap fetch() with a MSW/nock intercept that returns 429 on every 3rd call to feeds.soundon.fm to simulate SoundOn rate-limit.",
+      "cost": "zero — no real API spend; failure is observed in pipeline logs.",
+      "expected_behavior": "Current code throws ExtractorError('FETCH_FAILED') with no retry. After F-03 fix is applied (future change), retries should absorb the 429.",
+      "verification": "Run --limit 3 locally with the intercept. Expect 0 errors after F-03 fix, ≥2 errors without."
+    },
+    {
+      "id": "P-02",
+      "source_scenario": "S-13",
+      "injection": "SIGINT mid-batch probe — start --limit 5, wait for first episode to complete transcription, send SIGINT, then re-run --limit 5.",
+      "cost": "~$1-2 (one real Deepgram transcription + cleanup).",
+      "expected_behavior": "First run's 1 imported post survives. Restart completes remaining 4 without creating dup post. `duplicate` counter on restart = 1, `importedCount` cumulative across DB = 5.",
+      "verification": "Query `SELECT COUNT(*) FROM posts WHERE source='seed' AND kol_id=<gooaye_id>` before/after. Δ = 5."
+    }
+  ]
+}

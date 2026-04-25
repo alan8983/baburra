@@ -7,10 +7,11 @@
  * (Deepgram transcription → Gemini analysis → post creation).
  *
  * Usage:
- *   npx tsx scripts/scrape-guyi-podcast-ep501-600.ts                 # full run
- *   npx tsx scripts/scrape-guyi-podcast-ep501-600.ts --dry-run       # preview matched episodes
- *   npx tsx scripts/scrape-guyi-podcast-ep501-600.ts --limit 5       # first 5 episodes only
- *   npx tsx scripts/scrape-guyi-podcast-ep501-600.ts --batch-size 3  # 3 URLs per batch (default 3)
+ *   npx tsx scripts/scrape-guyi-podcast-ep501-600.ts                        # full run
+ *   npx tsx scripts/scrape-guyi-podcast-ep501-600.ts --dry-run              # preview matched episodes
+ *   npx tsx scripts/scrape-guyi-podcast-ep501-600.ts --limit 5              # first 5 episodes only
+ *   npx tsx scripts/scrape-guyi-podcast-ep501-600.ts --batch-size 3         # 3 URLs per batch (default 3)
+ *   npx tsx scripts/scrape-guyi-podcast-ep501-600.ts --retry-backoff-ms 5000 # Deepgram + Gemini retry base (default 5000)
  *
  * Pre-reqs: `.env.local` with SUPABASE, GEMINI_API_KEYS, DEEPGRAM_API_KEY.
  *
@@ -36,20 +37,45 @@ if (fs.existsSync(envPath)) {
   }
 }
 
+// `--retry-backoff-ms N` needs to propagate to deepgram/gemini clients via
+// env vars BEFORE they are imported (the clients read env at module init in
+// some paths). Sniff argv here and publish as DEEPGRAM_RETRY_BASE_MS /
+// GEMINI_RETRY_BASE_MS. Full CLI parsing still happens in parseArgs() below.
+(function sniffRetryBackoff() {
+  const args = process.argv.slice(2);
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--retry-backoff-ms') {
+      const raw = args[i + 1];
+      const n = Number.parseInt(raw ?? '', 10);
+      if (!Number.isFinite(n) || n < 0) {
+        throw new Error(`--retry-backoff-ms requires a non-negative integer (got: ${raw})`);
+      }
+      process.env.DEEPGRAM_RETRY_BASE_MS = String(n);
+      process.env.GEMINI_RETRY_BASE_MS = String(n);
+      return;
+    }
+  }
+})();
+
 import { XMLParser } from 'fast-xml-parser';
 import { PLATFORM_USER_ID } from '../src/lib/constants/config';
 import { encodeEpisodeUrl } from '../src/infrastructure/extractors/podcast.extractor';
 import {
   initiateProfileScrape,
   processJobBatch,
+  type UrlCompletionHook,
 } from '../src/domain/services/profile-scrape.service';
 import type { ScrapeOverrides } from '../src/domain/models/kol-source';
+import { writeSummary } from './lib/summarize-run';
 
 // ── Config ───────────────────────────────────────────────────────────────────
 
 // 股癌 SoundOn RSS feed URL
 // Verify: https://podcasts.apple.com/tw/podcast/股癌-gooaye/id1500839292
-const GUYI_RSS_FEED = 'https://feeds.soundon.fm/podcasts/30cee1f0-4616-46c8-80a8-7bc5a3c7db8b.xml';
+// Canonical Gooaye feed — matches kol_sources.platform_id on remote.
+// Previous hardcoded UUID (30cee1f0-...) 404'd as of 2026-04-25; sourced current
+// UUID via `SELECT platform_id FROM kol_sources WHERE name='Gooaye 股癌' AND platform='podcast'`.
+const GUYI_RSS_FEED = 'https://feeds.soundon.fm/podcasts/954689a5-3096-43a4-a80b-7810b219cef3.xml';
 
 // Apple Podcasts profile URL (used as profileUrl for initiateProfileScrape)
 const PROFILE_URL = 'https://podcasts.apple.com/tw/podcast/股癌-gooaye/id1500839292';
@@ -70,16 +96,18 @@ function parseArgs() {
   let dryRun = false;
   let limit = Infinity;
   let batchSize = 3;
+  let retryBackoffMs: number | null = null;
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === '--dry-run') dryRun = true;
     else if (a === '--limit') limit = parseInt(args[++i], 10);
     else if (a === '--batch-size') batchSize = parseInt(args[++i], 10);
+    else if (a === '--retry-backoff-ms') retryBackoffMs = parseInt(args[++i], 10);
   }
-  return { dryRun, limit, batchSize };
+  return { dryRun, limit, batchSize, retryBackoffMs };
 }
 
-const { dryRun, limit, batchSize } = parseArgs();
+const { dryRun, limit, batchSize, retryBackoffMs } = parseArgs();
 
 // ── RSS parsing ──────────────────────────────────────────────────────────────
 
@@ -114,11 +142,82 @@ function extractEpNumber(item: RssItem): number | null {
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
+// ── JSONL run log + summary on exit ──────────────────────────────────────────
+// Each successful/failed URL writes one JSONL line to scripts/logs/seed-run-<ts>.jsonl.
+// On process exit (normal, crash, or SIGINT) summarize-run writes the
+// aggregate summary.json alongside. Partial runs are flagged.
+
+const RUN_TS = new Date().toISOString().replace(/[:.]/g, '-');
+const LOG_DIR = path.join(__dirname, 'logs');
+if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
+const LOG_PATH = path.join(LOG_DIR, `seed-run-${RUN_TS}.jsonl`);
+const logStream = fs.createWriteStream(LOG_PATH, { flags: 'a' });
+
+let runCompletedNormally = false;
+let anyLogWritten = false;
+
+const onUrlComplete: UrlCompletionHook = (url, result, error) => {
+  anyLogWritten = true;
+  const entry = result
+    ? {
+        url: result.url,
+        status: result.status,
+        error: result.error,
+        title: result.title,
+        kolName: result.kolName,
+        stockTickers: result.stockTickers,
+        timings: result.timings,
+        ts: new Date().toISOString(),
+      }
+    : {
+        url,
+        status: 'error' as const,
+        error: error?.message ?? 'unknown error',
+        ts: new Date().toISOString(),
+      };
+  logStream.write(JSON.stringify(entry) + '\n');
+};
+
+function writeFinalSummary() {
+  try {
+    logStream.end();
+  } catch {
+    /* ignore */
+  }
+  if (!anyLogWritten) return;
+  try {
+    const output = writeSummary(LOG_PATH, { partial: !runCompletedNormally });
+    console.log(`\n[summary] Wrote: ${output}`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[summary] Failed to write summary: ${msg}`);
+  }
+}
+
+let sigintReceived = false;
+process.on('SIGINT', () => {
+  if (sigintReceived) {
+    console.warn('\n[signal] Second SIGINT — exiting immediately.');
+    process.exit(130);
+  }
+  sigintReceived = true;
+  console.warn('\n[signal] SIGINT received — finalizing log + summary...');
+  writeFinalSummary();
+  process.exit(130);
+});
+process.on('SIGTERM', () => {
+  console.warn('\n[signal] SIGTERM received — finalizing log + summary...');
+  writeFinalSummary();
+  process.exit(143);
+});
+
 async function main() {
   console.log(`\n=== 股癌 Podcast EP${EP_MIN}-${EP_MAX} Scrape ===`);
   console.log(`RSS: ${GUYI_RSS_FEED}`);
   console.log(`Mode: ${dryRun ? 'DRY RUN' : 'LIVE'}${limit < Infinity ? ` (limit=${limit})` : ''}`);
-  console.log(`Batch size: ${batchSize}\n`);
+  console.log(`Batch size: ${batchSize}`);
+  console.log(`Retry backoff base: ${retryBackoffMs ?? '5000 (default)'} ms`);
+  console.log(`Log: ${LOG_PATH}\n`);
 
   // 1. Fetch and parse the RSS feed
   console.log('Fetching RSS feed...');
@@ -200,7 +299,7 @@ async function main() {
 
   while (progress.status !== 'completed' && progress.status !== 'failed') {
     // Use long timeout (10 min) since Deepgram transcription can take minutes per episode
-    progress = await processJobBatch(result.jobId, batchSize, 600_000, OVERRIDES);
+    progress = await processJobBatch(result.jobId, batchSize, 600_000, OVERRIDES, onUrlComplete);
 
     const now = Date.now();
     if (now - lastLog >= 30_000 || progress.status === 'completed' || progress.status === 'failed') {
@@ -232,7 +331,13 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error('Fatal:', err);
-  process.exit(1);
-});
+main()
+  .then(() => {
+    runCompletedNormally = true;
+    writeFinalSummary();
+  })
+  .catch((err) => {
+    console.error('Fatal:', err);
+    writeFinalSummary();
+    process.exit(1);
+  });

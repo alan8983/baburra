@@ -4,6 +4,7 @@
 
 import { generateJson, generateStructuredJson } from '@/infrastructure/api/gemini.client';
 import type { Sentiment } from '@/domain/models/post';
+import type { GeminiCallMeta } from '@/domain/models/pipeline-timing';
 
 // =====================
 // Types
@@ -741,7 +742,8 @@ Return the refined arguments. Keep all fields unchanged unless a correction is n
 export async function extractArguments(
   content: string,
   ticker: string,
-  stockName: string
+  stockName: string,
+  meta?: GeminiCallMeta
 ): Promise<ArgumentExtractionResult> {
   // 格式化框架類別供 prompt 使用
   const frameworkText = FRAMEWORK_CATEGORIES.map(
@@ -759,18 +761,31 @@ export async function extractArguments(
   const result = await generateStructuredJson<ArgumentExtractionResult>(
     prompt,
     ARGUMENT_RESPONSE_SCHEMA,
-    genOptions
+    genOptions,
+    undefined,
+    meta
   );
   let validated = validateAndClamp(result.arguments);
 
   // Round 2: if too many, send feedback and ask Gemini to revise
   if (validated.length > 5) {
     const revisionPrompt = buildRevisionPrompt(content, ticker, stockName, validated);
+    // Accumulate retries from the revision call into the caller's meta.
+    const revisionMeta: GeminiCallMeta | undefined = meta
+      ? { retries: 0, keyIndex: 0, finalModel: '' }
+      : undefined;
     const revised = await generateStructuredJson<ArgumentExtractionResult>(
       revisionPrompt,
       ARGUMENT_RESPONSE_SCHEMA,
-      genOptions
+      genOptions,
+      undefined,
+      revisionMeta
     );
+    if (meta && revisionMeta) {
+      meta.retries += revisionMeta.retries;
+      meta.keyIndex = revisionMeta.keyIndex;
+      meta.finalModel = revisionMeta.finalModel;
+    }
     validated = validateAndClamp(revised.arguments);
   }
 
@@ -821,7 +836,8 @@ export async function identifyTickers(content: string): Promise<TickerIdentifica
  */
 export async function analyzeDraftContent(
   content: string,
-  timezone: string = 'Asia/Taipei'
+  timezone: string = 'Asia/Taipei',
+  meta?: GeminiCallMeta
 ): Promise<DraftAnalysisResult> {
   const today = new Date().toLocaleDateString('sv-SE', { timeZone: timezone }); // YYYY-MM-DD
 
@@ -866,11 +882,17 @@ export async function analyzeDraftContent(
   const result = await generateStructuredJson<RawDraftAnalysis>(
     prompt,
     DRAFT_ANALYSIS_RESPONSE_SCHEMA,
-    { temperature: 0.3, maxOutputTokens: 4096 }
+    // 8192 covers long-podcast transcripts (60-90 min) with 15+ tickers; 4096
+    // truncated for 2/47 episodes in the §8 S4 resume run (D5 — observed
+    // 2026-04-25). Matches the ceiling already used by extractArguments at L758.
+    { temperature: 0.3, maxOutputTokens: 8192 },
+    undefined,
+    meta
   );
 
   // 驗證並清理 tickers
   const validMarkets = ['US', 'TW', 'HK', 'CRYPTO'];
+  const seenTickers = new Set<string>();
   const aiStockTickers: IdentifiedTicker[] = (result.tickers || [])
     .filter((t) => t.ticker && t.name && validMarkets.includes(t.market))
     .map((t) => ({
@@ -883,7 +905,14 @@ export async function analyzeDraftContent(
       ...(t.source === 'inferred' && t.inferenceReason
         ? { inferenceReason: t.inferenceReason }
         : {}),
-    }));
+    }))
+    // Dedupe by normalized ticker to avoid downstream UNIQUE(post_id, stock_id)
+    // violations in post_stocks when Gemini emits the same ticker twice (D4).
+    .filter((t) => {
+      if (seenTickers.has(t.ticker)) return false;
+      seenTickers.add(t.ticker);
+      return true;
+    });
 
   // Merge with regex-extracted cashtags to catch any the AI missed
   const stockTickers = mergeWithCashtags(aiStockTickers, content);
