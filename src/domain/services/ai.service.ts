@@ -882,7 +882,10 @@ export async function analyzeDraftContent(
   const result = await generateStructuredJson<RawDraftAnalysis>(
     prompt,
     DRAFT_ANALYSIS_RESPONSE_SCHEMA,
-    { temperature: 0.3, maxOutputTokens: 4096 },
+    // 8192 covers long-podcast transcripts (60-90 min) with 15+ tickers; 4096
+    // truncated for 2/47 episodes in the §8 S4 resume run (D5 — observed
+    // 2026-04-25). Matches the ceiling already used by extractArguments at L758.
+    { temperature: 0.3, maxOutputTokens: 8192 },
     undefined,
     meta
   );
