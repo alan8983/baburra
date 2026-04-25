@@ -497,7 +497,8 @@ export async function processJobBatch(
             isFirstImportFree,
             kolCache,
             kolId,
-            itemStageCallback
+            itemStageCallback,
+            overrides?.source ?? null
           );
           if (value.status === 'success') {
             importedCount++;

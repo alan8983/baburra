@@ -1107,6 +1107,26 @@ export type Database = {
               p_title: string;
             };
             Returns: Json;
+          }
+        | {
+            Args: {
+              p_ai_model_version?: string;
+              p_arguments?: Json;
+              p_content: string;
+              p_content_fingerprint?: string;
+              p_created_by: string;
+              p_images: string[];
+              p_kol_id: string;
+              p_posted_at: string;
+              p_sentiment: number;
+              p_sentiment_ai_generated: boolean;
+              p_source?: string;
+              p_source_platform: string;
+              p_source_url: string;
+              p_stocks?: Json;
+              p_title: string;
+            };
+            Returns: Json;
           };
       delete_post_and_promote_mirror: {
         Args: { p_post_id: string };

@@ -381,7 +381,8 @@ describe('ScrapeOverrides', () => {
       true, // quotaExempt
       expect.any(Map),
       'kol-new',
-      undefined // no scrape_job_items → no stage callback
+      undefined, // no scrape_job_items → no stage callback
+      null // no overrides.source provided
     );
     // checkFirstImportFree should not be called since quotaExempt shortcuts the check
     expect(mocks.checkFirstImportFree).not.toHaveBeenCalled();

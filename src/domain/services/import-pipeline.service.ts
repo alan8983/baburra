@@ -327,7 +327,8 @@ export async function processUrl(
   quotaExempt: boolean,
   kolCache: Map<string, KolCacheEntry>,
   knownKolId?: string,
-  onStage?: StageCallback
+  onStage?: StageCallback,
+  source?: 'seed' | 'user' | null
 ): Promise<ImportUrlResult> {
   const emit: StageCallback = (stage, meta) => {
     if (!onStage) return;
@@ -781,6 +782,7 @@ export async function processUrl(
               : new Date(),
           draftAiArguments,
           contentFingerprint: fingerprint ?? undefined,
+          source: source ?? null,
         },
         userId
       );
