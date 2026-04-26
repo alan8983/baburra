@@ -90,6 +90,11 @@
       "loadFailed": "Failed to load KOL or KOL not found",
       "noPriceData": "No price data available"
     },
-    "scrapeInProgress": "Still analyzing... {processed}/{total} posts processed. Results will update automatically."
+    "scrapeInProgress": "Still analyzing... {processed}/{total} posts processed. Results will update automatically.",
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "pageLabel": "Page {page}"
+    }
   }
 }

@@ -2,13 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import React from 'react';
 import { KolStockSection, type StockGroup } from '../kol-stock-section';
-import { ROUTES } from '@/lib/constants';
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
 vi.mock('next-intl', () => ({
   useTranslations: (ns: string) => (key: string, params?: Record<string, unknown>) => {
-    if (key === 'detail.postsByStock.showMore') return `View all ${params?.count} posts`;
     if (key === 'detail.postsByStock.total') return `Total ${params?.count} posts`;
     if (key === 'detail.postsByStock.title') return 'Posts by Stock';
     if (key === 'detail.sentimentChart.title') return 'Sentiment Chart';
@@ -33,10 +31,10 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('next/dynamic', () => ({
   default: (_importFn: unknown) => {
-    // Return a placeholder component that renders nothing — chart rendering
-    // is irrelevant to the post-list slice tests.
+    // Chart rendering is mocked out — the layout tests don't depend on the
+    // actual canvas, only that a chart-shaped element is reachable.
     return function DynamicPlaceholder() {
-      return null;
+      return <div data-testid="sentiment-chart" />;
     };
   },
 }));
@@ -61,7 +59,10 @@ vi.mock('@/hooks/use-unlocks', () => ({
 }));
 
 vi.mock('@/hooks/use-stock-prices', () => ({
-  useStockPricesForChart: () => ({ data: null, isLoading: false }),
+  useStockPricesForChart: () => ({
+    data: { candles: [{ time: '2024-01-01', open: 1, high: 2, low: 0.5, close: 1.5 }] },
+    isLoading: false,
+  }),
 }));
 
 vi.mock('@/hooks', () => ({
@@ -79,7 +80,6 @@ vi.mock('@/components/paywall/unlock-cta', () => ({
 // ─── Factory ──────────────────────────────────────────────────────────────────
 
 function makePost(id: string): StockGroup['posts'][number] {
-  // Use a fixed valid date for all posts — ordering tests don't depend on dates.
   return {
     id,
     content: `Content of post ${id}`,
@@ -115,100 +115,72 @@ function renderSection(stock: StockGroup, showAllPosts?: boolean) {
   return render(<KolStockSection stock={stock} kolId={TEST_KOL_ID} showAllPosts={showAllPosts} />);
 }
 
-function getRenderedPosts(container: HTMLElement): HTMLElement[] {
-  // Each post renders as a div with the post content. The content text is
-  // "Content of post N" — look for elements that contain it.
-  return Array.from(container.querySelectorAll<HTMLElement>('[class*="cursor-pointer"]'));
-}
-
-function getShowMoreLink(container: HTMLElement): HTMLElement | null {
-  // The "Show more" button is a Link that navigates to /kols/.../stocks/...
-  // (distinct from the stock-detail link which is /stocks/... only).
-  return container.querySelector<HTMLElement>('a[href*="/kols/"]') ?? null;
-}
-
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-describe('KolStockSection — post slice behavior', () => {
+describe('KolStockSection — thin layout (KOL detail list view)', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
   });
 
-  it('renders all 3 posts and NO "Show more" button when stock.posts.length === 3', () => {
+  it('renders ticker link, stock name, and count badge', () => {
+    const stock = makeStock('NVDA', 18);
+    renderSection(stock);
+    // Ticker link to stock detail
+    const tickerLink = screen.getByRole('link', { name: 'NVDA' });
+    expect(tickerLink).toBeInTheDocument();
+    // Count badge
+    expect(screen.getByText('Total 18 posts')).toBeInTheDocument();
+    // Stock name
+    expect(screen.getByText('NVDA Corp')).toBeInTheDocument();
+  });
+
+  it('renders the sentiment chart placeholder', () => {
+    const stock = makeStock('NVDA', 5);
+    renderSection(stock);
+    expect(screen.getByTestId('sentiment-chart')).toBeInTheDocument();
+  });
+
+  it('renders all 4 period labels (5d / 30d / 90d / 365d) in the stats strip', () => {
+    const stock = makeStock('NVDA', 5);
+    renderSection(stock);
+    // Period labels come from the i18n mock (returns last segment).
+    expect(screen.getAllByText('5d').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('30d').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('90d').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('365d').length).toBeGreaterThan(0);
+  });
+
+  it('does NOT render any per-post snippet in the thin layout', () => {
+    const stock = makeStock('NVDA', 18);
+    renderSection(stock);
+    // Post-snippet elements would contain "Content of post N".
+    expect(screen.queryByText(/Content of post/)).toBeNull();
+  });
+
+  it('does NOT render a "Show more" link in the thin layout', () => {
+    const stock = makeStock('NVDA', 40);
+    const { container } = renderSection(stock);
+    // The drill-down link href pattern from the old layout is gone.
+    expect(container.querySelector('a[href*="/kols/"][href*="/stocks/"]')).toBeNull();
+  });
+});
+
+describe('KolStockSection — full layout (showAllPosts === true)', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('renders ALL posts when showAllPosts is true', () => {
+    const stock = makeStock('NVDA', 12);
+    renderSection(stock, true);
+    // Each post renders its content text in a card.
+    const postEls = screen.getAllByText(/Content of post/);
+    expect(postEls).toHaveLength(12);
+  });
+
+  it('renders the 2-column "Posts by Stock" card in the full layout', () => {
     const stock = makeStock('NVDA', 3);
-    const { container } = renderSection(stock);
-    expect(getRenderedPosts(container)).toHaveLength(3);
-    expect(screen.queryByText(/View all \d+ posts/)).toBeNull();
-  });
-
-  it('renders all 1 post and no button when stock.posts.length === 1', () => {
-    const stock = makeStock('NVDA', 1);
-    const { container } = renderSection(stock);
-    expect(getRenderedPosts(container)).toHaveLength(1);
-    expect(screen.queryByText(/View all \d+ posts/)).toBeNull();
-  });
-
-  it('renders all 2 posts and no button when stock.posts.length === 2', () => {
-    const stock = makeStock('NVDA', 2);
-    const { container } = renderSection(stock);
-    expect(getRenderedPosts(container)).toHaveLength(2);
-    expect(screen.queryByText(/View all \d+ posts/)).toBeNull();
-  });
-
-  it('renders exactly 3 posts + "Show more" button when stock.posts.length === 4', () => {
-    const stock = makeStock('NVDA', 4);
-    const { container } = renderSection(stock);
-    expect(getRenderedPosts(container)).toHaveLength(3);
-    expect(screen.getByText('View all 4 posts')).toBeInTheDocument();
-  });
-
-  it('renders exactly 3 posts + button when stock.posts.length === 40', () => {
-    const stock = makeStock('NVDA', 40);
-    const { container } = renderSection(stock);
-    expect(getRenderedPosts(container)).toHaveLength(3);
-    expect(screen.getByText('View all 40 posts')).toBeInTheDocument();
-  });
-
-  it('renders ALL 40 posts and NO button when showAllPosts === true', () => {
-    const stock = makeStock('NVDA', 40);
-    const { container } = renderSection(stock, true);
-    expect(getRenderedPosts(container)).toHaveLength(40);
-    expect(screen.queryByText(/View all \d+ posts/)).toBeNull();
-  });
-
-  it('preserves input order — first 3 rendered posts match posts[0..2]', () => {
-    const stock = makeStock('NVDA', 10);
-    const { container } = renderSection(stock);
-    const postEls = getRenderedPosts(container);
-    expect(postEls).toHaveLength(3);
-    // Each rendered post contains "Content of post N" where N = index + 1.
-    expect(postEls[0].textContent).toContain('Content of post 1');
-    expect(postEls[1].textContent).toContain('Content of post 2');
-    expect(postEls[2].textContent).toContain('Content of post 3');
-  });
-
-  describe('button href encoding', () => {
-    it('URL-encodes BRK.B correctly in the "Show more" link href', () => {
-      const stock = makeStock('BRK.B', 4);
-      const { container } = renderSection(stock);
-      const link = getShowMoreLink(container);
-      expect(link).not.toBeNull();
-      const expectedHref = ROUTES.KOL_STOCK_DETAIL(TEST_KOL_ID, 'BRK.B');
-      expect(link?.getAttribute('href')).toBe(expectedHref);
-      // BRK.B should be encoded — the dot doesn't require encoding per RFC 3986
-      // but encodeURIComponent leaves it as-is; assert the path contains it.
-      expect(link?.getAttribute('href')).toContain('BRK.B');
-    });
-
-    it('URL-encodes ^TWII correctly in the "Show more" link href', () => {
-      const stock = makeStock('^TWII', 4);
-      const { container } = renderSection(stock);
-      const link = getShowMoreLink(container);
-      expect(link).not.toBeNull();
-      const expectedHref = ROUTES.KOL_STOCK_DETAIL(TEST_KOL_ID, '^TWII');
-      expect(link?.getAttribute('href')).toBe(expectedHref);
-      // ^ must be encoded as %5E
-      expect(link?.getAttribute('href')).toContain('%5ETWII');
-    });
+    renderSection(stock, true);
+    expect(screen.getByText('Posts by Stock')).toBeInTheDocument();
   });
 });

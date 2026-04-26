@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useMemo } from 'react';
+import { use, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { ArrowLeft, Loader2, RefreshCw } from 'lucide-react';
@@ -21,6 +21,9 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { KolScorecard } from './_components/kol-scorecard';
 import { KolStockSection, type StockGroup } from './_components/kol-stock-section';
+import { PagePagination } from './_components/page-pagination';
+
+const STOCKS_PER_PAGE = 10;
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
@@ -73,8 +76,26 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
         });
       }
     }
-    return Array.from(map.values());
+    return Array.from(map.values()).sort((a, b) => {
+      if (b.posts.length !== a.posts.length) return b.posts.length - a.posts.length;
+      return a.ticker.localeCompare(b.ticker);
+    });
   }, [postsData?.data]);
+
+  // Pagination state — reset to page 1 whenever the KOL id changes.
+  // React's recommended "reset state during render" pattern (avoids useEffect setState).
+  const [currentPage, setCurrentPage] = useState(1);
+  const [prevId, setPrevId] = useState(id);
+  if (prevId !== id) {
+    setPrevId(id);
+    setCurrentPage(1);
+  }
+
+  const totalPages = Math.max(1, Math.ceil(postsByStock.length / STOCKS_PER_PAGE));
+  const visibleStocks = useMemo(
+    () => postsByStock.slice((currentPage - 1) * STOCKS_PER_PAGE, currentPage * STOCKS_PER_PAGE),
+    [postsByStock, currentPage]
+  );
 
   // Flatten all stock-level posts for the scorecard
   const allStockPosts = useMemo(() => {
@@ -204,14 +225,21 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
       ) : postsByStock.length === 0 ? (
         <p className="text-muted-foreground">{t('detail.postsByStock.noPosts')}</p>
       ) : (
-        <div className="space-y-2">
-          {postsByStock.map((stock, i) => (
-            <div key={stock.stockId}>
-              {i > 0 && <Separator className="my-8" />}
-              <KolStockSection stock={stock} kolId={id} />
-            </div>
-          ))}
-        </div>
+        <>
+          <div className="space-y-2">
+            {visibleStocks.map((stock, i) => (
+              <div key={stock.stockId}>
+                {i > 0 && <Separator className="my-5" />}
+                <KolStockSection stock={stock} kolId={id} />
+              </div>
+            ))}
+          </div>
+          <PagePagination
+            totalPages={totalPages}
+            currentPage={currentPage}
+            onPageChange={setCurrentPage}
+          />
+        </>
       )}
     </div>
   );
