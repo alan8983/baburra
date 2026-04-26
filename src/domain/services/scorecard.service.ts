@@ -49,7 +49,11 @@ try {
   /* running outside Vercel — no-op fallback is fine */
 }
 
-const COMPUTE_TIMEOUT_MS = 5000;
+// Per R12: must be generous enough that getStockPrices's own internal
+// stale-cache fallback (stock-price.repository.ts step 5) finishes before
+// this outer race rejects. The previous 5_000 caused the race to drop
+// real candles from the stale cache for slow Tiingo calls.
+const COMPUTE_TIMEOUT_MS = 30_000;
 
 // In-process dedupe locks — per-key promise reuse.
 const kolComputing = new Map<string, Promise<void>>();

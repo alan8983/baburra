@@ -75,4 +75,33 @@ async function main() {
   console.log(`  Errors:  ${errors}/${FAILED_URLS.length}`);
 }
 
-main().catch(console.error);
+// Hardcoded Gooaye KOL ID — this script only retries Gooaye URLs.
+const GOOAYE_KOL_ID = 'b7a958c4-f9f4-48e1-8dbf-a8966bf1484e';
+
+main()
+  .then(async () => {
+    // R11: bypasses the profile-scrape pipeline (uses processUrl directly),
+    // so the synchronous post-completion recompute does not fire. Trigger
+    // it manually so the Q2 consistency check below has fresh data.
+    const { computeKolScorecard } = await import('../src/domain/services/scorecard.service');
+    try {
+      await computeKolScorecard(GOOAYE_KOL_ID);
+    } catch (err) {
+      console.warn('[retry-gooaye-v2] computeKolScorecard failed:', err);
+    }
+    // Q2: tail-call the consistency check; non-zero exit fails the script.
+    const { checkKolConsistency } = await import('./check-kol-consistency');
+    const report = await checkKolConsistency(GOOAYE_KOL_ID);
+    if (!report.pass) {
+      console.error('\n[retry-gooaye-v2] consistency check FAILED for KOL', GOOAYE_KOL_ID);
+      for (const r of report.results) {
+        if (!r.pass) console.error(`  ${r.invariant}:`, JSON.stringify(r.detail));
+      }
+      process.exit(1);
+    }
+    console.log(`[retry-gooaye-v2] consistency check OK for KOL ${GOOAYE_KOL_ID}`);
+  })
+  .catch((err) => {
+    console.error('Fatal:', err);
+    process.exit(1);
+  });

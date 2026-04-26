@@ -75,3 +75,59 @@ npx tsx scripts/backfill-scorecards.ts --kol all --stocks
 Prereqs: `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and
 `TIINGO_API_TOKEN`. Script iterates sequentially (not in parallel) to respect
 Tiingo rate limits (2400 req/hour on Free tier).
+
+## `check-kol-consistency.ts`
+
+CLI invariant checker for the KOL detail page. Asserts the four invariants
+from `openspec/changes/kol-detail-consistency-qa-gate` (Q1) for a given kolId
+and exits non-zero with a printed diff on any failure. This is the **QA gate**
+that catches "DB is consistent but the page is broken" mismatches.
+
+```bash
+# Human-readable output
+npx tsx scripts/check-kol-consistency.ts <kolId>
+
+# Machine-readable
+npx tsx scripts/check-kol-consistency.ts <kolId> --json
+```
+
+Invariants checked:
+
+| ID | Assertion |
+|----|-----------|
+| I-1 | `kol_stats.post_count` denorm matches `COUNT(posts)` |
+| I-2 | `kol_scorecard_cache.post_count` matches, `stale=false`, `now() - computed_at < 12 h`, classifier_version current |
+| I-3 | For every stock with ≥3 posts for this KOL, `buckets_by_stock[stockId].day30.total ≥ 1` (short-circuits to pass when `volatility_thresholds` is empty for the ticker) |
+| I-4 | `listPosts({kolId, limit: 1000}).total === kol_stats.post_count` |
+
+Prereqs: `NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`. Runs in
+seconds — no external API calls.
+
+### Pattern: tail-call from any KOL-scope script
+
+**Every script that creates or refreshes posts for a specific KOL MUST tail-call
+this checker** and propagate its exit code. See `scrape-guyi-podcast-ep501-600.ts`,
+`scrape-gooaye-yt-601-650.ts`, `retry-gooaye-failed.ts`, `retry-gooaye-failed-v2.ts`
+for the canonical pattern. Skeleton:
+
+```ts
+main()
+  .then(async () => {
+    if (kolId) {
+      const { checkKolConsistency } = await import('./check-kol-consistency');
+      const report = await checkKolConsistency(kolId);
+      if (!report.pass) {
+        for (const r of report.results) {
+          if (!r.pass) console.error(`  ${r.invariant}:`, JSON.stringify(r.detail));
+        }
+        process.exit(1);
+      }
+    }
+  })
+  .catch((err) => { console.error('Fatal:', err); process.exit(1); });
+```
+
+If your script bypasses the profile-scrape pipeline (e.g. calls `processUrl`
+directly), also call `computeKolScorecard(kolId)` before the consistency
+check — the synchronous post-completion recompute (R11) only fires inside
+`processJobBatch`.

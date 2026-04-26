@@ -11,7 +11,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   try {
     const { id } = await params;
     const { searchParams } = new URL(request.url);
-    const pagination = parsePaginationParams(searchParams);
+    // Per R13 the KOL detail page asks for up to 1000 posts so the per-stock
+    // aggregation reflects the same universe as `computeKolScorecard`.
+    const pagination = parsePaginationParams(searchParams, { maxLimit: 1000 });
     if (pagination.error) {
       return errorResponse(400, 'BAD_REQUEST', pagination.error);
     }
@@ -20,6 +22,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       page: pagination.data?.page,
       limit: pagination.data?.limit,
     });
+    if (result.total > 500) {
+      // Heads-up so we revisit before any KOL approaches the detail-page
+      // limit=1000 cap (see openspec change kol-detail-consistency-qa-gate D1).
+      console.warn(`[api/kols/${id}/posts] result.total=${result.total} > 500`);
+    }
     await enrichPostsWithPriceChanges(result.data);
     return NextResponse.json({ ...result, currentAiModel: getAiModelVersion() });
   } catch (err) {

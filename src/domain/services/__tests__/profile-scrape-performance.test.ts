@@ -50,6 +50,12 @@ vi.mock('@/domain/services/import-pipeline.service', () => ({
   processUrl: vi.fn(),
 }));
 
+// R11: profile-scrape now awaits computeKolScorecard after completeScrapeJob.
+// Stub it as a no-op for performance tests so they don't try to hit the DB.
+vi.mock('@/domain/services/scorecard.service', () => ({
+  computeKolScorecard: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('@/infrastructure/extractors', () => ({
   youtubeChannelExtractor: {
     platform: 'youtube',

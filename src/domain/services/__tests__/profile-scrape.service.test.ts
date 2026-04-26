@@ -41,6 +41,8 @@ const mocks = vi.hoisted(() => ({
   },
   // Import pipeline
   processUrl: vi.fn(),
+  // Scorecard recompute (R11): synchronous post-completion call.
+  computeKolScorecard: vi.fn().mockResolvedValue(undefined),
   // #90 / D3 — terminal-state hardening helpers
   // Default to "nothing to reconcile" so the existing happy-path tests
   // continue through `processJobBatch` without short-circuiting.
@@ -106,6 +108,10 @@ vi.mock('@/infrastructure/extractors', () => ({
 
 vi.mock('@/domain/services/import-pipeline.service', () => ({
   processUrl: mocks.processUrl,
+}));
+
+vi.mock('@/domain/services/scorecard.service', () => ({
+  computeKolScorecard: mocks.computeKolScorecard,
 }));
 
 const aiUsageMocks = vi.hoisted(() => ({ consumeCredits: vi.fn() }));
@@ -787,6 +793,113 @@ describe('processJobBatch self-heal via reconcileStuckJob (#90 / D3)', () => {
     );
     expect(mocks.processUrl).toHaveBeenCalledTimes(1); // pipeline still ran
     consoleSpy.mockRestore();
+  });
+});
+
+// ── Synchronous scorecard recompute on scrape completion (R11) ──
+
+describe('processJobBatch awaits computeKolScorecard after completeScrapeJob (R11)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.reconcileStuckJob.mockResolvedValue({ reconciled: false });
+    mocks.getUserTimezone.mockResolvedValue('UTC');
+    mocks.checkFirstImportFree.mockResolvedValue(false);
+    mocks.processUrl.mockResolvedValue({ status: 'success' });
+    mocks.startScrapeJob.mockResolvedValue(undefined);
+    mocks.updateScrapeJobProgress.mockResolvedValue(undefined);
+    mocks.completeScrapeJob.mockResolvedValue(undefined);
+    mocks.updateScrapeStatus.mockResolvedValue(undefined);
+    mocks.computeKolScorecard.mockResolvedValue(undefined);
+  });
+
+  it('awaits computeKolScorecard after a successful scrape completes', async () => {
+    mocks.getScrapeJobById.mockResolvedValue({
+      id: 'job-finish',
+      kolSourceId: 'source-1',
+      status: 'queued',
+      jobType: 'initial_scrape',
+      discoveredUrls: ['u1'],
+      totalUrls: 1,
+      processedUrls: 0,
+      importedCount: 0,
+      duplicateCount: 0,
+      errorCount: 0,
+      filteredCount: 0,
+      triggeredBy: USER_ID,
+      retryCount: 0,
+    });
+    mocks.getSourceById.mockResolvedValue(mockSource({ kolId: 'kol-existing' }));
+
+    const callOrder: string[] = [];
+    mocks.completeScrapeJob.mockImplementationOnce(async () => {
+      callOrder.push('completeScrapeJob');
+    });
+    mocks.computeKolScorecard.mockImplementationOnce(async () => {
+      callOrder.push('computeKolScorecard');
+    });
+
+    await processJobBatch('job-finish', 10, 50_000);
+
+    expect(mocks.completeScrapeJob).toHaveBeenCalled();
+    expect(mocks.computeKolScorecard).toHaveBeenCalledWith('kol-existing');
+    // Order matters — recompute runs after the job is flipped completed.
+    expect(callOrder).toEqual(['completeScrapeJob', 'computeKolScorecard']);
+  });
+
+  it('logs and continues when computeKolScorecard throws (does not propagate)', async () => {
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    mocks.getScrapeJobById.mockResolvedValue({
+      id: 'job-finish-fail',
+      kolSourceId: 'source-1',
+      status: 'queued',
+      jobType: 'initial_scrape',
+      discoveredUrls: ['u1'],
+      totalUrls: 1,
+      processedUrls: 0,
+      importedCount: 0,
+      duplicateCount: 0,
+      errorCount: 0,
+      filteredCount: 0,
+      triggeredBy: USER_ID,
+      retryCount: 0,
+    });
+    mocks.getSourceById.mockResolvedValue(mockSource({ kolId: 'kol-existing' }));
+    mocks.computeKolScorecard.mockRejectedValueOnce(new Error('tiingo down'));
+
+    const result = await processJobBatch('job-finish-fail', 10, 50_000);
+
+    // The throw is swallowed — scrape status stays completed.
+    expect(result.status).toBe('completed');
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('computeKolScorecard'),
+      expect.any(String)
+    );
+    consoleSpy.mockRestore();
+  });
+
+  it('skips computeKolScorecard for batch-import jobs with no kolId', async () => {
+    mocks.getScrapeJobById.mockResolvedValue({
+      id: 'job-batch',
+      kolSourceId: null, // batch-import: no backing source
+      status: 'queued',
+      jobType: 'batch_import',
+      discoveredUrls: ['u1'],
+      totalUrls: 1,
+      processedUrls: 0,
+      importedCount: 0,
+      duplicateCount: 0,
+      errorCount: 0,
+      filteredCount: 0,
+      triggeredBy: USER_ID,
+      retryCount: 0,
+    });
+    // No source resolution.
+    mocks.getSourceById.mockResolvedValue(null);
+
+    await processJobBatch('job-batch', 10, 50_000);
+
+    expect(mocks.completeScrapeJob).toHaveBeenCalled();
+    expect(mocks.computeKolScorecard).not.toHaveBeenCalled();
   });
 });
 

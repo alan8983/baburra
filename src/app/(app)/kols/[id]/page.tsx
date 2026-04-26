@@ -29,7 +29,11 @@ export default function KolDetailPage({ params }: { params: Promise<{ id: string
   const tPosts = useTranslations('posts');
   const { id } = use(params);
   const { data: kol, isLoading: kolLoading, error: kolError } = useKol(id);
-  const { data: postsData, isLoading: postsLoading } = useKolPosts(id);
+  // Per R13: the detail page must request the full post set so per-stock
+  // breakdowns, sentiment markers, and post lists reflect the same universe
+  // as `computeKolScorecard` (which also uses limit=1000). Default limit=20
+  // remains for `usePosts` and other paginated callers.
+  const { data: postsData, isLoading: postsLoading } = useKolPosts(id, { limit: 1000 });
   const { data: kolSources } = useKolSources(id);
   const activeScrape = useActiveScrapeForKol(id);
   const reanalyzeBatch = useReanalyzeBatch();
