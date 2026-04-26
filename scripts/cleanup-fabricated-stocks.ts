@@ -100,6 +100,15 @@ const REMAP: Record<string, string> = {
   ORACLE: 'ORCL',
   FORTUNE: 'FTNT',
   'PURE.US': 'PSTG',
+  // 5-char US name-tickers (post-cleanup discovery 2026-04-26): the
+  // length>5 shape rule misses these because they're exactly 5 chars.
+  // Each is a name written as if it were the ticker.
+  INTEL: 'INTC',
+  ASTRA: 'ALAB',
+  CELSE: 'CLS',
+  CISCO: 'CSCO',
+  MELID: 'MELI',
+  UNITY: 'U',
   // TW: bare numeric → .TW canonical form (also covers ETF letter-tranche 00631L).
   // Only valid TW shapes (4-6 digit) are remappable. 3-digit codes like 566/569/366
   // are NOT real Taiwan tickers and go to PURE_DELETE instead.
@@ -167,6 +176,13 @@ const PURE_DELETE = new Set<string>([
   // of real TW companies and now alias-resolvable via stocks_master.
   'DYNA',
   '2888.TW', // 新光金 merged into 2887.TW; delisted
+  // 5-char US "tickers" that are conceptual, not securities
+  'AZURE', // Microsoft cloud product, not public
+  'WAYMO', // Google subsidiary, not public
+  // TW codes that pass the 4-6 digit shape but are not real listings
+  '6696.TW',
+  '9996.TW',
+  '9997.TW',
 ]);
 
 const SUSPECT_NAMES_TO_DELETE = new Set<string>([
@@ -466,6 +482,27 @@ async function main() {
 
   log('--- APPLYING CHANGES ---');
 
+  // Cascade-aware stock deletion. Two tables FK to stocks(id) with NO ACTION
+  // and must be cleared first: post_stocks and stock_prices. Three more
+  // CASCADE on their own (post_arguments, post_win_rate_samples,
+  // stock_scorecard_cache). All errors are surfaced — the previous version of
+  // this script swallowed delete failures, leaving orphan rows like 2357
+  // (no .TW) silently behind.
+  async function deleteStockRow(stockId: string, ticker: string) {
+    const { error: psErr } = await supabase
+      .from('post_stocks')
+      .delete()
+      .eq('stock_id', stockId);
+    if (psErr) throw new Error(`post_stocks delete failed for ${ticker}: ${psErr.message}`);
+    const { error: pricesErr } = await supabase
+      .from('stock_prices')
+      .delete()
+      .eq('stock_id', stockId);
+    if (pricesErr) throw new Error(`stock_prices delete failed for ${ticker}: ${pricesErr.message}`);
+    const { error: stockErr } = await supabase.from('stocks').delete().eq('id', stockId);
+    if (stockErr) throw new Error(`stocks delete failed for ${ticker}: ${stockErr.message}`);
+  }
+
   // Bucket A: remap then delete orphan.
   for (const p of plan.filter((x) => x.bucket === 'A_remap')) {
     const { data: target } = await supabase
@@ -474,11 +511,12 @@ async function main() {
       .eq('ticker', p.remapTo!)
       .maybeSingle();
     if (!target) {
-      // Target doesn't exist yet — it'll be created on next user-driven import
-      // for that ticker. Drop the orphan now.
       log(`  [A_remap] target ${p.remapTo} not yet in stocks; deleting source ${p.stock.ticker}`);
-      await supabase.from('post_stocks').delete().eq('stock_id', p.stock.id);
-      await supabase.from('stocks').delete().eq('id', p.stock.id);
+      try {
+        await deleteStockRow(p.stock.id, p.stock.ticker);
+      } catch (e) {
+        log(`  [A_remap] FAILED to delete ${p.stock.ticker}: ${(e as Error).message}`);
+      }
       continue;
     }
     // Move every post_stocks row from old → new. Conflict on (post_id, stock_id)
@@ -502,16 +540,58 @@ async function main() {
           .eq('stock_id', p.stock.id);
       }
     }
-    await supabase.from('stocks').delete().eq('id', p.stock.id);
-    log(`  [A_remap] ${p.stock.ticker} → ${p.remapTo} done`);
+    try {
+      await deleteStockRow(p.stock.id, p.stock.ticker);
+      log(`  [A_remap] ${p.stock.ticker} → ${p.remapTo} done`);
+    } catch (e) {
+      log(`  [A_remap] FAILED to delete ${p.stock.ticker} after remap: ${(e as Error).message}`);
+    }
   }
 
-  // Bucket B: cascade-delete linkages then the stock row.
+  // Bucket B: cascade-delete linkages then the stock row (errors surfaced).
   for (const p of plan.filter((x) => x.bucket === 'B_delete')) {
-    await supabase.from('post_stocks').delete().eq('stock_id', p.stock.id);
-    await supabase.from('stocks').delete().eq('id', p.stock.id);
-    log(`  [B_delete] ${p.stock.ticker} (${p.stock.name}) deleted [${p.reason}]`);
+    try {
+      await deleteStockRow(p.stock.id, p.stock.ticker);
+      log(`  [B_delete] ${p.stock.ticker} (${p.stock.name}) deleted [${p.reason}]`);
+    } catch (e) {
+      log(`  [B_delete] FAILED ${p.stock.ticker}: ${(e as Error).message}`);
+    }
   }
+
+  // Final pass — sync stocks.name to stocks_master.name for any (ticker, market)
+  // pair where they disagree. Catches cases the per-row classifier misses
+  // (e.g. 2303.TW had name="宏碁" but master says "聯電"; the row wasn't a
+  // suspect by any other rule). Per user feedback (2026-04-26): "use the
+  // ticker as index to map the company name". The master is the source of
+  // truth; if a specific stocks.name should override the master (e.g. TSLA
+  // displayed as "特斯拉"), the right place is manual_*_master.json — that
+  // entry then becomes the master row, and this sweep is a no-op for it.
+  log('--- NAME SYNC PASS ---');
+  // Re-fetch after our deletes/remaps so we operate on current state.
+  const { data: postCleanupStocks, error: postErr } = await supabase
+    .from('stocks')
+    .select('id, ticker, name, market');
+  if (postErr) throw postErr;
+  const { data: masterAll, error: mErr } = await supabase
+    .from('stocks_master')
+    .select('ticker, name, market');
+  if (mErr) throw mErr;
+  const masterByKey2 = new Map<string, MasterRow>(
+    (masterAll ?? []).map((m) => [`${m.ticker}::${m.market}`, m as MasterRow])
+  );
+  let synced = 0;
+  for (const s of (postCleanupStocks ?? []) as StockRow[]) {
+    const m = masterByKey2.get(`${s.ticker}::${s.market}`);
+    if (!m || m.name === s.name) continue;
+    const { error } = await supabase.from('stocks').update({ name: m.name }).eq('id', s.id);
+    if (error) {
+      log(`  [SYNC] FAILED ${s.ticker}: ${error.message}`);
+    } else {
+      log(`  [SYNC] ${s.ticker} (${s.market}): "${s.name}" → "${m.name}"`);
+      synced++;
+    }
+  }
+  log(`Name sync: ${synced} rows updated.`);
 
   // Bucket C: just update the name.
   for (const p of plan.filter((x) => x.bucket === 'C_rename')) {
