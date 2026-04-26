@@ -6,7 +6,6 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Clock, HelpCircle, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -149,11 +148,6 @@ export function KolStockSection({ stock, kolId, showAllPosts = false }: KolStock
     [stockBuckets]
   );
 
-  // Slice logic: show at most 3 posts on the KOL detail page unless showAllPosts is set.
-  const visiblePosts =
-    showAllPosts || stock.posts.length <= 3 ? stock.posts : stock.posts.slice(0, 3);
-  const showMoreButton = !showAllPosts && stock.posts.length > 3;
-
   // Layer-2 gate: Free users see a compact preview + UnlockCta until they unlock this
   // (kolId, stockId) pair. Pro/Max users bypass via unlockChecks.hasLayer2.
   if (!isL2Unlocked) {
@@ -177,6 +171,99 @@ export function KolStockSection({ stock, kolId, showAllPosts = false }: KolStock
     );
   }
 
+  // ── Thin layout (KOL detail list view) ─────────────────────────────────────
+  // Shows: header line + full-width sentiment chart (140px) + inline 4-period
+  // stats strip. No posts list — chart markers handle navigation.
+  if (!showAllPosts) {
+    const periodCells = [
+      { key: 'day5', label: t('detail.returnRate.periods.5d'), data: periodStats.day5 },
+      { key: 'day30', label: t('detail.returnRate.periods.30d'), data: periodStats.day30 },
+      { key: 'day90', label: t('detail.returnRate.periods.90d'), data: periodStats.day90 },
+      { key: 'day365', label: t('detail.returnRate.periods.365d'), data: periodStats.day365 },
+    ];
+
+    return (
+      <div className="space-y-3">
+        {/* Header line */}
+        <div className="flex items-center gap-2">
+          <Link
+            href={ROUTES.STOCK_DETAIL(stock.ticker)}
+            className="text-lg font-bold hover:underline"
+          >
+            {stock.ticker}
+          </Link>
+          <span className="text-muted-foreground">—</span>
+          <span className="text-sm font-medium">{stock.name}</span>
+          <Badge variant="secondary" className="ml-auto text-xs">
+            {t('detail.postsByStock.total', { count: stock.posts.length })}
+          </Badge>
+        </div>
+
+        {/* Full-width sentiment chart (140px) */}
+        {chartLoading ? (
+          <div className="flex h-[140px] items-center justify-center rounded-lg border">
+            <Loader2 className="text-muted-foreground h-5 w-5 animate-spin" />
+          </div>
+        ) : chartData && chartData.candles.length > 0 ? (
+          <SentimentLineChart
+            candles={chartData.candles}
+            sentimentMarkers={markers}
+            onMarkerClick={(postId) => router.push(ROUTES.POST_DETAIL(postId))}
+            height={140}
+            className="rounded-lg border"
+          />
+        ) : (
+          <div className="flex h-[140px] items-center justify-center rounded-lg border">
+            <p className="text-muted-foreground text-sm">{t('detail.errors.noPriceData')}</p>
+          </div>
+        )}
+
+        {/* Inline 4-period stats strip */}
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
+          {periodCells.map((item) => (
+            <div key={item.key} className="flex items-baseline gap-1.5">
+              <span className="text-muted-foreground font-medium">{item.label}</span>
+              {item.data.allPending ? (
+                <span className="text-muted-foreground inline-flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {t('detail.returnRate.pending')}
+                </span>
+              ) : (
+                <span
+                  className={`font-semibold ${getReturnRateColorClass(item.data.avgReturn, palette)}`}
+                >
+                  {formatReturnRate(item.data.avgReturn)}
+                </span>
+              )}
+            </div>
+          ))}
+          {stockWinRate30d && stockWinRate30d.total > 0 && (
+            <div className="text-muted-foreground ml-auto flex items-baseline gap-2">
+              <span>
+                {t('detail.returnRate.periods.30d')} · {stockWinRate30d.winCount}W /{' '}
+                {stockWinRate30d.loseCount}L / {stockWinRate30d.noiseCount}N
+              </span>
+              <span
+                className={
+                  !stockWinRate30d.sufficientData || stockWinRate30d.hitRate === null
+                    ? 'text-muted-foreground font-semibold'
+                    : stockWinRate30d.hitRate >= 0.5
+                      ? 'font-bold text-emerald-500 dark:text-emerald-400'
+                      : 'font-bold text-red-500 dark:text-red-400'
+                }
+              >
+                {stockWinRate30d.sufficientData && stockWinRate30d.hitRate !== null
+                  ? `${Math.round(stockWinRate30d.hitRate * 100)}%`
+                  : '—'}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Full layout (drill-down view: /kols/[id]/stocks/[ticker]) ──────────────
   return (
     <div className="space-y-4">
       {/* Stock row header */}
@@ -332,7 +419,7 @@ export function KolStockSection({ stock, kolId, showAllPosts = false }: KolStock
             <CardTitle className="text-sm">{t('detail.postsByStock.title')}</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2">
-            {visiblePosts.map((post) => (
+            {stock.posts.map((post) => (
               <div
                 key={post.id}
                 className="hover:bg-muted/50 cursor-pointer rounded-lg border p-3 transition-colors"
@@ -362,14 +449,6 @@ export function KolStockSection({ stock, kolId, showAllPosts = false }: KolStock
                 </div>
               </div>
             ))}
-            {/* "Show more" button — only when posts are truncated */}
-            {showMoreButton && (
-              <Button asChild variant="ghost" className="mt-2 w-full justify-center">
-                <Link href={ROUTES.KOL_STOCK_DETAIL(kolId, stock.ticker)}>
-                  {t('detail.postsByStock.showMore', { count: stock.posts.length })}
-                </Link>
-              </Button>
-            )}
           </CardContent>
         </Card>
       </div>
