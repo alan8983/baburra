@@ -85,6 +85,10 @@ const OVERRIDES: ScrapeOverrides = {
   quotaExempt: true,
 };
 
+// Captured from initiateProfileScrape so the post-run consistency check (Q2)
+// knows which KOL to verify.
+let scrapedKolId: string | null = null;
+
 async function main() {
   console.log(`\n=== Gooaye YouTube EP 601-650 Scrape ===`);
   console.log(`Videos: ${VIDEO_URLS.length}`);
@@ -101,6 +105,7 @@ async function main() {
     VIDEO_URLS,
     OVERRIDES
   );
+  scrapedKolId = result.kolId;
 
   console.log(`Job created: ${result.jobId} (${result.totalUrls} URLs)\n`);
 
@@ -142,7 +147,23 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error('Fatal:', err);
-  process.exit(1);
-});
+main()
+  .then(async () => {
+    // Q2: tail-call the consistency check; non-zero exit fails the script.
+    if (scrapedKolId) {
+      const { checkKolConsistency } = await import('./check-kol-consistency');
+      const report = await checkKolConsistency(scrapedKolId);
+      if (!report.pass) {
+        console.error('\n[scrape-gooaye-yt] consistency check FAILED for KOL', scrapedKolId);
+        for (const r of report.results) {
+          if (!r.pass) console.error(`  ${r.invariant}:`, JSON.stringify(r.detail));
+        }
+        process.exit(1);
+      }
+      console.log(`[scrape-gooaye-yt] consistency check OK for KOL ${scrapedKolId}`);
+    }
+  })
+  .catch((err) => {
+    console.error('Fatal:', err);
+    process.exit(1);
+  });

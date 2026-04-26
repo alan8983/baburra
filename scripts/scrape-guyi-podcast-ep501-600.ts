@@ -153,6 +153,10 @@ if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
 const LOG_PATH = path.join(LOG_DIR, `seed-run-${RUN_TS}.jsonl`);
 const logStream = fs.createWriteStream(LOG_PATH, { flags: 'a' });
 
+// Captured from initiateProfileScrape so the post-run consistency check (Q2)
+// knows which KOL to verify.
+let scrapedKolId: string | null = null;
+
 let runCompletedNormally = false;
 let anyLogWritten = false;
 
@@ -289,6 +293,7 @@ async function main() {
   console.log(`\nInitiating scrape job (${episodeUrls.length} URLs)...`);
 
   const result = await initiateProfileScrape(PROFILE_URL, PLATFORM_USER_ID, episodeUrls, OVERRIDES);
+  scrapedKolId = result.kolId;
 
   console.log(`Job created: ${result.jobId} (${result.totalUrls} URLs)\n`);
 
@@ -332,9 +337,22 @@ async function main() {
 }
 
 main()
-  .then(() => {
+  .then(async () => {
     runCompletedNormally = true;
     writeFinalSummary();
+    // Q2: tail-call the consistency check; non-zero exit fails the script.
+    if (scrapedKolId) {
+      const { checkKolConsistency } = await import('./check-kol-consistency');
+      const report = await checkKolConsistency(scrapedKolId);
+      if (!report.pass) {
+        console.error('\n[scrape-guyi] consistency check FAILED for KOL', scrapedKolId);
+        for (const r of report.results) {
+          if (!r.pass) console.error(`  ${r.invariant}:`, JSON.stringify(r.detail));
+        }
+        process.exit(1);
+      }
+      console.log(`[scrape-guyi] consistency check OK for KOL ${scrapedKolId}`);
+    }
   })
   .catch((err) => {
     console.error('Fatal:', err);

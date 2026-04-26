@@ -82,6 +82,7 @@
 - [ ] 8.4 Verify every gate in `pipeline-observability` spec's "Public-launch readiness gate" requirement: `success_rate ≥ 95`, `quality_gate_pass_rate ≥ 55`, zero duplicate rows vs S4-dry count, cost within ±20% of §6.5 estimate, no unhandled exception, every failed URL has a logged reason — tick each in `baseline.md` or record the failing gate
 - [ ] 8.5 If any gate fails: run `psql ... < scripts/seed-rollback.sql` scoped to Gooaye (`AND kol_id IN (...)`), diagnose in `baseline.md` `Stage 6 — gate failure`, and STOP. Re-attempt only after the diagnosis is addressed.
 - [ ] 8.6 If all gates pass: write the launch-readiness declaration at the top of `baseline.md` with the summary.json path + git SHA as evidence; commit `baseline.md` as `docs(baseline): Gooaye pipeline launch-ready`
+- [ ] 8.7 Run `npx tsx scripts/check-kol-consistency.ts b7a958c4-f9f4-48e1-8dbf-a8966bf1484e` (the QA gate from `kol-detail-consistency-qa-gate` Q4); the script MUST exit 0. Treat any failure as a launch-readiness blocker — paste the failed invariants into `baseline.md` `Stage 6 — gate failure` and STOP.
 
 ## 9. Documentation & Archive Prep
 
