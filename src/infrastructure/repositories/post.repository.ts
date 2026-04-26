@@ -246,8 +246,17 @@ export async function getPostById(id: string): Promise<PostWithPriceChanges | nu
 export async function createPost(input: CreatePostInput, createdBy: string | null): Promise<Post> {
   const supabase = createAdminClient();
 
+  // Defense in depth for #91 (D4). The AI-service layer (ai.service.ts:895)
+  // already dedupes Gemini's stockTickers output before they reach this
+  // function on the AI-driven path; this dedup protects non-AI callers
+  // (e.g. user-driven /api/import/batch, future webhook ingestion, manual
+  // seed scripts) from triggering the post_stocks UNIQUE(post_id, stock_id)
+  // constraint by passing duplicate stockIds. Silent — the AI layer is the
+  // canonical observation point if/when we add logging.
+  const uniqueStockIds = Array.from(new Set(input.stockIds ?? []));
+
   // Build stock array for RPC
-  const stocksParam = (input.stockIds ?? []).map((stockId) => ({
+  const stocksParam = uniqueStockIds.map((stockId) => ({
     stock_id: stockId,
     sentiment: input.stockSentiments?.[stockId] ?? null,
     source: input.stockSources?.[stockId]?.source ?? 'explicit',
@@ -256,12 +265,12 @@ export async function createPost(input: CreatePostInput, createdBy: string | nul
 
   // Build arguments array for RPC (resolve ticker → stock_id)
   let argumentsParam: unknown[] = [];
-  if (input.draftAiArguments?.length && input.stockIds?.length) {
+  if (input.draftAiArguments?.length && uniqueStockIds.length) {
     // Look up ticker → stockId mapping
     const { data: stockRows } = await supabase
       .from('stocks')
       .select('id, ticker')
-      .in('id', input.stockIds);
+      .in('id', uniqueStockIds);
 
     const tickerToStockId: Record<string, string> = {};
     for (const s of stockRows ?? []) {
@@ -311,7 +320,7 @@ export async function createPost(input: CreatePostInput, createdBy: string | nul
   // RPC returns the post row as JSONB
   const row = rpcData as DbPost;
   // Fire-and-forget scorecard invalidation for the KOL + every referenced stock.
-  void invalidateScorecardsAfterPostWrite(row.kol_id, input.stockIds ?? []);
+  void invalidateScorecardsAfterPostWrite(row.kol_id, uniqueStockIds);
   return mapDbToPost(row);
 }
 

@@ -36,6 +36,9 @@ vi.mock('@/infrastructure/repositories', () => ({
   createScrapeJobItems: vi.fn().mockResolvedValue([]),
   failScrapeJobItem: vi.fn().mockResolvedValue(undefined),
   updateScrapeJobItemDownloadProgress: vi.fn().mockResolvedValue(undefined),
+  // #90 / D3 — terminal-state hardening helpers (no-op defaults for perf tests)
+  reconcileStuckJob: vi.fn().mockResolvedValue({ reconciled: false }),
+  retryTerminalWrite: <T>(fn: () => Promise<T>) => fn(),
 }));
 
 vi.mock('@/infrastructure/repositories/profile.repository', () => ({

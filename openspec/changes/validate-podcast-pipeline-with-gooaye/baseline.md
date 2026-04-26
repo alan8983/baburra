@@ -32,7 +32,7 @@
 **Open bugs (GitHub issues, not blocking §6):**
 - D2 [#89](https://github.com/alan8983/baburra/issues/89) `posts.source` never written → rollback script inert.
 - D3 [#90](https://github.com/alan8983/baburra/issues/90) `completeScrapeJob` aborts script on Supabase fetch blip.
-- D4 [#91](https://github.com/alan8983/baburra/issues/91) duplicate tickers from Gemini → `post_stocks` constraint violation.
+- D4 [#91](https://github.com/alan8983/baburra/issues/91) duplicate tickers from Gemini → `post_stocks` constraint violation. **✅ resolved** by `8a26af2` (primary AI-layer dedup) + `dedup-stock-tickers-in-import-pipeline` (regression tests at both layers, defense-in-depth dedup at the repository sink, spec invariants in `ai-pipeline` and `repository-contracts` R9).
 
 ---
 
@@ -146,8 +146,8 @@ Report: [scenario/260425-1855-gooaye-scale/](./scenario/260425-1855-gooaye-scale
 | Id | Severity | Where | Impact | Fix size |
 | --- | --- | --- | --- | --- |
 | **D1** Podcast dedup asymmetry | HIGH | `import-pipeline.service.ts:372` + `podcast.extractor.ts:153` | `findPostBySourceUrl(podcast-rss://…)` never matches the stored enclosure URL, so re-runs pay full Deepgram cost before the unique constraint catches them at INSERT. Blocks §5.5 cheap idempotency. | 1-2 lines |
-| **D2** `posts.source` never populated | HIGH | `create_post_atomic` RPC lacks `p_source` param; pipeline passes nothing | `scripts/seed-rollback.sql` queries `WHERE source='seed'` — matches 0 rows; rollback effectively broken | Migration + RPC + code (medium) |
-| **D3** `completeScrapeJob` aborts script on Supabase fetch blip | MEDIUM | `scrape-job.repository.ts:195` via `profile-scrape.service.ts:561` | Network blip throws out of `processJobBatch`, kills the script (`process.exit(1)`). Posts committed, but `scrape_jobs.status` stuck in `processing`. | Add retry wrapper (small) |
+| **D2** `posts.source` never populated | HIGH | `create_post_atomic` RPC lacks `p_source` param; pipeline passes nothing | `scripts/seed-rollback.sql` queries `WHERE source='seed'` — matches 0 rows; rollback effectively broken | Migration + RPC + code (medium) — **✅ resolved** by `48eb1bb` (primary fix) + `fix-posts-source-rollback-completion` (regression test, R8 spec invariant, end-to-end rollback dry-run on 98 seed posts / 4622 post_arguments / 1240 post_stocks / 26 scrape_jobs / 2 kol_sources). |
+| **D3** `completeScrapeJob` aborts script on Supabase fetch blip | MEDIUM | `scrape-job.repository.ts:195` via `profile-scrape.service.ts:561` | Network blip throws out of `processJobBatch`, kills the script (`process.exit(1)`). Posts committed, but `scrape_jobs.status` stuck in `processing`. | Add retry wrapper (small) — **✅ resolved** by `harden-scrape-job-terminal-state` (`retryTerminalWrite` helper around `completeScrapeJob` / `failScrapeJob` / `markPermanentlyFailed` / `updateScrapeStatus`, plus `reconcileStuckJob` self-heal at `processJobBatch` entry; new `pipeline-observability` spec R1/R2/R3). |
 
 Empirical vs predict match-up:
 
@@ -211,7 +211,7 @@ Empirical vs predict match-up:
 | §5.6 S3-parallel-rerun | ✅ **PASS** | 10/10 dup in 5s — pure idempotency proof |
 | §5.7 Proceed? | ✅ yes | All idempotency gates met; proceed to §6 |
 
-**Bugs still open:** D2 ([#89](https://github.com/alan8983/baburra/issues/89)), D3 ([#90](https://github.com/alan8983/baburra/issues/90)), D4 ([#91](https://github.com/alan8983/baburra/issues/91)) — all in separate GitHub issues, none blocking §6.
+**Bugs still open:** _none_ — D2 ([#89](https://github.com/alan8983/baburra/issues/89)), D3 ([#90](https://github.com/alan8983/baburra/issues/90)), D4 ([#91](https://github.com/alan8983/baburra/issues/91)) all closed via the primary fixes (`48eb1bb`, `8a26af2`) + the closure changes `fix-posts-source-rollback-completion`, `harden-scrape-job-terminal-state`, `dedup-stock-tickers-in-import-pipeline`. None blocked §6.
 
 ## Stage 5 — tuned defaults
 

@@ -969,7 +969,7 @@ export type Database = {
           id?: string;
           low?: number | null;
           open?: number | null;
-          stock_id?: string;
+          stock_id: string;
           volume?: number | null;
         };
         Relationships: [

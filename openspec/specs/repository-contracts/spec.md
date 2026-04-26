@@ -97,7 +97,47 @@ These are invoked by the scraper worker, AI pipeline, or cron jobs — there is 
 - **WHEN** a PR adds a mutating function with no `userId` parameter
 - **THEN** the reviewer confirms it is only called from worker/pipeline code and the exemption list above is updated in the same PR, OR the reviewer asks for the function to be brought under R2-R4
 
-### Requirement: createStock refuses tickers absent from `stocks_master` (R7-stocks)
+### Requirement: Input persistence invariants (R7)
+
+Every field declared on a `Create*Input` type (e.g., `CreatePostInput`, `CreateKolInput`, `CreateScrapeJobInput`) SHALL be persisted to the corresponding DB write — either as a column in the `INSERT`/`UPDATE`, or as a parameter to the stored RPC that performs the write — OR be explicitly annotated as derived/computed in the type's JSDoc.
+
+**Worked examples for `CreatePostInput`:**
+- `source` — must reach `posts.source` via `create_post_atomic(p_source ...)`. Was at one point silently dropped (issue #89).
+- `contentFingerprint` — must reach `posts.content_fingerprint` via `create_post_atomic(p_content_fingerprint ...)`.
+- `aiModelVersion` — must reach `posts.ai_model_version` via `create_post_atomic(p_ai_model_version ...)`.
+- `stockSentiments` — folded into the `p_stocks` JSONB array (per-stock `sentiment` field).
+- `stockSources` — folded into the `p_stocks` JSONB array (per-stock `source` and `inference_reason` fields).
+
+**Rationale:** Issue [#89](https://github.com/alan8983/baburra/issues/89) (D2) was a silent-drop bug — `posts.source` had a column, an input field on `CreatePostInput`, and a downstream consumer (`scripts/seed-rollback.sql` filtering on `source = 'seed'`), but the RPC call dropped the value, and the failure was invisible until weeks later when the rollback script returned 0 deleted rows. Codifying the invariant turns this bug class from "easy to introduce, hard to detect" into "obvious in code review and caught by repository unit tests."
+
+#### Scenario: Adding a new field to a `Create*Input` type
+- **WHEN** a developer adds a new field to a `Create*Input` interface (e.g., adds `archivedAt?: Date | null` to `CreatePostInput`)
+- **THEN** they also wire it into the corresponding repository write (RPC parameter or column) AND add or extend a unit test under `src/infrastructure/repositories/__tests__/<repo>.repository.test.ts` that asserts the value is forwarded to the underlying client call
+
+#### Scenario: A field is intentionally not persisted
+- **WHEN** a `Create*Input` field is computed or derived rather than persisted (e.g., a virtual field used only for in-process branching)
+- **THEN** the field's JSDoc explicitly documents that it is not persisted, and the repository implementation drops it without ambiguity
+
+### Requirement: Junction-table input dedup (R8)
+
+Repository functions that accept an array of foreign keys destined for a junction table (e.g., `createPost(input).stockIds` → `post_stocks(post_id, stock_id)`) SHALL deduplicate the array before constructing junction rows. Callers MAY pass duplicates — they must not trigger a database UNIQUE-constraint failure at the repository boundary.
+
+**Worked examples:**
+- `createPost(input)` deduplicates `input.stockIds` via `Array.from(new Set(input.stockIds ?? []))` before building both the `p_stocks` RPC parameter and the `tickerToStockId` lookup. The downstream `invalidateScorecardsAfterPostWrite` call also receives the deduplicated array.
+
+**Rationale:** Issue [#91](https://github.com/alan8983/baburra/issues/91) (D4) was a `post_stocks_post_id_stock_id_key` unique-violation triggered by `analyzeDraftContent` returning `[{ticker:'BTC'}, {ticker:'btc'}]` for one Gooaye podcast episode. The primary fix (silent first-wins dedup at `ai.service.ts:895`) closed the AI-driven path, but a non-AI caller (`/api/import/batch`, future webhook, manual seed script) constructing `stockIds` from another source would still hit the constraint. Junction-table dedup at the repository sink is defense in depth — the bug class is now caught by either layer alone, so removing one doesn't reintroduce the failure.
+
+The dedup is silent at the repository layer (no log) — the AI layer is the canonical observation point if/when we add logging, since the repository has no URL/source context to make the log entry actionable.
+
+#### Scenario: Caller passes duplicate stockIds
+- **WHEN** a caller invokes `createPost({ stockIds: ['s1', 's1', 's2'], … })`
+- **THEN** the underlying RPC receives `p_stocks` with exactly two entries (one for `s1`, one for `s2`), no UNIQUE constraint is violated, and the function returns the created post normally
+
+#### Scenario: A new repository function writes to a junction table
+- **WHEN** a developer adds a new repository function that accepts an array of foreign keys for a junction table (e.g., `createBookmarkSet({ tagIds: string[] })`)
+- **THEN** the function deduplicates the array before the junction-row construction, AND a unit test under `__tests__/<repo>.repository.test.ts` asserts the dedup (passing duplicates produces deduplicated rows in the captured client call)
+
+### Requirement: createStock refuses tickers absent from `stocks_master` (R9)
 
 `createStock` (`src/infrastructure/repositories/stock.repository.ts`) SHALL
 reject any input whose normalized `ticker` is not present in the
@@ -109,9 +149,10 @@ with a message naming the rejected ticker.
 the `resolveStock` seam, but other callers (manual scripts, future webhook
 ingestion, hand-edits) may bypass that seam. Enforcing the master-membership
 check inside `createStock` keeps the `stocks` table clean even before the
-DB-level FK on `stocks.ticker → stocks_master.ticker` is applied
-(post-cleanup). After the FK lands, this check becomes belt-and-suspenders —
-the DB would reject anyway, but the application-layer error is more readable.
+DB-level FK on `stocks(ticker, market) → stocks_master(ticker, market)` is
+applied (post-cleanup). After the FK lands, this check becomes
+belt-and-suspenders — the DB would reject anyway, but the application-layer
+error is more readable.
 
 Spec source: `openspec/changes/fix-ticker-mapping-quality/`.
 
@@ -123,7 +164,7 @@ Spec source: `openspec/changes/fix-ticker-mapping-quality/`.
 - **WHEN** `createStock({ ticker: 'CHROME', name: 'Chrome', market: 'US' })` is called and `stocks_master` does not contain `'CHROME'`
 - **THEN** the function throws an error whose message names `'CHROME'` and references `stocks_master`, and no `stocks` row is created
 
-### Requirement: Known deferred exceptions (R8)
+### Requirement: Known deferred exceptions (R10)
 
 Functions that should be user-scoped but are not yet are tracked here rather than silently ignored. Each entry SHALL name a follow-up change proposal when one exists.
 
