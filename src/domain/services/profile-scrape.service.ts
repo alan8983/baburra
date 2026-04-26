@@ -123,6 +123,7 @@ import type { ScrapeJobItemStage, ScrapeStageMeta, ScrapeOverrides } from '@/dom
 import type { ScrapeJobType } from '@/domain/models';
 import { updateValidationStatus } from '@/infrastructure/repositories/kol.repository';
 import { handleValidationCompletion } from '@/domain/services/kol-validation.service';
+import { computeKolScorecard } from '@/domain/services/scorecard.service';
 
 // ── Types ──
 
@@ -625,6 +626,22 @@ export async function processJobBatch(
         await handleValidationCompletion(kolId);
       } catch (validationErr) {
         console.error(`Validation scoring failed for KOL ${kolId}:`, validationErr);
+      }
+    }
+
+    // Per R11: synchronously recompute the KOL scorecard so the cache is
+    // warm before the user opens the detail page. The fire-and-forget
+    // read-through path is too lossy when ~30 Tiingo calls have to land
+    // in a single response budget. Skip for batch-import jobs (no kolId).
+    // Failure here is logged but does not flip the scrape job's status.
+    if (kolId) {
+      try {
+        await computeKolScorecard(kolId);
+      } catch (scorecardErr) {
+        console.warn(
+          `[profile-scrape] computeKolScorecard(${kolId}) failed after completeScrapeJob:`,
+          scorecardErr instanceof Error ? scorecardErr.message : scorecardErr
+        );
       }
     }
   }

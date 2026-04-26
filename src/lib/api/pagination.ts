@@ -25,11 +25,22 @@ function parseBoundedInt(
   return { value: num };
 }
 
-export function parsePaginationParams(searchParams: URLSearchParams): PaginationResult {
+export interface PaginationOptions {
+  /** Hard cap on `?limit=`. Default 100. The KOL detail page passes 1000
+   * because it derives the per-stock breakdown from the full post set
+   * (R13 in repository-contracts). */
+  maxLimit?: number;
+}
+
+export function parsePaginationParams(
+  searchParams: URLSearchParams,
+  options: PaginationOptions = {}
+): PaginationResult {
+  const maxLimit = options.maxLimit ?? 100;
   const pageResult = parseBoundedInt(searchParams.get('page'), 'page', 1, 1000);
   if (pageResult.error) return { error: pageResult.error };
 
-  const limitResult = parseBoundedInt(searchParams.get('limit'), 'limit', 1, 100);
+  const limitResult = parseBoundedInt(searchParams.get('limit'), 'limit', 1, maxLimit);
   if (limitResult.error) return { error: limitResult.error };
 
   return {
