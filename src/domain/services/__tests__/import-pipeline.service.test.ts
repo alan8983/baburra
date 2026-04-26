@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   getAiModelVersion: vi.fn(),
   downloadYoutubeAudio: vi.fn(),
   deepgramTranscribe: vi.fn(),
+  resolveStocksBatch: vi.fn(),
 }));
 
 vi.mock('@/infrastructure/extractors', () => ({
@@ -74,6 +75,10 @@ vi.mock('@/infrastructure/api/youtube-audio.client', () => ({
 
 vi.mock('@/infrastructure/api/deepgram.client', () => ({
   deepgramTranscribe: mocks.deepgramTranscribe,
+}));
+
+vi.mock('@/domain/services/ticker-resolver.service', () => ({
+  resolveStocksBatch: mocks.resolveStocksBatch,
 }));
 
 import { executeBatchImport } from '../import-pipeline.service';
@@ -127,6 +132,17 @@ function setupSuccessfulImport() {
   mocks.getStockByTicker.mockResolvedValue({ id: 'stock-1', ticker: 'AAPL' });
   mocks.extractArguments.mockResolvedValue({ arguments: [] });
   mocks.createPost.mockResolvedValue({ id: 'post-1' });
+  // Default: every Gemini-emitted ticker resolves to an identical canonical
+  // form. Per-test overrides simulate drops or name overrides.
+  mocks.resolveStocksBatch.mockImplementation(
+    async (tickers: Array<{ ticker: string; market: string }>) => {
+      const out = new Map();
+      for (const t of tickers) {
+        out.set(t.ticker, { ticker: t.ticker, name: 'Apple Inc.', market: t.market });
+      }
+      return out;
+    }
+  );
   mocks.getAiModelVersion.mockReturnValue('gemini-2.0-flash');
   mocks.findTranscriptByUrl.mockResolvedValue(null);
   mocks.saveTranscript.mockResolvedValue(undefined);
@@ -136,6 +152,17 @@ function setupSuccessfulImport() {
 
 beforeEach(() => {
   Object.values(mocks).forEach((m) => m.mockReset());
+  // Default resolver impl: pass through every Gemini ticker as-is. Tests that
+  // exercise drops/renames override this with mockResolvedValueOnce(...).
+  mocks.resolveStocksBatch.mockImplementation(
+    async (tickers: Array<{ ticker: string; market: string }>) => {
+      const out = new Map();
+      for (const t of tickers) {
+        out.set(t.ticker, { ticker: t.ticker, name: 'Apple Inc.', market: t.market });
+      }
+      return out;
+    }
+  );
 });
 
 // =====================
@@ -408,6 +435,12 @@ describe('executeBatchImport', () => {
         stockSentiments: { AAPL: 1, TSLA: -1 },
       })
     );
+    mocks.resolveStocksBatch.mockResolvedValueOnce(
+      new Map([
+        ['AAPL', { ticker: 'AAPL', name: 'Apple Inc.', market: 'US' }],
+        ['TSLA', { ticker: 'TSLA', name: 'Tesla, Inc.', market: 'US' }],
+      ])
+    );
     mocks.getStockByTicker
       .mockResolvedValueOnce({ id: 'stock-aapl', ticker: 'AAPL' })
       .mockResolvedValueOnce({ id: 'stock-tsla', ticker: 'TSLA' });
@@ -416,6 +449,108 @@ describe('executeBatchImport', () => {
 
     expect(result.urlResults[0].stockTickers).toEqual(['AAPL', 'TSLA']);
     expect(mocks.getStockByTicker).toHaveBeenCalledTimes(2);
+  });
+
+  // ── Ticker validation against stocks_master ──
+
+  it('drops tickers that fail master validation; post still creates with survivors', async () => {
+    // Gemini emits a real ticker plus a hallucinated one. The resolver returns
+    // the canonical row for AAPL and null for CHROME. Pipeline must persist
+    // only AAPL — no error, no exception.
+    setupSuccessfulImport();
+    mocks.analyzeDraftContent.mockResolvedValue(
+      mockAnalysis({
+        stockTickers: [
+          { ticker: 'AAPL', name: 'Apple Inc.', market: 'US', confidence: 0.9 },
+          { ticker: 'CHROME', name: 'Chrome', market: 'US', confidence: 0.4 }, // hallucination
+        ],
+        stockSentiments: { AAPL: 1, CHROME: 2 },
+      })
+    );
+    mocks.resolveStocksBatch.mockResolvedValueOnce(
+      new Map<string, { ticker: string; name: string; market: string } | null>([
+        ['AAPL', { ticker: 'AAPL', name: 'Apple Inc.', market: 'US' }],
+        ['CHROME', null], // dropped — not in master
+      ])
+    );
+    mocks.getStockByTicker.mockResolvedValueOnce({ id: 'stock-aapl', ticker: 'AAPL' });
+
+    const result = await executeBatchImport({ urls: ['https://x.com/a/status/1'] }, USER_ID);
+
+    expect(result.urlResults[0].status).toBe('success');
+    expect(result.urlResults[0].stockTickers).toEqual(['AAPL']);
+    // Only AAPL went to the stock-creation path; CHROME never hit getStockByTicker.
+    expect(mocks.getStockByTicker).toHaveBeenCalledWith('AAPL');
+    expect(mocks.getStockByTicker).not.toHaveBeenCalledWith('CHROME');
+    expect(mocks.createStock).not.toHaveBeenCalled();
+    // extractArguments only ran for the surviving ticker.
+    expect(mocks.extractArguments).toHaveBeenCalledTimes(1);
+    expect(mocks.extractArguments).toHaveBeenCalledWith(
+      expect.any(String),
+      'AAPL',
+      'Apple Inc.',
+      expect.anything()
+    );
+  });
+
+  it('uses canonical name from master, not Gemini-supplied name', async () => {
+    // Gemini calls 2353.TW "宏捷" (the bug). Master returns "宏碁". The new
+    // stock row created downstream must use "宏碁".
+    setupSuccessfulImport();
+    mocks.analyzeDraftContent.mockResolvedValue(
+      mockAnalysis({
+        stockTickers: [{ ticker: '2353.TW', name: '宏捷', market: 'TW', confidence: 0.9 }],
+        stockSentiments: { '2353.TW': 1 },
+      })
+    );
+    mocks.resolveStocksBatch.mockResolvedValueOnce(
+      new Map([['2353.TW', { ticker: '2353.TW', name: '宏碁', market: 'TW' }]])
+    );
+    mocks.getStockByTicker.mockResolvedValueOnce(null); // not yet in stocks
+    mocks.createStock.mockResolvedValueOnce({ id: 'stock-2353', ticker: '2353.TW', name: '宏碁' });
+
+    await executeBatchImport({ urls: ['https://x.com/a/status/1'] }, USER_ID);
+
+    // Critical assertion: createStock was called with the master's '宏碁',
+    // NOT Gemini's '宏捷'.
+    expect(mocks.createStock).toHaveBeenCalledWith(
+      expect.objectContaining({ ticker: '2353.TW', name: '宏碁' })
+    );
+    // And extractArguments uses the canonical name.
+    expect(mocks.extractArguments).toHaveBeenCalledWith(
+      expect.any(String),
+      '2353.TW',
+      '宏碁',
+      expect.anything()
+    );
+  });
+
+  it('refunds credits and short-circuits when ALL tickers fail master validation', async () => {
+    // All Gemini tickers were hallucinations. Pipeline must refund and return
+    // no_resolvable_tickers — same shape as the existing zero-tickers path.
+    setupSuccessfulImport();
+    mocks.analyzeDraftContent.mockResolvedValue(
+      mockAnalysis({
+        stockTickers: [
+          { ticker: 'CHROME', name: 'Chrome', market: 'US', confidence: 0.4 },
+          { ticker: '馮君', name: '馮君', market: 'TW', confidence: 0.5 },
+        ],
+        stockSentiments: {},
+      })
+    );
+    mocks.resolveStocksBatch.mockResolvedValueOnce(
+      new Map<string, { ticker: string; name: string; market: string } | null>([
+        ['CHROME', null],
+        ['馮君', null],
+      ])
+    );
+
+    const result = await executeBatchImport({ urls: ['https://x.com/a/status/1'] }, USER_ID);
+
+    expect(result.urlResults[0].status).toBe('error');
+    expect(result.urlResults[0].error).toBe('no_resolvable_tickers');
+    expect(mocks.createPost).not.toHaveBeenCalled();
+    expect(mocks.refundCredits).toHaveBeenCalledWith(USER_ID, expect.any(Number));
   });
 
   // ── Argument extraction ──

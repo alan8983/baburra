@@ -1,0 +1,41 @@
+
+================================================================================
+SUSPECT: name~"馮君"
+================================================================================
+  (no matching stocks in DB)
+
+================================================================================
+SUSPECT: name~"宏捷", ticker=2353.TW
+================================================================================
+  (no matching stocks in DB)
+
+================================================================================
+SUSPECT: name~"宏碁", ticker=2353.TW
+================================================================================
+
+  STOCK 2353.TW | name="宏碁" | market=TW | id=605778fc-b4b6-4d39-ba1a-14ca8dadd161
+  → 8 post_stocks rows (showing up to 8)
+
+    POST 5d68b2b3-f9a2-4a9f-90f1-8b41b8bf9079 | kol="Gooaye 股癌" | url=https://www.youtube.com/watch?v=Y3UKwjPIVeE | source=explicit
+
+    POST 386f3a00-0b05-4925-afe3-1686c5863cac | kol="Gooaye 股癌" | url=https://www.youtube.com/watch?v=jJRkpZX3Z1Y | source=explicit
+
+    POST 861c8c56-b5f4-4d8b-b855-64dd6bc74c4a | kol="Gooaye 股癌" | url=https://www.youtube.com/watch?v=QVlUUZMmJcQ | source=explicit
+
+    POST 807562ce-a0db-445e-a343-9a66fd74b2f9 | kol="Gooaye 股癌" | url=podcast-rss://aHR0cHM6Ly9mZWVkcy5zb3VuZG9uLmZtL3BvZGNhc3RzLzk1NDY4OWE1LTMwOTYtNDNhNC1hODBiLTc4MTBiMjE5Y2VmMy54bWw#7144a806-a199-4db9-8c1a-f5fc4de34c9d | source=explicit
+
+    POST e0b7883b-01f0-43a5-b310-afa8688eb391 | kol="Gooaye 股癌" | url=podcast-rss://aHR0cHM6Ly9mZWVkcy5zb3VuZG9uLmZtL3BvZGNhc3RzLzk1NDY4OWE1LTMwOTYtNDNhNC1hODBiLTc4MTBiMjE5Y2VmMy54bWw#ec6ef62b-3894-4189-8a77-8137d8aa683a | source=explicit
+
+    POST a5873924-83b5-4e8f-8e8c-3812fbf7cff1 | kol="Gooaye 股癌" | url=podcast-rss://aHR0cHM6Ly9mZWVkcy5zb3VuZG9uLmZtL3BvZGNhc3RzLzk1NDY4OWE1LTMwOTYtNDNhNC1hODBiLTc4MTBiMjE5Y2VmMy54bWw#3e6e0d8f-80c5-4d28-94b2-c4dc0f0f74b0 | source=explicit
+
+    POST 74f0ee79-404b-430b-90e5-b9c516dd1668 | kol="Gooaye 股癌" | url=podcast-rss://aHR0cHM6Ly9mZWVkcy5zb3VuZG9uLmZtL3BvZGNhc3RzLzk1NDY4OWE1LTMwOTYtNDNhNC1hODBiLTc4MTBiMjE5Y2VmMy54bWw#5f2f44a2-266d-4694-ab53-a538832044a8 | source=explicit
+
+    POST a0139515-823d-4537-9b8d-a22107faa42f | kol="Gooaye 股癌" | url=podcast-rss://aHR0cHM6Ly9mZWVkcy5zb3VuZG9uLmZtL3BvZGNhc3RzLzk1NDY4OWE1LTMwOTYtNDNhNC1hODBiLTc4MTBiMjE5Y2VmMy54bWw#3d44d215-15ea-42fb-a552-c83a8cb8764b | source=explicit
+
+  ⚠ Token "宏碁" never appeared verbatim in any inspected transcript (8 scanned).
+    → likely AI hallucination, NOT a transcription error.
+
+================================================================================
+SCOPE: stock names shared across multiple tickers (top 30)
+================================================================================
+  found 0 duplicate-name groups (showing top 30)

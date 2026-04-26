@@ -104,6 +104,27 @@ export async function getStockByTicker(ticker: string): Promise<StockWithStats |
 export async function createStock(input: CreateStockInput): Promise<Stock> {
   const supabase = createAdminClient();
   const ticker = input.ticker.trim().toUpperCase();
+
+  // Defense-in-depth: refuse to create a stock that's not in stocks_master.
+  // The import pipeline already validates via resolveStock, but other callers
+  // (manual scripts, future webhook ingestion) may bypass that seam. This check
+  // keeps the stocks table clean even before the FK constraint lands.
+  // Spec: openspec/specs/repository-contracts/spec.md (createStock invariant).
+  const { data: masterRow, error: masterErr } = await supabase
+    .from('stocks_master')
+    .select('ticker, name')
+    .eq('ticker', ticker)
+    .maybeSingle();
+  if (masterErr) {
+    throw new Error(`stocks_master lookup failed for ${ticker}: ${masterErr.message}`);
+  }
+  if (!masterRow) {
+    throw new Error(
+      `createStock rejected: ticker '${ticker}' is not in stocks_master. ` +
+        'Add it via scripts/seed-stocks-master.ts or the manual_us_master.json override.'
+    );
+  }
+
   const { data: row, error } = await supabase
     .from('stocks')
     .upsert(

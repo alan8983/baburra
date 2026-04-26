@@ -1074,6 +1074,44 @@ export type Database = {
           ticker?: string;
           updated_at?: string | null;
         };
+        Relationships: [
+          {
+            foreignKeyName: 'fk_stocks_master';
+            columns: ['ticker', 'market'];
+            isOneToOne: false;
+            referencedRelation: 'stocks_master';
+            referencedColumns: ['ticker', 'market'];
+          },
+        ];
+      };
+      stocks_master: {
+        Row: {
+          aliases: string[];
+          created_at: string;
+          market: string;
+          name: string;
+          source: string;
+          ticker: string;
+          updated_at: string;
+        };
+        Insert: {
+          aliases?: string[];
+          created_at?: string;
+          market: string;
+          name: string;
+          source: string;
+          ticker: string;
+          updated_at?: string;
+        };
+        Update: {
+          aliases?: string[];
+          created_at?: string;
+          market?: string;
+          name?: string;
+          source?: string;
+          ticker?: string;
+          updated_at?: string;
+        };
         Relationships: [];
       };
       transcripts: {

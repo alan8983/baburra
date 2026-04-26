@@ -40,6 +40,7 @@ import {
   extractArguments,
   extractAtHandles,
 } from '@/domain/services/ai.service';
+import { resolveStocksBatch } from '@/domain/services/ticker-resolver.service';
 import { getAiModelVersion } from '@/infrastructure/api/gemini.client';
 import { isLikelyInvestmentContent } from '@/domain/services/content-filter';
 import { cleanTranscript } from '@/domain/services/transcript-cleanup';
@@ -666,7 +667,15 @@ export async function processUrl(
       kolId = kolEntry.kolId;
     }
 
-    // 7. Find or create stocks for identified tickers
+    // 7. Validate Gemini's tickers against the authoritative master, then find
+    // or create stocks. The master lookup canonicalizes ticker form (e.g.
+    // '2357' → '2357.TW') and overrides Gemini's company name (Gemini
+    // hallucinates names — the master is the source of truth).
+    //
+    // Tickers absent from the master are silently dropped from the post.
+    // resolveStocksBatch already logs each drop at info level.
+    //
+    // Spec: openspec/specs/ai-pipeline/spec.md (registry-validated extraction).
     const stockIds: string[] = [];
     const stockSentiments: Record<string, Sentiment> = {};
     const stockSources: Record<
@@ -675,7 +684,42 @@ export async function processUrl(
     > = {};
     const tickerToStockId: Record<string, string> = {};
 
-    for (const ticker of analysis.stockTickers) {
+    // Bulk-resolve in one DB round-trip per market (vs N sequential). The
+    // resolver only supports US/TW/CRYPTO — HK tickers (legacy AI-output enum
+    // value, never seeded into the master) get dropped here.
+    const resolvedMap = await resolveStocksBatch(
+      analysis.stockTickers
+        .filter((t): t is typeof t & { market: 'US' | 'TW' | 'CRYPTO' } => t.market !== 'HK')
+        .map((t) => ({ ticker: t.ticker, market: t.market }))
+    );
+
+    // Carry a parallel array of "resolved + Gemini metadata" so downstream
+    // stages (extractArguments, sentiment mapping) work off canonical names
+    // and tickers, while preserving Gemini's source/inferenceReason.
+    type ResolvedStockTicker = {
+      ticker: string;
+      name: string;
+      market: 'US' | 'TW' | 'CRYPTO';
+      source: 'explicit' | 'inferred';
+      inferenceReason?: string;
+      originalTicker: string; // Gemini's pre-normalization ticker (for sentiment lookup)
+    };
+    const resolvedStockTickers: ResolvedStockTicker[] = [];
+    for (const t of analysis.stockTickers) {
+      if (t.market === 'HK') continue; // unsupported; resolver was bypassed for HK
+      const resolved = resolvedMap.get(t.ticker);
+      if (!resolved) continue; // dropped — already logged by the resolver
+      resolvedStockTickers.push({
+        ticker: resolved.ticker,
+        name: resolved.name,
+        market: resolved.market,
+        source: t.source ?? 'explicit',
+        ...(t.inferenceReason ? { inferenceReason: t.inferenceReason } : {}),
+        originalTicker: t.ticker,
+      });
+    }
+
+    for (const ticker of resolvedStockTickers) {
       try {
         const existingStock = await getStockByTicker(ticker.ticker);
         let stockId: string;
@@ -701,30 +745,56 @@ export async function processUrl(
       }
     }
 
-    // Map per-ticker sentiments to per-stockId sentiments
+    // Map per-ticker sentiments to per-stockId sentiments. Gemini keys its
+    // stockSentiments by the ORIGINAL (pre-normalization) ticker, so we route
+    // through the original→resolved lookup before hitting tickerToStockId.
     if (analysis.stockSentiments) {
+      const originalToCanonical = new Map(
+        resolvedStockTickers.map((t) => [t.originalTicker.toUpperCase(), t.ticker.toUpperCase()])
+      );
       for (const [ticker, sentiment] of Object.entries(analysis.stockSentiments)) {
-        const stockId = tickerToStockId[ticker.toUpperCase()];
+        const canonical = originalToCanonical.get(ticker.toUpperCase());
+        if (!canonical) continue; // sentiment for a dropped ticker — discard
+        const stockId = tickerToStockId[canonical];
         if (stockId) {
           stockSentiments[stockId] = sentiment;
         }
       }
     }
 
-    // 8. Extract arguments per stock (parallel)
+    // If every Gemini-emitted ticker was rejected by the master, the post has
+    // no real stocks. Refund credits and short-circuit, mirroring the
+    // zero-tickers path at L617-633 above.
+    if (resolvedStockTickers.length === 0) {
+      if (!quotaExempt && creditsConsumed > 0) {
+        await refundCredits(userId, creditsConsumed).catch((err) =>
+          console.error('Credit refund failed (zero resolved tickers):', err)
+        );
+      }
+      emit('done', { errorMessage: 'no_resolvable_tickers' });
+      return {
+        url,
+        status: 'error',
+        error: 'no_resolvable_tickers',
+        timings: buildStageTimings(timings, stageMeta),
+      };
+    }
+
+    // 8. Extract arguments per stock (parallel) — operates on the canonical
+    // ticker/name from the master, not Gemini's pre-validation output.
     const _tArgs = Date.now();
     let draftAiArguments: DraftAiArguments[] | undefined;
-    if (analysis.stockTickers.length > 0) {
+    if (resolvedStockTickers.length > 0) {
       try {
         // One meta object per ticker call — retries summed, keyIndex/finalModel
         // from the last completed call (most recent signal).
-        const argMetas = analysis.stockTickers.map(() => ({
+        const argMetas = resolvedStockTickers.map(() => ({
           retries: 0,
           keyIndex: 0,
           finalModel: '',
         }));
         const results = await Promise.allSettled(
-          analysis.stockTickers.map((ticker, i) =>
+          resolvedStockTickers.map((ticker, i) =>
             extractArguments(contentForAnalysis, ticker.ticker, ticker.name, argMetas[i])
           )
         );
@@ -733,15 +803,15 @@ export async function processUrl(
           const result = results[i];
           if (result.status === 'fulfilled' && result.value.arguments.length > 0) {
             argumentResults.push({
-              ticker: analysis.stockTickers[i].ticker,
-              name: analysis.stockTickers[i].name,
+              ticker: resolvedStockTickers[i].ticker,
+              name: resolvedStockTickers[i].name,
               arguments: result.value.arguments,
             });
           } else if (result.status === 'rejected') {
             const errMsg =
               result.reason instanceof Error ? result.reason.message : String(result.reason);
             console.warn(
-              `[pipeline] extractArguments failed for ${analysis.stockTickers[i].ticker}: ${errMsg.slice(0, 200)}`
+              `[pipeline] extractArguments failed for ${resolvedStockTickers[i].ticker}: ${errMsg.slice(0, 200)}`
             );
           }
         }
@@ -801,7 +871,7 @@ export async function processUrl(
     timings.postCreationMs = Date.now() - _tPost;
     stageMeta.supabaseOk = true;
     timings.totalMs = Date.now() - _t0;
-    timings.stockCount = analysis.stockTickers.length;
+    timings.stockCount = resolvedStockTickers.length;
     timings.argumentCount = draftAiArguments
       ? draftAiArguments.reduce((sum, g) => sum + g.arguments.length, 0)
       : 0;
@@ -817,7 +887,7 @@ export async function processUrl(
       postId: post.id,
       title: fetchResult.title || undefined,
       sourcePlatform: fetchResult.sourcePlatform,
-      stockTickers: analysis.stockTickers.map((t) => t.ticker),
+      stockTickers: resolvedStockTickers.map((t) => t.ticker),
       sentiment: analysis.sentiment,
       kolId,
       kolName: detectedKolName,

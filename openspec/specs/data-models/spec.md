@@ -9,7 +9,8 @@
 | --- | --- | --- |
 | `profiles` | Private | User profile, AI usage, subscription tier |
 | `kols` | Shared | KOL directory (name, slug, avatar, social links) |
-| `stocks` | Shared | Investment targets (ticker, name, market) |
+| `stocks` | Shared | Investment targets (ticker, name, market). FK `stocks.ticker → stocks_master.ticker` enforces registry-grounded membership (added post-cleanup; see `fix-ticker-mapping-quality`). |
+| `stocks_master` | Shared (seed) | Authoritative ticker registry — `(ticker PK, name, market, source)`. Seeded from TWSE ISIN listings (TW), NASDAQ Trader symbol directories (US), a manual override file, and a curated crypto list. Read-only at runtime; refreshed via `scripts/build-{tw,us}-master.ts` + `scripts/seed-stocks-master.ts`. |
 | `posts` | Shared | Published articles with sentiment, content, source URL |
 | `post_stocks` | Shared | Many-to-many: post ↔ stock |
 | `stock_prices` | Shared (cache) | Daily OHLCV price data — Tiingo (US/CRYPTO), TWSE Open Data (TW) |
@@ -37,7 +38,7 @@
 profiles ──< drafts
 profiles ──< bookmarks
 profiles ──< kol_subscriptions
-kols ──< posts ──< post_stocks >── stocks
+kols ──< posts ──< post_stocks >── stocks ──> stocks_master  (FK on ticker)
 kols ──< kol_sources
 posts ──< post_arguments >── stocks
 posts ──< post_arguments >── argument_categories
@@ -50,6 +51,8 @@ stocks ──< volatility_thresholds  (by ticker, not FK)
 
 | Migration | Description | Date |
 | --- | --- | --- |
+| 20260426000000 | FK enforcement: `stocks(ticker, market) → stocks_master(ticker, market)` — `fix-ticker-mapping-quality` | 2026-04-26 |
+| 20260425100000 | Create `stocks_master` (authoritative ticker registry, with `aliases text[]`) — `fix-ticker-mapping-quality` | 2026-04-25 |
 | 20260425000002 | Widen `stock_prices.volume` from `BIGINT` to `NUMERIC(20, 8)` (accept fractional crypto volumes) | 2026-04-25 |
 | 20260414000002 | Add `volatility_thresholds` + `post_win_rate_samples` cache tables | 2026-04-14 |
 | 20250602 | Remove onboarding columns, add `first_import_free` | 2026-03-18 |

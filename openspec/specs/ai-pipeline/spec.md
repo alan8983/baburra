@@ -79,10 +79,48 @@ AI-extracted entity lists (e.g., `analysis.stockTickers`, returned by `analyzeDr
 - Profile scrape jobs are quota-exempt (`quotaExempt: true`)
 - Atomic operations: `consume_ai_quota()` and `refund_ai_quota()` DB functions
 
+## Invariants
+
+### Ticker resolution must be registry-grounded
+
+AI-extracted tickers are not trusted as-is. Before any `stocks` row is created
+or any post is linked to a stock, every Gemini-emitted `{ticker, market}` pair
+MUST be passed through `resolveStock`/`resolveStocksBatch`
+(`src/domain/services/ticker-resolver.service.ts`) and validated against
+`stocks_master`.
+
+- **Source of truth**: `stocks_master(ticker, name, market)`. Seeded from TWSE
+  ISIN listings (TW), NASDAQ Trader symbol directories (US), a hand-curated
+  manual override file (US ADRs/edge cases missed by NASDAQ Trader), and a
+  curated crypto list. Refreshed via `scripts/build-tw-master.ts`,
+  `scripts/build-us-master.ts`, and `scripts/seed-stocks-master.ts`.
+- **Resolution**:
+  - Tickers IN the master: persisted with the **master's name**, not the
+    AI-supplied name. The AI's ticker form is normalized first (e.g.
+    `'2357'` + `TW` → `'2357.TW'`).
+  - Tickers NOT in the master: silently dropped from the post. Logged at
+    info level via `[ticker-resolver]`. The pipeline does NOT retry analysis
+    or attempt fuzzy fallback.
+  - If every Gemini-emitted ticker is dropped, the post is short-circuited
+    via the `no_resolvable_tickers` error path (mirrors the existing
+    `no_tickers_identified` zero-tickers handler) and credits are refunded.
+- **Why**: Gemini hallucinates company names ("宏捷" for `2353.TW`/Acer,
+  "馮君" bound to 9 unrelated TW codes), invents tickers (`CHROME`, `SPACEX`,
+  `MARVELL`), and emits non-canonical forms (`2357` without `.TW`). The
+  master is the authority; the AI is advisory.
+
+### `HK` market is unsupported
+
+`IdentifiedTicker.market` includes `'HK'` for legacy enum compatibility, but
+the platform only supports `US` / `TW` / `CRYPTO`. HK tickers are dropped at
+the resolver boundary (skipped before `resolveStocksBatch`).
+
 ## Key Files
 
 - `src/infrastructure/api/gemini.client.ts` — Gemini API client
 - `src/domain/services/ai.service.ts` — Extraction logic + prompts
+- `src/domain/services/ticker-resolver.service.ts` — Master-validation seam
+- `src/infrastructure/data/{tw,us,manual_us,crypto}_master.json` — Registry sources
 - `src/infrastructure/repositories/ai-usage.repository.ts` — Quota tracking
 - `src/domain/services/import-pipeline.service.ts` — Batch import orchestrator
 - `src/domain/services/profile-scrape.service.ts` — Profile scrape orchestrator

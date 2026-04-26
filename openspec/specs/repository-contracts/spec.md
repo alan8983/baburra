@@ -97,7 +97,7 @@ These are invoked by the scraper worker, AI pipeline, or cron jobs — there is 
 - **WHEN** a PR adds a mutating function with no `userId` parameter
 - **THEN** the reviewer confirms it is only called from worker/pipeline code and the exemption list above is updated in the same PR, OR the reviewer asks for the function to be brought under R2-R4
 
-### Requirement: Input persistence invariants (R8)
+### Requirement: Input persistence invariants (R7)
 
 Every field declared on a `Create*Input` type (e.g., `CreatePostInput`, `CreateKolInput`, `CreateScrapeJobInput`) SHALL be persisted to the corresponding DB write — either as a column in the `INSERT`/`UPDATE`, or as a parameter to the stored RPC that performs the write — OR be explicitly annotated as derived/computed in the type's JSDoc.
 
@@ -118,7 +118,7 @@ Every field declared on a `Create*Input` type (e.g., `CreatePostInput`, `CreateK
 - **WHEN** a `Create*Input` field is computed or derived rather than persisted (e.g., a virtual field used only for in-process branching)
 - **THEN** the field's JSDoc explicitly documents that it is not persisted, and the repository implementation drops it without ambiguity
 
-### Requirement: Junction-table input dedup (R9)
+### Requirement: Junction-table input dedup (R8)
 
 Repository functions that accept an array of foreign keys destined for a junction table (e.g., `createPost(input).stockIds` → `post_stocks(post_id, stock_id)`) SHALL deduplicate the array before constructing junction rows. Callers MAY pass duplicates — they must not trigger a database UNIQUE-constraint failure at the repository boundary.
 
@@ -137,7 +137,34 @@ The dedup is silent at the repository layer (no log) — the AI layer is the can
 - **WHEN** a developer adds a new repository function that accepts an array of foreign keys for a junction table (e.g., `createBookmarkSet({ tagIds: string[] })`)
 - **THEN** the function deduplicates the array before the junction-row construction, AND a unit test under `__tests__/<repo>.repository.test.ts` asserts the dedup (passing duplicates produces deduplicated rows in the captured client call)
 
-### Requirement: Known deferred exceptions (R7)
+### Requirement: createStock refuses tickers absent from `stocks_master` (R9)
+
+`createStock` (`src/infrastructure/repositories/stock.repository.ts`) SHALL
+reject any input whose normalized `ticker` is not present in the
+`stocks_master` table. The check is a `SELECT ticker FROM stocks_master WHERE
+ticker = $1` issued before the `stocks` upsert; on miss, the function throws
+with a message naming the rejected ticker.
+
+**Rationale:** The import pipeline already validates AI-extracted tickers at
+the `resolveStock` seam, but other callers (manual scripts, future webhook
+ingestion, hand-edits) may bypass that seam. Enforcing the master-membership
+check inside `createStock` keeps the `stocks` table clean even before the
+DB-level FK on `stocks(ticker, market) → stocks_master(ticker, market)` is
+applied (post-cleanup). After the FK lands, this check becomes
+belt-and-suspenders — the DB would reject anyway, but the application-layer
+error is more readable.
+
+Spec source: `openspec/changes/fix-ticker-mapping-quality/`.
+
+#### Scenario: Master-validated ticker is created
+- **WHEN** `createStock({ ticker: '2330.TW', name: '台積電', market: 'TW' })` is called and `stocks_master` contains row `(2330.TW, 台積電, TW)`
+- **THEN** the function upserts a `stocks` row and returns the entity
+
+#### Scenario: Hallucinated ticker is rejected
+- **WHEN** `createStock({ ticker: 'CHROME', name: 'Chrome', market: 'US' })` is called and `stocks_master` does not contain `'CHROME'`
+- **THEN** the function throws an error whose message names `'CHROME'` and references `stocks_master`, and no `stocks` row is created
+
+### Requirement: Known deferred exceptions (R10)
 
 Functions that should be user-scoped but are not yet are tracked here rather than silently ignored. Each entry SHALL name a follow-up change proposal when one exists.
 

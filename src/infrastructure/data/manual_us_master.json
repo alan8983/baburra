@@ -1,0 +1,19 @@
+[
+  { "ticker": "CFLT", "name": "Confluent, Inc.", "market": "US", "source": "manual" },
+  { "ticker": "EADSY", "name": "Airbus SE (ADR)", "market": "US", "source": "manual" },
+  { "ticker": "PSTG", "name": "Pure Storage, Inc.", "market": "US", "source": "manual" },
+  {
+    "ticker": "BYD",
+    "name": "BYD",
+    "market": "US",
+    "source": "manual",
+    "_note": "Display preserves the short form 'BYD' rather than NASDAQ Trader's 'Boyd Gaming Corporation Common Stock'. Per user direction 2026-04-26."
+  },
+  {
+    "ticker": "NIO",
+    "name": "NIO",
+    "market": "US",
+    "source": "manual",
+    "_note": "Display preserves 'NIO' rather than the verbose NASDAQ Trader form. Per user direction 2026-04-26."
+  }
+]
