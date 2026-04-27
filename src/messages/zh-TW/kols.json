@@ -78,8 +78,9 @@
     },
     "scorecard": {
       "winRate": "勝率",
-      "hitRate": "精準度",
-      "correct": "正確",
+      "hitRate": "命中率",
+      "directionalHitRate": "方向命中率",
+      "correct": "方向正確",
       "sectorPerformance": "各標的表現",
       "computing": "正在計算...",
       "pending": "{count} 待計算"

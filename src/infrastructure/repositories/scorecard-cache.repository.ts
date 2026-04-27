@@ -20,8 +20,33 @@ import type { WinRateBucket } from '@/domain/calculators';
 /** Any cache row older than this is considered stale even without a flag. */
 export const SCORECARD_TTL_MS = 12 * 60 * 60 * 1000;
 
+/**
+ * Application-level cache schema version. Bump whenever the persisted
+ * `WinRateBucket` JSONB blob gains required fields, even when
+ * CLASSIFIER_VERSION does not change. Existing rows whose blob predates the
+ * current schema are detected via `isCurrentBlobSchema` and treated as
+ * misses on read — no DDL or backfill required.
+ */
+export const SCORECARD_CACHE_VERSION = 1;
+
 /** Per-period bucket persisted in the JSONB columns. */
 export type ScorecardBucket = WinRateBucket;
+
+/**
+ * Detects whether a persisted bucket blob was written by code that knows
+ * about the current schema. Pre-v1 rows lack `histogram` / `directionalHitRate`
+ * because aggregation didn't produce them; reading such a row would deserialise
+ * the new fields as `undefined` and crash downstream consumers that expect
+ * tuples / numbers. Field-presence detection is preferred over a separate
+ * `cache_version` column to keep this change DDL-free.
+ */
+function isCurrentBlobSchema(bucket: ScorecardBucket | undefined | null): boolean {
+  if (!bucket) return false;
+  // `histogram` is the v1 sentinel — added in the
+  // redesign-scorecard-with-directional-ring-and-histogram change.
+  const b = bucket as Partial<WinRateBucket>;
+  return Array.isArray(b.histogram) && b.histogram.length === 6;
+}
 
 export interface KolScorecardBlob {
   day5: ScorecardBucket;
@@ -120,6 +145,7 @@ export async function getKolScorecard(
   if (row.classifier_version !== classifierVersion) return null;
   if (row.stale) return null;
   if (!isFresh(row.computed_at)) return null;
+  if (!isCurrentBlobSchema(row.day5)) return null;
   return {
     day5: row.day5,
     day30: row.day30,
@@ -213,6 +239,7 @@ export async function getStockScorecard(
   if (row.classifier_version !== classifierVersion) return null;
   if (row.stale) return null;
   if (!isFresh(row.computed_at)) return null;
+  if (!isCurrentBlobSchema(row.day5)) return null;
   return {
     day5: row.day5,
     day30: row.day30,

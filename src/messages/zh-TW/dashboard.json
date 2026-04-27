@@ -54,7 +54,7 @@
   "pulse": {
     "title": "投資組合脈搏",
     "winRate": "勝率",
-    "hitRate": "精準度",
+    "hitRate": "命中率",
     "avgReturn": "平均報酬",
     "trend": "30日趨勢",
     "noData": "追蹤 KOL 預測以查看您的投資組合脈搏。"
@@ -73,7 +73,7 @@
     "insufficientDataEmpty": "樣本收集中…（每位 KOL 至少需要 10 筆已解析貼文）",
     "calls": "次預測",
     "tabs": {
-      "accuracy": "精準度",
+      "accuracy": "命中率",
       "signalQuality": "信號品質"
     }
   },

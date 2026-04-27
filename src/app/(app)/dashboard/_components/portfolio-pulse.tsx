@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { TrendingUp, TrendingDown, Minus, Activity } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Activity, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AnimatedNumber } from '@/components/ui/animated-number';
 import { useColorPalette } from '@/lib/colors/color-palette-context';
@@ -13,7 +13,7 @@ import {
   type WinRateStats,
 } from '@/domain/calculators';
 import { PeriodSelector } from '@/components/shared/period-selector';
-import { PerformanceMetricsPopover } from '@/components/shared/performance-metrics-popover';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { InsufficientDataBadge } from '@/components/shared/insufficient-data-badge';
 import { useProfile } from '@/hooks/use-profile';
 import {
@@ -58,13 +58,16 @@ export function PortfolioPulse({ posts, pulseStats }: PortfolioPulseProps) {
     return calculateReturnRateStats(forReturn).day30.avgReturn;
   }, [posts]);
 
-  const hitRateDisplay =
-    selectedBucket.sufficientData && selectedBucket.hitRate !== null
-      ? selectedBucket.hitRate * 100
-      : null;
+  const directionalDisplay =
+    selectedBucket.directionalHitRate !== null ? selectedBucket.directionalHitRate * 100 : null;
+  const directionalSampleSize = selectedBucket.directionalSampleSize;
+  const directionalCorrectCount =
+    directionalDisplay !== null && directionalSampleSize > 0
+      ? Math.round((directionalDisplay / 100) * directionalSampleSize)
+      : 0;
   const totalWithResult =
     selectedBucket.winCount + selectedBucket.loseCount + selectedBucket.noiseCount;
-  const showInsufficient = !selectedBucket.sufficientData && totalWithResult > 0;
+  const showInsufficient = directionalSampleSize > 0 && directionalSampleSize < 30;
   const sqrKey = getSqrQualitativeLabel(selectedBucket.sqr);
 
   const trend =
@@ -85,21 +88,39 @@ export function PortfolioPulse({ posts, pulseStats }: PortfolioPulseProps) {
           <p className="text-muted-foreground py-2 text-sm">{t('pulse.noData')}</p>
         ) : (
           <div className="grid grid-cols-3 gap-4">
-            {/* Hit Rate */}
+            {/* Directional Hit Rate */}
             <div className="text-center">
               <div className="text-muted-foreground mb-1 flex items-center justify-center gap-1 text-xs">
-                <span>{t('pulse.hitRate')}</span>
-                <PerformanceMetricsPopover bucket={selectedBucket} />
+                <span>{tMetrics('directionalHitRate')}</span>
+                <Tooltip delayDuration={150}>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label={`${tMetrics('directionalHitRate')} 公式`}
+                      className="text-muted-foreground hover:text-foreground inline-flex h-3.5 w-3.5 items-center justify-center"
+                    >
+                      <Info className="h-3 w-3" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-xs whitespace-pre-line">
+                    {tMetrics('formulaTooltip.directionalHitRate', {
+                      correct: directionalCorrectCount,
+                      n: directionalSampleSize,
+                      value:
+                        directionalDisplay !== null ? `${directionalDisplay.toFixed(1)}%` : '—',
+                    })}
+                  </TooltipContent>
+                </Tooltip>
               </div>
               <p
                 className={`text-2xl font-bold ${
-                  hitRateDisplay !== null && hitRateDisplay >= 50
+                  directionalDisplay !== null && directionalDisplay >= 50
                     ? colors.bullish.text
                     : colors.bearish.text
                 }`}
               >
-                {hitRateDisplay !== null ? (
-                  <AnimatedNumber value={hitRateDisplay} decimals={1} suffix="%" />
+                {directionalDisplay !== null ? (
+                  <AnimatedNumber value={directionalDisplay} decimals={1} suffix="%" />
                 ) : (
                   '—'
                 )}

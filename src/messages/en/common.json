@@ -147,8 +147,16 @@
   },
   "metrics": {
     "title": "Performance Metrics",
-    "detailsTrigger": "View detailed metrics",
     "precision": "Precision",
+    "hitRate": "Hit Rate",
+    "directionalHitRate": "Directional Hit Rate",
+    "histogramTitle": "σ-band Distribution",
+    "advancedHeading": "Advanced Analytics",
+    "strongSignalGroup": "Strong Signal Quality",
+    "returnQualityGroup": "Return Quality",
+    "insufficientSampleBadge": "Insufficient sample",
+    "statisticallySignificantBadge": "✓ Statistically significant",
+    "directionalSampleSize": "{count} resolved",
     "sqr": "SQR",
     "sqrLabel": {
       "excellent": "Excellent",
@@ -161,7 +169,16 @@
     "threshold": "Threshold",
     "insufficientData": "More data needed",
     "insufficientDataTooltip": "At least {min} resolved posts (wins + losses) are required before derived metrics are shown.",
-    "sqrExplainer": "SQR (Signal Quality Ratio) measures how consistently a KOL's signals beat noise. SQR > 1.0 is excellent."
+    "sqrExplainer": "SQR (Signal Quality Ratio) measures how consistently a KOL's signals beat noise. SQR > 1.0 is excellent.",
+    "formulaTooltip": {
+      "directionalHitRate": "Directional Hit Rate = directionally-correct samples ÷ resolved samples\n= {correct} ÷ {n} = {value}\nMeasures whether the call's direction matched the realised move, regardless of σ threshold.",
+      "precision": "Precision = wins ÷ (wins + losses)\n= {wins} ÷ ({wins} + {loses}) = {value}\nExcludes the noise band (sub-σ moves); measures the hit rate among strong-conviction calls.",
+      "hitRate": "Hit Rate = wins ÷ (wins + losses + noise)\n= {wins} ÷ {total} = {value}\nConservative variant counting sub-σ noise samples in the denominator.",
+      "sqr": "SQR = mean(excess return) ÷ stdev(excess return)\n= {value}\nMeasures consistency of σ-normalised returns; SQR > 1.0 is excellent.",
+      "avgExcessWin": "Avg Excess Win = mean(σ-normalised return) over winning samples\n= {value}σ\nAverage σ overshoot when winning.",
+      "avgExcessLose": "Avg Excess Loss = mean(σ-normalised return) over losing samples\n= {value}σ\nAverage σ adverse move when losing.",
+      "threshold": "Threshold = 1σ realised volatility\n= ±{value}\nClassification boundary for win/lose/noise; moves within ±σ are noise."
+    }
   },
   "errors": {
     "generic": "An error occurred, please try again later",

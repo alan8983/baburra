@@ -50,8 +50,9 @@
     "communityAccuracy": {
       "title": "KOL 社群對 {ticker} 的預測準確度",
       "description": "衡量 KOL 社群的看多／看空觀點，是否能轉化為超出常態波動的價格變動。",
-      "hitRateLabel": "精準度",
-      "correct": "正確",
+      "hitRateLabel": "命中率",
+      "directionalHitRateLabel": "方向命中率",
+      "correct": "方向正確",
       "noData": "尚無針對此標的的已解析預測。"
     },
     "returnRate": {
