@@ -147,8 +147,16 @@
   },
   "metrics": {
     "title": "表現指標",
-    "detailsTrigger": "查看詳細指標",
     "precision": "精準度",
+    "hitRate": "命中率",
+    "directionalHitRate": "方向命中率",
+    "histogramTitle": "σ 分布",
+    "advancedHeading": "進階分析",
+    "strongSignalGroup": "強訊號表現",
+    "returnQualityGroup": "報酬品質",
+    "insufficientSampleBadge": "樣本不足以判斷",
+    "statisticallySignificantBadge": "✓ 統計顯著",
+    "directionalSampleSize": "{count} 筆已解析",
     "sqr": "信號品質",
     "sqrLabel": {
       "excellent": "優秀",
@@ -161,7 +169,16 @@
     "threshold": "閾值",
     "insufficientData": "需要更多樣本",
     "insufficientDataTooltip": "至少需要 {min} 筆已解析貼文（勝+敗），才會顯示衍生指標。",
-    "sqrExplainer": "信號品質（SQR）衡量 KOL 的訊號相對於雜訊的穩定度。SQR > 1.0 為優秀。"
+    "sqrExplainer": "信號品質（SQR）衡量 KOL 的訊號相對於雜訊的穩定度。SQR > 1.0 為優秀。",
+    "formulaTooltip": {
+      "directionalHitRate": "方向命中率 = 方向猜對的筆數 ÷ 已解析筆數\n= {correct} ÷ {n} = {value}\n不論漲跌幅是否超過 σ 門檻，只看 KOL 對方向的判斷是否正確。",
+      "precision": "精準度 = 勝 ÷ (勝 + 敗)\n= {wins} ÷ ({wins} + {loses}) = {value}\n排除雜訊（漲跌幅在 ±σ 內的樣本），衡量 KOL 下重話時的命中率。",
+      "hitRate": "命中率 = 勝 ÷ (勝 + 敗 + 雜訊)\n= {wins} ÷ {total} = {value}\n保守版命中率，含 σ 內的雜訊作為分母。",
+      "sqr": "SQR = mean(超額報酬) ÷ stdev(超額報酬)\n= {value}\n衡量 KOL 訊號相對於雜訊的穩定度；SQR > 1.0 為優秀。",
+      "avgExcessWin": "平均超額勝幅 = mean(σ-normalized 報酬) over 勝樣本\n= {value}σ\n勝出時平均超過門檻幾個 σ。",
+      "avgExcessLose": "平均超額虧幅 = mean(σ-normalized 報酬) over 敗樣本\n= {value}σ\n敗北時平均反向幾個 σ。",
+      "threshold": "閾值 = 1σ 已實現波動率\n= ±{value}\n用於分類 win/lose/noise 的門檻；漲跌幅在此區間內視為雜訊。"
+    }
   },
   "errors": {
     "generic": "發生錯誤，請稍後再試",

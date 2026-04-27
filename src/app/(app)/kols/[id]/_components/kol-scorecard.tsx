@@ -16,7 +16,8 @@ import { useKolWinRate } from '@/hooks/use-kols';
 import { useProfile } from '@/hooks/use-profile';
 import { WinRateRing } from './win-rate-ring';
 import { PeriodSelector } from '@/components/shared/period-selector';
-import { PerformanceMetricsPopover } from '@/components/shared/performance-metrics-popover';
+import { ScorecardAdvancedMetrics } from '@/components/shared/scorecard-advanced-metrics';
+import { SigmaBandHistogram } from '@/components/shared/sigma-band-histogram';
 import { InsufficientDataBadge } from '@/components/shared/insufficient-data-badge';
 import { SubscriptionToggle } from '@/components/kol/subscription-toggle';
 import { BlurGate } from '@/components/paywall/blur-gate';
@@ -27,6 +28,9 @@ import {
 } from '@/domain/models/user';
 import type { KOLWithStats } from '@/domain/models/kol';
 import type { Sentiment } from '@/domain/models/post';
+import { computeBinomialPValueAgainstHalf } from '@/lib/stats/binomial';
+
+const MIN_DIRECTIONAL_SAMPLE_FOR_BADGES = 30;
 
 type PriceChangeStatusType = 'pending' | 'no_data' | 'value';
 
@@ -91,6 +95,7 @@ export function KolScorecard({
   hasInferredTickers,
 }: KolScorecardProps) {
   const t = useTranslations('kols');
+  const tMetrics = useTranslations('common.metrics');
   const { palette } = useColorPalette();
 
   // Server-computed per-period stats (dynamic 1σ classifier).
@@ -107,15 +112,23 @@ export function KolScorecard({
     override ?? profile?.defaultWinRatePeriod ?? DEFAULT_WIN_RATE_PERIOD;
 
   const selectedBucket = winRateStats?.[WIN_RATE_PERIOD_TO_BUCKET[selectedPeriod]] ?? null;
-  const hitRateDisplay =
-    selectedBucket && selectedBucket.sufficientData && selectedBucket.hitRate !== null
-      ? selectedBucket.hitRate * 100
+  const directionalDisplay =
+    selectedBucket && selectedBucket.directionalHitRate !== null
+      ? selectedBucket.directionalHitRate * 100
       : null;
-  const winCount = selectedBucket?.winCount ?? 0;
-  const totalCalls = selectedBucket ? selectedBucket.winCount + selectedBucket.loseCount : 0;
-  const noiseCount = selectedBucket?.noiseCount ?? 0;
+  const directionalSampleSize = selectedBucket?.directionalSampleSize ?? 0;
+  const directionalCorrectCount =
+    directionalDisplay !== null && directionalSampleSize > 0
+      ? Math.round((directionalDisplay / 100) * directionalSampleSize)
+      : 0;
+  const histogram = selectedBucket?.histogram ?? ([0, 0, 0, 0, 0, 0] as const);
   const thresholdRef = selectedBucket?.threshold ?? null;
-  const showInsufficient = selectedBucket !== null && !selectedBucket.sufficientData;
+  const showInsufficient =
+    selectedBucket !== null && directionalSampleSize < MIN_DIRECTIONAL_SAMPLE_FOR_BADGES;
+  const showSignificantBadge =
+    !showInsufficient &&
+    directionalDisplay !== null &&
+    computeBinomialPValueAgainstHalf(directionalCorrectCount, directionalSampleSize) < 0.05;
 
   // Period stats — now read straight from the server-aggregated blob.
   const periodStats = useMemo(
@@ -226,39 +239,57 @@ export function KolScorecard({
 
           {/* Right: Scorecard metrics */}
           <div className="flex flex-1 flex-col items-center gap-4 lg:flex-row lg:items-start lg:justify-end">
-            {/* Hit Rate Ring + period selector + metrics popover */}
-            <div className="flex flex-col items-center gap-2">
+            {/* Directional Hit Rate Ring + Histogram + Advanced metrics */}
+            <div className="flex flex-col items-center gap-3">
               <PeriodSelector value={selectedPeriod} onChange={setOverride} />
-              <div className="flex items-center gap-1">
-                <WinRateRing
-                  value={hitRateDisplay}
-                  label={t('detail.scorecard.hitRate')}
-                  size={120}
-                />
-                <PerformanceMetricsPopover bucket={selectedBucket} />
+              <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+                <div className="flex flex-col items-center gap-1">
+                  <WinRateRing
+                    value={directionalDisplay}
+                    mode="centred-gauge"
+                    label={t('detail.scorecard.directionalHitRate')}
+                    size={120}
+                  />
+                  {isComputing && (
+                    <p className="text-muted-foreground animate-pulse text-xs">
+                      {t('detail.scorecard.computing')}
+                    </p>
+                  )}
+                  {!isComputing && directionalSampleSize > 0 && (
+                    <p className="text-muted-foreground text-xs">
+                      {directionalCorrectCount}/{directionalSampleSize}{' '}
+                      {t('detail.scorecard.correct')}
+                    </p>
+                  )}
+                  {!isComputing && showInsufficient && <InsufficientDataBadge />}
+                  {!isComputing && showSignificantBadge && (
+                    <Badge variant="secondary" className="text-[10px]">
+                      {tMetrics('statisticallySignificantBadge')}
+                    </Badge>
+                  )}
+                  {thresholdRef && (
+                    <p className="text-muted-foreground text-[10px]">
+                      ±{(thresholdRef.value * 100).toFixed(1)}% σ
+                      {thresholdRef.source === 'index-fallback' && ' (idx)'}
+                    </p>
+                  )}
+                  {hasInferredTickers && directionalSampleSize > 0 && (
+                    <p className="text-muted-foreground max-w-[140px] text-center text-[10px] leading-tight">
+                      此命中率包含系統推論的關聯標的
+                    </p>
+                  )}
+                </div>
+                {!isComputing && directionalSampleSize > 0 && (
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-muted-foreground text-[10px]">
+                      {tMetrics('histogramTitle')}
+                    </span>
+                    <SigmaBandHistogram bins={histogram} />
+                  </div>
+                )}
               </div>
-              {isComputing && (
-                <p className="text-muted-foreground animate-pulse text-xs">
-                  {t('detail.scorecard.computing')}
-                </p>
-              )}
-              {!isComputing && totalCalls > 0 && (
-                <p className="text-muted-foreground text-xs">
-                  {winCount}/{totalCalls} {t('detail.scorecard.correct')}
-                  {noiseCount > 0 && ` · ${noiseCount} noise`}
-                </p>
-              )}
-              {!isComputing && showInsufficient && <InsufficientDataBadge />}
-              {thresholdRef && (
-                <p className="text-muted-foreground text-[10px]">
-                  ±{(thresholdRef.value * 100).toFixed(1)}% σ
-                  {thresholdRef.source === 'index-fallback' && ' (index)'}
-                </p>
-              )}
-              {hasInferredTickers && totalCalls > 0 && (
-                <p className="text-muted-foreground max-w-[140px] text-center text-[10px] leading-tight">
-                  此勝率包含系統推論的關聯標的
-                </p>
+              {!isComputing && selectedBucket && (
+                <ScorecardAdvancedMetrics bucket={selectedBucket} className="w-full max-w-xs" />
               )}
             </div>
 

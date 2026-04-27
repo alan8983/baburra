@@ -94,9 +94,13 @@ export interface ClassifiedSample {
 }
 
 /**
- * Per-period performance metrics. Hit Rate is the primary UI metric;
- * Precision, Avg Excess Win/Lose, and SQR are secondary details exposed
- * through the performance metrics popover.
+ * Per-period performance metrics.
+ *
+ * Headline UI metric is `directionalHitRate` (proportion of non-excluded
+ * resolved samples whose direction matched the realised price move,
+ * irrespective of σ threshold). The σ-derived metrics — `hitRate`,
+ * `precision`, `avgExcessWin`/`avgExcessLose`, `sqr`, and the σ-band
+ * `histogram` — are presented as advanced analytics alongside it.
  */
 export interface WinRateBucket {
   total: number; // win + lose + noise
@@ -111,6 +115,29 @@ export interface WinRateBucket {
   hitRate: number | null;
   /** wins / (wins + loses); null if !sufficientData. */
   precision: number | null;
+  /**
+   * count(sign(sentiment) × sign(priceChange) > 0) / directionalSampleSize.
+   * Null when `directionalSampleSize === 0` OR `sufficientData === false`.
+   * Independent of the σ threshold — measures whether the call's direction
+   * agreed with the realised move regardless of magnitude.
+   */
+  directionalHitRate: number | null;
+  /**
+   * Count of samples eligible for directional comparison: outcome ∈
+   * {win, lose, noise} AND `excessReturn !== null`. Equals
+   * `winCount + loseCount + noiseCount` for current-version samples
+   * (legacy rows missing `excessReturn` are excluded).
+   */
+  directionalSampleSize: number;
+  /**
+   * Six-bin σ-band histogram of direction-adjusted `excessReturn`:
+   *   [< -2σ, -2σ ~ -1σ, -1σ ~ 0, 0 ~ +1σ, +1σ ~ +2σ, > +2σ]
+   * Each interval is left-closed, right-open except the last bin
+   * (which is closed on both sides as a half-line). `excessReturn === 0`
+   * lands in bin 3. Always populated, even when `sufficientData === false`;
+   * empty bins contain 0.
+   */
+  histogram: [number, number, number, number, number, number];
   /** Mean σ-normalized return over win samples; null if no wins. */
   avgExcessWin: number | null;
   /** Mean σ-normalized return over lose samples (negative); null if no loses. */
@@ -171,6 +198,63 @@ export function computePrecision(wins: number, loses: number): number | null {
   const denom = wins + loses;
   if (denom === 0) return null;
   return wins / denom;
+}
+
+/**
+ * Directional hit rate: proportion of non-excluded resolved samples whose
+ * call direction agreed with the realised move, irrespective of σ threshold.
+ *
+ * `excessReturn = sign(sentiment) × priceChange / threshold` is already
+ * direction-adjusted at classification time, so its sign tells us whether
+ * the directional read was correct (positive = correct, negative = wrong,
+ * zero = exact tie which counts in the denominator only).
+ *
+ * Returns `{ rate: null }` when no eligible samples exist; the `aggregateBucket`
+ * caller is responsible for further nulling the rate when `!sufficientData`.
+ */
+export function computeDirectionalHitRate(samples: ClassifiedSample[]): {
+  rate: number | null;
+  sampleSize: number;
+  correctCount: number;
+} {
+  let correct = 0;
+  let n = 0;
+  for (const s of samples) {
+    if (s.outcome === 'excluded') continue;
+    if (s.excessReturn === null) continue;
+    n++;
+    if (s.excessReturn > 0) correct++;
+  }
+  return { rate: n === 0 ? null : correct / n, sampleSize: n, correctCount: correct };
+}
+
+/**
+ * Six-bin σ-band histogram of direction-adjusted `excessReturn`:
+ *   index 0: excessReturn < -2σ
+ *   index 1: -2σ ≤ excessReturn < -1σ
+ *   index 2: -1σ ≤ excessReturn < 0
+ *   index 3: 0 ≤ excessReturn < +1σ   (excessReturn === 0 lands here)
+ *   index 4: +1σ ≤ excessReturn < +2σ
+ *   index 5: excessReturn ≥ +2σ
+ *
+ * Always populated regardless of `sufficientData`. Empty bins contain 0.
+ */
+export function computeSigmaBandHistogram(
+  samples: ClassifiedSample[]
+): [number, number, number, number, number, number] {
+  const bins: [number, number, number, number, number, number] = [0, 0, 0, 0, 0, 0];
+  for (const s of samples) {
+    if (s.outcome === 'excluded') continue;
+    if (s.excessReturn === null) continue;
+    const r = s.excessReturn;
+    if (r < -2) bins[0]++;
+    else if (r < -1) bins[1]++;
+    else if (r < 0) bins[2]++;
+    else if (r < 1) bins[3]++;
+    else if (r < 2) bins[4]++;
+    else bins[5]++;
+  }
+  return bins;
 }
 
 /**
@@ -313,6 +397,8 @@ export function aggregateBucket(samples: ClassifiedSample[]): WinRateBucket {
   const avgExcessLose = sufficientData ? computeAvgExcess(samples, 'lose') : null;
   const sqr = sufficientData ? computeSqr(samples) : null;
   const returnStats = computeReturn(samples);
+  const directional = computeDirectionalHitRate(samples);
+  const histogram = computeSigmaBandHistogram(samples);
 
   const threshold: ThresholdRef | null = anySource
     ? { value: median(thresholdValues), source: anyFallback ? 'index-fallback' : 'ticker' }
@@ -329,6 +415,9 @@ export function aggregateBucket(samples: ClassifiedSample[]): WinRateBucket {
     loses: loseCount,
     hitRate,
     precision,
+    directionalHitRate: sufficientData ? directional.rate : null,
+    directionalSampleSize: directional.sampleSize,
+    histogram,
     avgExcessWin,
     avgExcessLose,
     sqr,
@@ -352,6 +441,9 @@ export function emptyBucket(): WinRateBucket {
     loses: 0,
     hitRate: null,
     precision: null,
+    directionalHitRate: null,
+    directionalSampleSize: 0,
+    histogram: [0, 0, 0, 0, 0, 0],
     avgExcessWin: null,
     avgExcessLose: null,
     sqr: null,

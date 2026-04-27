@@ -79,7 +79,8 @@
     "scorecard": {
       "winRate": "Win Rate",
       "hitRate": "Hit Rate",
-      "correct": "correct",
+      "directionalHitRate": "Directional Hit Rate",
+      "correct": "directionally correct",
       "sectorPerformance": "Performance by Stock",
       "computing": "Computing...",
       "pending": "{count} pending"

@@ -2,11 +2,13 @@ import { describe, it, expect } from 'vitest';
 import {
   classifyOutcome,
   aggregateBucket,
+  computeDirectionalHitRate,
   computeExcessReturn,
   computeHitRate,
   computePrecision,
   computeAvgExcess,
   computeReturn,
+  computeSigmaBandHistogram,
   computeSqr,
   getSqrQualitativeLabel,
   MIN_RESOLVED_POSTS_PER_PERIOD,
@@ -121,6 +123,120 @@ describe('performance-metric helpers', () => {
   });
 });
 
+describe('computeDirectionalHitRate', () => {
+  const t = { value: 0.05, source: 'ticker' as const };
+  const mk = (outcome: 'win' | 'lose' | 'noise', excess: number): ClassifiedSample => ({
+    outcome,
+    threshold: t,
+    excessReturn: excess,
+  });
+
+  it('counts samples whose excessReturn > 0 as correct', () => {
+    // Bullish-correct (win), bearish-correct (win, sign-flipped → +)
+    const samples: ClassifiedSample[] = [mk('win', 2), mk('win', 0.5), mk('lose', -1.2)];
+    const r = computeDirectionalHitRate(samples);
+    expect(r.sampleSize).toBe(3);
+    expect(r.correctCount).toBe(2);
+    expect(r.rate).toBeCloseTo(2 / 3);
+  });
+
+  it('counts excessReturn === 0 in the denominator only', () => {
+    const samples: ClassifiedSample[] = [mk('win', 1.5), mk('noise', 0), mk('lose', -1)];
+    const r = computeDirectionalHitRate(samples);
+    expect(r.sampleSize).toBe(3);
+    expect(r.correctCount).toBe(1);
+    expect(r.rate).toBeCloseTo(1 / 3);
+  });
+
+  it('ignores excluded samples', () => {
+    const samples: ClassifiedSample[] = [
+      mk('win', 1),
+      { outcome: 'excluded', threshold: null, excessReturn: null },
+    ];
+    const r = computeDirectionalHitRate(samples);
+    expect(r.sampleSize).toBe(1);
+    expect(r.correctCount).toBe(1);
+    expect(r.rate).toBeCloseTo(1);
+  });
+
+  it('returns null rate when no eligible samples exist', () => {
+    expect(computeDirectionalHitRate([])).toEqual({
+      rate: null,
+      sampleSize: 0,
+      correctCount: 0,
+    });
+  });
+
+  it('mixed 6/10 produces 0.6', () => {
+    const samples: ClassifiedSample[] = [
+      ...Array.from({ length: 6 }, () => mk('win', 1.2)),
+      ...Array.from({ length: 4 }, () => mk('lose', -1.0)),
+    ];
+    expect(computeDirectionalHitRate(samples).rate).toBeCloseTo(0.6);
+  });
+});
+
+describe('computeSigmaBandHistogram', () => {
+  const t = { value: 0.05, source: 'ticker' as const };
+  const mk = (outcome: 'win' | 'lose' | 'noise', excess: number): ClassifiedSample => ({
+    outcome,
+    threshold: t,
+    excessReturn: excess,
+  });
+
+  it('places samples in the correct bins', () => {
+    const samples: ClassifiedSample[] = [
+      mk('lose', -3.2), // bin 0
+      mk('lose', -1.5), // bin 1
+      mk('lose', -0.5), // bin 2
+      mk('noise', 0), // bin 3
+      mk('noise', 0.7), // bin 3
+      mk('win', 1.5), // bin 4
+      mk('win', 4.5), // bin 5
+    ];
+    const h = computeSigmaBandHistogram(samples);
+    expect(h).toEqual([1, 1, 1, 2, 1, 1]);
+  });
+
+  it('boundary at +1σ exactly lands in bin 4 (left-closed)', () => {
+    const h = computeSigmaBandHistogram([mk('win', 1)]);
+    expect(h).toEqual([0, 0, 0, 0, 1, 0]);
+  });
+
+  it('boundary at -1σ exactly lands in bin 2 (-1σ ≤ x < 0)', () => {
+    const h = computeSigmaBandHistogram([mk('lose', -1)]);
+    expect(h).toEqual([0, 0, 1, 0, 0, 0]);
+  });
+
+  it('boundary at -2σ exactly lands in bin 1 (-2σ ≤ x < -1σ)', () => {
+    const h = computeSigmaBandHistogram([mk('lose', -2)]);
+    expect(h).toEqual([0, 1, 0, 0, 0, 0]);
+  });
+
+  it('boundary at +2σ exactly lands in bin 5 (left-closed half-line)', () => {
+    const h = computeSigmaBandHistogram([mk('win', 2)]);
+    expect(h).toEqual([0, 0, 0, 0, 0, 1]);
+  });
+
+  it('zero excessReturn lands in bin 3', () => {
+    const h = computeSigmaBandHistogram([mk('noise', 0)]);
+    expect(h).toEqual([0, 0, 0, 1, 0, 0]);
+  });
+
+  it('ignores excluded samples', () => {
+    const samples: ClassifiedSample[] = [
+      mk('win', 2.5),
+      { outcome: 'excluded', threshold: null, excessReturn: null },
+      { outcome: 'noise', threshold: t, excessReturn: null },
+    ];
+    expect(computeSigmaBandHistogram(samples)).toEqual([0, 0, 0, 0, 0, 1]);
+  });
+
+  it('returns all-zero array for empty input', () => {
+    expect(computeSigmaBandHistogram([])).toEqual([0, 0, 0, 0, 0, 0]);
+  });
+});
+
 describe('aggregateBucket', () => {
   const ticker = (value: number) => ({ value, source: 'ticker' as const });
   const fallback = (value: number) => ({ value, source: 'index-fallback' as const });
@@ -222,6 +338,41 @@ describe('aggregateBucket', () => {
     expect(b.avgReturn).toBeCloseTo(0.05, 6);
     expect(b.returnSampleSize).toBe(3);
     expect(b.pendingCount).toBe(2);
+  });
+
+  it('5.10e directionalHitRate, directionalSampleSize, and histogram fields populate', () => {
+    // 8 wins (excess +2), 4 loses (excess -1.5), 10 noise samples split:
+    //   6 noise with excess +0.2 (directionally correct)
+    //   3 noise with excess -0.3 (directionally wrong)
+    //   1 noise with excess  0.0 (tie — counts in size, not numerator)
+    const samples: ClassifiedSample[] = [
+      ...Array.from({ length: 8 }, () => mk('win', ticker(0.04), 2)),
+      ...Array.from({ length: 4 }, () => mk('lose', ticker(0.04), -1.5)),
+      ...Array.from({ length: 6 }, () => mk('noise', ticker(0.04), 0.2)),
+      ...Array.from({ length: 3 }, () => mk('noise', ticker(0.04), -0.3)),
+      mk('noise', ticker(0.04), 0),
+      { outcome: 'excluded', threshold: null, excessReturn: null },
+    ];
+    const b = aggregateBucket(samples);
+    // Eligible: 22 (excluded dropped). Numerator: 8 wins + 6 noise-correct = 14
+    expect(b.directionalSampleSize).toBe(22);
+    expect(b.directionalHitRate).toBeCloseTo(14 / 22);
+    // Histogram bins: <-2σ:0, -2~-1:4 (loses at -1.5), -1~0:3 (noise -0.3) +0 (excluded out),
+    //   0~1:7 (1 zero + 6 +0.2), 1~2:0, ≥2:8 (wins)
+    expect(b.histogram).toEqual([0, 4, 3, 7, 0, 8]);
+  });
+
+  it('5.10f directionalHitRate is null when sufficientData is false', () => {
+    const samples: ClassifiedSample[] = [
+      ...Array.from({ length: 5 }, () => mk('win', ticker(0.04), 2)),
+      ...Array.from({ length: 4 }, () => mk('lose', ticker(0.04), -1.5)),
+    ];
+    const b = aggregateBucket(samples);
+    expect(b.sufficientData).toBe(false);
+    expect(b.directionalHitRate).toBeNull();
+    // But sample size and histogram are still populated.
+    expect(b.directionalSampleSize).toBe(9);
+    expect(b.histogram).toEqual([0, 4, 0, 0, 0, 5]);
   });
 
   it('5.11 representative threshold is the median; index-fallback wins source if any', () => {

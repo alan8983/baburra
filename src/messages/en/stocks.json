@@ -51,7 +51,8 @@
       "title": "KOL Community Accuracy on {ticker}",
       "description": "How well the KOL community's bullish/bearish calls on this ticker translate into moves beyond normal volatility.",
       "hitRateLabel": "Hit Rate",
-      "correct": "correct",
+      "directionalHitRateLabel": "Directional Hit Rate",
+      "correct": "directionally correct",
       "noData": "No resolved KOL predictions for this ticker yet."
     },
     "returnRate": {
