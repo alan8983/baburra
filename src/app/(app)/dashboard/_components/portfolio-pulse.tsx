@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { TrendingUp, TrendingDown, Minus, Activity } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Activity, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AnimatedNumber } from '@/components/ui/animated-number';
 import { useColorPalette } from '@/lib/colors/color-palette-context';
@@ -12,7 +12,6 @@ import {
   type PostForReturnRate,
   type WinRateStats,
 } from '@/domain/calculators';
-import { Info } from 'lucide-react';
 import { PeriodSelector } from '@/components/shared/period-selector';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { InsufficientDataBadge } from '@/components/shared/insufficient-data-badge';
