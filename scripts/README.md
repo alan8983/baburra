@@ -56,7 +56,19 @@ npx tsx scripts/backfill-scorecards.ts --kol all --stocks
 
 # Dry-run — prints what would be computed without touching the DB
 npx tsx scripts/backfill-scorecards.ts --kol all --stocks --dry-run
+
+# Resume an interrupted run — skip rows already at the current schema
+npx tsx scripts/backfill-scorecards.ts --kol all --stocks --skip-warm
 ```
+
+Each compute is followed by a row read-back; if the row isn't warm at the
+current schema, the script retries up to 3 times with 2s/4s exponential
+backoff. This covers transient Tiingo 429s, network blips, and Supabase
+upsert failures without leaving silently-broken rows behind.
+
+`--skip-warm` checks `classifier_version`, `stale`, and the JSONB schema
+sentinel (a 6-bin `histogram`) against `isCurrentBlobSchema` from the cache
+repository, so re-runs only do remaining work.
 
 Production usage (set env vars first):
 

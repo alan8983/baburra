@@ -39,8 +39,11 @@ export type ScorecardBucket = WinRateBucket;
  * the new fields as `undefined` and crash downstream consumers that expect
  * tuples / numbers. Field-presence detection is preferred over a separate
  * `cache_version` column to keep this change DDL-free.
+ *
+ * Exported so the backfill script can use the exact same predicate to decide
+ * whether a row already at the current schema can be skipped on a re-run.
  */
-function isCurrentBlobSchema(bucket: ScorecardBucket | undefined | null): boolean {
+export function isCurrentBlobSchema(bucket: ScorecardBucket | undefined | null): boolean {
   if (!bucket) return false;
   // `histogram` is the v1 sentinel — added in the
   // redesign-scorecard-with-directional-ring-and-histogram change.
