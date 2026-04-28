@@ -11,10 +11,11 @@
  * thundering-herd of concurrent Tiingo fetches on the first wave of requests.
  *
  * Usage:
- *   npx tsx scripts/backfill-scorecards.ts --kol <slug|id>      # one KOL
- *   npx tsx scripts/backfill-scorecards.ts --kol all             # all KOLs with posts
- *   npx tsx scripts/backfill-scorecards.ts --kol all --stocks    # all KOLs + all stocks
- *   npx tsx scripts/backfill-scorecards.ts --kol all --dry-run   # preview only
+ *   npx tsx scripts/backfill-scorecards.ts --kol <slug|id>          # one KOL
+ *   npx tsx scripts/backfill-scorecards.ts --kol all                 # all KOLs with posts
+ *   npx tsx scripts/backfill-scorecards.ts --kol all --stocks        # all KOLs + all stocks
+ *   npx tsx scripts/backfill-scorecards.ts --kol all --dry-run       # preview only
+ *   npx tsx scripts/backfill-scorecards.ts --kol all --skip-warm     # resume: skip rows already at current schema
  *
  * Pre-reqs: `.env.local` with `NEXT_PUBLIC_SUPABASE_URL`,
  * `SUPABASE_SERVICE_ROLE_KEY`, and `TIINGO_API_TOKEN`.
@@ -30,18 +31,29 @@ import {
   computeKolScorecard,
   computeStockScorecard,
 } from '../src/domain/services/scorecard.service';
+import { CLASSIFIER_VERSION } from '../src/domain/calculators';
+import { isCurrentBlobSchema } from '../src/infrastructure/repositories/scorecard-cache.repository';
 
 // ── CLI args ──────────────────────────────────────────────────────────────────
 
-function parseArgs(): { kolArg: string; stocks: boolean; dryRun: boolean } {
+interface CliArgs {
+  kolArg: string;
+  stocks: boolean;
+  dryRun: boolean;
+  skipWarm: boolean;
+}
+
+function parseArgs(): CliArgs {
   const args = process.argv.slice(2);
   let kolArg: string | null = null;
   let dryRun = false;
   let stocks = false;
+  let skipWarm = false;
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
     if (a === '--dry-run') dryRun = true;
     else if (a === '--stocks') stocks = true;
+    else if (a === '--skip-warm') skipWarm = true;
     else if (a === '--kol') {
       const val = args[++i];
       if (!val) {
@@ -56,10 +68,23 @@ function parseArgs(): { kolArg: string; stocks: boolean; dryRun: boolean } {
     process.exit(1);
   }
   // process.exit(1) above guarantees kolArg is non-null here.
-  return { kolArg, stocks, dryRun };
+  return { kolArg, stocks, dryRun, skipWarm };
 }
 
-const { kolArg, stocks: includeStocks, dryRun } = parseArgs();
+const { kolArg, stocks: includeStocks, dryRun, skipWarm } = parseArgs();
+
+// ── Retry policy ──────────────────────────────────────────────────────────────
+// computeKolScorecard / computeStockScorecard swallow internal errors and just
+// log a warning. So "did the work succeed" is determined by reading the row
+// back and checking the schema sentinel — not by exception handling. We retry
+// with exponential backoff (2s, 4s) when the verify check fails after compute,
+// which covers transient Tiingo 429s, network blips, and Supabase upsert errors.
+const MAX_ATTEMPTS = 3;
+const BACKOFF_BASE_MS = 2_000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 // ── DB helpers ────────────────────────────────────────────────────────────────
 
@@ -145,11 +170,94 @@ async function fetchStockTicker(stockId: string): Promise<string> {
   return data?.ticker ?? stockId;
 }
 
+/** Return post count for a stock (used to differentiate "no posts" from compute failure). */
+async function fetchStockPostCount(stockId: string): Promise<number> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('post_stocks')
+    .select('post_id')
+    .eq('stock_id', stockId);
+  if (error) return 0;
+  return (data ?? []).length;
+}
+
+/**
+ * True iff the persisted row exists with `classifier_version === CLASSIFIER_VERSION`,
+ * `stale === false`, and the JSONB blob is at the current schema (carries a
+ * 6-bin `histogram`). Mirrors `getKolScorecard`'s freshness check exactly,
+ * minus the TTL — backfill should not skip rows that are merely TTL-stale,
+ * since the whole point of the script is to refresh them.
+ */
+async function isKolRowWarm(kolId: string): Promise<boolean> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('kol_scorecard_cache')
+    .select('classifier_version, stale, day5')
+    .eq('kol_id', kolId)
+    .maybeSingle();
+  if (error || !data) return false;
+  if (data.classifier_version !== CLASSIFIER_VERSION) return false;
+  if (data.stale) return false;
+  return isCurrentBlobSchema(data.day5);
+}
+
+async function isStockRowWarm(stockId: string): Promise<boolean> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from('stock_scorecard_cache')
+    .select('classifier_version, stale, day5')
+    .eq('stock_id', stockId)
+    .maybeSingle();
+  if (error || !data) return false;
+  if (data.classifier_version !== CLASSIFIER_VERSION) return false;
+  if (data.stale) return false;
+  return isCurrentBlobSchema(data.day5);
+}
+
+/**
+ * Run `compute` and verify with `isWarm`. Retry up to MAX_ATTEMPTS with
+ * exponential backoff (2s, 4s) when the row isn't warm after compute.
+ *
+ * Returns `'done'` on first warm verification, `'failed'` if all attempts
+ * exhausted. The compute service swallows internal errors so we can't rely
+ * on thrown exceptions — verification is the source of truth.
+ */
+async function computeWithVerify(
+  label: string,
+  compute: () => Promise<void>,
+  isWarm: () => Promise<boolean>
+): Promise<{ status: 'done' | 'failed'; attempts: number; ms: number }> {
+  const t0 = Date.now();
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      await compute();
+    } catch (err) {
+      // Service should swallow, but guard anyway so a thrown error doesn't
+      // skip the verify-and-retry path.
+      console.warn(
+        `[backfill] ${label} compute attempt ${attempt}/${MAX_ATTEMPTS} threw:`,
+        err instanceof Error ? err.message : err
+      );
+    }
+    if (await isWarm()) {
+      return { status: 'done', attempts: attempt, ms: Date.now() - t0 };
+    }
+    if (attempt < MAX_ATTEMPTS) {
+      const backoffMs = BACKOFF_BASE_MS * 2 ** (attempt - 1);
+      console.warn(
+        `[backfill] ${label} attempt ${attempt}/${MAX_ATTEMPTS} did not produce a warm row — retrying in ${backoffMs}ms`
+      );
+      await sleep(backoffMs);
+    }
+  }
+  return { status: 'failed', attempts: MAX_ATTEMPTS, ms: Date.now() - t0 };
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
   console.log(
-    `[backfill] starting${dryRun ? ' (dry-run)' : ''} — kol=${kolArg}${includeStocks ? ' --stocks' : ''}`
+    `[backfill] starting${dryRun ? ' (dry-run)' : ''} — kol=${kolArg}${includeStocks ? ' --stocks' : ''}${skipWarm ? ' --skip-warm' : ''}`
   );
 
   // ── Resolve KOL list ───────────────────────────────────────────────────────
@@ -178,18 +286,37 @@ async function main() {
 
   if (dryRun) {
     console.log('[backfill] dry-run: would compute scorecard for:');
+    let kolPlanned = 0;
+    let kolWouldSkip = 0;
     for (const kolId of kolIds) {
       const slug = await fetchKolSlug(kolId);
       const postCount = await fetchPostCount(kolId);
-      console.log(`  KOL  ${slug} (${kolId}) — ${postCount} posts`);
+      const warm = skipWarm ? await isKolRowWarm(kolId) : false;
+      const note = postCount === 0 ? ' [skip: no posts]' : warm ? ' [skip: already warm]' : '';
+      if (postCount === 0 || warm) kolWouldSkip++;
+      else kolPlanned++;
+      console.log(`  KOL  ${slug} (${kolId}) — ${postCount} posts${note}`);
     }
+    console.log(
+      `[backfill] dry-run KOL plan: ${kolPlanned} to compute, ${kolWouldSkip} to skip`
+    );
     if (includeStocks) {
       const stockIds = await fetchStockIdsForKols(kolIds);
       console.log(`[backfill] dry-run: would compute stock scorecard for ${stockIds.length} stocks`);
+      let stockPlanned = 0;
+      let stockWouldSkip = 0;
       for (const stockId of stockIds) {
         const ticker = await fetchStockTicker(stockId);
-        console.log(`  Stock  ${ticker} (${stockId})`);
+        const postCount = await fetchStockPostCount(stockId);
+        const warm = skipWarm ? await isStockRowWarm(stockId) : false;
+        const note = postCount === 0 ? ' [skip: no posts]' : warm ? ' [skip: already warm]' : '';
+        if (postCount === 0 || warm) stockWouldSkip++;
+        else stockPlanned++;
+        console.log(`  Stock  ${ticker} (${stockId})${note}`);
       }
+      console.log(
+        `[backfill] dry-run stock plan: ${stockPlanned} to compute, ${stockWouldSkip} to skip`
+      );
     }
     console.log('[backfill] dry-run complete — no writes made.');
     return;
@@ -199,32 +326,50 @@ async function main() {
 
   const kolTotal = kolIds.length;
   let kolDone = 0;
+  let kolSkipped = 0;
   const kolFailures: string[] = [];
   const kolStart = Date.now();
 
-  for (const kolId of kolIds) {
+  for (let i = 0; i < kolIds.length; i++) {
+    const kolId = kolIds[i];
     const slug = await fetchKolSlug(kolId);
     const postCount = await fetchPostCount(kolId);
-    const t0 = Date.now();
-    try {
-      await computeKolScorecard(kolId);
-      const ms = Date.now() - t0;
+
+    if (postCount === 0) {
+      kolSkipped++;
+      console.log(`[backfill] KOL ${i + 1}/${kolTotal}: ${slug} — skipped (no posts)`);
+      continue;
+    }
+
+    if (skipWarm && (await isKolRowWarm(kolId))) {
+      kolSkipped++;
+      console.log(
+        `[backfill] KOL ${i + 1}/${kolTotal}: ${slug} — skipped (already warm at current schema)`
+      );
+      continue;
+    }
+
+    const result = await computeWithVerify(
+      `KOL ${slug}`,
+      () => computeKolScorecard(kolId),
+      () => isKolRowWarm(kolId)
+    );
+    if (result.status === 'done') {
       kolDone++;
       console.log(
-        `[backfill] KOL ${kolDone}/${kolTotal}: ${slug} — computed in ${ms}ms (posts=${postCount})`
+        `[backfill] KOL ${i + 1}/${kolTotal}: ${slug} — computed in ${result.ms}ms (posts=${postCount}, attempts=${result.attempts})`
       );
-    } catch (err) {
+    } else {
       kolFailures.push(kolId);
       console.warn(
-        `[backfill] KOL ${slug} (${kolId}) FAILED:`,
-        err instanceof Error ? err.message : err
+        `[backfill] KOL ${slug} (${kolId}) FAILED after ${MAX_ATTEMPTS} attempts in ${result.ms}ms`
       );
     }
   }
 
   const kolElapsed = Math.round((Date.now() - kolStart) / 1000);
   console.log(
-    `[backfill] KOLs complete: ${kolDone}/${kolTotal} in ${kolElapsed}s${
+    `[backfill] KOLs complete: ${kolDone}/${kolTotal} done, ${kolSkipped} skipped in ${kolElapsed}s${
       kolFailures.length > 0 ? `; ${kolFailures.length} failures (${kolFailures.join(', ')})` : ''
     }`
   );
@@ -241,31 +386,50 @@ async function main() {
 
   const stockTotal = stockIds.length;
   let stockDone = 0;
+  let stockSkipped = 0;
   const stockFailures: string[] = [];
   const stockStart = Date.now();
 
-  for (const stockId of stockIds) {
+  for (let i = 0; i < stockIds.length; i++) {
+    const stockId = stockIds[i];
     const ticker = await fetchStockTicker(stockId);
-    const t0 = Date.now();
-    try {
-      await computeStockScorecard(stockId);
-      const ms = Date.now() - t0;
+
+    const postCount = await fetchStockPostCount(stockId);
+    if (postCount === 0) {
+      stockSkipped++;
+      console.log(`[backfill] Stock ${i + 1}/${stockTotal}: ${ticker} — skipped (no posts)`);
+      continue;
+    }
+
+    if (skipWarm && (await isStockRowWarm(stockId))) {
+      stockSkipped++;
+      console.log(
+        `[backfill] Stock ${i + 1}/${stockTotal}: ${ticker} — skipped (already warm at current schema)`
+      );
+      continue;
+    }
+
+    const result = await computeWithVerify(
+      `Stock ${ticker}`,
+      () => computeStockScorecard(stockId),
+      () => isStockRowWarm(stockId)
+    );
+    if (result.status === 'done') {
       stockDone++;
       console.log(
-        `[backfill] Stock ${stockDone}/${stockTotal}: ${ticker} — computed in ${ms}ms`
+        `[backfill] Stock ${i + 1}/${stockTotal}: ${ticker} — computed in ${result.ms}ms (attempts=${result.attempts})`
       );
-    } catch (err) {
+    } else {
       stockFailures.push(stockId);
       console.warn(
-        `[backfill] Stock ${ticker} (${stockId}) FAILED:`,
-        err instanceof Error ? err.message : err
+        `[backfill] Stock ${ticker} (${stockId}) FAILED after ${MAX_ATTEMPTS} attempts in ${result.ms}ms`
       );
     }
   }
 
   const stockElapsed = Math.round((Date.now() - stockStart) / 1000);
   console.log(
-    `[backfill] Stocks complete: ${stockDone}/${stockTotal} in ${stockElapsed}s${
+    `[backfill] Stocks complete: ${stockDone}/${stockTotal} done, ${stockSkipped} skipped in ${stockElapsed}s${
       stockFailures.length > 0
         ? `; ${stockFailures.length} failures (${stockFailures.join(', ')})`
         : ''
@@ -275,7 +439,7 @@ async function main() {
   // ── Final summary ──────────────────────────────────────────────────────────
 
   console.log(
-    `[backfill] Summary — KOLs: ${kolDone}/${kolTotal} in ${kolElapsed}s; Stocks: ${stockDone}/${stockTotal} in ${stockElapsed}s.${
+    `[backfill] Summary — KOLs: ${kolDone}/${kolTotal} done (${kolSkipped} skipped) in ${kolElapsed}s; Stocks: ${stockDone}/${stockTotal} done (${stockSkipped} skipped) in ${stockElapsed}s.${
       kolFailures.length + stockFailures.length > 0
         ? ` Failures: ${[...kolFailures, ...stockFailures].join(', ')}`
         : ' No failures.'
