@@ -33,7 +33,7 @@ interface CommunityAccuracyCardProps {
 export function CommunityAccuracyCard({ ticker }: CommunityAccuracyCardProps) {
   const t = useTranslations('stocks');
   const tMetrics = useTranslations('common.metrics');
-  const { data: stats, isLoading } = useStockScorecard(ticker);
+  const { data: stats, isLoading, isFetching } = useStockScorecard(ticker);
   const { data: profile } = useProfile();
 
   const [override, setOverride] = useState<WinRatePeriod | null>(null);
@@ -70,7 +70,7 @@ export function CommunityAccuracyCard({ ticker }: CommunityAccuracyCardProps) {
         </div>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
+        {isLoading || (stats === null && isFetching) || stats === null ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
           </div>

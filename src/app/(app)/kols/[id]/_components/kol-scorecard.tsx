@@ -98,12 +98,15 @@ export function KolScorecard({
   const tMetrics = useTranslations('common.metrics');
   const { palette } = useColorPalette();
 
-  // Server-computed per-period stats (dynamic 1σ classifier).
-  // When `data === null` + `isFetching`, the server returned `computing` and
-  // React Query is polling — show a subtle "computing..." label instead of
-  // rendering em-dashes that look like missing data.
+  // Loading taxonomy:
+  //   data === undefined  → React Query has not resolved yet (initial fetch in flight).
+  //   data === null       → server returned `{ status: 'computing' }`; we're polling.
+  //   data === stats      → cache hit (or legacy synchronous compute), render normally.
+  // Both undefined/null cases should show the "正在計算..." text — the previous
+  // gate (`null && winRateFetching`) flickered to false in the 3 s gap between
+  // polls, leaving the ring blank with no other UI to explain why.
   const { data: winRateStats, isFetching: winRateFetching } = useKolWinRate(kolId);
-  const isComputing = winRateStats === null && winRateFetching;
+  const isComputing = winRateStats === null || (winRateStats === undefined && winRateFetching);
   const { data: profile } = useProfile();
 
   // User's per-card override, or null to fall through to the profile default.
